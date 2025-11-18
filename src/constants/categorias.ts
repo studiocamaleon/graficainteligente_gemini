@@ -31,6 +31,12 @@ export const CATEGORIAS_SISTEMA = {
     descripcion: 'Productos para plotter de corte',
     color: '#EC4899',
   },
+  SELLOS: {
+    id: '00000000-0000-0000-0000-000000000005',
+    nombre: 'Sellos',
+    descripcion: 'Productos de sellos y accesorios',
+    color: '#8B5CF6',
+  },
 } as const;
 
 // Exportaciones de compatibilidad
@@ -38,6 +44,7 @@ export const CATEGORIA_IMPRESION_LASER_ID = CATEGORIAS_SISTEMA.IMPRESION_LASER.i
 export const CATEGORIA_GRAN_FORMATO_ID = CATEGORIAS_SISTEMA.IMPRESION_GRAN_FORMATO.id;
 export const CATEGORIA_MATERIALES_RIGIDOS_ID = CATEGORIAS_SISTEMA.MATERIALES_RIGIDOS.id;
 export const CATEGORIA_PLOTTER_CORTE_ID = CATEGORIAS_SISTEMA.PLOTTER_CORTE.id;
+export const CATEGORIA_SELLOS_ID = CATEGORIAS_SISTEMA.SELLOS.id;
 
 // Lista de IDs de todas las categorías (útil para validaciones)
 export const CATEGORIA_IDS = Object.values(CATEGORIAS_SISTEMA).map(cat => cat.id);

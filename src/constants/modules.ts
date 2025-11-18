@@ -27,6 +27,7 @@ import {
   List,
   Blocks,
   Scissors,
+  Stamp,
 } from 'lucide-react';
 
 export interface SubModule {
@@ -173,6 +174,13 @@ export const MODULES: Module[] = [
         description: 'Productos para plotter de corte',
         path: '/app/productos/plotter-corte',
         icon: Scissors,
+      },
+      {
+        id: 'productos-sellos',
+        name: 'Sellos',
+        description: 'Productos de sellos y accesorios',
+        path: '/app/productos/sellos',
+        icon: Stamp,
       },
     ],
   },

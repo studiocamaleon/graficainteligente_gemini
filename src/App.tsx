@@ -30,6 +30,7 @@ import { ImpresionLaser } from './pages/app/productos/ImpresionLaser';
 import { GranFormato } from './pages/app/productos/GranFormato';
 import { MaterialesRigidos } from './pages/app/productos/MaterialesRigidos';
 import { PlotterCorte } from './pages/app/productos/PlotterCorte';
+import { Sellos } from './pages/app/productos/Sellos';
 
 function AppRoutes() {
   const { user, loading } = useAuth();
@@ -81,6 +82,7 @@ function AppRoutes() {
                 <Route path="productos/gran-formato" element={<GranFormato />} />
                 <Route path="productos/materiales-rigidos" element={<MaterialesRigidos />} />
                 <Route path="productos/plotter-corte" element={<PlotterCorte />} />
+                <Route path="productos/sellos" element={<Sellos />} />
                 <Route path="orders" element={<Navigate to="/app/orders/ordenes" replace />} />
                 <Route path="orders/ordenes" element={<OrdersListPage />} />
                 <Route path="orders/crear-ot" element={<CreateOrderPage />} />

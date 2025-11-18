@@ -819,7 +819,62 @@ export interface ProductoPlotterCortePrecio {
   updated_at: string;
 }
 
-export type ProductoEspecifico = ProductoImpresionLaser | ProductoGranFormato | ProductoMaterialesRigidos | ProductoPlotterCorte;
+export type TipoProductoSello = 'sello' | 'repuesto' | 'polimero' | 'tinta' | 'accesorios';
+export type TipoSello = 'manual' | 'automatico';
+export type MarcaSello = 'Trodat' | 'ColoP' | 'Shiny';
+export type TipoTinta = 'textil' | 'papel';
+
+export interface ProductoSello {
+  id: string;
+  company_id: string;
+  nombre: string;
+  tipo_producto: TipoProductoSello;
+  tipo_sello: TipoSello | null;
+  marca: MarcaSello | null;
+  medida_ancho: number | null;
+  medida_alto: number | null;
+  tipo_tinta: TipoTinta | null;
+  impuesto_iva: number;
+  ruta_produccion_id: string | null;
+  is_active: boolean;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProductoSelloConRelaciones extends ProductoSello {
+  ruta_produccion?: {
+    id: string;
+    nombre: string;
+  } | null;
+}
+
+export interface CreateProductoSelloData {
+  nombre: string;
+  tipo_producto: TipoProductoSello;
+  tipo_sello?: TipoSello;
+  marca?: MarcaSello;
+  medida_ancho?: number;
+  medida_alto?: number;
+  tipo_tinta?: TipoTinta;
+  impuesto_iva: number;
+  ruta_produccion_id?: string;
+}
+
+export interface UpdateProductoSelloData extends Partial<CreateProductoSelloData> {
+  is_active?: boolean;
+}
+
+export interface ProductoSelloPrecio {
+  id: string;
+  producto_id: string;
+  precio_unitario: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export type ProductoEspecifico = ProductoImpresionLaser | ProductoGranFormato | ProductoMaterialesRigidos | ProductoPlotterCorte | ProductoSello;
 
 export interface ProductoConTipo {
   producto_tipo: ProductoTipo;
