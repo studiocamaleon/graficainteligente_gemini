@@ -1,4 +1,4 @@
-import { StyleSheet } from '@react-pdf/renderer';
+import { StyleSheet } from '../reactPdfWrapper';
 
 export const colors = {
   primary: '#2563EB',

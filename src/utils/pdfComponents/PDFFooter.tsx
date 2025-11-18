@@ -1,4 +1,4 @@
-import { View, Text } from '@react-pdf/renderer';
+import { View, Text } from '../reactPdfWrapper';
 import { commonStyles } from './styles';
 
 interface PDFFooterProps {

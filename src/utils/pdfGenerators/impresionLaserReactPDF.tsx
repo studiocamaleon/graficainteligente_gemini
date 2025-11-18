@@ -1,4 +1,4 @@
-import { Document, Page, View, Text, StyleSheet, pdf } from '@react-pdf/renderer';
+import { Document, Page, View, Text, StyleSheet, pdf } from '../reactPdfWrapper';
 import { PDFHeader } from '../pdfComponents/PDFHeader';
 import { PDFFooter } from '../pdfComponents/PDFFooter';
 import { PDFInkBadge } from '../pdfComponents/PDFInkBadge';

@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet } from '@react-pdf/renderer';
+import { View, Text, StyleSheet } from '../reactPdfWrapper';
 import { commonStyles, colors } from './styles';
 
 interface PDFBadgeProps {

@@ -1,4 +1,4 @@
-import { Text, StyleSheet } from '@react-pdf/renderer';
+import { Text, StyleSheet } from '../reactPdfWrapper';
 import { colors } from './styles';
 
 const styles = StyleSheet.create({
