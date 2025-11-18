@@ -6,8 +6,7 @@ import { ExportPDFButton } from '../../../../components/ui/ExportPDFButton';
 import { ProductoLaserPreciosCard } from '../../../../components/productos/impresion-laser/ProductoLaserPreciosCard';
 import { FloatingPreciosSaveButton } from '../../../../components/productos/impresion-laser/FloatingPreciosSaveButton';
 import { useAllProductosLaserPrecios } from '../../../../hooks/useAllProductosLaserPrecios';
-import { usePrintDocument } from '../../../../hooks/usePrintDocument';
-import { ListaPreciosLaserLayout } from '../../../../components/print/lista-precios/ListaPreciosLaserLayout';
+import { generateImpresionLaserPDF } from '../../../../utils/pdfGenerators/impresionLaserPDF';
 
 export function PreciosLaserTab() {
   const {
@@ -73,24 +72,16 @@ export function PreciosLaserTab() {
     );
   }
 
-  const { contentRef, print } = usePrintDocument({
-    documentTitle: `Lista_Precios_Impresion_Laser_${new Date().toISOString().split('T')[0]}`,
-  });
-
-  const handleExportPDF = async () => {
-    await print();
+  const handleExportPDF = () => {
+    generateImpresionLaserPDF(productos);
   };
 
   return (
     <div className="space-y-6 pb-24">
-      <div className="hidden">
-        <ListaPreciosLaserLayout ref={contentRef} productos={productos} />
-      </div>
-
       <div className="flex justify-end">
         <ExportPDFButton
           onExport={handleExportPDF}
-          label="Descargar Lista de Precios"
+          label="Exportar Lista de Precios"
         />
       </div>
 

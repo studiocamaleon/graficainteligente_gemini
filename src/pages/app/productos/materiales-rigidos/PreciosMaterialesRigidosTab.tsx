@@ -6,8 +6,7 @@ import { ExportPDFButton } from '../../../../components/ui/ExportPDFButton';
 import { MaterialesRigidosPreciosTable } from '../../../../components/productos/materiales-rigidos/MaterialesRigidosPreciosTable';
 import { FloatingPreciosSaveButton } from '../../../../components/productos/impresion-laser/FloatingPreciosSaveButton';
 import { useAllProductosMaterialesRigidosPrecios } from '../../../../hooks/useAllProductosMaterialesRigidosPrecios';
-import { usePrintDocument } from '../../../../hooks/usePrintDocument';
-import { ListaPreciosMaterialesRigidosLayout } from '../../../../components/print/lista-precios/ListaPreciosMaterialesRigidosLayout';
+import { generateMaterialesRigidosPDF } from '../../../../utils/pdfGenerators/materialesRigidosPDF';
 
 export function PreciosMaterialesRigidosTab() {
   const {
@@ -80,27 +79,16 @@ export function PreciosMaterialesRigidosTab() {
 
   const productosModificadosSet = new Set(Object.keys(preciosModificados));
 
-  const { contentRef, print } = usePrintDocument({
-    documentTitle: `Lista_Precios_Materiales_Rigidos_${new Date().toISOString().split('T')[0]}`,
-  });
-
-  const handleExportPDF = async () => {
-    await print();
+  const handleExportPDF = () => {
+    generateMaterialesRigidosPDF(productosAgrupados);
   };
 
   return (
     <div className="space-y-6 pb-24">
-      <div className="hidden">
-        <ListaPreciosMaterialesRigidosLayout
-          ref={contentRef}
-          productosAgrupados={productosAgrupados}
-        />
-      </div>
-
       <div className="flex justify-end">
         <ExportPDFButton
           onExport={handleExportPDF}
-          label="Descargar Lista de Precios"
+          label="Exportar Lista de Precios"
         />
       </div>
 

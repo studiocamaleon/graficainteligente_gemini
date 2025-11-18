@@ -1232,6 +1232,16 @@ export interface Database {
         Insert: Omit<Paso, 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Omit<Paso, 'id' | 'created_at' | 'company_id'>>;
       };
+      grupos_pasos: {
+        Row: GrupoPaso;
+        Insert: Omit<GrupoPaso, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<GrupoPaso, 'id' | 'created_at' | 'company_id'>>;
+      };
+      grupos_pasos_items: {
+        Row: GrupoPasoItem;
+        Insert: Omit<GrupoPasoItem, 'id' | 'created_at'>;
+        Update: Partial<Omit<GrupoPasoItem, 'id' | 'created_at'>>;
+      };
       categorias: {
         Row: Categoria;
         Insert: Omit<Categoria, 'id' | 'created_at' | 'updated_at'>;
