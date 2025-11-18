@@ -109,14 +109,14 @@ export function ProductosSellosTab({ triggerCreate }: ProductosSellosTabProps) {
   const columns = [
     {
       key: 'nombre',
-      label: 'Nombre',
+      header: 'Nombre',
       render: (producto: any) => (
         <div className="font-medium text-gray-900">{producto.nombre}</div>
       ),
     },
     {
       key: 'tipo_producto',
-      label: 'Tipo',
+      header: 'Tipo',
       render: (producto: any) => (
         <Badge variant="default" className="bg-violet-600 text-white">
           {getTipoProductoLabel(producto.tipo_producto)}
@@ -125,14 +125,14 @@ export function ProductosSellosTab({ triggerCreate }: ProductosSellosTabProps) {
     },
     {
       key: 'marca',
-      label: 'Marca',
+      header: 'Marca',
       render: (producto: any) => (
         <span className="text-sm text-gray-600">{producto.marca || '-'}</span>
       ),
     },
     {
       key: 'medidas',
-      label: 'Medidas',
+      header: 'Medidas',
       render: (producto: any) => {
         if (producto.medida_ancho && producto.medida_alto) {
           return (
@@ -146,14 +146,14 @@ export function ProductosSellosTab({ triggerCreate }: ProductosSellosTabProps) {
     },
     {
       key: 'impuesto_iva',
-      label: 'IVA',
+      header: 'IVA',
       render: (producto: any) => (
         <span className="text-sm text-gray-600">{producto.impuesto_iva}%</span>
       ),
     },
     {
       key: 'is_active',
-      label: 'Estado',
+      header: 'Estado',
       render: (producto: any) => (
         <Badge variant={producto.is_active ? 'success' : 'default'}>
           {producto.is_active ? 'Activo' : 'Inactivo'}
@@ -162,7 +162,7 @@ export function ProductosSellosTab({ triggerCreate }: ProductosSellosTabProps) {
     },
     {
       key: 'actions',
-      label: 'Acciones',
+      header: 'Acciones',
       render: (producto: any) => (
         <div className="flex items-center gap-2">
           <Button
@@ -239,7 +239,7 @@ export function ProductosSellosTab({ triggerCreate }: ProductosSellosTabProps) {
               }
             />
           ) : (
-            <Table columns={columns} data={productos} />
+            <Table columns={columns} data={productos} keyExtractor={(producto) => producto.id} />
           )}
         </div>
       </Card>
