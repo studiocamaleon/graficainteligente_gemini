@@ -81,3 +81,70 @@ export const addFooter = (
 
   doc.text(formatDate(), pageWidth - 20, pageHeight - 12, { align: 'right' });
 };
+
+export const sortTintas = (tintas: string[]): string[] => {
+  return [...tintas].sort((a, b) => {
+    const order: { [key: string]: number } = {
+      'CMYK': 1,
+      'CMYK+W': 2,
+      'CMYK+V': 3,
+      'CMYK+W+V': 4,
+      'K': 5,
+    };
+
+    const orderA = order[a] || 999;
+    const orderB = order[b] || 999;
+
+    if (orderA !== orderB) {
+      return orderA - orderB;
+    }
+
+    return a.localeCompare(b);
+  });
+};
+
+export interface InkColorCircle {
+  color: string;
+  isVarnish: boolean;
+}
+
+export const getInkColorCircles = (tinta: string): InkColorCircle[] => {
+  switch (tinta) {
+    case 'K':
+      return [{ color: '#374151', isVarnish: false }];
+    case 'CMYK':
+      return [
+        { color: '#06b6d4', isVarnish: false },
+        { color: '#ec4899', isVarnish: false },
+        { color: '#fbbf24', isVarnish: false },
+        { color: '#374151', isVarnish: false },
+      ];
+    case 'CMYK+W':
+      return [
+        { color: '#06b6d4', isVarnish: false },
+        { color: '#ec4899', isVarnish: false },
+        { color: '#fbbf24', isVarnish: false },
+        { color: '#374151', isVarnish: false },
+        { color: '#ffffff', isVarnish: false },
+      ];
+    case 'CMYK+V':
+      return [
+        { color: '#06b6d4', isVarnish: false },
+        { color: '#ec4899', isVarnish: false },
+        { color: '#fbbf24', isVarnish: false },
+        { color: '#374151', isVarnish: false },
+        { color: '#9E9E9E', isVarnish: true },
+      ];
+    case 'CMYK+W+V':
+      return [
+        { color: '#06b6d4', isVarnish: false },
+        { color: '#ec4899', isVarnish: false },
+        { color: '#fbbf24', isVarnish: false },
+        { color: '#374151', isVarnish: false },
+        { color: '#ffffff', isVarnish: false },
+        { color: '#9E9E9E', isVarnish: true },
+      ];
+    default:
+      return [{ color: '#6b7280', isVarnish: false }];
+  }
+};
