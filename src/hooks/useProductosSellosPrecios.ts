@@ -7,6 +7,9 @@ export interface ProductoSelloConPrecio {
   id: string;
   nombre: string;
   tipo_producto: string;
+  marca: string | null;
+  medida_ancho: number | null;
+  medida_alto: number | null;
   precio_unitario: number;
   precio_id: string | null;
 }
@@ -40,7 +43,7 @@ export function useProductosSellosPrecios() {
 
       const { data: productosData, error: productosError } = await supabase
         .from('productos_sellos')
-        .select('id, nombre, tipo_producto')
+        .select('id, nombre, tipo_producto, marca, medida_ancho, medida_alto')
         .eq('company_id', profile?.company_id)
         .eq('is_active', true)
         .order('nombre', { ascending: true });
@@ -73,6 +76,9 @@ export function useProductosSellosPrecios() {
           id: producto.id,
           nombre: producto.nombre,
           tipo_producto: producto.tipo_producto,
+          marca: producto.marca || null,
+          medida_ancho: producto.medida_ancho || null,
+          medida_alto: producto.medida_alto || null,
           precio_unitario: precio?.precio_unitario || 0,
           precio_id: precio?.id || null,
         };

@@ -19,6 +19,14 @@ const getTipoProductoLabel = (tipo: string): string => {
   return labels[tipo] || tipo;
 };
 
+const formatMedida = (ancho: number | null, alto: number | null): string => {
+  if (!ancho && !alto) return '-';
+  if (ancho && alto) return `${ancho} x ${alto} mm`;
+  if (ancho) return `${ancho} mm`;
+  if (alto) return `${alto} mm`;
+  return '-';
+};
+
 export function SellosPreciosTable({ productos, onPreciosChange }: SellosPreciosTableProps) {
   const [precios, setPrecios] = useState<Record<string, number>>({});
 
@@ -63,6 +71,12 @@ export function SellosPreciosTable({ productos, onPreciosChange }: SellosPrecios
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">
               Tipo
             </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">
+              Medida
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">
+              Marca
+            </th>
             <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-64">
               Precio Unitario
             </th>
@@ -78,6 +92,12 @@ export function SellosPreciosTable({ productos, onPreciosChange }: SellosPrecios
                 <Badge variant="default" className="bg-violet-600 text-white">
                   {getTipoProductoLabel(producto.tipo_producto)}
                 </Badge>
+              </td>
+              <td className="px-6 py-4 text-sm text-gray-700 border-r border-gray-200">
+                {formatMedida(producto.medida_ancho, producto.medida_alto)}
+              </td>
+              <td className="px-6 py-4 text-sm text-gray-700 border-r border-gray-200">
+                {producto.marca || '-'}
               </td>
               <td className="px-6 py-4 w-64">
                 <div className="flex items-center gap-2">

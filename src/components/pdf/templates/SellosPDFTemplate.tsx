@@ -20,11 +20,21 @@ const getTipoProductoLabel = (tipo: string): string => {
   return labels[tipo] || tipo;
 };
 
+const formatMedida = (ancho: number | null, alto: number | null): string => {
+  if (!ancho && !alto) return '-';
+  if (ancho && alto) return `${ancho} x ${alto} mm`;
+  if (ancho) return `${ancho} mm`;
+  if (alto) return `${alto} mm`;
+  return '-';
+};
+
 export const SellosPDFTemplate = forwardRef<HTMLDivElement, SellosPDFTemplateProps>(
   ({ productos }, ref) => {
     const columns = [
       { key: 'nombre', label: 'Producto' },
       { key: 'tipo', label: 'Tipo' },
+      { key: 'medida', label: 'Medida' },
+      { key: 'marca', label: 'Marca' },
       { key: 'precio', label: 'Precio Unitario' },
     ];
 
@@ -33,6 +43,8 @@ export const SellosPDFTemplate = forwardRef<HTMLDivElement, SellosPDFTemplatePro
       tipo: (
         <PDFBadge variant="violet">{getTipoProductoLabel(producto.tipo_producto)}</PDFBadge>
       ),
+      medida: formatMedida(producto.medida_ancho, producto.medida_alto),
+      marca: producto.marca || '-',
       precio: producto.precio_unitario > 0 ? `$ ${producto.precio_unitario.toFixed(2)}` : '-',
     }));
 
