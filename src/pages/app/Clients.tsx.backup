@@ -1,0 +1,26 @@
+import { Users } from 'lucide-react';
+import { Card } from '../../components/ui/Card';
+import { PageHeader } from '../../components/ui/PageHeader';
+import { EmptyState } from '../../components/ui/EmptyState';
+import { Button } from '../../components/ui/Button';
+
+export function Clients() {
+  return (
+    <div>
+      <PageHeader
+        title="Clientes"
+        description="Gestiona tus clientes y contactos"
+        action={<Button variant="primary">Nuevo Cliente</Button>}
+      />
+
+      <Card padding="none">
+        <EmptyState
+          icon={Users}
+          title="No hay clientes registrados"
+          description="Comienza agregando tu primer cliente para gestionar órdenes y cotizaciones"
+          action={<Button variant="primary">Agregar Cliente</Button>}
+        />
+      </Card>
+    </div>
+  );
+}

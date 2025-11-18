@@ -1,0 +1,250 @@
+import { ReactNode, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Menu, X, LogOut, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useAuth } from '../hooks/useAuth';
+import { MODULES } from '../constants/modules';
+import { Avatar } from '../components/ui/Avatar';
+import { Badge } from '../components/ui/Badge';
+import { PLAN_COLORS } from '../constants/plans';
+
+interface MainLayoutProps {
+  children: ReactNode;
+}
+
+export function MainLayout({ children }: MainLayoutProps) {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { profile, company, plan, signOut } = useAuth();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/login');
+  };
+
+  const isActive = (path: string) => location.pathname === path;
+
+  const planColor = plan ? PLAN_COLORS[plan.slug as keyof typeof PLAN_COLORS] : PLAN_COLORS.free;
+
+  return (
+    <div className="min-h-screen bg-gray-50 flex">
+      <aside
+        className={`${
+          isSidebarOpen ? 'w-72' : 'w-20'
+        } hidden lg:flex flex-col bg-white border-r border-gray-200 transition-all duration-300 fixed h-screen z-30`}
+      >
+        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+          {isSidebarOpen && (
+            <div className="flex items-center gap-2">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-cyan-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                <span className="text-white font-bold text-xl">P</span>
+              </div>
+              <div className="overflow-hidden">
+                <div className="font-bold text-gray-900 text-sm truncate">
+                  {company?.name || 'PrintFlow'}
+                </div>
+              </div>
+            </div>
+          )}
+          <button
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            {isSidebarOpen ? (
+              <ChevronLeft className="w-5 h-5 text-gray-600" />
+            ) : (
+              <ChevronRight className="w-5 h-5 text-gray-600" />
+            )}
+          </button>
+        </div>
+
+        <nav className="flex-1 overflow-y-auto p-4 space-y-1">
+          {MODULES.map((module) => {
+            const Icon = module.icon;
+            const active = isActive(module.path);
+
+            return (
+              <Link key={module.id} to={module.path}>
+                <motion.div
+                  whileHover={{ x: 4 }}
+                  className={`
+                    flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all
+                    ${
+                      active
+                        ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-lg shadow-blue-500/30'
+                        : 'text-gray-700 hover:bg-gray-100'
+                    }
+                  `}
+                >
+                  <Icon className={`w-5 h-5 flex-shrink-0 ${active ? 'text-white' : module.color}`} />
+                  {isSidebarOpen && (
+                    <span className="font-medium text-sm truncate">{module.name}</span>
+                  )}
+                </motion.div>
+              </Link>
+            );
+          })}
+        </nav>
+
+        <div className="p-4 border-t border-gray-200 space-y-3">
+          {plan && isSidebarOpen && (
+            <div className={`p-3 rounded-lg border-2 ${planColor}`}>
+              <div className="text-xs font-semibold mb-1">Plan Actual</div>
+              <div className="font-bold text-sm">{plan.name}</div>
+            </div>
+          )}
+
+          <div className="flex items-center gap-3">
+            <Avatar src={profile?.avatar_url} name={profile?.full_name} size="md" />
+            {isSidebarOpen && (
+              <div className="flex-1 min-w-0">
+                <div className="font-semibold text-sm text-gray-900 truncate">
+                  {profile?.full_name}
+                </div>
+                <div className="text-xs text-gray-500 truncate">{profile?.email}</div>
+              </div>
+            )}
+          </div>
+
+          {isSidebarOpen && (
+            <button
+              onClick={handleSignOut}
+              className="w-full flex items-center gap-2 px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-all font-medium text-sm"
+            >
+              <LogOut className="w-4 h-4" />
+              Cerrar Sesión
+            </button>
+          )}
+        </div>
+      </aside>
+
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+            />
+
+            <motion.aside
+              initial={{ x: -300 }}
+              animate={{ x: 0 }}
+              exit={{ x: -300 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="fixed left-0 top-0 bottom-0 w-72 bg-white z-50 lg:hidden flex flex-col shadow-2xl"
+            >
+              <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-cyan-600 rounded-xl flex items-center justify-center">
+                    <span className="text-white font-bold text-xl">P</span>
+                  </div>
+                  <span className="font-bold text-gray-900">{company?.name || 'PrintFlow'}</span>
+                </div>
+                <button
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-600" />
+                </button>
+              </div>
+
+              <nav className="flex-1 overflow-y-auto p-4 space-y-1">
+                {MODULES.map((module) => {
+                  const Icon = module.icon;
+                  const active = isActive(module.path);
+
+                  return (
+                    <Link
+                      key={module.id}
+                      to={module.path}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      <div
+                        className={`
+                          flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all
+                          ${
+                            active
+                              ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-lg shadow-blue-500/30'
+                              : 'text-gray-700 hover:bg-gray-100'
+                          }
+                        `}
+                      >
+                        <Icon className={`w-5 h-5 ${active ? 'text-white' : module.color}`} />
+                        <span className="font-medium text-sm">{module.name}</span>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </nav>
+
+              <div className="p-4 border-t border-gray-200 space-y-3">
+                {plan && (
+                  <div className={`p-3 rounded-lg border-2 ${planColor}`}>
+                    <div className="text-xs font-semibold mb-1">Plan Actual</div>
+                    <div className="font-bold text-sm">{plan.name}</div>
+                  </div>
+                )}
+
+                <div className="flex items-center gap-3">
+                  <Avatar src={profile?.avatar_url} name={profile?.full_name} size="md" />
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-sm text-gray-900 truncate">
+                      {profile?.full_name}
+                    </div>
+                    <div className="text-xs text-gray-500 truncate">{profile?.email}</div>
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleSignOut}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-all font-medium text-sm"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Cerrar Sesión
+                </button>
+              </div>
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
+
+      <div
+        className={`flex-1 flex flex-col ${isSidebarOpen ? 'lg:ml-72' : 'lg:ml-20'} transition-all duration-300`}
+      >
+        <header className="bg-white border-b border-gray-200 sticky top-0 z-20">
+          <div className="px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <button
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="lg:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <Menu className="w-6 h-6 text-gray-600" />
+            </button>
+
+            <div className="flex-1 lg:flex-initial">
+              <h1 className="text-xl font-bold text-gray-900">
+                {MODULES.find((m) => m.path === location.pathname)?.name || 'PrintFlow'}
+              </h1>
+            </div>
+
+            <div className="flex items-center gap-3">
+              {profile?.role && (
+                <Badge variant="primary" size="sm">
+                  {profile.role.replace('_', ' ')}
+                </Badge>
+              )}
+            </div>
+          </div>
+        </header>
+
+        <main className="flex-1 overflow-auto">
+          <div className="px-4 sm:px-6 lg:px-8 py-8">{children}</div>
+        </main>
+      </div>
+    </div>
+  );
+}

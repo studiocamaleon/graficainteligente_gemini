@@ -1,0 +1,1 @@
+export const TECNOLOGIA_IMPRESION_LASER_ID = 'd1f9452e-dda9-4419-966c-a7f4a4f98e07';
