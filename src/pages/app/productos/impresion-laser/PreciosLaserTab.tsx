@@ -21,6 +21,10 @@ export function PreciosLaserTab() {
     hasUnsavedChanges,
   } = useAllProductosLaserPrecios();
 
+  const { componentRef, isGenerating, handlePrint, handleDownloadPDF } = usePDFExport({
+    filename: `Lista_Precios_Impresion_Laser_${new Date().toISOString().split('T')[0]}.pdf`,
+  });
+
   // Warn user before leaving with unsaved changes
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -72,10 +76,6 @@ export function PreciosLaserTab() {
       </Card>
     );
   }
-
-  const { componentRef, isGenerating, handlePrint, handleDownloadPDF } = usePDFExport({
-    filename: `Lista_Precios_Impresion_Laser_${new Date().toISOString().split('T')[0]}.pdf`,
-  });
 
   return (
     <>
