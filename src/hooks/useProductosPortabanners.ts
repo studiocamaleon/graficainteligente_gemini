@@ -99,7 +99,7 @@ export function useProductoPortabanner(id?: string) {
       if (productoError) throw productoError;
       if (!productoData) throw new Error('Producto no encontrado');
 
-      const [serviciosResult, acabadosResult, rangoPrecioResult, tecnologiaResult] = await Promise.all([
+      const [serviciosResult, acabadosResult, tecnologiasResult, rangoPrecioResult, tecnologiaResult] = await Promise.all([
         supabase
           .from('productos_portabanners_servicios')
           .select(`
@@ -117,6 +117,18 @@ export function useProductoPortabanner(id?: string) {
             id,
             acabado_id,
             acabados (
+              id,
+              nombre
+            )
+          `)
+          .eq('producto_id', id),
+        supabase
+          .from('productos_portabanners_tecnologias')
+          .select(`
+            id,
+            tecnologia_id,
+            created_at,
+            tecnologias (
               id,
               nombre
             )
@@ -140,6 +152,7 @@ export function useProductoPortabanner(id?: string) {
 
       if (serviciosResult.error) throw serviciosResult.error;
       if (acabadosResult.error) throw acabadosResult.error;
+      if (tecnologiasResult.error) throw tecnologiasResult.error;
       if (rangoPrecioResult.error) throw rangoPrecioResult.error;
       if (tecnologiaResult.error) throw tecnologiaResult.error;
 
@@ -157,10 +170,19 @@ export function useProductoPortabanner(id?: string) {
         acabado_nombre: rel.acabados?.nombre || '',
       }));
 
+      const tecnologias = (tecnologiasResult.data || []).map((rel: any) => ({
+        id: rel.id,
+        producto_id: id,
+        tecnologia_id: rel.tecnologia_id,
+        tecnologia_nombre: rel.tecnologias?.nombre || '',
+        created_at: rel.created_at,
+      }));
+
       const productoCompleto: ProductoPortabannerConRelaciones = {
         ...productoData,
         servicios,
         acabados,
+        tecnologias,
         rango_precio: rangoPrecioResult.data,
         tecnologia: tecnologiaResult.data,
       };
@@ -191,7 +213,7 @@ export function useProductoPortabanner(id?: string) {
           ancho_cm: data.ancho_cm,
           alto_cm: data.alto_cm,
           tecnologia_id: data.tecnologia_id,
-          tintas: data.tintas,
+          tintas: ['CMYK'],
           impuesto_iva: data.impuesto_iva,
           rango_precio_id: data.rango_precio_id || null,
           ruta_produccion_id: data.ruta_produccion_id || null,
@@ -202,6 +224,11 @@ export function useProductoPortabanner(id?: string) {
       if (productoError) throw productoError;
       if (!newProducto) throw new Error('No se pudo crear el producto');
 
+      const tecnologiasInserts = data.tecnologias_ids.map((tecnologia_id) => ({
+        producto_id: newProducto.id,
+        tecnologia_id,
+      }));
+
       const serviciosInserts = data.servicios.map((servicio_id) => ({
         producto_id: newProducto.id,
         servicio_id,
@@ -211,6 +238,14 @@ export function useProductoPortabanner(id?: string) {
         producto_id: newProducto.id,
         acabado_id,
       }));
+
+      if (tecnologiasInserts.length > 0) {
+        const { error: tecnologiasError } = await supabase
+          .from('productos_portabanners_tecnologias')
+          .insert(tecnologiasInserts);
+
+        if (tecnologiasError) throw tecnologiasError;
+      }
 
       if (serviciosInserts.length > 0) {
         const { error: serviciosError } = await supabase
@@ -254,7 +289,7 @@ export function useProductoPortabanner(id?: string) {
           ancho_cm: data.ancho_cm,
           alto_cm: data.alto_cm,
           tecnologia_id: data.tecnologia_id,
-          tintas: data.tintas,
+          tintas: ['CMYK'],
           impuesto_iva: data.impuesto_iva,
           rango_precio_id: data.rango_precio_id || null,
           ruta_produccion_id: data.ruta_produccion_id || null,
@@ -264,8 +299,14 @@ export function useProductoPortabanner(id?: string) {
 
       if (productoError) throw productoError;
 
+      await supabase.from('productos_portabanners_tecnologias').delete().eq('producto_id', id);
       await supabase.from('productos_portabanners_servicios').delete().eq('producto_id', id);
       await supabase.from('productos_portabanners_acabados').delete().eq('producto_id', id);
+
+      const tecnologiasInserts = data.tecnologias_ids.map((tecnologia_id) => ({
+        producto_id: id,
+        tecnologia_id,
+      }));
 
       const serviciosInserts = data.servicios.map((servicio_id) => ({
         producto_id: id,
@@ -276,6 +317,14 @@ export function useProductoPortabanner(id?: string) {
         producto_id: id,
         acabado_id,
       }));
+
+      if (tecnologiasInserts.length > 0) {
+        const { error: tecnologiasError } = await supabase
+          .from('productos_portabanners_tecnologias')
+          .insert(tecnologiasInserts);
+
+        if (tecnologiasError) throw tecnologiasError;
+      }
 
       if (serviciosInserts.length > 0) {
         const { error: serviciosError } = await supabase

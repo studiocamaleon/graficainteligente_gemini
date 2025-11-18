@@ -3,7 +3,7 @@ import { Card } from '../../ui/Card';
 import { Input } from '../../ui/Input';
 import { Button } from '../../ui/Button';
 import { MedidaPortabannerInput } from './MedidaPortabannerInput';
-import { TecnologiaTintasPortabannerSelector } from './TecnologiaTintasPortabannerSelector';
+import { TecnologiasPortabannerSelector } from './TecnologiasPortabannerSelector';
 import { ServiciosSelectorGranFormato } from '../gran-formato/ServiciosSelectorGranFormato';
 import { AcabadosSelectorGranFormato } from '../gran-formato/AcabadosSelectorGranFormato';
 import { ImpuestoSelector } from '../impresion-laser/ImpuestoSelector';
@@ -26,8 +26,7 @@ interface FormErrors {
   nombre?: string;
   ancho?: string;
   alto?: string;
-  tecnologia?: string;
-  tintas?: string;
+  tecnologias?: string;
   impuesto?: string;
 }
 
@@ -41,8 +40,7 @@ export function ProductoPortabannerForm({
   const [nombre, setNombre] = useState('');
   const [ancho, setAncho] = useState<number | undefined>(undefined);
   const [alto, setAlto] = useState<number | undefined>(undefined);
-  const [tecnologiaId, setTecnologiaId] = useState('');
-  const [tintas, setTintas] = useState<string[]>([]);
+  const [tecnologiasIds, setTecnologiasIds] = useState<string[]>([]);
   const [servicios, setServicios] = useState<string[]>([]);
   const [acabados, setAcabados] = useState<string[]>([]);
   const [impuesto, setImpuesto] = useState(21);
@@ -55,8 +53,7 @@ export function ProductoPortabannerForm({
       setNombre(producto.nombre);
       setAncho(producto.ancho_cm);
       setAlto(producto.alto_cm);
-      setTecnologiaId(producto.tecnologia_id);
-      setTintas(producto.tintas || []);
+      setTecnologiasIds(producto.tecnologias?.map((t) => t.tecnologia_id) || []);
       setImpuesto(producto.impuesto_iva);
       setRangoPrecioId(producto.rango_precio_id || undefined);
       setRutaProduccionId(producto.ruta_produccion_id || '');
@@ -73,8 +70,7 @@ export function ProductoPortabannerForm({
     nombre,
     ancho,
     alto,
-    tecnologiaId,
-    tintas,
+    tecnologiasIds,
     servicios,
     acabados,
     impuesto,
@@ -99,12 +95,8 @@ export function ProductoPortabannerForm({
       newErrors.alto = 'El alto debe ser mayor a 0';
     }
 
-    if (!tecnologiaId) {
-      newErrors.tecnologia = 'Debe seleccionar una tecnología';
-    }
-
-    if (tintas.length === 0) {
-      newErrors.tintas = 'Debe seleccionar al menos una tinta';
+    if (tecnologiasIds.length === 0) {
+      newErrors.tecnologias = 'Debe seleccionar al menos una tecnología';
     }
 
     if (!impuesto) {
@@ -126,8 +118,8 @@ export function ProductoPortabannerForm({
       nombre: nombre.trim(),
       ancho_cm: ancho!,
       alto_cm: alto!,
-      tecnologia_id: tecnologiaId,
-      tintas,
+      tecnologia_id: tecnologiasIds[0],
+      tecnologias_ids: tecnologiasIds,
       impuesto_iva: impuesto,
       rango_precio_id: rangoPrecioId,
       ruta_produccion_id: rutaProduccionId || undefined,
@@ -174,13 +166,10 @@ export function ProductoPortabannerForm({
 
       <Card>
         <div className="p-6">
-          <TecnologiaTintasPortabannerSelector
-            tecnologiaId={tecnologiaId}
-            tintas={tintas}
-            onTecnologiaChange={setTecnologiaId}
-            onTintasChange={setTintas}
-            errorTecnologia={errors.tecnologia}
-            errorTintas={errors.tintas}
+          <TecnologiasPortabannerSelector
+            tecnologiasSeleccionadas={tecnologiasIds}
+            onTecnologiasChange={setTecnologiasIds}
+            error={errors.tecnologias}
           />
         </div>
       </Card>

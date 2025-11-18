@@ -64,23 +64,36 @@ export function ProductoPortabannerDetalle({
         </div>
 
         <div className="border-t pt-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Tecnología de Impresión</h3>
-          {producto.tecnologia && (
-            <div className="space-y-3">
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Tecnología</p>
-                <Badge variant="secondary">{producto.tecnologia.nombre}</Badge>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600 mb-2">Tintas disponibles</p>
-                <div className="flex flex-wrap gap-2">
-                  {producto.tintas.map((tinta) => (
-                    <InkBadge key={tinta} tinta={tinta} />
-                  ))}
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Tecnologías de Impresión</h3>
+          <div className="space-y-3">
+            {producto.tecnologias && producto.tecnologias.length > 0 ? (
+              <>
+                <div>
+                  <p className="text-sm text-gray-600 mb-2">Tecnologías disponibles</p>
+                  <div className="flex flex-wrap gap-2">
+                    {producto.tecnologias.map((tec) => (
+                      <Badge key={tec.id} variant="secondary">
+                        {tec.tecnologia_nombre}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            </div>
-          )}
+                <div>
+                  <p className="text-sm text-gray-600 mb-2">Tintas</p>
+                  <div className="flex flex-wrap gap-2">
+                    {producto.tintas.map((tinta) => (
+                      <InkBadge key={tinta} tinta={tinta} />
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Todas las tecnologías utilizan tintas CMYK
+                  </p>
+                </div>
+              </>
+            ) : (
+              <p className="text-sm text-gray-500">No hay tecnologías configuradas</p>
+            )}
+          </div>
         </div>
 
         {producto.servicios.length > 0 && (

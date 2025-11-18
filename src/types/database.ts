@@ -904,9 +904,18 @@ export interface ProductoPortabannerAcabado {
   acabado_nombre: string;
 }
 
+export interface ProductoPortabannerTecnologia {
+  id: string;
+  producto_id: string;
+  tecnologia_id: string;
+  tecnologia_nombre: string;
+  created_at: string;
+}
+
 export interface ProductoPortabannerConRelaciones extends ProductoPortabanner {
   servicios: ProductoPortabannerServicio[];
   acabados: ProductoPortabannerAcabado[];
+  tecnologias: ProductoPortabannerTecnologia[];
   rango_precio?: {
     id: string;
     nombre: string;
@@ -923,7 +932,7 @@ export interface CreateProductoPortabannerData {
   ancho_cm: number;
   alto_cm: number;
   tecnologia_id: string;
-  tintas: string[];
+  tecnologias_ids: string[];
   impuesto_iva: number;
   rango_precio_id?: string;
   ruta_produccion_id?: string;
@@ -940,6 +949,7 @@ export interface ProductoPortabannerPrecio {
   cantidad_desde: number;
   cantidad_hasta: number | null;
   precio: number;
+  tecnologia_id: string | null;
   created_at: string;
   updated_at: string;
 }
