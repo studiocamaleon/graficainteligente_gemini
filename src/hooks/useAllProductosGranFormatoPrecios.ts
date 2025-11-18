@@ -28,6 +28,12 @@ export interface ProductoGFParaPrecios {
   tecnologias: TecnologiaConTintas[];
 }
 
+export interface PrecioProducto {
+  rango_min: number;
+  rango_max: number;
+  precio: number;
+}
+
 export interface ProductoPorRango {
   id: string;
   nombre: string;
@@ -36,7 +42,8 @@ export interface ProductoPorRango {
   unidad_medida: string;
   rangos: RangoPrecio[];
   tipo_venta: 'mt2' | 'mt_lineal';
-  ancho_fijo?: number; // Solo para productos mt_lineal
+  ancho_fijo?: number;
+  precios?: PrecioProducto[];
 }
 
 export interface TecnologiaAgrupada {
@@ -224,6 +231,42 @@ export function useAllProductosGranFormatoPrecios() {
 
       setProductos(productosConRango);
 
+      // Fetch existing precios for all products
+      const productoIds = productosConRango.map((p) => p.id);
+      let preciosMap = new Map<string, Map<string, Map<string, PrecioProducto[]>>>();
+
+      if (productoIds.length > 0) {
+        const { data: preciosExistentes } = await supabase
+          .from('productos_gran_formato_precios')
+          .select('producto_gran_formato_id, tecnologia_id, tinta, rango_precio_min, rango_precio_max, precio')
+          .in('producto_gran_formato_id', productoIds)
+          .eq('company_id', companyId);
+
+        if (preciosExistentes) {
+          preciosExistentes.forEach((precio) => {
+            const productoId = precio.producto_gran_formato_id;
+            const tecnologiaId = precio.tecnologia_id;
+            const tinta = precio.tinta;
+
+            if (!preciosMap.has(productoId)) {
+              preciosMap.set(productoId, new Map());
+            }
+            if (!preciosMap.get(productoId)!.has(tecnologiaId)) {
+              preciosMap.get(productoId)!.set(tecnologiaId, new Map());
+            }
+            if (!preciosMap.get(productoId)!.get(tecnologiaId)!.has(tinta)) {
+              preciosMap.get(productoId)!.get(tecnologiaId)!.set(tinta, []);
+            }
+
+            preciosMap.get(productoId)!.get(tecnologiaId)!.get(tinta)!.push({
+              rango_min: precio.rango_precio_min,
+              rango_max: precio.rango_precio_max,
+              precio: precio.precio,
+            });
+          });
+        }
+      }
+
       // Agrupar por tecnología
       const tecnologiasMap = new Map<string, TecnologiaAgrupada>();
 
@@ -254,6 +297,8 @@ export function useAllProductosGranFormatoPrecios() {
               tintaData.productosPorRango.set(rangoKey, []);
             }
 
+            const precios = preciosMap.get(producto.id)?.get(tecnologia.id)?.get(tinta) || [];
+
             tintaData.productosPorRango.get(rangoKey)!.push({
               id: producto.id,
               nombre: producto.nombre,
@@ -265,6 +310,7 @@ export function useAllProductosGranFormatoPrecios() {
               ancho_fijo: producto.tipo_venta === 'mt_lineal' && producto.anchos_disponibles.length > 0
                 ? producto.anchos_disponibles[0]
                 : undefined,
+              precios: precios.length > 0 ? precios : undefined,
             });
           });
         });
@@ -272,30 +318,27 @@ export function useAllProductosGranFormatoPrecios() {
 
       setTecnologiasAgrupadas(Array.from(tecnologiasMap.values()));
 
-      // Fetch existing precios and create snapshot
-      const productoIds = productosConRango.map((p) => p.id);
+      // Create snapshot from already loaded precios
       if (productoIds.length > 0) {
-        const { data: preciosExistentes } = await supabase
-          .from('productos_gran_formato_precios')
-          .select('producto_gran_formato_id, tecnologia_id, tinta, rango_precio_min, rango_precio_max, precio')
-          .in('producto_gran_formato_id', productoIds)
-          .eq('company_id', companyId);
-
-        if (preciosExistentes) {
-          const initialSnapshot: PreciosSnapshot = {};
-          preciosExistentes.forEach((precio) => {
-            const key = createPrecioKey({
-              producto_gran_formato_id: precio.producto_gran_formato_id,
-              tecnologia_id: precio.tecnologia_id,
-              tinta: precio.tinta,
-              rango_precio_min: precio.rango_precio_min,
-              rango_precio_max: precio.rango_precio_max,
-              precio: precio.precio,
+        const initialSnapshot: PreciosSnapshot = {};
+        preciosMap.forEach((tecnologiasMap, productoId) => {
+          tecnologiasMap.forEach((tintasMap, tecnologiaId) => {
+            tintasMap.forEach((precios, tinta) => {
+              precios.forEach((precio) => {
+                const key = createPrecioKey({
+                  producto_gran_formato_id: productoId,
+                  tecnologia_id: tecnologiaId,
+                  tinta: tinta,
+                  rango_precio_min: precio.rango_min,
+                  rango_precio_max: precio.rango_max,
+                  precio: precio.precio,
+                });
+                initialSnapshot[key] = precio.precio;
+              });
             });
-            initialSnapshot[key] = precio.precio;
           });
-          setPreciosSnapshot(initialSnapshot);
-        }
+        });
+        setPreciosSnapshot(initialSnapshot);
       }
     } catch (err) {
       console.error('Error fetching productos:', err);

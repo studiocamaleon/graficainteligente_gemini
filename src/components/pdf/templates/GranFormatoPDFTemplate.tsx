@@ -85,7 +85,7 @@ export const GranFormatoPDFTemplate = forwardRef<HTMLDivElement, GranFormatoPDFT
                       }
 
                       primerProducto.rangos.forEach((rango) => {
-                        const precioData = producto.precios.find(
+                        const precioData = producto.precios?.find(
                           (p) => p.rango_min === rango.min && p.rango_max === rango.max
                         );
                         row[`rango_${rango.min}_${rango.max}`] = precioData
