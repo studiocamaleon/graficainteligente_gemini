@@ -8,8 +8,12 @@ interface ColorPlotterSelectorProps {
 }
 
 const COLORES: { value: ColorPlotter; label: string }[] = [
-  { value: 'Blanco o Negro', label: 'Blanco o Negro' },
+  { value: 'Blanco', label: 'Blanco' },
+  { value: 'Negro', label: 'Negro' },
   { value: 'Color', label: 'Color' },
+  { value: 'Esmerilado Gris', label: 'Esmerilado Gris' },
+  { value: 'Esmerilado Blanco', label: 'Esmerilado Blanco' },
+  { value: 'Otro', label: 'Otro' },
 ];
 
 export function ColorPlotterSelector({ value, onChange, error }: ColorPlotterSelectorProps) {
@@ -25,7 +29,7 @@ export function ColorPlotterSelector({ value, onChange, error }: ColorPlotterSel
       <p className="text-sm text-gray-500 mb-3">
         Selecciona el tipo de color del producto
       </p>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {COLORES.map((color) => (
           <button
             key={color.value}

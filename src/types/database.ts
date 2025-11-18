@@ -623,7 +623,7 @@ export interface Producto {
 
 export type ProductoTipo = 'laser' | 'gran_formato' | 'materiales_rigidos' | 'plotter_corte';
 
-export type ColorPlotter = 'Blanco o Negro' | 'Color';
+export type ColorPlotter = 'Blanco' | 'Negro' | 'Color' | 'Esmerilado Gris' | 'Esmerilado Blanco' | 'Otro';
 
 export type MarcaPlotter = 'Avery' | 'Oracal' | 'Ritrama' | 'McCal' | 'Orajet' | 'Importado';
 
