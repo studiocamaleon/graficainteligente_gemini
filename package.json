@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.app.json"
   },
   "dependencies": {
+    "@react-pdf/renderer": "^4.3.1",
     "@supabase/supabase-js": "^2.57.4",
     "dotenv": "^17.2.3",
     "framer-motion": "^12.23.24",

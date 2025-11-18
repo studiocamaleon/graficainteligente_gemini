@@ -8,7 +8,7 @@ import { FloatingPreciosSaveButton } from '../../../../components/productos/impr
 import { useAllProductosGranFormatoPrecios } from '../../../../hooks/useAllProductosGranFormatoPrecios';
 import { supabase } from '../../../../lib/supabase';
 import type { PrecioGFInput } from '../../../../hooks/useAllProductosGranFormatoPrecios';
-import { generateGranFormatoPDF } from '../../../../utils/pdfGenerators/granFormatoPDF';
+import { generateGranFormatoReactPDF } from '../../../../utils/pdfGenerators/granFormatoReactPDF';
 
 interface PreciosSnapshot {
   [key: string]: number;
@@ -313,7 +313,7 @@ export function PreciosGranFormatoTab() {
   }
 
   const handleExportPDF = async () => {
-    await generateGranFormatoPDF(tecnologiasAgrupadas);
+    await generateGranFormatoReactPDF(tecnologiasAgrupadas);
   };
 
   return (

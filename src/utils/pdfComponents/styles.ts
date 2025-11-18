@@ -1,0 +1,172 @@
+import { StyleSheet } from '@react-pdf/renderer';
+
+export const colors = {
+  primary: '#2563EB',
+  primaryLight: '#EFF6FF',
+  secondary: '#6B7280',
+  success: '#10B981',
+  warning: '#F59E0B',
+  purple: '#9333EA',
+  purpleLight: '#F3E8FF',
+  white: '#FFFFFF',
+  gray50: '#F9FAFB',
+  gray100: '#F3F4F6',
+  gray200: '#E5E7EB',
+  gray300: '#D1D5DB',
+  gray500: '#6B7280',
+  gray700: '#374151',
+  gray900: '#111827',
+  blue50: '#EFF6FF',
+  blue100: '#DBEAFE',
+  blue500: '#3B82F6',
+  blue600: '#2563EB',
+  green50: '#F0FDF4',
+  green600: '#16A34A',
+  yellow50: '#FEFCE8',
+};
+
+export const commonStyles = StyleSheet.create({
+  page: {
+    flexDirection: 'column',
+    backgroundColor: colors.white,
+    padding: 30,
+    fontFamily: 'Helvetica',
+  },
+  header: {
+    backgroundColor: colors.primary,
+    padding: 20,
+    marginBottom: 20,
+    borderRadius: 8,
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: colors.white,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: colors.white,
+    textAlign: 'center',
+  },
+  footer: {
+    position: 'absolute',
+    bottom: 20,
+    left: 30,
+    right: 30,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: colors.gray200,
+  },
+  footerText: {
+    fontSize: 9,
+    color: colors.gray500,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: colors.gray900,
+    marginBottom: 12,
+    paddingBottom: 8,
+    borderBottomWidth: 2,
+    borderBottomColor: colors.primary,
+  },
+  card: {
+    marginBottom: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.gray200,
+    overflow: 'hidden',
+  },
+  cardHeader: {
+    backgroundColor: colors.blue50,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray200,
+  },
+  cardHeaderTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: colors.gray900,
+  },
+  cardBody: {
+    padding: 12,
+  },
+  badge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    fontSize: 9,
+    fontWeight: 'bold',
+  },
+  badgePrimary: {
+    backgroundColor: colors.blue100,
+    color: colors.blue600,
+  },
+  badgeSecondary: {
+    backgroundColor: colors.gray100,
+    color: colors.gray700,
+  },
+  badgeSuccess: {
+    backgroundColor: colors.green50,
+    color: colors.green600,
+  },
+  badgeWarning: {
+    backgroundColor: colors.yellow50,
+    color: colors.warning,
+  },
+  table: {
+    width: '100%',
+    borderWidth: 1,
+    borderColor: colors.gray200,
+    borderRadius: 4,
+  },
+  tableHeader: {
+    flexDirection: 'row',
+    backgroundColor: colors.primary,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray200,
+  },
+  tableHeaderCell: {
+    padding: 8,
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: colors.white,
+    textAlign: 'center',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray200,
+  },
+  tableRowAlt: {
+    backgroundColor: colors.gray50,
+  },
+  tableCell: {
+    padding: 8,
+    fontSize: 9,
+    color: colors.gray700,
+  },
+  tableCellCenter: {
+    textAlign: 'center',
+  },
+  tableCellRight: {
+    textAlign: 'right',
+  },
+  priceText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: colors.success,
+  },
+  emptyState: {
+    padding: 20,
+    textAlign: 'center',
+    color: colors.gray500,
+    fontSize: 11,
+  },
+});

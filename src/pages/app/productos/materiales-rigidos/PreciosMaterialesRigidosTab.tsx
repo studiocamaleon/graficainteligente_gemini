@@ -6,7 +6,7 @@ import { ExportPDFButton } from '../../../../components/ui/ExportPDFButton';
 import { MaterialesRigidosPreciosTable } from '../../../../components/productos/materiales-rigidos/MaterialesRigidosPreciosTable';
 import { FloatingPreciosSaveButton } from '../../../../components/productos/impresion-laser/FloatingPreciosSaveButton';
 import { useAllProductosMaterialesRigidosPrecios } from '../../../../hooks/useAllProductosMaterialesRigidosPrecios';
-import { generateMaterialesRigidosPDF } from '../../../../utils/pdfGenerators/materialesRigidosPDF';
+import { generateMaterialesRigidosReactPDF } from '../../../../utils/pdfGenerators/materialesRigidosReactPDF';
 
 export function PreciosMaterialesRigidosTab() {
   const {
@@ -79,8 +79,8 @@ export function PreciosMaterialesRigidosTab() {
 
   const productosModificadosSet = new Set(Object.keys(preciosModificados));
 
-  const handleExportPDF = () => {
-    generateMaterialesRigidosPDF(productosAgrupados);
+  const handleExportPDF = async () => {
+    await generateMaterialesRigidosReactPDF(productosAgrupados);
   };
 
   return (

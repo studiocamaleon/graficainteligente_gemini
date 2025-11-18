@@ -6,7 +6,7 @@ import { ExportPDFButton } from '../../../../components/ui/ExportPDFButton';
 import { ProductoLaserPreciosCard } from '../../../../components/productos/impresion-laser/ProductoLaserPreciosCard';
 import { FloatingPreciosSaveButton } from '../../../../components/productos/impresion-laser/FloatingPreciosSaveButton';
 import { useAllProductosLaserPrecios } from '../../../../hooks/useAllProductosLaserPrecios';
-import { generateImpresionLaserPDF } from '../../../../utils/pdfGenerators/impresionLaserPDF';
+import { generateImpresionLaserReactPDF } from '../../../../utils/pdfGenerators/impresionLaserReactPDF';
 
 export function PreciosLaserTab() {
   const {
@@ -72,8 +72,8 @@ export function PreciosLaserTab() {
     );
   }
 
-  const handleExportPDF = () => {
-    generateImpresionLaserPDF(productos);
+  const handleExportPDF = async () => {
+    await generateImpresionLaserReactPDF(productos);
   };
 
   return (
