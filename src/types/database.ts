@@ -874,7 +874,77 @@ export interface ProductoSelloPrecio {
   updated_at: string;
 }
 
-export type ProductoEspecifico = ProductoImpresionLaser | ProductoGranFormato | ProductoMaterialesRigidos | ProductoPlotterCorte | ProductoSello;
+export interface ProductoPortabanner {
+  id: string;
+  company_id: string;
+  nombre: string;
+  ancho_cm: number;
+  alto_cm: number;
+  tecnologia_id: string;
+  tintas: string[];
+  impuesto_iva: number;
+  rango_precio_id: string | null;
+  ruta_produccion_id: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProductoPortabannerServicio {
+  id: string;
+  producto_id: string;
+  servicio_id: string;
+  servicio_nombre: string;
+}
+
+export interface ProductoPortabannerAcabado {
+  id: string;
+  producto_id: string;
+  acabado_id: string;
+  acabado_nombre: string;
+}
+
+export interface ProductoPortabannerConRelaciones extends ProductoPortabanner {
+  servicios: ProductoPortabannerServicio[];
+  acabados: ProductoPortabannerAcabado[];
+  rango_precio?: {
+    id: string;
+    nombre: string;
+    unidad_medida: string;
+  } | null;
+  tecnologia?: {
+    id: string;
+    nombre: string;
+  } | null;
+}
+
+export interface CreateProductoPortabannerData {
+  nombre: string;
+  ancho_cm: number;
+  alto_cm: number;
+  tecnologia_id: string;
+  tintas: string[];
+  impuesto_iva: number;
+  rango_precio_id?: string;
+  ruta_produccion_id?: string;
+  servicios: string[];
+  acabados: string[];
+}
+
+export interface ProductoPortabannerPrecio {
+  id: string;
+  company_id: string;
+  producto_id: string;
+  ancho_cm: number;
+  alto_cm: number;
+  cantidad_desde: number;
+  cantidad_hasta: number | null;
+  precio: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export type ProductoEspecifico = ProductoImpresionLaser | ProductoGranFormato | ProductoMaterialesRigidos | ProductoPlotterCorte | ProductoSello | ProductoPortabanner;
 
 export interface ProductoConTipo {
   producto_tipo: ProductoTipo;
