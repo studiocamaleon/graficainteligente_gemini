@@ -4,6 +4,7 @@ import { PDFTable } from '../PDFTable';
 import { PDFSectionHeader } from '../PDFSectionHeader';
 import { PDFBadge } from '../PDFBadge';
 import { formatCurrency } from '../../../utils/pdfHelpers';
+import { isInfiniteRango, normalizeRangoMax } from '../../../utils/rangoUtils';
 import type { TecnologiaAgrupada } from '../../../hooks/useAllProductosGranFormatoPrecios';
 
 interface GranFormatoPDFTemplateProps {
@@ -63,13 +64,13 @@ export const GranFormatoPDFTemplate = forwardRef<HTMLDivElement, GranFormatoPDFT
                     }
 
                     primerProducto.rangos.forEach((rango) => {
-                      const rangoText =
-                        rango.max === Infinity
-                          ? `≥ ${rango.min} ${primerProducto.unidad_medida}`
-                          : `${rango.min}-${rango.max} ${primerProducto.unidad_medida}`;
+                      const normalizedMax = normalizeRangoMax(rango.max);
+                      const rangoText = isInfiniteRango(normalizedMax)
+                        ? `≥ ${rango.min} ${primerProducto.unidad_medida}`
+                        : `${rango.min}-${rango.max} ${primerProducto.unidad_medida}`;
                       columns.push({
                         header: rangoText,
-                        key: `rango_${rango.min}_${rango.max}`,
+                        key: `rango_${rango.min}_${normalizedMax}`,
                         align: 'right' as const,
                       });
                     });
@@ -85,10 +86,11 @@ export const GranFormatoPDFTemplate = forwardRef<HTMLDivElement, GranFormatoPDFT
                       }
 
                       primerProducto.rangos.forEach((rango) => {
+                        const normalizedMax = normalizeRangoMax(rango.max);
                         const precioData = producto.precios?.find(
-                          (p) => p.rango_min === rango.min && p.rango_max === rango.max
+                          (p) => p.rango_min === rango.min && p.rango_max === normalizedMax
                         );
-                        row[`rango_${rango.min}_${rango.max}`] = precioData
+                        row[`rango_${rango.min}_${normalizedMax}`] = precioData
                           ? formatCurrency(precioData.precio)
                           : '-';
                       });

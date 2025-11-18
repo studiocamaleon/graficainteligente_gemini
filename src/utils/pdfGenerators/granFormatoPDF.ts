@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { formatCurrency, formatDateForFilename, addHeader, addFooter } from '../pdfHelpers';
+import { isInfiniteRango, normalizeRangoMax } from '../rangoUtils';
 import type { TecnologiaAgrupada } from '../../hooks/useAllProductosGranFormatoPrecios';
 
 interface PreciosPorProducto {
@@ -88,10 +89,10 @@ export const generateGranFormatoPDF = async (
         }
 
         primerProducto.rangos.forEach((rango) => {
-          const rangoText =
-            rango.max === Infinity
-              ? `≥ ${rango.min} ${primerProducto.unidad_medida}`
-              : `${rango.min}-${rango.max} ${primerProducto.unidad_medida}`;
+          const normalizedMax = normalizeRangoMax(rango.max);
+          const rangoText = isInfiniteRango(normalizedMax)
+            ? `≥ ${rango.min} ${primerProducto.unidad_medida}`
+            : `${rango.min}-${rango.max} ${primerProducto.unidad_medida}`;
           tableHeaders.push(rangoText);
         });
 

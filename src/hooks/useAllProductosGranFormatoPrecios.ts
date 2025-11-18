@@ -207,11 +207,17 @@ export function useAllProductosGranFormatoPrecios() {
               .maybeSingle();
 
             if (rangoData) {
+              // Normalizar los valores max de los rangos al cargarlos desde la BD
+              const rangosNormalizados = (rangoData.rangos as RangoPrecio[]).map(rango => ({
+                min: normalizeRangoMin(rango.min),
+                max: normalizeRangoMax(rango.max),
+              }));
+
               rangoPrecio = {
                 id: rangoData.id,
                 nombre: rangoData.nombre,
                 unidad_medida: rangoData.unidad_medida,
-                rangos: rangoData.rangos as RangoPrecio[],
+                rangos: rangosNormalizados,
               };
             }
           }
@@ -259,8 +265,8 @@ export function useAllProductosGranFormatoPrecios() {
             }
 
             preciosMap.get(productoId)!.get(tecnologiaId)!.get(tinta)!.push({
-              rango_min: precio.rango_precio_min,
-              rango_max: precio.rango_precio_max,
+              rango_min: normalizeRangoMin(precio.rango_precio_min),
+              rango_max: normalizeRangoMax(precio.rango_precio_max),
               precio: precio.precio,
             });
           });
