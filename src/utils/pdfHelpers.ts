@@ -48,17 +48,17 @@ export const addHeader = (
   const pageWidth = doc.internal.pageSize.width;
 
   doc.setFillColor(37, 99, 235);
-  doc.rect(0, 0, pageWidth, 50, 'F');
+  doc.rect(0, 0, pageWidth, 45, 'F');
 
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(24);
+  doc.setFontSize(22);
   doc.setFont('helvetica', 'bold');
-  doc.text(title, pageWidth / 2, 25, { align: 'center' });
+  doc.text(title, pageWidth / 2, 22, { align: 'center' });
 
   if (subtitle) {
-    doc.setFontSize(12);
+    doc.setFontSize(11);
     doc.setFont('helvetica', 'normal');
-    doc.text(subtitle, pageWidth / 2, 38, { align: 'center' });
+    doc.text(subtitle, pageWidth / 2, 35, { align: 'center' });
   }
 
   doc.setTextColor(0, 0, 0);
@@ -72,14 +72,14 @@ export const addFooter = (
   const pageHeight = doc.internal.pageSize.height;
 
   doc.setFillColor(245, 245, 245);
-  doc.rect(0, pageHeight - 25, pageWidth, 25, 'F');
+  doc.rect(0, pageHeight - 20, pageWidth, 20, 'F');
 
-  doc.setFontSize(9);
+  doc.setFontSize(8);
   doc.setTextColor(100, 100, 100);
   doc.setFont('helvetica', 'normal');
-  doc.text(companyName, 20, pageHeight - 12);
+  doc.text(companyName, 15, pageHeight - 10);
 
-  doc.text(formatDate(), pageWidth - 20, pageHeight - 12, { align: 'right' });
+  doc.text(formatDate(), pageWidth - 15, pageHeight - 10, { align: 'right' });
 };
 
 export const sortTintas = (tintas: string[]): string[] => {

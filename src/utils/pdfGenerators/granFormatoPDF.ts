@@ -28,7 +28,7 @@ export const generateGranFormatoPDF = async (
 ) => {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.width;
-  let currentY = 60;
+  let currentY = 55;
 
   addHeader(doc, 'Lista de Precios', 'Gran Formato');
 
@@ -47,12 +47,12 @@ export const generateGranFormatoPDF = async (
     }
 
     doc.setFillColor(147, 51, 234);
-    doc.roundedRect(15, currentY, pageWidth - 30, 12, 2, 2, 'F');
+    doc.roundedRect(10, currentY, pageWidth - 20, 12, 2, 2, 'F');
 
     doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(255, 255, 255);
-    doc.text(tecnologia.nombre, 20, currentY + 8);
+    doc.text(tecnologia.nombre, 15, currentY + 8);
 
     currentY += 18;
 
@@ -63,12 +63,12 @@ export const generateGranFormatoPDF = async (
       }
 
       doc.setFillColor(243, 244, 246);
-      doc.roundedRect(20, currentY, pageWidth - 40, 8, 1, 1, 'F');
+      doc.roundedRect(15, currentY, pageWidth - 30, 8, 1, 1, 'F');
 
       doc.setFontSize(11);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(75, 85, 99);
-      doc.text(`Tinta: ${getInkBadgeText(tintaData.tinta)}`, 25, currentY + 5.5);
+      doc.text(`Tinta: ${getInkBadgeText(tintaData.tinta)}`, 20, currentY + 5.5);
 
       currentY += 12;
 
@@ -155,7 +155,7 @@ export const generateGranFormatoPDF = async (
             fillColor: [248, 250, 252],
           },
           columnStyles: columnStyles,
-          margin: { left: 20, right: 20 },
+          margin: { left: 10, right: 10 },
           didDrawPage: () => {
             addFooter(doc);
           },

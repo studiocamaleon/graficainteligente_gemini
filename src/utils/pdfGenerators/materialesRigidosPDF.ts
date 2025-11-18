@@ -33,7 +33,7 @@ export const generateMaterialesRigidosPDF = (
 ) => {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.width;
-  let currentY = 60;
+  let currentY = 55;
 
   addHeader(doc, 'Lista de Precios', 'Materiales Rígidos');
 
@@ -61,12 +61,12 @@ export const generateMaterialesRigidosPDF = (
     }
 
     doc.setFillColor(239, 246, 255);
-    doc.roundedRect(15, currentY, pageWidth - 30, 12, 2, 2, 'F');
+    doc.roundedRect(10, currentY, pageWidth - 20, 12, 2, 2, 'F');
 
     doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(37, 99, 235);
-    doc.text(grupo.material_nombre, 20, currentY + 8);
+    doc.text(grupo.material_nombre, 15, currentY + 8);
 
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
@@ -151,7 +151,7 @@ export const generateMaterialesRigidosPDF = (
         4: { cellWidth: 30, halign: 'right' },
         5: { cellWidth: 30, halign: 'right' },
       },
-      margin: { left: 15, right: 15 },
+      margin: { left: 10, right: 10 },
       didDrawPage: (data) => {
         addFooter(doc);
       },

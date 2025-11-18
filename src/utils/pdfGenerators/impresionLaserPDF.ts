@@ -167,8 +167,8 @@ export const generateImpresionLaserPDF = (productos: ProductoLaserParaPrecios[])
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.width;
   const pageHeight = doc.internal.pageSize.height;
-  const footerMargin = 15;
-  let currentY = 60;
+  const footerMargin = 10;
+  let currentY = 55;
   let isFirstProduct = true;
 
   addHeader(doc, 'Lista de Precios', 'Impresión Láser');
@@ -199,12 +199,12 @@ export const generateImpresionLaserPDF = (productos: ProductoLaserParaPrecios[])
     isFirstProduct = false;
 
     doc.setFillColor(37, 99, 235);
-    doc.roundedRect(15, currentY, pageWidth - 30, 15, 2, 2, 'F');
+    doc.roundedRect(10, currentY, pageWidth - 20, 15, 2, 2, 'F');
 
     doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(255, 255, 255);
-    doc.text(producto.nombre, 20, currentY + 10);
+    doc.text(producto.nombre, 15, currentY + 10);
 
     currentY += 15;
 
@@ -216,14 +216,14 @@ export const generateImpresionLaserPDF = (productos: ProductoLaserParaPrecios[])
       const materialText = `Material: ${material.material_nombre} - ${material.variante_nombre}${
         material.espesor ? ` (${material.espesor} ${material.unidad_espesor})` : ''
       }`;
-      doc.text(materialText, 20, currentY);
+      doc.text(materialText, 15, currentY);
       currentY += 6;
     }
 
     if (medidaGroups.length === 0) {
       doc.setFontSize(10);
       doc.setTextColor(150, 150, 150);
-      doc.text('Sin configuraciones disponibles', 20, currentY);
+      doc.text('Sin configuraciones disponibles', 15, currentY);
       currentY += 20;
       return;
     }
@@ -235,22 +235,22 @@ export const generateImpresionLaserPDF = (productos: ProductoLaserParaPrecios[])
       }
 
       doc.setFillColor(243, 244, 246);
-      doc.roundedRect(15, currentY, pageWidth - 30, 7, 1, 1, 'F');
+      doc.roundedRect(10, currentY, pageWidth - 20, 7, 1, 1, 'F');
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(55, 65, 81);
-      doc.text(`Medida: ${group.medida.ancho} × ${group.medida.alto} mm`, 20, currentY + 5);
+      doc.text(`Medida: ${group.medida.ancho} × ${group.medida.alto} mm`, 15, currentY + 5);
 
       currentY += 10;
 
       const useSideBySide = group.tintas.length === 2;
 
       if (useSideBySide) {
-        const tableWidth = (pageWidth - 40) / 2;
+        const tableWidth = (pageWidth - 30) / 2;
         const spacing = 5;
 
         group.tintas.forEach((tinta, tintaIndex) => {
-          const startX = 15 + (tintaIndex * (tableWidth + spacing));
+          const startX = 10 + (tintaIndex * (tableWidth + spacing));
           let localY = currentY;
 
           doc.setFillColor(239, 246, 255);
@@ -326,16 +326,16 @@ export const generateImpresionLaserPDF = (productos: ProductoLaserParaPrecios[])
           }
 
           doc.setFillColor(239, 246, 255);
-          doc.roundedRect(15, currentY, pageWidth - 30, 6, 1, 1, 'F');
+          doc.roundedRect(10, currentY, pageWidth - 20, 6, 1, 1, 'F');
           doc.setDrawColor(191, 219, 254);
-          doc.roundedRect(15, currentY, pageWidth - 30, 6, 1, 1, 'D');
+          doc.roundedRect(10, currentY, pageWidth - 20, 6, 1, 1, 'D');
 
-          drawInkCircles(doc, 18, currentY + 3, tinta.nombre);
+          drawInkCircles(doc, 13, currentY + 3, tinta.nombre);
 
           doc.setFontSize(8.5);
           doc.setFont('helvetica', 'bold');
           doc.setTextColor(31, 41, 55);
-          doc.text(tinta.nombre, 40, currentY + 4.5);
+          doc.text(tinta.nombre, 35, currentY + 4.5);
 
           currentY += 6;
 
@@ -383,7 +383,7 @@ export const generateImpresionLaserPDF = (productos: ProductoLaserParaPrecios[])
               1: { halign: 'right' },
               2: { halign: 'right' },
             },
-            margin: { left: 15, right: 15 },
+            margin: { left: 10, right: 10 },
             didDrawPage: () => {
               addFooter(doc);
             },

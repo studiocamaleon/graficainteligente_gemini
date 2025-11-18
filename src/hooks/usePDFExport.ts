@@ -94,7 +94,8 @@ export function usePDFExport(options: UsePDFExportOptions = {}) {
         backgroundColor: '#ffffff',
       });
 
-      const imgWidth = pageFormat === 'a4' ? 210 : 215.9;
+      const margin = 5;
+      const imgWidth = (pageFormat === 'a4' ? 210 : 215.9) - (margin * 2);
       const pageHeight = pageFormat === 'a4' ? 297 : 279.4;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
@@ -105,12 +106,12 @@ export function usePDFExport(options: UsePDFExportOptions = {}) {
       });
 
       let heightLeft = imgHeight;
-      let position = 0;
+      let position = margin;
 
       pdf.addImage(
         canvas.toDataURL('image/png'),
         'PNG',
-        0,
+        margin,
         position,
         imgWidth,
         imgHeight
@@ -119,12 +120,12 @@ export function usePDFExport(options: UsePDFExportOptions = {}) {
       heightLeft -= pageHeight;
 
       while (heightLeft > 0) {
-        position = heightLeft - imgHeight;
+        position = heightLeft - imgHeight + margin;
         pdf.addPage();
         pdf.addImage(
           canvas.toDataURL('image/png'),
           'PNG',
-          0,
+          margin,
           position,
           imgWidth,
           imgHeight

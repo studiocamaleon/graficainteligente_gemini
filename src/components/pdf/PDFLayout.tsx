@@ -15,7 +15,7 @@ export const PDFLayout = forwardRef<HTMLDivElement, PDFLayoutProps>(
           {`
             @page {
               size: A4;
-              margin: 15mm;
+              margin: 5mm;
             }
 
             @media print {
