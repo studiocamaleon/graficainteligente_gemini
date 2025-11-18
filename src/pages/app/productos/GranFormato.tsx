@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Package, Plus, DollarSign } from 'lucide-react';
 import { Card } from '../../../components/ui/Card';
 import { Button } from '../../../components/ui/Button';
@@ -17,15 +17,19 @@ export function GranFormato() {
     setTriggerCreate((prev) => prev + 1);
   };
 
-  usePageHeader(
-    'Gestiona los productos de impresión gran formato disponibles',
-    activeTab === 'productos' ? (
-      <Button onClick={handleOpenCreateModal}>
-        <Plus className="w-4 h-4 mr-2" />
-        Nuevo Producto
-      </Button>
-    ) : undefined
-  );
+  const headerAction = useMemo(() => {
+    if (activeTab === 'productos') {
+      return (
+        <Button onClick={handleOpenCreateModal}>
+          <Plus className="w-4 h-4 mr-2" />
+          Nuevo Producto
+        </Button>
+      );
+    }
+    return undefined;
+  }, [activeTab]);
+
+  usePageHeader('Gestiona los productos de impresión gran formato disponibles', headerAction);
 
   const tabs = [
     { id: 'productos', name: 'Productos', icon: Package },
