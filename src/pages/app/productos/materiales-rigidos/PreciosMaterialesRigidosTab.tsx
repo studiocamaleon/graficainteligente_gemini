@@ -2,9 +2,11 @@ import { useEffect } from 'react';
 import { Package, Loader2 } from 'lucide-react';
 import { Card } from '../../../../components/ui/Card';
 import { EmptyState } from '../../../../components/ui/EmptyState';
+import { ExportPDFButton } from '../../../../components/ui/ExportPDFButton';
 import { MaterialesRigidosPreciosTable } from '../../../../components/productos/materiales-rigidos/MaterialesRigidosPreciosTable';
 import { FloatingPreciosSaveButton } from '../../../../components/productos/impresion-laser/FloatingPreciosSaveButton';
 import { useAllProductosMaterialesRigidosPrecios } from '../../../../hooks/useAllProductosMaterialesRigidosPrecios';
+import { generateMaterialesRigidosPDF } from '../../../../utils/pdfGenerators/materialesRigidosPDF';
 
 export function PreciosMaterialesRigidosTab() {
   const {
@@ -75,11 +77,21 @@ export function PreciosMaterialesRigidosTab() {
     );
   }
 
-  // Create set of modified product IDs for highlighting
   const productosModificadosSet = new Set(Object.keys(preciosModificados));
+
+  const handleExportPDF = () => {
+    generateMaterialesRigidosPDF(productosAgrupados);
+  };
 
   return (
     <div className="space-y-6 pb-24">
+      <div className="flex justify-end">
+        <ExportPDFButton
+          onExport={handleExportPDF}
+          label="Exportar Lista de Precios"
+        />
+      </div>
+
       {materialesIds.map((materialId) => {
         const grupo = productosAgrupados[materialId];
         return (

@@ -2,11 +2,13 @@ import { useEffect, useCallback, useState, useMemo } from 'react';
 import { Package, Loader2 } from 'lucide-react';
 import { Card } from '../../../../components/ui/Card';
 import { EmptyState } from '../../../../components/ui/EmptyState';
+import { ExportPDFButton } from '../../../../components/ui/ExportPDFButton';
 import { GranFormatoTecnologiaSection } from '../../../../components/productos/gran-formato/GranFormatoTecnologiaSection';
 import { FloatingPreciosSaveButton } from '../../../../components/productos/impresion-laser/FloatingPreciosSaveButton';
 import { useAllProductosGranFormatoPrecios } from '../../../../hooks/useAllProductosGranFormatoPrecios';
 import { supabase } from '../../../../lib/supabase';
 import type { PrecioGFInput } from '../../../../hooks/useAllProductosGranFormatoPrecios';
+import { generateGranFormatoPDF } from '../../../../utils/pdfGenerators/granFormatoPDF';
 
 interface PreciosSnapshot {
   [key: string]: number;
@@ -310,8 +312,19 @@ export function PreciosGranFormatoTab() {
     );
   }
 
+  const handleExportPDF = async () => {
+    await generateGranFormatoPDF(tecnologiasAgrupadas);
+  };
+
   return (
     <div className="space-y-6 pb-24">
+      <div className="flex justify-end">
+        <ExportPDFButton
+          onExport={handleExportPDF}
+          label="Exportar Lista de Precios"
+        />
+      </div>
+
       {tecnologiasConCallbacks.map((tecnologia) => (
         <GranFormatoTecnologiaSection
           key={tecnologia.id}
