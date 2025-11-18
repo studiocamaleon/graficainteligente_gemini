@@ -28,6 +28,8 @@ export const generateGranFormatoPDF = async (
 ) => {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.width;
+  const pageHeight = doc.internal.pageSize.height;
+  const bottomMargin = 25;
   let currentY = 55;
 
   addHeader(doc, 'Lista de Precios', 'Gran Formato');
@@ -41,9 +43,9 @@ export const generateGranFormatoPDF = async (
   }
 
   for (const tecnologia of tecnologiasAgrupadas) {
-    if (currentY > 240) {
+    if (currentY > pageHeight - bottomMargin - 15) {
       doc.addPage();
-      currentY = 20;
+      currentY = 10;
     }
 
     doc.setFillColor(147, 51, 234);
@@ -57,9 +59,9 @@ export const generateGranFormatoPDF = async (
     currentY += 18;
 
     for (const tintaData of tecnologia.tintas) {
-      if (currentY > 240) {
+      if (currentY > pageHeight - bottomMargin - 20) {
         doc.addPage();
-        currentY = 20;
+        currentY = 10;
       }
 
       doc.setFillColor(243, 244, 246);
@@ -76,11 +78,6 @@ export const generateGranFormatoPDF = async (
         if (productos.length === 0) continue;
 
         const primerProducto = productos[0];
-
-        if (currentY > 200) {
-          doc.addPage();
-          currentY = 20;
-        }
 
         const tableHeaders: string[] = ['Producto', 'Tipo de Venta'];
 
@@ -155,19 +152,23 @@ export const generateGranFormatoPDF = async (
             fillColor: [248, 250, 252],
           },
           columnStyles: columnStyles,
-          margin: { left: 10, right: 10 },
-          didDrawPage: () => {
+          margin: { left: 10, right: 10, top: 10, bottom: bottomMargin },
+          showHead: 'everyPage',
+          didDrawPage: (data) => {
             addFooter(doc);
+            if (data.pageNumber > 1 && data.cursor) {
+              currentY = data.cursor.y;
+            }
           },
         });
 
-        currentY = (doc as any).lastAutoTable.finalY + 8;
+        currentY = (doc as any).lastAutoTable.finalY + 5;
       }
 
-      currentY += 5;
+      currentY += 3;
     }
 
-    currentY += 10;
+    currentY += 5;
   }
 
   const totalPages = doc.getNumberOfPages();

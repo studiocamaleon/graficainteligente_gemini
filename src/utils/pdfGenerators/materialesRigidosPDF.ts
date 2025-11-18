@@ -151,13 +151,14 @@ export const generateMaterialesRigidosPDF = (
         4: { cellWidth: 30, halign: 'right' },
         5: { cellWidth: 30, halign: 'right' },
       },
-      margin: { left: 10, right: 10 },
+      margin: { left: 10, right: 10, top: 10, bottom: bottomMargin },
+      showHead: 'everyPage',
       didDrawPage: (data) => {
         addFooter(doc);
       },
     });
 
-    currentY = (doc as any).lastAutoTable.finalY + 15;
+    currentY = (doc as any).lastAutoTable.finalY + 8;
   });
 
   const totalPages = doc.getNumberOfPages();
