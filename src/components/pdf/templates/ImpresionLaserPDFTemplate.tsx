@@ -80,14 +80,14 @@ export const ImpresionLaserPDFTemplate = forwardRef<HTMLDivElement, ImpresionLas
         title="Lista de Precios"
         subtitle="Impresión Láser"
       >
-        <div className="space-y-10">
+        <div className="space-y-6">
           {productos.map((producto) => {
             const materialInfo = getMaterialInfo(producto);
             const medidaGroups = groupByMedida(producto);
             const cantidades = getCantidades(producto);
 
             return (
-              <div key={producto.id} className="space-y-6 page-break">
+              <div key={producto.id} className="space-y-4 page-break">
                 <PDFSectionHeader
                   title={producto.nombre}
                   subtitle={materialInfo}
@@ -99,18 +99,18 @@ export const ImpresionLaserPDFTemplate = forwardRef<HTMLDivElement, ImpresionLas
                     Sin configuraciones disponibles
                   </div>
                 ) : (
-                  <div className="space-y-8">
+                  <div className="space-y-4">
                     {medidaGroups.map((group) => {
                       const useSideBySide = group.tintas.length === 2;
 
                       return (
-                        <div key={`${group.medida.ancho}x${group.medida.alto}`} className="space-y-4">
+                        <div key={`${group.medida.ancho}x${group.medida.alto}`} className="space-y-3">
                           <div className="text-sm font-semibold text-gray-700 bg-gray-100 px-4 py-2 rounded-lg">
                             Medida: {group.medida.ancho} × {group.medida.alto} mm
                           </div>
 
                           {useSideBySide ? (
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-2 gap-3">
                               {group.tintas.map((tinta) => {
                                 const columns = [
                                   { header: 'Cantidad', key: 'cantidad', align: 'center' as const, width: '30%' },
@@ -141,8 +141,8 @@ export const ImpresionLaserPDFTemplate = forwardRef<HTMLDivElement, ImpresionLas
                                 });
 
                                 return (
-                                  <div key={tinta.id} className="space-y-2">
-                                    <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-lg border border-blue-200">
+                                  <div key={tinta.id} className="space-y-1.5">
+                                    <div className="flex items-center gap-2 px-2.5 py-1.5 bg-blue-50 rounded-lg border border-blue-200">
                                       <InkColorCircles tinta={tinta.nombre} size="sm" />
                                       <span className="text-sm font-bold text-gray-800">{tinta.nombre}</span>
                                     </div>
@@ -152,7 +152,7 @@ export const ImpresionLaserPDFTemplate = forwardRef<HTMLDivElement, ImpresionLas
                               })}
                             </div>
                           ) : (
-                            <div className="space-y-4">
+                            <div className="space-y-3">
                               {group.tintas.map((tinta) => {
                                 const columns = [
                                   { header: 'Cantidad', key: 'cantidad', align: 'center' as const, width: '20%' },
@@ -183,8 +183,8 @@ export const ImpresionLaserPDFTemplate = forwardRef<HTMLDivElement, ImpresionLas
                                 });
 
                                 return (
-                                  <div key={tinta.id} className="space-y-2">
-                                    <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-lg border border-blue-200">
+                                  <div key={tinta.id} className="space-y-1.5">
+                                    <div className="flex items-center gap-2 px-2.5 py-1.5 bg-blue-50 rounded-lg border border-blue-200">
                                       <InkColorCircles tinta={tinta.nombre} size="sm" />
                                       <span className="text-sm font-bold text-gray-800">{tinta.nombre}</span>
                                     </div>
