@@ -2,11 +2,12 @@ import { useEffect } from 'react';
 import { Package, Loader2 } from 'lucide-react';
 import { Card } from '../../../../components/ui/Card';
 import { EmptyState } from '../../../../components/ui/EmptyState';
-import { ExportPDFButton } from '../../../../components/ui/ExportPDFButton';
+import { ExportPDFButtonGroup } from '../../../../components/ui/ExportPDFButtonGroup';
 import { MaterialesRigidosPreciosTable } from '../../../../components/productos/materiales-rigidos/MaterialesRigidosPreciosTable';
 import { FloatingPreciosSaveButton } from '../../../../components/productos/impresion-laser/FloatingPreciosSaveButton';
 import { useAllProductosMaterialesRigidosPrecios } from '../../../../hooks/useAllProductosMaterialesRigidosPrecios';
-import { generateMaterialesRigidosPDF } from '../../../../utils/pdfGenerators/materialesRigidosPDF';
+import { usePDFExport } from '../../../../hooks/usePDFExport';
+import { MaterialesRigidosPDFTemplate } from '../../../../components/pdf/templates/MaterialesRigidosPDFTemplate';
 
 export function PreciosMaterialesRigidosTab() {
   const {
@@ -79,40 +80,51 @@ export function PreciosMaterialesRigidosTab() {
 
   const productosModificadosSet = new Set(Object.keys(preciosModificados));
 
-  const handleExportPDF = () => {
-    generateMaterialesRigidosPDF(productosAgrupados);
-  };
+  const { componentRef, isGenerating, handlePrint, handleDownloadPDF } = usePDFExport({
+    filename: `Lista_Precios_Materiales_Rigidos_${new Date().toISOString().split('T')[0]}.pdf`,
+  });
 
   return (
-    <div className="space-y-6 pb-24">
-      <div className="flex justify-end">
-        <ExportPDFButton
-          onExport={handleExportPDF}
-          label="Exportar Lista de Precios"
+    <>
+      <div className="space-y-6 pb-24">
+        <div className="flex justify-end">
+          <ExportPDFButtonGroup
+            onPrint={handlePrint}
+            onDownload={handleDownloadPDF}
+            isGenerating={isGenerating}
+            label="Exportar Lista de Precios"
+          />
+        </div>
+
+        {materialesIds.map((materialId) => {
+          const grupo = productosAgrupados[materialId];
+          return (
+            <MaterialesRigidosPreciosTable
+              key={materialId}
+              materialId={materialId}
+              materialNombre={grupo.material_nombre}
+              productos={grupo.productos}
+              calcularM2Placa={calcularM2Placa}
+              calcularPrecioM2={calcularPrecioM2}
+              onPrecioChange={updatePrecioForProducto}
+              productosModificados={productosModificadosSet}
+            />
+          );
+        })}
+
+        <FloatingPreciosSaveButton
+          hasChanges={hasUnsavedChanges()}
+          onSave={saveAllPrecios}
+          isSaving={isSaving}
         />
       </div>
 
-      {materialesIds.map((materialId) => {
-        const grupo = productosAgrupados[materialId];
-        return (
-          <MaterialesRigidosPreciosTable
-            key={materialId}
-            materialId={materialId}
-            materialNombre={grupo.material_nombre}
-            productos={grupo.productos}
-            calcularM2Placa={calcularM2Placa}
-            calcularPrecioM2={calcularPrecioM2}
-            onPrecioChange={updatePrecioForProducto}
-            productosModificados={productosModificadosSet}
-          />
-        );
-      })}
-
-      <FloatingPreciosSaveButton
-        hasChanges={hasUnsavedChanges()}
-        onSave={saveAllPrecios}
-        isSaving={isSaving}
-      />
-    </div>
+      <div className="hidden">
+        <MaterialesRigidosPDFTemplate
+          ref={componentRef}
+          productosAgrupados={productosAgrupados}
+        />
+      </div>
+    </>
   );
 }

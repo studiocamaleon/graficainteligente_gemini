@@ -2,13 +2,14 @@ import { useEffect, useCallback, useState, useMemo } from 'react';
 import { Package, Loader2 } from 'lucide-react';
 import { Card } from '../../../../components/ui/Card';
 import { EmptyState } from '../../../../components/ui/EmptyState';
-import { ExportPDFButton } from '../../../../components/ui/ExportPDFButton';
+import { ExportPDFButtonGroup } from '../../../../components/ui/ExportPDFButtonGroup';
 import { GranFormatoTecnologiaSection } from '../../../../components/productos/gran-formato/GranFormatoTecnologiaSection';
 import { FloatingPreciosSaveButton } from '../../../../components/productos/impresion-laser/FloatingPreciosSaveButton';
 import { useAllProductosGranFormatoPrecios } from '../../../../hooks/useAllProductosGranFormatoPrecios';
 import { supabase } from '../../../../lib/supabase';
 import type { PrecioGFInput } from '../../../../hooks/useAllProductosGranFormatoPrecios';
-import { generateGranFormatoPDF } from '../../../../utils/pdfGenerators/granFormatoPDF';
+import { usePDFExport } from '../../../../hooks/usePDFExport';
+import { GranFormatoPDFTemplate } from '../../../../components/pdf/templates/GranFormatoPDFTemplate';
 
 interface PreciosSnapshot {
   [key: string]: number;
@@ -312,32 +313,43 @@ export function PreciosGranFormatoTab() {
     );
   }
 
-  const handleExportPDF = async () => {
-    await generateGranFormatoPDF(tecnologiasAgrupadas);
-  };
+  const { componentRef, isGenerating, handlePrint, handleDownloadPDF } = usePDFExport({
+    filename: `Lista_Precios_Gran_Formato_${new Date().toISOString().split('T')[0]}.pdf`,
+  });
 
   return (
-    <div className="space-y-6 pb-24">
-      <div className="flex justify-end">
-        <ExportPDFButton
-          onExport={handleExportPDF}
-          label="Exportar Lista de Precios"
+    <>
+      <div className="space-y-6 pb-24">
+        <div className="flex justify-end">
+          <ExportPDFButtonGroup
+            onPrint={handlePrint}
+            onDownload={handleDownloadPDF}
+            isGenerating={isGenerating}
+            label="Exportar Lista de Precios"
+          />
+        </div>
+
+        {tecnologiasConCallbacks.map((tecnologia) => (
+          <GranFormatoTecnologiaSection
+            key={tecnologia.id}
+            tecnologia={tecnologia}
+            onPreciosChange={tecnologia.handleChange}
+          />
+        ))}
+
+        <FloatingPreciosSaveButton
+          hasChanges={hasUnsavedChangesLocal()}
+          onSave={saveAllPreciosWithTecnologias}
+          isSaving={isSaving}
         />
       </div>
 
-      {tecnologiasConCallbacks.map((tecnologia) => (
-        <GranFormatoTecnologiaSection
-          key={tecnologia.id}
-          tecnologia={tecnologia}
-          onPreciosChange={tecnologia.handleChange}
+      <div className="hidden">
+        <GranFormatoPDFTemplate
+          ref={componentRef}
+          tecnologias={tecnologiasAgrupadas}
         />
-      ))}
-
-      <FloatingPreciosSaveButton
-        hasChanges={hasUnsavedChangesLocal()}
-        onSave={saveAllPreciosWithTecnologias}
-        isSaving={isSaving}
-      />
-    </div>
+      </div>
+    </>
   );
 }
