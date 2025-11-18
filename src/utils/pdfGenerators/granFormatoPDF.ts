@@ -154,6 +154,8 @@ export const generateGranFormatoPDF = async (
           columnStyles: columnStyles,
           margin: { left: 10, right: 10, top: 10, bottom: bottomMargin },
           showHead: 'everyPage',
+          rowPageBreak: 'avoid',
+          pageBreak: 'auto',
           didDrawPage: (data) => {
             addFooter(doc);
             if (data.pageNumber > 1 && data.cursor) {

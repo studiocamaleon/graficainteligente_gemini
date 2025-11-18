@@ -33,6 +33,8 @@ export const generateMaterialesRigidosPDF = (
 ) => {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.width;
+  const pageHeight = doc.internal.pageSize.height;
+  const bottomMargin = 25;
   let currentY = 55;
 
   addHeader(doc, 'Lista de Precios', 'Materiales Rígidos');
@@ -50,12 +52,12 @@ export const generateMaterialesRigidosPDF = (
   materialesIds.forEach((materialId, materialIndex) => {
     const grupo = productosAgrupados[materialId];
 
-    if (materialIndex > 0 && currentY > 220) {
+    if (materialIndex > 0 && currentY > pageHeight - bottomMargin - 40) {
       doc.addPage();
       currentY = 20;
     }
 
-    if (currentY > 220) {
+    if (currentY > pageHeight - bottomMargin - 40) {
       doc.addPage();
       currentY = 20;
     }
@@ -153,6 +155,8 @@ export const generateMaterialesRigidosPDF = (
       },
       margin: { left: 10, right: 10, top: 10, bottom: bottomMargin },
       showHead: 'everyPage',
+      rowPageBreak: 'avoid',
+      pageBreak: 'auto',
       didDrawPage: (data) => {
         addFooter(doc);
       },

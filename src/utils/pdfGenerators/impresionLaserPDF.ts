@@ -234,6 +234,8 @@ export const generateImpresionLaserPDF = (productos: ProductoLaserParaPrecios[])
             margin: { left: startX, right: pageWidth - startX - tableWidth, top: 10, bottom: bottomMargin },
             tableWidth: tableWidth,
             showHead: 'everyPage',
+            rowPageBreak: 'avoid',
+            pageBreak: 'auto',
             headStyles: {
               fillColor: [37, 99, 235],
               textColor: [255, 255, 255],
@@ -329,6 +331,8 @@ export const generateImpresionLaserPDF = (productos: ProductoLaserParaPrecios[])
             },
             margin: { left: 10, right: 10, top: 10, bottom: bottomMargin },
             showHead: 'everyPage',
+            rowPageBreak: 'avoid',
+            pageBreak: 'auto',
             didDrawPage: () => {
               addFooter(doc);
             },
