@@ -23,7 +23,7 @@ export function usePDFExport(options: UsePDFExportOptions = {}) {
   const handlePrint = useReactToPrint({
     contentRef: componentRef,
     documentTitle: filename.replace('.pdf', ''),
-    onBeforeGetContent: () => {
+    onBeforePrint: async () => {
       setIsGenerating(true);
     },
     onAfterPrint: () => {
