@@ -24,7 +24,7 @@ export function TipoProductoSelector({ value, onChange, error }: TipoProductoSel
       </label>
       <Select
         value={value}
-        onChange={(e) => onChange(e.target.value as TipoProductoSello)}
+        onChange={(newValue) => onChange(newValue as TipoProductoSello)}
       >
         <option value="">Selecciona un tipo</option>
         {TIPOS_PRODUCTO.map((tipo) => (

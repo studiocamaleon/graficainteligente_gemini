@@ -16,7 +16,7 @@ export function TipoTintaSelector({ value, onChange, error }: TipoTintaSelectorP
       </label>
       <Select
         value={value}
-        onChange={(e) => onChange(e.target.value as TipoTinta | '')}
+        onChange={(newValue) => onChange(newValue as TipoTinta | '')}
       >
         <option value="">Selecciona un tipo</option>
         <option value="textil">Textil</option>

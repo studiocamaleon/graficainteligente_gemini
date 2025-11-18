@@ -16,7 +16,7 @@ export function TipoSelloSelector({ value, onChange, error }: TipoSelloSelectorP
       </label>
       <Select
         value={value}
-        onChange={(e) => onChange(e.target.value as TipoSello | '')}
+        onChange={(newValue) => onChange(newValue as TipoSello | '')}
       >
         <option value="">Selecciona un tipo</option>
         <option value="manual">Manual</option>

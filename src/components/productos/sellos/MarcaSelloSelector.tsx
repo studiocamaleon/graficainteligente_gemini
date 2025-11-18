@@ -16,7 +16,7 @@ export function MarcaSelloSelector({ value, onChange, error }: MarcaSelloSelecto
       </label>
       <Select
         value={value}
-        onChange={(e) => onChange(e.target.value as MarcaSello | '')}
+        onChange={(newValue) => onChange(newValue as MarcaSello | '')}
       >
         <option value="">Selecciona una marca</option>
         <option value="Trodat">Trodat</option>
