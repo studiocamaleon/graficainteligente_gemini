@@ -25,12 +25,19 @@ export const CATEGORIAS_SISTEMA = {
     descripcion: 'Productos con materiales rígidos',
     color: '#F59E0B',
   },
+  PLOTTER_CORTE: {
+    id: '00000000-0000-0000-0000-000000000004',
+    nombre: 'Plotter de Corte',
+    descripcion: 'Productos para plotter de corte',
+    color: '#EC4899',
+  },
 } as const;
 
 // Exportaciones de compatibilidad
 export const CATEGORIA_IMPRESION_LASER_ID = CATEGORIAS_SISTEMA.IMPRESION_LASER.id;
 export const CATEGORIA_GRAN_FORMATO_ID = CATEGORIAS_SISTEMA.IMPRESION_GRAN_FORMATO.id;
 export const CATEGORIA_MATERIALES_RIGIDOS_ID = CATEGORIAS_SISTEMA.MATERIALES_RIGIDOS.id;
+export const CATEGORIA_PLOTTER_CORTE_ID = CATEGORIAS_SISTEMA.PLOTTER_CORTE.id;
 
 // Lista de IDs de todas las categorías (útil para validaciones)
 export const CATEGORIA_IDS = Object.values(CATEGORIAS_SISTEMA).map(cat => cat.id);

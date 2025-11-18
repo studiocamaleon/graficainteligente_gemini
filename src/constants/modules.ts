@@ -26,6 +26,7 @@ import {
   FilePlus,
   List,
   Blocks,
+  Scissors,
 } from 'lucide-react';
 
 export interface SubModule {
@@ -165,6 +166,13 @@ export const MODULES: Module[] = [
         description: 'Productos de materiales rígidos',
         path: '/app/productos/materiales-rigidos',
         icon: Blocks,
+      },
+      {
+        id: 'productos-plotter-corte',
+        name: 'Plotter de Corte',
+        description: 'Productos para plotter de corte',
+        path: '/app/productos/plotter-corte',
+        icon: Scissors,
       },
     ],
   },

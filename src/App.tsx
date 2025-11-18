@@ -29,6 +29,7 @@ import { RangosPrecio } from './pages/app/abm-core/RangosPrecio';
 import { ImpresionLaser } from './pages/app/productos/ImpresionLaser';
 import { GranFormato } from './pages/app/productos/GranFormato';
 import { MaterialesRigidos } from './pages/app/productos/MaterialesRigidos';
+import { PlotterCorte } from './pages/app/productos/PlotterCorte';
 
 function AppRoutes() {
   const { user, loading } = useAuth();
@@ -79,6 +80,7 @@ function AppRoutes() {
                 <Route path="productos/impresion-laser" element={<ImpresionLaser />} />
                 <Route path="productos/gran-formato" element={<GranFormato />} />
                 <Route path="productos/materiales-rigidos" element={<MaterialesRigidos />} />
+                <Route path="productos/plotter-corte" element={<PlotterCorte />} />
                 <Route path="orders" element={<Navigate to="/app/orders/ordenes" replace />} />
                 <Route path="orders/ordenes" element={<OrdersListPage />} />
                 <Route path="orders/crear-ot" element={<CreateOrderPage />} />

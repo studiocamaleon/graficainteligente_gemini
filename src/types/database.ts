@@ -621,7 +621,11 @@ export interface Producto {
   updated_at: string;
 }
 
-export type ProductoTipo = 'laser' | 'gran_formato' | 'materiales_rigidos';
+export type ProductoTipo = 'laser' | 'gran_formato' | 'materiales_rigidos' | 'plotter_corte';
+
+export type ColorPlotter = 'Blanco o Negro' | 'Color';
+
+export type MarcaPlotter = 'Avery' | 'Oracal' | 'Ritrama' | 'McCal' | 'Orajet' | 'Importado';
 
 export interface ProductoImpresionLaser {
   id: string;
@@ -732,7 +736,90 @@ export interface ProductoMaterialesRigidos {
   updated_at: string;
 }
 
-export type ProductoEspecifico = ProductoImpresionLaser | ProductoGranFormato | ProductoMaterialesRigidos;
+export interface ProductoPlotterCorte {
+  id: string;
+  company_id: string;
+  nombre: string;
+  unidad_venta: 'mt_lineal';
+  material_id: string;
+  variante_nombre: string;
+  espesor: number | null;
+  anchos_disponibles: number[];
+  cantidad_minima: number | null;
+  color: ColorPlotter;
+  marca: MarcaPlotter | null;
+  impuesto_iva: number;
+  rango_precio_id: string | null;
+  ruta_produccion_id: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProductoPlotterCorteMaterial {
+  id: string;
+  producto_plotter_corte_id: string;
+  material_id: string;
+  material_nombre: string;
+  variante_nombre: string;
+  espesor: number | null;
+  unidad_espesor: string | null;
+}
+
+export interface ProductoPlotterCorteServicio {
+  id: string;
+  producto_plotter_corte_id: string;
+  servicio_id: string;
+  servicio_nombre: string;
+  is_active: boolean;
+}
+
+export interface ProductoPlotterCorteAcabado {
+  id: string;
+  producto_plotter_corte_id: string;
+  acabado_id: string;
+  acabado_nombre: string;
+  is_active: boolean;
+}
+
+export interface ProductoPlotterCorteConRelaciones extends ProductoPlotterCorte {
+  servicios: ProductoPlotterCorteServicio[];
+  acabados: ProductoPlotterCorteAcabado[];
+  rango_precio?: {
+    id: string;
+    nombre: string;
+    unidad_medida: string;
+  } | null;
+}
+
+export interface CreateProductoPlotterCorteData {
+  nombre: string;
+  material_id: string;
+  variante_nombre: string;
+  espesor?: number;
+  anchos_disponibles: number[];
+  cantidad_minima?: number;
+  color: ColorPlotter;
+  marca?: MarcaPlotter;
+  impuesto_iva: number;
+  rango_precio_id?: string;
+  ruta_produccion_id?: string;
+  servicios: string[];
+  acabados: string[];
+}
+
+export interface ProductoPlotterCortePrecio {
+  id: string;
+  producto_id: string;
+  ancho: number;
+  cantidad_desde: number;
+  cantidad_hasta: number | null;
+  precio: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export type ProductoEspecifico = ProductoImpresionLaser | ProductoGranFormato | ProductoMaterialesRigidos | ProductoPlotterCorte;
 
 export interface ProductoConTipo {
   producto_tipo: ProductoTipo;
