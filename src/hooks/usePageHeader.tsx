@@ -50,7 +50,7 @@ export function usePageHeader(description?: string | null, action?: ReactNode | 
     return () => {
       context.clearPageHeader();
     };
-  }, [description, context.setPageHeader, context.clearPageHeader]);
+  }, [description, action, context]);
 
   return context;
 }
