@@ -344,7 +344,15 @@ export function PreciosGranFormatoTab() {
         />
       </div>
 
-      <div className="hidden">
+      <div
+        style={{
+          position: 'absolute',
+          left: '-9999px',
+          top: '0',
+          width: '210mm',
+          minHeight: '297mm'
+        }}
+      >
         <GranFormatoPDFTemplate
           ref={componentRef}
           tecnologias={tecnologiasAgrupadas}

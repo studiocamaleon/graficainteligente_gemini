@@ -10,7 +10,7 @@ interface PDFLayoutProps {
 export const PDFLayout = forwardRef<HTMLDivElement, PDFLayoutProps>(
   ({ children, title, subtitle, companyName = 'Sistema de Gestión' }, ref) => {
     return (
-      <div ref={ref} className="bg-white">
+      <div ref={ref} className="bg-white p-8" data-pdf-content style={{ minWidth: '210mm' }}>
         <style type="text/css" media="print">
           {`
             @page {
@@ -37,7 +37,7 @@ export const PDFLayout = forwardRef<HTMLDivElement, PDFLayoutProps>(
           `}
         </style>
 
-        <div className="pdf-header bg-blue-600 text-white p-8 mb-6 rounded-lg print:rounded-none">
+        <div className="pdf-header bg-blue-600 text-white p-6 mb-6 rounded-lg print:rounded-none">
           {title && (
             <h1 className="text-3xl font-bold text-center mb-2">{title}</h1>
           )}

@@ -87,12 +87,65 @@ export function usePDFExport(options: UsePDFExportOptions = {}) {
     try {
       const element = componentRef.current;
 
+      const elementWidth = element.scrollWidth;
+      const elementHeight = element.scrollHeight;
+
+      if (elementWidth === 0 || elementHeight === 0) {
+        throw new Error('El elemento a exportar no tiene dimensiones válidas. Asegúrate de que el contenido esté visible.');
+      }
+
+      console.log('[PDF Export] Iniciando captura de canvas:', {
+        width: elementWidth,
+        height: elementHeight
+      });
+
+      await new Promise(resolve => setTimeout(resolve, 100));
+
       const canvas = await html2canvas(element, {
         scale: 2,
         useCORS: true,
+        allowTaint: false,
         logging: false,
         backgroundColor: '#ffffff',
+        windowWidth: elementWidth,
+        windowHeight: elementHeight,
+        onclone: (clonedDoc) => {
+          const clonedElement = clonedDoc.querySelector('[data-pdf-content]');
+          if (clonedElement) {
+            (clonedElement as HTMLElement).style.display = 'block';
+            (clonedElement as HTMLElement).style.position = 'relative';
+            (clonedElement as HTMLElement).style.visibility = 'visible';
+          }
+        },
       });
+
+      if (!canvas || canvas.width === 0 || canvas.height === 0) {
+        throw new Error('El canvas generado no tiene dimensiones válidas');
+      }
+
+      console.log('[PDF Export] Canvas generado:', {
+        width: canvas.width,
+        height: canvas.height
+      });
+
+      let imageData: string;
+      try {
+        imageData = canvas.toDataURL('image/png');
+      } catch (canvasError) {
+        console.error('[PDF Export] Error al convertir canvas a Data URL:', canvasError);
+        throw new Error('Error al procesar la imagen del contenido. Intenta reducir el tamaño del contenido.');
+      }
+
+      if (!imageData || !imageData.startsWith('data:image/png;base64,')) {
+        throw new Error('El formato de imagen generado no es válido');
+      }
+
+      const base64Length = imageData.split(',')[1]?.length || 0;
+      if (base64Length < 100) {
+        throw new Error('La imagen generada está vacía o corrupta');
+      }
+
+      console.log('[PDF Export] Data URL generado correctamente, tamaño base64:', base64Length);
 
       const margin = 5;
       const imgWidth = (pageFormat === 'a4' ? 210 : 215.9) - (margin * 2);
@@ -108,14 +161,19 @@ export function usePDFExport(options: UsePDFExportOptions = {}) {
       let heightLeft = imgHeight;
       let position = margin;
 
-      pdf.addImage(
-        canvas.toDataURL('image/png'),
-        'PNG',
-        margin,
-        position,
-        imgWidth,
-        imgHeight
-      );
+      try {
+        pdf.addImage(
+          imageData,
+          'PNG',
+          margin,
+          position,
+          imgWidth,
+          imgHeight
+        );
+      } catch (addImageError) {
+        console.error('[PDF Export] Error al agregar imagen al PDF:', addImageError);
+        throw new Error('Error al agregar la imagen al PDF. El contenido puede ser demasiado grande.');
+      }
 
       heightLeft -= pageHeight;
 
@@ -123,7 +181,7 @@ export function usePDFExport(options: UsePDFExportOptions = {}) {
         position = heightLeft - imgHeight + margin;
         pdf.addPage();
         pdf.addImage(
-          canvas.toDataURL('image/png'),
+          imageData,
           'PNG',
           margin,
           position,
@@ -133,11 +191,12 @@ export function usePDFExport(options: UsePDFExportOptions = {}) {
         heightLeft -= pageHeight;
       }
 
+      console.log('[PDF Export] PDF generado exitosamente');
       pdf.save(filename);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
       setError(`Error al generar PDF: ${errorMessage}`);
-      console.error('Error generating PDF:', err);
+      console.error('[PDF Export] Error completo:', err);
     } finally {
       setIsGenerating(false);
     }

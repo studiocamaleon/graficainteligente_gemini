@@ -119,7 +119,15 @@ export function PreciosMaterialesRigidosTab() {
         />
       </div>
 
-      <div className="hidden">
+      <div
+        style={{
+          position: 'absolute',
+          left: '-9999px',
+          top: '0',
+          width: '210mm',
+          minHeight: '297mm'
+        }}
+      >
         <MaterialesRigidosPDFTemplate
           ref={componentRef}
           productosAgrupados={productosAgrupados}
