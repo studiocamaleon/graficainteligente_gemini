@@ -325,7 +325,7 @@ export function PreciosGranFormatoTab() {
             onPrint={handlePrint}
             onDownload={handleDownloadPDF}
             isGenerating={isGenerating}
-            label="Exportar Lista de Precios"
+            label="Exportar"
           />
         </div>
 

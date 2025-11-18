@@ -136,19 +136,12 @@ export function PreciosPlotterCorteTab() {
             onPrint={handlePrint}
             onDownload={handleDownloadPDF}
             isGenerating={isGenerating}
-            label="Exportar Lista de Precios"
+            label="Exportar"
           />
         </div>
 
         <Card>
           <div className="p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Configuración de Precios por Ancho y Rango
-            </h3>
-            <p className="text-sm text-gray-600 mb-6">
-              Configure los precios para cada combinación de producto y ancho según los rangos de
-              cantidad en metros lineales.
-            </p>
             <PlotterCorteMatrizPrecios
               productosPorAncho={productosPorAncho}
               onPreciosChange={handlePreciosChange}
