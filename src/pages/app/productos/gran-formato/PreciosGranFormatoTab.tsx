@@ -73,6 +73,10 @@ export function PreciosGranFormatoTab() {
   const [preciosSnapshot, setPreciosSnapshot] = useState<PreciosSnapshot>({});
   const [isLoadingSnapshot, setIsLoadingSnapshot] = useState(true);
 
+  const { componentRef, isGenerating, handlePrint, handleDownloadPDF } = usePDFExport({
+    filename: `Lista_Precios_Gran_Formato_${new Date().toISOString().split('T')[0]}.pdf`,
+  });
+
   useEffect(() => {
     async function loadSnapshot() {
       if (productos.length === 0) {
@@ -312,10 +316,6 @@ export function PreciosGranFormatoTab() {
       </Card>
     );
   }
-
-  const { componentRef, isGenerating, handlePrint, handleDownloadPDF } = usePDFExport({
-    filename: `Lista_Precios_Gran_Formato_${new Date().toISOString().split('T')[0]}.pdf`,
-  });
 
   return (
     <>

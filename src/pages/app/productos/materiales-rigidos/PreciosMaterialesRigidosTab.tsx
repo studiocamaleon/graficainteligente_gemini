@@ -24,6 +24,10 @@ export function PreciosMaterialesRigidosTab() {
     calcularPrecioM2,
   } = useAllProductosMaterialesRigidosPrecios();
 
+  const { componentRef, isGenerating, handlePrint, handleDownloadPDF } = usePDFExport({
+    filename: `Lista_Precios_Materiales_Rigidos_${new Date().toISOString().split('T')[0]}.pdf`,
+  });
+
   // Warn user before leaving with unsaved changes
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -79,10 +83,6 @@ export function PreciosMaterialesRigidosTab() {
   }
 
   const productosModificadosSet = new Set(Object.keys(preciosModificados));
-
-  const { componentRef, isGenerating, handlePrint, handleDownloadPDF } = usePDFExport({
-    filename: `Lista_Precios_Materiales_Rigidos_${new Date().toISOString().split('T')[0]}.pdf`,
-  });
 
   return (
     <>

@@ -25,6 +25,7 @@ export function ProductosMaterialesRigidosTab({ triggerCreate = 0 }: ProductosMa
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDetalleModalOpen, setIsDetalleModalOpen] = useState(false);
   const [selectedProducto, setSelectedProducto] = useState<ProductoMaterialesRigidosConRelaciones | null>(null);
+  const [waitingToEdit, setWaitingToEdit] = useState(false);
   const lastTriggerRef = useRef<number>(triggerCreate);
 
   const filters = {
@@ -33,7 +34,7 @@ export function ProductosMaterialesRigidosTab({ triggerCreate = 0 }: ProductosMa
   };
 
   const { productos, isLoading, refetch } = useProductosMaterialesRigidos(filters);
-  const { toggleStatus, deleteProducto, producto: productoCompleto, refetch: refetchProducto } = useProductoMaterialesRigidos(selectedProducto?.id);
+  const { toggleStatus, deleteProducto, producto: productoCompleto, refetch: refetchProducto, isLoading: isLoadingProducto } = useProductoMaterialesRigidos(selectedProducto?.id);
 
   useEffect(() => {
     if (triggerCreate && triggerCreate > 0 && triggerCreate !== lastTriggerRef.current) {
@@ -41,6 +42,13 @@ export function ProductosMaterialesRigidosTab({ triggerCreate = 0 }: ProductosMa
       setIsCreateModalOpen(true);
     }
   }, [triggerCreate]);
+
+  useEffect(() => {
+    if (waitingToEdit && productoCompleto && !isLoadingProducto) {
+      setIsEditModalOpen(true);
+      setWaitingToEdit(false);
+    }
+  }, [waitingToEdit, productoCompleto, isLoadingProducto]);
 
   const {
     dialogState,
@@ -57,10 +65,9 @@ export function ProductosMaterialesRigidosTab({ triggerCreate = 0 }: ProductosMa
     setIsDetalleModalOpen(true);
   };
 
-  const handleEditar = async (producto: ProductoMaterialesRigidos) => {
+  const handleEditar = (producto: ProductoMaterialesRigidos) => {
     setSelectedProducto(producto as ProductoMaterialesRigidosConRelaciones);
-    await refetchProducto();
-    setIsEditModalOpen(true);
+    setWaitingToEdit(true);
   };
 
   const handleToggleStatus = (id: string, nombre: string, isActive: boolean) => {
@@ -96,6 +103,7 @@ export function ProductosMaterialesRigidosTab({ triggerCreate = 0 }: ProductosMa
     refetch();
     setIsCreateModalOpen(false);
     setIsEditModalOpen(false);
+    setWaitingToEdit(false);
     setSelectedProducto(null);
   };
 
@@ -272,6 +280,7 @@ export function ProductosMaterialesRigidosTab({ triggerCreate = 0 }: ProductosMa
             isOpen={isEditModalOpen}
             onClose={() => {
               setIsEditModalOpen(false);
+              setWaitingToEdit(false);
               setSelectedProducto(null);
             }}
             producto={productoCompleto}
