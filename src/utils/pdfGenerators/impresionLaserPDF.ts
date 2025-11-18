@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { formatCurrency, formatDateForFilename, addHeader, addFooter, sortTintas, getInkColorCircles } from '../pdfHelpers';
+import { formatCurrency, formatDateForFilename, addHeader, addFooter, sortTintas, getInkColorCircles, estimateTableHeight, hasEnoughSpaceForTable } from '../pdfHelpers';
 import type { ProductoLaserParaPrecios } from '../../hooks/useAllProductosLaserPrecios';
 
 interface TintaData {
@@ -104,7 +104,7 @@ export const generateImpresionLaserPDF = (productos: ProductoLaserParaPrecios[])
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.width;
   const pageHeight = doc.internal.pageSize.height;
-  const bottomMargin = 25;
+  const bottomMargin = 30;
   let currentY = 55;
   let isFirstProduct = true;
 
@@ -169,7 +169,8 @@ export const generateImpresionLaserPDF = (productos: ProductoLaserParaPrecios[])
     }
 
     medidaGroups.forEach((group) => {
-      if (currentY > pageHeight - bottomMargin - 15) {
+      const estimatedGroupHeight = estimateTableHeight(cantidades.length * group.tintas.length, 2.5, 8.5);
+      if (!hasEnoughSpaceForTable(currentY, pageHeight, bottomMargin, estimatedGroupHeight + 15, 2)) {
         doc.addPage();
         currentY = 10;
       }
@@ -266,7 +267,8 @@ export const generateImpresionLaserPDF = (productos: ProductoLaserParaPrecios[])
         currentY = lastTable.finalY + 3;
       } else {
         group.tintas.forEach((tinta) => {
-          if (currentY > pageHeight - bottomMargin - 15) {
+          const estimatedTintaHeight = estimateTableHeight(cantidades.length, 2.5, 8.5);
+          if (!hasEnoughSpaceForTable(currentY, pageHeight, bottomMargin, estimatedTintaHeight + 14, 2)) {
             doc.addPage();
             currentY = 10;
           }

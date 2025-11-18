@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { formatCurrency, formatDateForFilename, addHeader, addFooter } from '../pdfHelpers';
+import { formatCurrency, formatDateForFilename, addHeader, addFooter, estimateTableHeight, hasEnoughSpaceForTable } from '../pdfHelpers';
 import { isInfiniteRango, normalizeRangoMax } from '../rangoUtils';
 import type { TecnologiaAgrupada } from '../../hooks/useAllProductosGranFormatoPrecios';
 
@@ -29,7 +29,7 @@ export const generateGranFormatoPDF = async (
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.width;
   const pageHeight = doc.internal.pageSize.height;
-  const bottomMargin = 25;
+  const bottomMargin = 30;
   let currentY = 55;
 
   addHeader(doc, 'Lista de Precios', 'Gran Formato');
@@ -109,6 +109,12 @@ export const generateGranFormatoPDF = async (
 
           return row;
         });
+
+        const estimatedHeight = estimateTableHeight(tableData.length, 3, 8);
+        if (!hasEnoughSpaceForTable(currentY, pageHeight, bottomMargin, estimatedHeight, 2)) {
+          doc.addPage();
+          currentY = 10;
+        }
 
         const columnCount = tableHeaders.length;
         const baseWidth = 35;

@@ -148,3 +148,30 @@ export const getInkColorCircles = (tinta: string): InkColorCircle[] => {
       return [{ color: '#6b7280', isVarnish: false }];
   }
 };
+
+export const estimateTableHeight = (
+  rowCount: number,
+  cellPadding: number = 3,
+  fontSize: number = 8,
+  headerHeight: number = 10
+): number => {
+  const lineHeight = fontSize * 0.35;
+  const rowHeight = lineHeight + (cellPadding * 2);
+  const bodyHeight = rowCount * rowHeight;
+  return headerHeight + bodyHeight + 2;
+};
+
+export const hasEnoughSpaceForTable = (
+  currentY: number,
+  pageHeight: number,
+  bottomMargin: number,
+  estimatedTableHeight: number,
+  minRowsToShow: number = 3
+): boolean => {
+  const availableSpace = pageHeight - currentY - bottomMargin;
+  const minSpaceNeeded = estimatedTableHeight > 0
+    ? Math.min(estimatedTableHeight, 10 + (minRowsToShow * 8))
+    : 30;
+
+  return availableSpace >= minSpaceNeeded;
+};

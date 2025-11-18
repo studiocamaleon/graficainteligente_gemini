@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { formatCurrency, formatDateForFilename, addHeader, addFooter } from '../pdfHelpers';
+import { formatCurrency, formatDateForFilename, addHeader, addFooter, estimateTableHeight, hasEnoughSpaceForTable } from '../pdfHelpers';
 import type {
   ProductoMaterialRigidoParaPrecios,
   ProductosAgrupadosPorMaterial,
@@ -34,7 +34,7 @@ export const generateMaterialesRigidosPDF = (
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.width;
   const pageHeight = doc.internal.pageSize.height;
-  const bottomMargin = 25;
+  const bottomMargin = 30;
   let currentY = 55;
 
   addHeader(doc, 'Lista de Precios', 'Materiales Rígidos');
@@ -52,12 +52,8 @@ export const generateMaterialesRigidosPDF = (
   materialesIds.forEach((materialId, materialIndex) => {
     const grupo = productosAgrupados[materialId];
 
-    if (materialIndex > 0 && currentY > pageHeight - bottomMargin - 40) {
-      doc.addPage();
-      currentY = 20;
-    }
-
-    if (currentY > pageHeight - bottomMargin - 40) {
+    const estimatedTableHeight = estimateTableHeight(grupo.productos.length, 5, 9);
+    if (!hasEnoughSpaceForTable(currentY, pageHeight, bottomMargin, estimatedTableHeight + 30, 2)) {
       doc.addPage();
       currentY = 20;
     }
