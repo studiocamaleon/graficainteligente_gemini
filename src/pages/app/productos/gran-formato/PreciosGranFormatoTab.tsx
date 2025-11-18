@@ -8,7 +8,8 @@ import { FloatingPreciosSaveButton } from '../../../../components/productos/impr
 import { useAllProductosGranFormatoPrecios } from '../../../../hooks/useAllProductosGranFormatoPrecios';
 import { supabase } from '../../../../lib/supabase';
 import type { PrecioGFInput } from '../../../../hooks/useAllProductosGranFormatoPrecios';
-import { generateGranFormatoReactPDF } from '../../../../utils/pdfGenerators/granFormatoReactPDF';
+import { usePrintDocument } from '../../../../hooks/usePrintDocument';
+import { ListaPreciosGranFormatoLayout } from '../../../../components/print/lista-precios/ListaPreciosGranFormatoLayout';
 
 interface PreciosSnapshot {
   [key: string]: number;
@@ -312,16 +313,27 @@ export function PreciosGranFormatoTab() {
     );
   }
 
+  const { contentRef, print } = usePrintDocument({
+    documentTitle: `Lista_Precios_Gran_Formato_${new Date().toISOString().split('T')[0]}`,
+  });
+
   const handleExportPDF = async () => {
-    await generateGranFormatoReactPDF(tecnologiasAgrupadas);
+    await print();
   };
 
   return (
     <div className="space-y-6 pb-24">
+      <div className="hidden">
+        <ListaPreciosGranFormatoLayout
+          ref={contentRef}
+          tecnologiasAgrupadas={tecnologiasAgrupadas}
+        />
+      </div>
+
       <div className="flex justify-end">
         <ExportPDFButton
           onExport={handleExportPDF}
-          label="Exportar Lista de Precios"
+          label="Descargar Lista de Precios"
         />
       </div>
 

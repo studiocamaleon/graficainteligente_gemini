@@ -1,17 +1,19 @@
 import { useState } from 'react';
-import { Download, Loader2 } from 'lucide-react';
+import { Download, Loader2, Printer } from 'lucide-react';
 import { Button } from './Button';
 
 interface ExportPDFButtonProps {
   onExport: () => Promise<void> | void;
   label?: string;
   disabled?: boolean;
+  showPrintOption?: boolean;
 }
 
 export function ExportPDFButton({
   onExport,
-  label = 'Exportar PDF',
+  label = 'Descargar PDF',
   disabled = false,
+  showPrintOption = false,
 }: ExportPDFButtonProps) {
   const [isExporting, setIsExporting] = useState(false);
 
@@ -27,23 +29,25 @@ export function ExportPDFButton({
   };
 
   return (
-    <Button
-      onClick={handleExport}
-      disabled={disabled || isExporting}
-      variant="primary"
-      className="flex items-center gap-2"
-    >
-      {isExporting ? (
-        <>
-          <Loader2 className="w-4 h-4 animate-spin" />
-          Generando...
-        </>
-      ) : (
-        <>
-          <Download className="w-4 h-4" />
-          {label}
-        </>
-      )}
-    </Button>
+    <div className="flex items-center gap-2">
+      <Button
+        onClick={handleExport}
+        disabled={disabled || isExporting}
+        variant="primary"
+        className="flex items-center gap-2"
+      >
+        {isExporting ? (
+          <>
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Generando...
+          </>
+        ) : (
+          <>
+            {showPrintOption ? <Printer className="w-4 h-4" /> : <Download className="w-4 h-4" />}
+            {label}
+          </>
+        )}
+      </Button>
+    </div>
   );
 }
