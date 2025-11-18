@@ -28,6 +28,7 @@ import {
   Blocks,
   Scissors,
   Stamp,
+  Frame,
 } from 'lucide-react';
 
 export interface SubModule {
@@ -181,6 +182,13 @@ export const MODULES: Module[] = [
         description: 'Productos de sellos y accesorios',
         path: '/app/productos/sellos',
         icon: Stamp,
+      },
+      {
+        id: 'productos-portabanners',
+        name: 'Portabanners',
+        description: 'Productos de portabanners y expositores',
+        path: '/app/productos/portabanners',
+        icon: Frame,
       },
     ],
   },
