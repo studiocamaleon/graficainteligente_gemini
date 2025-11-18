@@ -56,8 +56,7 @@ export function RangoPrecioSelectorPlotterCorte({
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const value = e.target.value;
+  const handleChange = (value: string) => {
     onChange(value === '' ? undefined : value);
   };
 
