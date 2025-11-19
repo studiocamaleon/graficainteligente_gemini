@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useBlocker } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, Loader2 } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
@@ -7,6 +7,7 @@ import { Tabs } from '../../../components/ui/Tabs';
 import { usePageHeader } from '../../../hooks/usePageHeader';
 import { useAuth } from '../../../hooks/useAuth';
 import { useOrdenTrabajo } from '../../../hooks/useOrdenTrabajo';
+import { usePrompt } from '../../../hooks/usePrompt';
 import { OrdenGeneralSection } from '../../../components/orders/OrdenGeneralSection';
 import { OrdenItemsTab } from '../../../components/orders/OrdenItemsTab';
 import { OrdenPagosTab } from '../../../components/orders/OrdenPagosTab';
@@ -55,32 +56,14 @@ export function CreateOrderPage() {
     return clienteId !== '' || items.length > 0 || notasInternas !== '' || fechaEntrega !== '';
   };
 
-  const blocker = useBlocker(
-    ({ currentLocation, nextLocation }) =>
-      !ordenCreada &&
-      formularioTieneDatos() &&
-      currentLocation.pathname !== nextLocation.pathname
+  const confirmNavigation = usePrompt(
+    '¿Estás seguro de que deseas salir? Se perderán los cambios no guardados.',
+    !ordenCreada && formularioTieneDatos()
   );
 
-  useEffect(() => {
-    if (blocker.state === 'blocked') {
-      const confirmar = window.confirm(
-        '¿Estás seguro de que deseas salir? Se perderán los cambios no guardados.'
-      );
-      if (confirmar) {
-        blocker.proceed();
-      } else {
-        blocker.reset();
-      }
-    }
-  }, [blocker]);
-
   const handleVolver = () => {
-    if (formularioTieneDatos()) {
-      const confirmar = window.confirm(
-        '¿Estás seguro de que deseas salir? Se perderán los cambios no guardados.'
-      );
-      if (!confirmar) return;
+    if (formularioTieneDatos() && !ordenCreada) {
+      if (!confirmNavigation()) return;
     }
     navigate('/app/orders/ordenes');
   };
