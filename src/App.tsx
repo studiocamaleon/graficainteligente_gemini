@@ -37,6 +37,8 @@ import { Terminaciones as CentroCopiadoTerminaciones } from './pages/app/centro-
 import { RangosPrecio as CentroCopiadoRangosPrecio } from './pages/app/centro-copiado/RangosPrecio';
 import { Precios as CentroCopiadoPrecios } from './pages/app/centro-copiado/Precios';
 import { Ordenes as CentroCopiadoOrdenes } from './pages/app/centro-copiado/Ordenes';
+import { CrearOrdenCopiado } from './pages/app/centro-copiado/CrearOrdenCopiado';
+import { DetalleOrdenCopiado } from './pages/app/centro-copiado/DetalleOrdenCopiado';
 
 function AppRoutes() {
   const { user, loading } = useAuth();
@@ -95,6 +97,8 @@ function AppRoutes() {
                 <Route path="centro-copiado/rangos-precio" element={<CentroCopiadoRangosPrecio />} />
                 <Route path="centro-copiado/precios" element={<CentroCopiadoPrecios />} />
                 <Route path="centro-copiado/ordenes" element={<CentroCopiadoOrdenes />} />
+                <Route path="centro-copiado/ordenes/crear" element={<CrearOrdenCopiado />} />
+                <Route path="centro-copiado/ordenes/:id" element={<DetalleOrdenCopiado />} />
                 <Route path="orders" element={<Navigate to="/app/orders/ordenes" replace />} />
                 <Route path="orders/ordenes" element={<OrdersListPage />} />
                 <Route path="orders/crear-ot" element={<CreateOrderPage />} />
