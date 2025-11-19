@@ -24,6 +24,7 @@ export function Precios() {
   const [preciosPorTinta, setPreciosPorTinta] = useState<Map<TipoTintaCopiado, PrecioImpresionInput[]>>(new Map());
   const [preciosSnapshot, setPreciosSnapshot] = useState<PreciosSnapshot>({});
   const [isSaving, setIsSaving] = useState(false);
+  const [resetKey, setResetKey] = useState(0);
 
   const {
     tamanios,
@@ -88,14 +89,20 @@ export function Precios() {
   }, []);
 
   const hasUnsavedChanges = useMemo(() => {
+    // Si no hay precios por tinta, no hay cambios
     if (preciosPorTinta.size === 0) return false;
 
     const allPrecios = Array.from(preciosPorTinta.values()).flat();
 
+    // Si no hay precios en el array, no hay cambios
+    if (allPrecios.length === 0) return false;
+
+    // Verificar si algún precio difiere del snapshot
     for (const precio of allPrecios) {
       const key = createPrecioKey(precio);
       const snapshotPrecio = preciosSnapshot[key];
 
+      // Si el precio es diferente al snapshot, hay cambios
       if (snapshotPrecio === undefined || snapshotPrecio !== precio.precio) {
         return true;
       }
@@ -116,15 +123,22 @@ export function Precios() {
       const success = await savePrecios(allPrecios);
 
       if (success) {
+        // Primero refetch para obtener los datos actualizados
+        await refetch();
+
+        // Actualizar el snapshot con todos los precios guardados
         const newSnapshot: PreciosSnapshot = { ...preciosSnapshot };
         allPrecios.forEach(precio => {
           const key = createPrecioKey(precio);
           newSnapshot[key] = precio.precio;
         });
         setPreciosSnapshot(newSnapshot);
+
+        // Limpiar el mapa de precios pendientes
         setPreciosPorTinta(new Map());
 
-        await refetch();
+        // Forzar remount de los componentes para resetear hasLocalChanges
+        setResetKey(prev => prev + 1);
       }
     } catch (error) {
       console.error('Error saving precios:', error);
@@ -186,6 +200,7 @@ export function Precios() {
     return (
       <div className="space-y-6">
         <CentroCopiadoTintaSection
+          key={`${currentTintaData.tipo_tinta}-${resetKey}`}
           tintaData={currentTintaData}
           rangos={rangos}
           onPreciosChange={(precios) => handleTintaChange(currentTintaData.tipo_tinta, precios)}
