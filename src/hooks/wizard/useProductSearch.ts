@@ -47,7 +47,7 @@ export function useProductSearch(searchTerm: string) {
         const results: ProductSearchResult[] = [];
 
         for (const laserData of productsLaserData) {
-          const [materialesRes, medidasRes, tintasRes, precioMinRes] = await Promise.all([
+          const [materialesRes, medidasRes, tecnologiasRes, precioMinRes] = await Promise.all([
             supabase
               .from('productos_impresion_laser_materiales')
               .select('material_id, variante_nombre, materiales(id, nombre)')
@@ -61,9 +61,11 @@ export function useProductSearch(searchTerm: string) {
               .eq('producto_laser_id', laserData.id),
 
             supabase
-              .from('productos_impresion_laser_precios')
-              .select('tinta_id')
-              .eq('producto_laser_id', laserData.id),
+              .from('productos_impresion_laser_tecnologias')
+              .select('tecnologia_id, tintas')
+              .eq('producto_laser_id', laserData.id)
+              .limit(1)
+              .maybeSingle(),
 
             supabase
               .from('productos_impresion_laser_precios')
@@ -74,11 +76,11 @@ export function useProductSearch(searchTerm: string) {
               .maybeSingle()
           ]);
 
-          if (materialesRes.error || medidasRes.error || tintasRes.error) {
+          if (materialesRes.error || medidasRes.error || tecnologiasRes.error) {
             console.error('Error cargando datos del producto:', {
               materialesRes: materialesRes.error,
               medidasRes: medidasRes.error,
-              tintasRes: tintasRes.error
+              tecnologiasRes: tecnologiasRes.error
             });
             continue;
           }
@@ -100,13 +102,13 @@ export function useProductSearch(searchTerm: string) {
           }));
 
           const tintasUnicas = new Map();
-          if (tintasRes.data) {
-            const tintaIds = tintasRes.data.map((t: any) => t.tinta_id).filter(Boolean);
+          if (tecnologiasRes.data && tecnologiasRes.data.tintas) {
+            const tintaIds = tecnologiasRes.data.tintas.filter(Boolean);
 
             if (tintaIds.length > 0) {
               const { data: tintasInfo } = await supabase
-                .from('tecnologia_tintas_pasos')
-                .select('id, nombre, tipo')
+                .from('tecnologias_tintas_pasos')
+                .select('id, tinta, tecnologia_id')
                 .in('id', tintaIds);
 
               if (tintasInfo) {
@@ -114,8 +116,8 @@ export function useProductSearch(searchTerm: string) {
                   if (!tintasUnicas.has(tinta.id)) {
                     tintasUnicas.set(tinta.id, {
                       tinta_id: tinta.id,
-                      nombre: tinta.nombre,
-                      tipo: tinta.tipo,
+                      nombre: tinta.tinta,
+                      tipo: tinta.tinta,
                     });
                   }
                 });
