@@ -1,48 +1,308 @@
-import { useState, useMemo } from 'react';
-import { Settings2, FileText } from 'lucide-react';
+import { useState, useMemo, useCallback } from 'react';
+import { Settings2, FileText, Plus, Edit2, Trash2 } from 'lucide-react';
 import { Card } from '../../../components/ui/Card';
 import { Tabs } from '../../../components/ui/Tabs';
-import { usePageHeader } from '../../../hooks/usePageHeader';
+import { Button } from '../../../components/ui/Button';
+import { Table } from '../../../components/ui/Table';
+import { Modal } from '../../../components/ui/Modal';
+import { SearchInput } from '../../../components/ui/SearchInput';
+import { Badge } from '../../../components/ui/Badge';
 import { EmptyState } from '../../../components/ui/EmptyState';
+import { usePageHeader } from '../../../hooks/usePageHeader';
+import { useConfirmDialog } from '../../../hooks/useConfirmDialog';
+import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
+import { useCentroCopiadoTamanios } from '../../../hooks/useCentroCopiadoTamanios';
+import { useCentroCopiadoPapeles } from '../../../hooks/useCentroCopiadoPapeles';
+import { TamanioPapelForm } from '../../../components/centro-copiado/TamanioPapelForm';
+import { PapelForm } from '../../../components/centro-copiado/PapelForm';
+import type { CentroCopiadoTamanioPapel } from '../../../types/database';
 
 type TabType = 'tamanios' | 'papeles';
 
 export function Configuracion() {
   const [activeTab, setActiveTab] = useState<TabType>('tamanios');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedTamanio, setSelectedTamanio] = useState<CentroCopiadoTamanioPapel | null>(null);
+  const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
 
-  usePageHeader('Configura los tamaños de papel y tipos de papel disponibles para el centro de copiado');
+  const {
+    tamanios,
+    loading: loadingTamanios,
+    createTamanio,
+    updateTamanio,
+    deleteTamanio,
+    fetchTamanios,
+  } = useCentroCopiadoTamanios();
+
+  const {
+    papeles,
+    loading: loadingPapeles,
+    createPapel,
+    deletePapel,
+    fetchPapeles,
+  } = useCentroCopiadoPapeles();
+
+  const {
+    dialogState,
+    isLoading: isConfirmLoading,
+    closeDialog,
+    handleConfirm,
+    confirmDelete,
+  } = useConfirmDialog();
+
+  const handleOpenCreateModal = useCallback(() => {
+    setSelectedTamanio(null);
+    setModalMode('create');
+    setIsModalOpen(true);
+  }, []);
+
+  const headerAction = useMemo(() => {
+    if (activeTab === 'tamanios') {
+      return (
+        <Button variant="primary" onClick={handleOpenCreateModal}>
+          <Plus className="w-5 h-5" />
+          Nuevo Tamaño
+        </Button>
+      );
+    } else if (activeTab === 'papeles') {
+      return (
+        <Button variant="primary" onClick={() => setIsModalOpen(true)}>
+          <Plus className="w-5 h-5" />
+          Agregar Papel
+        </Button>
+      );
+    }
+    return undefined;
+  }, [activeTab, handleOpenCreateModal]);
+
+  usePageHeader('Configura los tamaños de papel y tipos de papel disponibles para el centro de copiado', headerAction);
 
   const tabs = [
     { id: 'tamanios', name: 'Tamaños de Papel', icon: FileText },
     { id: 'papeles', name: 'Tipos de Papel', icon: Settings2 },
   ];
 
+  const filteredTamanios = useMemo(() => {
+    if (!searchTerm) return tamanios;
+    const search = searchTerm.toLowerCase();
+    return tamanios.filter((t) => t.nombre.toLowerCase().includes(search));
+  }, [tamanios, searchTerm]);
+
+  const filteredPapeles = useMemo(() => {
+    if (!searchTerm) return papeles;
+    const search = searchTerm.toLowerCase();
+    return papeles.filter(
+      (p) =>
+        p.variante_nombre.toLowerCase().includes(search) ||
+        p.material?.nombre.toLowerCase().includes(search)
+    );
+  }, [papeles, searchTerm]);
+
+  const handleEditTamanio = (tamanio: CentroCopiadoTamanioPapel) => {
+    setSelectedTamanio(tamanio);
+    setModalMode('edit');
+    setIsModalOpen(true);
+  };
+
+  const handleDeleteTamanio = async (tamanio: CentroCopiadoTamanioPapel) => {
+    confirmDelete(tamanio.nombre, async () => {
+      const success = await deleteTamanio(tamanio.id);
+      if (success) {
+        await fetchTamanios();
+      }
+    });
+  };
+
+  const handleDeletePapel = async (papelId: string, nombre: string) => {
+    confirmDelete(nombre, async () => {
+      const success = await deletePapel(papelId);
+      if (success) {
+        await fetchPapeles();
+      }
+    });
+  };
+
+  const handleSubmitTamanio = async (data: any) => {
+    if (modalMode === 'create') {
+      const result = await createTamanio(data);
+      if (result) {
+        setIsModalOpen(false);
+        await fetchTamanios();
+      }
+    } else if (selectedTamanio) {
+      const result = await updateTamanio(selectedTamanio.id, data);
+      if (result) {
+        setIsModalOpen(false);
+        await fetchTamanios();
+      }
+    }
+  };
+
+  const handleSubmitPapel = async (data: any) => {
+    const result = await createPapel(data);
+    if (result) {
+      setIsModalOpen(false);
+      await fetchPapeles();
+    }
+  };
+
+  const renderTamaniosTab = () => {
+    if (loadingTamanios) {
+      return (
+        <Card>
+          <div className="p-12 text-center">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+            <p className="text-gray-600">Cargando tamaños...</p>
+          </div>
+        </Card>
+      );
+    }
+
+    if (tamanios.length === 0) {
+      return (
+        <Card>
+          <div className="p-12">
+            <EmptyState
+              icon={FileText}
+              title="No hay tamaños de papel configurados"
+              description="Comienza agregando tamaños de papel como A4, SRA3, Carta, Oficio, etc."
+            />
+          </div>
+        </Card>
+      );
+    }
+
+    return (
+      <Card>
+        <div className="p-6">
+          <SearchInput
+            value={searchTerm}
+            onChange={setSearchTerm}
+            placeholder="Buscar tamaño..."
+            className="mb-4"
+          />
+
+          <Table
+            columns={[
+              { key: 'nombre', label: 'Nombre' },
+              { key: 'dimensiones', label: 'Dimensiones (mm)' },
+              { key: 'actions', label: 'Acciones', align: 'right' },
+            ]}
+            data={filteredTamanios.map((tamanio) => ({
+              nombre: <span className="font-medium">{tamanio.nombre}</span>,
+              dimensiones: (
+                <Badge variant="secondary">
+                  {tamanio.ancho_mm} × {tamanio.alto_mm} mm
+                </Badge>
+              ),
+              actions: (
+                <div className="flex items-center justify-end gap-2">
+                  <button
+                    onClick={() => handleEditTamanio(tamanio)}
+                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                    title="Editar"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteTamanio(tamanio)}
+                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    title="Eliminar"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ),
+            }))}
+          />
+        </div>
+      </Card>
+    );
+  };
+
+  const renderPapelesTab = () => {
+    if (loadingPapeles) {
+      return (
+        <Card>
+          <div className="p-12 text-center">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+            <p className="text-gray-600">Cargando papeles...</p>
+          </div>
+        </Card>
+      );
+    }
+
+    if (papeles.length === 0) {
+      return (
+        <Card>
+          <div className="p-12">
+            <EmptyState
+              icon={Settings2}
+              title="No hay tipos de papel configurados"
+              description="Agrega tipos de papel desde tus materiales existentes para usarlos en el centro de copiado."
+            />
+          </div>
+        </Card>
+      );
+    }
+
+    return (
+      <Card>
+        <div className="p-6">
+          <SearchInput
+            value={searchTerm}
+            onChange={setSearchTerm}
+            placeholder="Buscar papel..."
+            className="mb-4"
+          />
+
+          <Table
+            columns={[
+              { key: 'material', label: 'Material' },
+              { key: 'variante', label: 'Variante' },
+              { key: 'espesor', label: 'Espesor' },
+              { key: 'actions', label: 'Acciones', align: 'right' },
+            ]}
+            data={filteredPapeles.map((papel) => ({
+              material: <span className="font-medium">{papel.material?.nombre || 'N/A'}</span>,
+              variante: papel.variante_nombre,
+              espesor: papel.espesor ? (
+                <Badge variant="secondary">
+                  {papel.espesor} {papel.unidad_espesor}
+                </Badge>
+              ) : (
+                <span className="text-gray-400">N/A</span>
+              ),
+              actions: (
+                <div className="flex items-center justify-end gap-2">
+                  <button
+                    onClick={() =>
+                      handleDeletePapel(
+                        papel.id,
+                        `${papel.material?.nombre} - ${papel.variante_nombre}`
+                      )
+                    }
+                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    title="Eliminar"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ),
+            }))}
+          />
+        </div>
+      </Card>
+    );
+  };
+
   const renderTabContent = () => {
     switch (activeTab) {
       case 'tamanios':
-        return (
-          <Card>
-            <div className="p-12">
-              <EmptyState
-                icon={FileText}
-                title="Gestión de Tamaños de Papel"
-                description="Aquí podrás configurar los tamaños de papel disponibles (A4, SRA3, etc.). Funcionalidad en desarrollo."
-              />
-            </div>
-          </Card>
-        );
+        return renderTamaniosTab();
       case 'papeles':
-        return (
-          <Card>
-            <div className="p-12">
-              <EmptyState
-                icon={Settings2}
-                title="Gestión de Tipos de Papel"
-                description="Aquí podrás seleccionar los tipos de papel disponibles desde tus materiales. Funcionalidad en desarrollo."
-              />
-            </div>
-          </Card>
-        );
+        return renderPapelesTab();
       default:
         return null;
     }
@@ -55,6 +315,37 @@ export function Configuracion() {
       </Card>
 
       <div>{renderTabContent()}</div>
+
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title={
+          activeTab === 'tamanios'
+            ? modalMode === 'create'
+              ? 'Nuevo Tamaño de Papel'
+              : 'Editar Tamaño de Papel'
+            : 'Agregar Tipo de Papel'
+        }
+      >
+        {activeTab === 'tamanios' ? (
+          <TamanioPapelForm
+            tamanio={modalMode === 'edit' ? selectedTamanio || undefined : undefined}
+            onSubmit={handleSubmitTamanio}
+            onCancel={() => setIsModalOpen(false)}
+          />
+        ) : (
+          <PapelForm onSubmit={handleSubmitPapel} onCancel={() => setIsModalOpen(false)} />
+        )}
+      </Modal>
+
+      <ConfirmDialog
+        isOpen={dialogState.isOpen}
+        title={dialogState.title}
+        message={dialogState.message}
+        onConfirm={handleConfirm}
+        onCancel={closeDialog}
+        isLoading={isConfirmLoading}
+      />
     </div>
   );
 }

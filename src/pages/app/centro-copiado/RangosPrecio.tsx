@@ -1,22 +1,181 @@
-import { Percent } from 'lucide-react';
+import { useState, useMemo, useCallback } from 'react';
+import { Percent, Plus, Edit2, Trash2 } from 'lucide-react';
 import { Card } from '../../../components/ui/Card';
-import { usePageHeader } from '../../../hooks/usePageHeader';
+import { Button } from '../../../components/ui/Button';
+import { Table } from '../../../components/ui/Table';
+import { Modal } from '../../../components/ui/Modal';
+import { Badge } from '../../../components/ui/Badge';
 import { EmptyState } from '../../../components/ui/EmptyState';
+import { usePageHeader } from '../../../hooks/usePageHeader';
+import { useConfirmDialog } from '../../../hooks/useConfirmDialog';
+import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
+import { useCentroCopiadoRangosPrecioImpresion } from '../../../hooks/useCentroCopiadoRangosPrecioImpresion';
+import { RangoPrecioImpresionForm } from '../../../components/centro-copiado/RangoPrecioImpresionForm';
+import type { CentroCopiadoRangoPrecioImpresion } from '../../../types/database';
 
 export function RangosPrecio() {
-  usePageHeader('Configura los rangos de cantidad de hojas para el sistema de precios escalonados');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedRango, setSelectedRango] = useState<CentroCopiadoRangoPrecioImpresion | null>(null);
+  const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
 
-  return (
-    <div className="space-y-6">
+  const {
+    rangos,
+    loading,
+    createRango,
+    updateRango,
+    deleteRango,
+    fetchRangos,
+  } = useCentroCopiadoRangosPrecioImpresion();
+
+  const {
+    dialogState,
+    isLoading: isConfirmLoading,
+    closeDialog,
+    handleConfirm,
+    confirmDelete,
+  } = useConfirmDialog();
+
+  const handleOpenCreateModal = useCallback(() => {
+    setSelectedRango(null);
+    setModalMode('create');
+    setIsModalOpen(true);
+  }, []);
+
+  const headerAction = useMemo(
+    () => (
+      <Button variant="primary" onClick={handleOpenCreateModal}>
+        <Plus className="w-5 h-5" />
+        Nuevo Rango
+      </Button>
+    ),
+    [handleOpenCreateModal]
+  );
+
+  usePageHeader('Configura los rangos de cantidad de hojas para el sistema de precios escalonados', headerAction);
+
+  const handleEdit = (rango: CentroCopiadoRangoPrecioImpresion) => {
+    setSelectedRango(rango);
+    setModalMode('edit');
+    setIsModalOpen(true);
+  };
+
+  const handleDelete = async (rango: CentroCopiadoRangoPrecioImpresion) => {
+    confirmDelete(rango.nombre, async () => {
+      const success = await deleteRango(rango.id);
+      if (success) {
+        await fetchRangos();
+      }
+    });
+  };
+
+  const handleSubmit = async (data: any) => {
+    if (modalMode === 'create') {
+      const result = await createRango(data);
+      if (result) {
+        setIsModalOpen(false);
+        await fetchRangos();
+      }
+    } else if (selectedRango) {
+      const result = await updateRango(selectedRango.id, data);
+      if (result) {
+        setIsModalOpen(false);
+        await fetchRangos();
+      }
+    }
+  };
+
+  if (loading) {
+    return (
+      <Card>
+        <div className="p-12 text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+          <p className="text-gray-600">Cargando rangos...</p>
+        </div>
+      </Card>
+    );
+  }
+
+  if (rangos.length === 0) {
+    return (
       <Card>
         <div className="p-12">
           <EmptyState
             icon={Percent}
-            title="Rangos de Precio para Impresión"
-            description="Aquí podrás configurar los rangos de cantidad de hojas (ej: 1-50, 51-100, 101-500, etc.) para aplicar precios escalonados. Funcionalidad en desarrollo."
+            title="No hay rangos de precio configurados"
+            description="Comienza creando rangos de cantidad de hojas para aplicar precios escalonados. Por ejemplo: 1-50 hojas, 51-100 hojas, 101-500 hojas, etc."
           />
         </div>
       </Card>
+    );
+  }
+
+  const maxOrden = Math.max(...rangos.map(r => r.orden), 0);
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <div className="p-6">
+          <Table
+            columns={[
+              { key: 'orden', label: 'Orden' },
+              { key: 'nombre', label: 'Nombre del Rango' },
+              { key: 'rango', label: 'Cantidad de Hojas' },
+              { key: 'actions', label: 'Acciones', align: 'right' },
+            ]}
+            data={rangos.map((rango) => ({
+              orden: <Badge variant="secondary">{rango.orden}</Badge>,
+              nombre: <span className="font-medium">{rango.nombre}</span>,
+              rango: (
+                <div className="flex items-center gap-2">
+                  <Badge variant="primary">
+                    {rango.hojas_desde} - {rango.hojas_hasta || '∞'}
+                  </Badge>
+                </div>
+              ),
+              actions: (
+                <div className="flex items-center justify-end gap-2">
+                  <button
+                    onClick={() => handleEdit(rango)}
+                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                    title="Editar"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(rango)}
+                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    title="Eliminar"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ),
+            }))}
+          />
+        </div>
+      </Card>
+
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title={modalMode === 'create' ? 'Nuevo Rango de Precio' : 'Editar Rango de Precio'}
+      >
+        <RangoPrecioImpresionForm
+          rango={modalMode === 'edit' ? selectedRango || undefined : undefined}
+          onSubmit={handleSubmit}
+          onCancel={() => setIsModalOpen(false)}
+          maxOrden={maxOrden}
+        />
+      </Modal>
+
+      <ConfirmDialog
+        isOpen={dialogState.isOpen}
+        title={dialogState.title}
+        message={dialogState.message}
+        onConfirm={handleConfirm}
+        onCancel={closeDialog}
+        isLoading={isConfirmLoading}
+      />
     </div>
   );
 }
