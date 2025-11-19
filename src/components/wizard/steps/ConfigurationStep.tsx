@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Card } from '../../ui/Card';
 import { Input } from '../../ui/Input';
-import { Select } from '../../ui/Select';
 import { Button } from '../../ui/Button';
-import { Ruler, Package, Layers, Palette, FileText } from 'lucide-react';
+import { Ruler, Package, Layers, Palette, FileText, Check } from 'lucide-react';
 import type { ProductConfiguration } from '../../../hooks/wizard/useProductConfiguration';
 
 interface ConfigurationStepProps {
@@ -85,6 +84,18 @@ export function ConfigurationStep({ config, selectedConfig, onConfigChange }: Co
 
   const isImpresionLaser = config.categoria === 'Impresion Laser';
 
+  // Función helper para nombres de tintas
+  const getNombreTinta = (tinta: string): string => {
+    const nombresMap: Record<string, string> = {
+      'K': 'Negro',
+      'CMYK': 'Color (CMYK)',
+      'CMYK+W': 'Color + Blanco',
+      'CMYK+V': 'Color + Barniz',
+      'CMYK+W+V': 'Color + Blanco + Barniz'
+    };
+    return nombresMap[tinta] || tinta;
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -140,7 +151,7 @@ export function ConfigurationStep({ config, selectedConfig, onConfigChange }: Co
         )}
       </Card>
 
-      {/* Medidas */}
+      {/* Medidas - Cards en lugar de Select */}
       {config.medidas && config.medidas.length > 0 && (
         <Card className="p-6">
           <div className="flex items-center gap-2 mb-4">
@@ -156,26 +167,35 @@ export function ConfigurationStep({ config, selectedConfig, onConfigChange }: Co
             </div>
           ) : (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-3">
                 Selecciona la medida
               </label>
-              <Select
-                value={localConfig.medida_ancho && localConfig.medida_alto ? `${localConfig.medida_ancho}x${localConfig.medida_alto}` : ''}
-                onChange={(e) => {
-                  const value = e.target?.value;
-                  if (value) {
-                    const [ancho, alto] = value.split('x').map(Number);
-                    handleChange({ medida_ancho: ancho, medida_alto: alto });
-                  }
-                }}
-              >
-                <option value="">Selecciona una medida</option>
-                {config.medidas.map((medida) => (
-                  <option key={`${medida.ancho}x${medida.alto}`} value={`${medida.ancho}x${medida.alto}`}>
-                    {medida.ancho} x {medida.alto} cm
-                  </option>
-                ))}
-              </Select>
+              <div className="grid grid-cols-3 gap-3">
+                {config.medidas.map((medida) => {
+                  const isSelected = localConfig.medida_ancho === medida.ancho && localConfig.medida_alto === medida.alto;
+                  return (
+                    <Card
+                      key={`${medida.ancho}x${medida.alto}`}
+                      className={`p-4 cursor-pointer transition-all ${
+                        isSelected
+                          ? 'ring-2 ring-blue-600 bg-blue-50 border-blue-600'
+                          : 'hover:border-blue-300 hover:shadow-md'
+                      }`}
+                      onClick={() => handleChange({ medida_ancho: medida.ancho, medida_alto: medida.alto })}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="font-semibold text-gray-900">{medida.ancho} x {medida.alto}</div>
+                          <div className="text-sm text-gray-500">centímetros</div>
+                        </div>
+                        {isSelected && (
+                          <Check className="w-5 h-5 text-blue-600" />
+                        )}
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
             </div>
           )}
         </Card>
@@ -190,25 +210,21 @@ export function ConfigurationStep({ config, selectedConfig, onConfigChange }: Co
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-3">
               Selecciona el ancho
             </label>
-            <Select
-              value={localConfig.medida_ancho?.toString() || ''}
-              onChange={(e) => {
-                const value = e.target?.value;
-                if (value) {
-                  handleChange({ medida_ancho: parseFloat(value) });
-                }
-              }}
-            >
-              <option value="">Selecciona un ancho</option>
+            <div className="grid grid-cols-4 gap-3">
               {config.anchos_disponibles.map((ancho) => (
-                <option key={ancho} value={ancho}>
+                <Button
+                  key={ancho}
+                  variant={localConfig.medida_ancho === ancho ? 'primary' : 'secondary'}
+                  onClick={() => handleChange({ medida_ancho: ancho })}
+                  className="w-full"
+                >
                   {ancho} cm
-                </option>
+                </Button>
               ))}
-            </Select>
+            </div>
           </div>
 
           {config.tipo_medida === 'ancho_maximo' && localConfig.medida_ancho && (
@@ -242,37 +258,46 @@ export function ConfigurationStep({ config, selectedConfig, onConfigChange }: Co
             <h3 className="text-lg font-semibold text-gray-900">Material</h3>
           </div>
 
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Selecciona el material
-              </label>
-              <Select
-                value={localConfig.material_id || ''}
-                onChange={(e) => {
-                  const value = e.target?.value;
-                  if (!value) return;
-
-                  const material = config.materiales?.find(m => m.material_id === value);
-                  if (material) {
-                    handleChange({
-                      material_id: material.material_id,
-                      material_nombre: material.material_nombre,
-                      variante_id: material.variante_id,
-                      variante_nombre: material.variante_nombre,
-                      espesor: material.espesor || null
-                    });
-                  }
-                }}
-              >
-                <option value="">Selecciona un material</option>
-                {config.materiales.map((material) => (
-                  <option key={material.id} value={material.material_id}>
-                    {material.material_nombre} - {material.variante_nombre}
-                    {material.espesor && ` (${material.espesor} ${material.unidad_espesor})`}
-                  </option>
-                ))}
-              </Select>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-3">
+              Selecciona el material
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              {config.materiales.map((material) => {
+                const isSelected = localConfig.material_id === material.material_id;
+                return (
+                  <Card
+                    key={material.id}
+                    className={`p-4 cursor-pointer transition-all ${
+                      isSelected
+                        ? 'ring-2 ring-blue-600 bg-blue-50 border-blue-600'
+                        : 'hover:border-blue-300 hover:shadow-md'
+                    }`}
+                    onClick={() => {
+                      handleChange({
+                        material_id: material.material_id,
+                        material_nombre: material.material_nombre,
+                        variante_id: material.variante_id,
+                        variante_nombre: material.variante_nombre,
+                        espesor: material.espesor || null
+                      });
+                    }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="font-semibold text-gray-900">{material.material_nombre}</div>
+                        <div className="text-sm text-gray-600">{material.variante_nombre}</div>
+                        {material.espesor && (
+                          <div className="text-sm text-gray-500">{material.espesor} {material.unidad_espesor}</div>
+                        )}
+                      </div>
+                      {isSelected && (
+                        <Check className="w-5 h-5 text-blue-600 flex-shrink-0 ml-2" />
+                      )}
+                    </div>
+                  </Card>
+                );
+              })}
             </div>
           </div>
         </Card>
@@ -284,7 +309,7 @@ export function ConfigurationStep({ config, selectedConfig, onConfigChange }: Co
           <div className="flex items-center gap-2 mb-4">
             <Palette className="w-5 h-5 text-blue-600" />
             <h3 className="text-lg font-semibold text-gray-900">
-              {isImpresionLaser ? 'Impresión' : 'Tecnología e Impresión'}
+              {isImpresionLaser ? 'Tipo de Impresión' : 'Tecnología e Impresión'}
             </h3>
           </div>
 
@@ -292,70 +317,83 @@ export function ConfigurationStep({ config, selectedConfig, onConfigChange }: Co
             {/* Solo mostrar selector de tecnología si NO es Impresión Láser */}
             {!isImpresionLaser && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-3">
                   Tecnología
                 </label>
-                <Select
-                  value={localConfig.tecnologia_id || ''}
-                  onChange={(e) => {
-                    const value = e.target?.value;
-                    if (!value) return;
-
-                    const tecnologia = config.tecnologias?.find(t => t.tecnologia_id === value);
-                    if (tecnologia) {
-                      handleChange({
-                        tecnologia_id: tecnologia.tecnologia_id,
-                        tecnologia_nombre: tecnologia.tecnologia_nombre,
-                        tinta: null,
-                        tinta_nombre: null
-                      });
-                    }
-                  }}
-                >
-                  <option value="">Selecciona una tecnología</option>
-                  {config.tecnologias.map((tec) => (
-                    <option key={tec.tecnologia_id} value={tec.tecnologia_id}>
-                      {tec.tecnologia_nombre}
-                    </option>
-                  ))}
-                </Select>
+                <div className="grid grid-cols-2 gap-3">
+                  {config.tecnologias.map((tec) => {
+                    const isSelected = localConfig.tecnologia_id === tec.tecnologia_id;
+                    return (
+                      <Card
+                        key={tec.tecnologia_id}
+                        className={`p-4 cursor-pointer transition-all ${
+                          isSelected
+                            ? 'ring-2 ring-blue-600 bg-blue-50 border-blue-600'
+                            : 'hover:border-blue-300 hover:shadow-md'
+                        }`}
+                        onClick={() => {
+                          handleChange({
+                            tecnologia_id: tec.tecnologia_id,
+                            tecnologia_nombre: tec.tecnologia_nombre,
+                            tinta: null,
+                            tinta_nombre: null
+                          });
+                        }}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="font-semibold text-gray-900">{tec.tecnologia_nombre}</div>
+                          {isSelected && (
+                            <Check className="w-5 h-5 text-blue-600" />
+                          )}
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
               </div>
             )}
 
-            {/* Selector de tintas */}
+            {/* Selector de tintas - Cards */}
             {localConfig.tecnologia_id && (() => {
               const tecnologia = config.tecnologias?.find(t => t.tecnologia_id === localConfig.tecnologia_id);
-              return tecnologia && tecnologia.tintas.length > 0 && (
+              return tecnologia && tecnologia.tintas && tecnologia.tintas.length > 0 && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
                     Tipo de tinta
                   </label>
-                  <Select
-                    value={localConfig.tinta || ''}
-                    onChange={(e) => {
-                      const value = e.target?.value;
-                      if (!value) return;
+                  <div className="grid grid-cols-2 gap-3">
+                    {tecnologia.tintas.map((tinta) => {
+                      const isSelected = localConfig.tinta === tinta;
+                      const nombreTinta = getNombreTinta(tinta);
 
-                      const nombresMap: Record<string, string> = {
-                        'K': 'Negro (K)',
-                        'CMYK': 'Cuatricromía (CMYK)',
-                        'CMYK+W': 'CMYK + Blanco',
-                        'CMYK+V': 'CMYK + Barniz',
-                        'CMYK+W+V': 'CMYK + Blanco + Barniz'
-                      };
-                      handleChange({
-                        tinta: value,
-                        tinta_nombre: nombresMap[value] || value
-                      });
-                    }}
-                  >
-                    <option value="">Selecciona una tinta</option>
-                    {tecnologia.tintas.map((tinta) => (
-                      <option key={tinta} value={tinta}>
-                        {tinta === 'K' ? 'Negro (K)' : tinta === 'CMYK' ? 'Cuatricromía (CMYK)' : tinta}
-                      </option>
-                    ))}
-                  </Select>
+                      return (
+                        <Card
+                          key={tinta}
+                          className={`p-4 cursor-pointer transition-all ${
+                            isSelected
+                              ? 'ring-2 ring-blue-600 bg-blue-50 border-blue-600'
+                              : 'hover:border-blue-300 hover:shadow-md'
+                          }`}
+                          onClick={() => {
+                            handleChange({
+                              tinta: tinta,
+                              tinta_nombre: nombreTinta
+                            });
+                          }}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="font-semibold text-gray-900">{nombreTinta}</div>
+                              <div className="text-xs text-gray-500 mt-1">{tinta}</div>
+                            </div>
+                            {isSelected && (
+                              <Check className="w-5 h-5 text-blue-600 flex-shrink-0 ml-2" />
+                            )}
+                          </div>
+                        </Card>
+                      );
+                    })}
+                  </div>
                 </div>
               );
             })()}
@@ -376,13 +414,20 @@ export function ConfigurationStep({ config, selectedConfig, onConfigChange }: Co
               <Card
                 className={`p-4 cursor-pointer transition-all ${
                   localConfig.cara_impresa === 'solo_frente'
-                    ? 'ring-2 ring-blue-600 bg-blue-50'
-                    : 'hover:border-blue-300'
+                    ? 'ring-2 ring-blue-600 bg-blue-50 border-blue-600'
+                    : 'hover:border-blue-300 hover:shadow-md'
                 }`}
                 onClick={() => handleChange({ cara_impresa: 'solo_frente' })}
               >
-                <h4 className="font-medium text-gray-900">Solo Frente</h4>
-                <p className="text-sm text-gray-600 mt-1">Impresión en una sola cara</p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-medium text-gray-900">Solo Frente</h4>
+                    <p className="text-sm text-gray-600 mt-1">Una cara</p>
+                  </div>
+                  {localConfig.cara_impresa === 'solo_frente' && (
+                    <Check className="w-5 h-5 text-blue-600" />
+                  )}
+                </div>
               </Card>
             )}
 
@@ -390,13 +435,20 @@ export function ConfigurationStep({ config, selectedConfig, onConfigChange }: Co
               <Card
                 className={`p-4 cursor-pointer transition-all ${
                   localConfig.cara_impresa === 'frente_y_dorso'
-                    ? 'ring-2 ring-blue-600 bg-blue-50'
-                    : 'hover:border-blue-300'
+                    ? 'ring-2 ring-blue-600 bg-blue-50 border-blue-600'
+                    : 'hover:border-blue-300 hover:shadow-md'
                 }`}
                 onClick={() => handleChange({ cara_impresa: 'frente_y_dorso' })}
               >
-                <h4 className="font-medium text-gray-900">Frente y Dorso</h4>
-                <p className="text-sm text-gray-600 mt-1">Impresión en ambas caras</p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-medium text-gray-900">Frente y Dorso</h4>
+                    <p className="text-sm text-gray-600 mt-1">Ambas caras</p>
+                  </div>
+                  {localConfig.cara_impresa === 'frente_y_dorso' && (
+                    <Check className="w-5 h-5 text-blue-600" />
+                  )}
+                </div>
               </Card>
             )}
           </div>
