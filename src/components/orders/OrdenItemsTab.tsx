@@ -4,7 +4,7 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Table } from '../ui/Table';
 import { EmptyState } from '../ui/EmptyState';
-import { AddItemModal } from './AddItemModal';
+import { AddItemWizard } from '../wizard/AddItemWizard';
 
 interface OrdenItem {
   id?: string;
@@ -35,8 +35,22 @@ export function OrdenItemsTab({
 }: OrdenItemsTabProps) {
   const [showAddModal, setShowAddModal] = useState(false);
 
-  const handleAgregarItem = (nuevoItem: Omit<OrdenItem, 'id'>) => {
-    setItems([...items, { ...nuevoItem, id: `temp-${Date.now()}` }]);
+  const handleAgregarItem = async (itemData: any) => {
+    const nuevoItem: OrdenItem = {
+      id: `temp-${Date.now()}`,
+      producto_id: itemData.producto_id,
+      producto_nombre: itemData.configuracion?.categoria_nombre || 'Producto',
+      cantidad: itemData.cantidad,
+      configuracion: itemData.configuracion,
+      precio_base: itemData.configuracion?.desglose_precio?.precio_base || 0,
+      precio_servicios: itemData.configuracion?.desglose_precio?.precio_servicios || 0,
+      precio_acabados: itemData.configuracion?.desglose_precio?.precio_acabados || 0,
+      precio_unitario_final: itemData.precio_unitario,
+      precio_total: itemData.subtotal,
+      descuento_individual: 0,
+    };
+
+    setItems([...items, nuevoItem]);
     setShowAddModal(false);
   };
 
@@ -72,16 +86,40 @@ export function OrdenItemsTab({
 
     const parts: string[] = [];
 
-    if (config.tecnologia) parts.push(config.tecnologia);
-    if (config.material) parts.push(config.material);
-    if (config.tintas && config.tintas.length > 0) {
-      parts.push(`Tintas: ${config.tintas.join(', ')}`);
+    if (config.tipo_tinta) {
+      parts.push(config.tipo_tinta === 'CMYK' ? 'Color' : 'B/N');
     }
-    if (config.medidas) {
-      parts.push(`${config.medidas.ancho}x${config.medidas.alto} cm`);
+
+    if (config.medida_seleccionada) {
+      const medida = config.medida_seleccionada;
+      if (medida.display) {
+        parts.push(medida.display);
+      } else if (medida.ancho && medida.alto) {
+        parts.push(`${medida.ancho}x${medida.alto} cm`);
+      }
     }
-    if (config.caras_impresas) {
-      parts.push(`Caras: ${config.caras_impresas}`);
+
+    if (config.cara_impresion) {
+      const caraTexto = config.cara_impresion === 'solo_frente' ? 'Frente' : 'Frente/Dorso';
+      parts.push(caraTexto);
+    }
+
+    if (config.material_nombre && config.variante_nombre) {
+      parts.push(`${config.material_nombre} ${config.variante_nombre}`);
+    }
+
+    if (config.servicios_seleccionados && config.servicios_seleccionados.length > 0) {
+      const servicios = config.servicios_seleccionados
+        .map((s: any) => s.nivel ? `${s.nombre} (${s.nivel})` : s.nombre)
+        .join(', ');
+      parts.push(`Servicios: ${servicios}`);
+    }
+
+    if (config.acabados_seleccionados && config.acabados_seleccionados.length > 0) {
+      const acabados = config.acabados_seleccionados
+        .map((a: any) => a.nivel ? `${a.nombre} (${a.nivel})` : a.nombre)
+        .join(', ');
+      parts.push(`Acabados: ${acabados}`);
     }
 
     return parts.join(' | ');
@@ -210,12 +248,11 @@ export function OrdenItemsTab({
         </>
       )}
 
-      {showAddModal && (
-        <AddItemModal
-          onClose={() => setShowAddModal(false)}
-          onAgregar={handleAgregarItem}
-        />
-      )}
+      <AddItemWizard
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onAgregar={handleAgregarItem}
+      />
     </div>
   );
 }
