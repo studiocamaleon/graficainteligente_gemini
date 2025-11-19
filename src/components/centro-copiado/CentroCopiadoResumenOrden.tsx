@@ -1,3 +1,4 @@
+import { useState, useEffect, RefObject } from 'react';
 import { DollarSign, ShoppingCart, AlertCircle } from 'lucide-react';
 import { Card } from '../ui/Card';
 import { Badge } from '../ui/Badge';
@@ -14,6 +15,7 @@ interface CentroCopiadoResumenOrdenProps {
   onGuardar: () => void;
   onCancelar: () => void;
   guardando: boolean;
+  containerRef: RefObject<HTMLDivElement>;
 }
 
 export function CentroCopiadoResumenOrden({
@@ -23,9 +25,49 @@ export function CentroCopiadoResumenOrden({
   onGuardar,
   onCancelar,
   guardando,
+  containerRef,
 }: CentroCopiadoResumenOrdenProps) {
   const { tamanios } = useCentroCopiadoTamanios();
   const { papeles } = useCentroCopiadoPapeles();
+  const [dimensions, setDimensions] = useState({ left: 0, width: 0 });
+  const [isLargeScreen, setIsLargeScreen] = useState(false);
+
+  useEffect(() => {
+    const updateDimensions = () => {
+      const isLg = window.innerWidth >= 1024;
+      setIsLargeScreen(isLg);
+
+      if (isLg && containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        setDimensions({
+          left: rect.left,
+          width: rect.width,
+        });
+      }
+    };
+
+    updateDimensions();
+
+    const handleResize = () => {
+      updateDimensions();
+    };
+
+    const handleResizeThrottled = () => {
+      requestAnimationFrame(handleResize);
+    };
+
+    window.addEventListener('resize', handleResizeThrottled);
+
+    const resizeObserver = new ResizeObserver(handleResizeThrottled);
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+    }
+
+    return () => {
+      window.removeEventListener('resize', handleResizeThrottled);
+      resizeObserver.disconnect();
+    };
+  }, [containerRef]);
 
   const itemsCompletos = items.filter(
     (item) =>
@@ -92,8 +134,20 @@ export function CentroCopiadoResumenOrden({
     return partes.join(' • ') || 'Sin configurar';
   };
 
+  const fixedStyles = isLargeScreen
+    ? {
+        position: 'fixed' as const,
+        top: '88px',
+        left: `${dimensions.left}px`,
+        width: `${dimensions.width}px`,
+        maxHeight: 'calc(100vh - 104px)',
+        overflowY: 'auto' as const,
+        zIndex: 20,
+      }
+    : {};
+
   return (
-    <div className="lg:fixed lg:top-[88px] lg:right-8 lg:w-[calc((100%-4rem)/3-1.5rem)] lg:max-h-[calc(100vh-104px)] lg:overflow-y-auto z-20">
+    <div style={fixedStyles}>
     <Card className="h-fit shadow-lg">
       <div className="p-4">
         <div className="flex items-center gap-2 mb-4">

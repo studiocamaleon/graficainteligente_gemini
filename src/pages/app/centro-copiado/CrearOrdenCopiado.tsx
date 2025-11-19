@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Plus, ArrowLeft, Save, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
@@ -36,6 +36,7 @@ export function CrearOrdenCopiado() {
   const [guardando, setGuardando] = useState(false);
   const [infoGeneralCollapsed, setInfoGeneralCollapsed] = useState(false);
   const [initialized, setInitialized] = useState(false);
+  const resumenContainerRef = useRef<HTMLDivElement>(null);
 
   const { clients, loading: loadingClients } = useClients({ page: 1, itemsPerPage: 100 });
   const { createOrden } = useCentroCopiadoOrdenes();
@@ -386,17 +387,16 @@ export function CrearOrdenCopiado() {
           </div>
         </div>
 
-        <div className="lg:col-span-1">
-          <div className="lg:w-full">
-            <CentroCopiadoResumenOrden
-              items={items}
-              descuento={descuento}
-              onDescuentoChange={setDescuento}
-              onGuardar={guardarOrden}
-              onCancelar={cancelar}
-              guardando={guardando}
-            />
-          </div>
+        <div ref={resumenContainerRef} className="lg:col-span-1 lg:min-h-[600px]">
+          <CentroCopiadoResumenOrden
+            items={items}
+            descuento={descuento}
+            onDescuentoChange={setDescuento}
+            onGuardar={guardarOrden}
+            onCancelar={cancelar}
+            guardando={guardando}
+            containerRef={resumenContainerRef}
+          />
         </div>
       </div>
 
