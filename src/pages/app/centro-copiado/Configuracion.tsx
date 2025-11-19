@@ -15,7 +15,14 @@ import { useCentroCopiadoTamanios } from '../../../hooks/useCentroCopiadoTamanio
 import { useCentroCopiadoPapeles } from '../../../hooks/useCentroCopiadoPapeles';
 import { TamanioPapelForm } from '../../../components/centro-copiado/TamanioPapelForm';
 import { PapelForm } from '../../../components/centro-copiado/PapelForm';
-import type { CentroCopiadoTamanioPapel } from '../../../types/database';
+import type { CentroCopiadoTamanioPapel, CentroCopiadoPapel } from '../../../types/database';
+
+interface PapelWithMaterial extends CentroCopiadoPapel {
+  material?: {
+    id: string;
+    nombre: string;
+  };
+}
 
 type TabType = 'tamanios' | 'papeles';
 
@@ -185,36 +192,47 @@ export function Configuracion() {
 
           <Table
             columns={[
-              { key: 'nombre', label: 'Nombre' },
-              { key: 'dimensiones', label: 'Dimensiones (mm)' },
-              { key: 'actions', label: 'Acciones', align: 'right' },
+              {
+                key: 'nombre',
+                header: 'Nombre',
+                render: (tamanio: CentroCopiadoTamanioPapel) => (
+                  <span className="font-medium">{tamanio.nombre}</span>
+                )
+              },
+              {
+                key: 'dimensiones',
+                header: 'Dimensiones (mm)',
+                render: (tamanio: CentroCopiadoTamanioPapel) => (
+                  <Badge variant="secondary">
+                    {tamanio.ancho_mm} × {tamanio.alto_mm} mm
+                  </Badge>
+                )
+              },
+              {
+                key: 'actions',
+                header: 'Acciones',
+                render: (tamanio: CentroCopiadoTamanioPapel) => (
+                  <div className="flex items-center justify-end gap-2">
+                    <button
+                      onClick={() => handleEditTamanio(tamanio)}
+                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      title="Editar"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteTamanio(tamanio)}
+                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Eliminar"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                )
+              },
             ]}
-            data={filteredTamanios.map((tamanio) => ({
-              nombre: <span className="font-medium">{tamanio.nombre}</span>,
-              dimensiones: (
-                <Badge variant="secondary">
-                  {tamanio.ancho_mm} × {tamanio.alto_mm} mm
-                </Badge>
-              ),
-              actions: (
-                <div className="flex items-center justify-end gap-2">
-                  <button
-                    onClick={() => handleEditTamanio(tamanio)}
-                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                    title="Editar"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDeleteTamanio(tamanio)}
-                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                    title="Eliminar"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              ),
-            }))}
+            data={filteredTamanios}
+            keyExtractor={(tamanio) => tamanio.id}
           />
         </div>
       </Card>
@@ -259,38 +277,52 @@ export function Configuracion() {
 
           <Table
             columns={[
-              { key: 'material', label: 'Material' },
-              { key: 'variante', label: 'Variante' },
-              { key: 'espesor', label: 'Espesor' },
-              { key: 'actions', label: 'Acciones', align: 'right' },
+              {
+                key: 'material',
+                header: 'Material',
+                render: (papel: PapelWithMaterial) => (
+                  <span className="font-medium">{papel.material?.nombre || 'N/A'}</span>
+                )
+              },
+              {
+                key: 'variante',
+                header: 'Variante',
+                render: (papel: PapelWithMaterial) => papel.variante_nombre
+              },
+              {
+                key: 'espesor',
+                header: 'Espesor',
+                render: (papel: PapelWithMaterial) => papel.espesor ? (
+                  <Badge variant="secondary">
+                    {papel.espesor} {papel.unidad_espesor}
+                  </Badge>
+                ) : (
+                  <span className="text-gray-400">N/A</span>
+                )
+              },
+              {
+                key: 'actions',
+                header: 'Acciones',
+                render: (papel: PapelWithMaterial) => (
+                  <div className="flex items-center justify-end gap-2">
+                    <button
+                      onClick={() =>
+                        handleDeletePapel(
+                          papel.id,
+                          `${papel.material?.nombre} - ${papel.variante_nombre}`
+                        )
+                      }
+                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Eliminar"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                )
+              },
             ]}
-            data={filteredPapeles.map((papel) => ({
-              material: <span className="font-medium">{papel.material?.nombre || 'N/A'}</span>,
-              variante: papel.variante_nombre,
-              espesor: papel.espesor ? (
-                <Badge variant="secondary">
-                  {papel.espesor} {papel.unidad_espesor}
-                </Badge>
-              ) : (
-                <span className="text-gray-400">N/A</span>
-              ),
-              actions: (
-                <div className="flex items-center justify-end gap-2">
-                  <button
-                    onClick={() =>
-                      handleDeletePapel(
-                        papel.id,
-                        `${papel.material?.nombre} - ${papel.variante_nombre}`
-                      )
-                    }
-                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                    title="Eliminar"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              ),
-            }))}
+            data={filteredPapeles}
+            keyExtractor={(papel) => papel.id}
           />
         </div>
       </Card>
