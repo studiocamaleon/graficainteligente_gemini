@@ -45,10 +45,13 @@ export function OrdenGeneralSection({
     { value: 'Mostrador', label: 'Mostrador', icon: Store },
   ];
 
-  const clientesOptions = clients.map(c => ({
-    value: c.id,
-    label: `${c.nombre_fantasia} (${c.numero_documento})`,
-  }));
+  const clientesOptions = [
+    { value: '', label: 'Seleccione un cliente' },
+    ...clients.map(c => ({
+      value: c.id,
+      label: `${c.nombre_fantasia} (${c.numero_documento})`,
+    }))
+  ];
 
   const minFecha = new Date().toISOString().split('T')[0];
 

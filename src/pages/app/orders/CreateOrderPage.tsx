@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Loader2 } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, AlertTriangle } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
 import { Tabs } from '../../../components/ui/Tabs';
+import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
 import { usePageHeader } from '../../../hooks/usePageHeader';
 import { useAuth } from '../../../hooks/useAuth';
 import { useOrdenTrabajo } from '../../../hooks/useOrdenTrabajo';
@@ -56,14 +57,15 @@ export function CreateOrderPage() {
     return clienteId !== '' || items.length > 0 || notasInternas !== '' || fechaEntrega !== '';
   };
 
-  const confirmNavigation = usePrompt(
+  const { showPrompt, isPromptOpen, closePrompt, confirmPrompt } = usePrompt(
     '¿Estás seguro de que deseas salir? Se perderán los cambios no guardados.',
     !ordenCreada && formularioTieneDatos()
   );
 
   const handleVolver = () => {
     if (formularioTieneDatos() && !ordenCreada) {
-      if (!confirmNavigation()) return;
+      showPrompt(() => navigate('/app/orders/ordenes'));
+      return;
     }
     navigate('/app/orders/ordenes');
   };
@@ -173,31 +175,32 @@ export function CreateOrderPage() {
   const totales = calcularTotales();
 
   return (
-    <div className="space-y-6 pb-32">
-      <div className="flex items-center justify-between">
-        <Button variant="secondary" onClick={handleVolver}>
-          <ArrowLeft className="w-4 h-4" />
-          Volver a órdenes
-        </Button>
+    <>
+      <div className="space-y-6 pb-32">
+        <div className="flex items-center justify-between">
+          <Button variant="secondary" onClick={handleVolver}>
+            <ArrowLeft className="w-4 h-4" />
+            Volver a órdenes
+          </Button>
 
-        <Button
-          onClick={handleCrearOrden}
-          disabled={loading || items.length === 0 || !clienteId}
-          className="bg-blue-600 hover:bg-blue-700"
-        >
-          {loading ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Creando...
-            </>
-          ) : (
-            <>
-              <Save className="w-4 h-4" />
-              Crear Orden
-            </>
-          )}
-        </Button>
-      </div>
+          <Button
+            onClick={handleCrearOrden}
+            disabled={loading || items.length === 0 || !clienteId}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Creando...
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4" />
+                Crear Orden
+              </>
+            )}
+          </Button>
+        </div>
 
       <Card>
         <OrdenGeneralSection
@@ -248,13 +251,26 @@ export function CreateOrderPage() {
         </div>
       </Card>
 
-      <OrdenFooterTotales
-        subtotal={totales.subtotal}
-        descuentoAplicado={totales.descuentoAplicado}
-        iva={totales.iva}
-        total={totales.total}
-        requiereFactura={requiereFactura}
+        <OrdenFooterTotales
+          subtotal={totales.subtotal}
+          descuentoAplicado={totales.descuentoAplicado}
+          iva={totales.iva}
+          total={totales.total}
+          requiereFactura={requiereFactura}
+        />
+      </div>
+
+      <ConfirmDialog
+        isOpen={isPromptOpen}
+        onClose={closePrompt}
+        onConfirm={confirmPrompt}
+        title="Cambios sin guardar"
+        message="¿Estás seguro de que deseas salir? Se perderán todos los cambios no guardados en esta orden de trabajo."
+        confirmText="Salir sin guardar"
+        cancelText="Continuar editando"
+        variant="warning"
+        icon={<AlertTriangle className="w-6 h-6" />}
       />
-    </div>
+    </>
   );
 }

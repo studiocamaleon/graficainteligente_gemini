@@ -1,10 +1,19 @@
-import { useEffect, useCallback, useContext, useRef } from 'react';
+import { useEffect, useContext, useRef, useState } from 'react';
 import { useLocation, UNSAFE_NavigationContext } from 'react-router-dom';
 
-export function usePrompt(message: string, when: boolean = true) {
+interface UsePromptReturn {
+  showPrompt: (onConfirm: () => void) => void;
+  isPromptOpen: boolean;
+  closePrompt: () => void;
+  confirmPrompt: () => void;
+}
+
+export function usePrompt(message: string, when: boolean = true): UsePromptReturn {
   const location = useLocation();
   const { navigator } = useContext(UNSAFE_NavigationContext);
   const blockedRef = useRef(false);
+  const [isPromptOpen, setIsPromptOpen] = useState(false);
+  const pendingNavigationRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     if (!when) return;
@@ -35,11 +44,11 @@ export function usePrompt(message: string, when: boolean = true) {
         return originalPush.apply(navigator, args);
       }
 
-      const confirmed = window.confirm(message);
-      if (confirmed) {
+      pendingNavigationRef.current = () => {
         blockedRef.current = true;
-        return originalPush.apply(navigator, args);
-      }
+        originalPush.apply(navigator, args);
+      };
+      setIsPromptOpen(true);
     };
 
     navigator.replace = (...args: Parameters<typeof originalReplace>) => {
@@ -48,19 +57,19 @@ export function usePrompt(message: string, when: boolean = true) {
         return originalReplace.apply(navigator, args);
       }
 
-      const confirmed = window.confirm(message);
-      if (confirmed) {
+      pendingNavigationRef.current = () => {
         blockedRef.current = true;
-        return originalReplace.apply(navigator, args);
-      }
+        originalReplace.apply(navigator, args);
+      };
+      setIsPromptOpen(true);
     };
 
     navigator.go = (...args: Parameters<typeof originalGo>) => {
-      const confirmed = window.confirm(message);
-      if (confirmed) {
+      pendingNavigationRef.current = () => {
         blockedRef.current = true;
-        return originalGo.apply(navigator, args);
-      }
+        originalGo.apply(navigator, args);
+      };
+      setIsPromptOpen(true);
     };
 
     return () => {
@@ -68,11 +77,29 @@ export function usePrompt(message: string, when: boolean = true) {
       navigator.replace = originalReplace;
       navigator.go = originalGo;
     };
-  }, [when, message, navigator, location]);
+  }, [when, navigator, location]);
 
-  const confirmNavigation = useCallback(() => {
-    return window.confirm(message);
-  }, [message]);
+  const showPrompt = (onConfirm: () => void) => {
+    pendingNavigationRef.current = onConfirm;
+    setIsPromptOpen(true);
+  };
 
-  return confirmNavigation;
+  const closePrompt = () => {
+    setIsPromptOpen(false);
+    pendingNavigationRef.current = null;
+  };
+
+  const confirmPrompt = () => {
+    if (pendingNavigationRef.current) {
+      pendingNavigationRef.current();
+    }
+    closePrompt();
+  };
+
+  return {
+    showPrompt,
+    isPromptOpen,
+    closePrompt,
+    confirmPrompt,
+  };
 }
