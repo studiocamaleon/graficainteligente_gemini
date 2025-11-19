@@ -79,6 +79,7 @@ export function CentroCopiadoTintaSection({
 
   const totalCombinaciones = tintaData.combinaciones.length;
   const totalPrecios = preciosCargados.size;
+  const TintaIcon = getTintaIcon();
 
   return (
     <Card className="overflow-hidden">
@@ -88,7 +89,7 @@ export function CentroCopiadoTintaSection({
       >
         <div className="flex items-center gap-4">
           <div className="p-2 bg-blue-100 rounded-lg">
-            {getTintaIcon()({ className: 'w-5 h-5 text-blue-600' })}
+            <TintaIcon className="w-5 h-5 text-blue-600" />
           </div>
           <div className="text-left">
             <div className="flex items-center gap-2">
