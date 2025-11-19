@@ -115,7 +115,7 @@ export function ProductoLaserPrecioMatriz({
         <div className="flex items-center gap-3">
           <MeasureBadge ancho={medida.ancho} alto={medida.alto} />
           <div className="w-px h-8 bg-gray-300"></div>
-          <InkBadge tinta={tinta.nombre} />
+          <InkBadge tinta={tinta} />
         </div>
         {materialInfo && (
           <MaterialBadge
