@@ -165,11 +165,11 @@ export function CentroCopiadoItemForm({
 
   return (
     <Card className="relative">
-      <button
-        onClick={onToggleCollapse}
-        className="w-full p-4 text-left hover:bg-gray-50 transition-colors rounded-t-lg flex items-center justify-between"
-      >
-        <div className="flex items-center gap-3 flex-1 min-w-0">
+      <div className="w-full p-4 rounded-t-lg flex items-center justify-between">
+        <button
+          onClick={onToggleCollapse}
+          className="flex items-center gap-3 flex-1 min-w-0 text-left hover:opacity-80 transition-opacity"
+        >
           <Badge variant="primary">#{itemNumber}</Badge>
           {isCollapsed && isConfigComplete && (
             <>
@@ -184,7 +184,14 @@ export function CentroCopiadoItemForm({
           {!isCollapsed && (
             <h3 className="text-lg font-semibold text-gray-900">Item #{itemNumber}</h3>
           )}
-        </div>
+          <div className="ml-auto flex items-center">
+            {isCollapsed ? (
+              <ChevronDown className="w-5 h-5 text-gray-500" />
+            ) : (
+              <ChevronUp className="w-5 h-5 text-gray-500" />
+            )}
+          </div>
+        </button>
         <div className="flex items-center gap-2 ml-4">
           {!isCollapsed && precioCalculado !== null && (
             <Badge variant="success" className="text-lg font-bold">
@@ -193,22 +200,14 @@ export function CentroCopiadoItemForm({
             </Badge>
           )}
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onRemove();
-            }}
+            onClick={onRemove}
             className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
             title="Eliminar item"
           >
             <Trash2 className="w-4 h-4" />
           </button>
-          {isCollapsed ? (
-            <ChevronDown className="w-5 h-5 text-gray-500" />
-          ) : (
-            <ChevronUp className="w-5 h-5 text-gray-500" />
-          )}
         </div>
-      </button>
+      </div>
 
       {!isCollapsed && (
         <div className="p-4 pt-0">

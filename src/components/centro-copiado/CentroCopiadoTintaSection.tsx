@@ -74,8 +74,8 @@ export function CentroCopiadoTintaSection({
     return tintaData.tipo_tinta === 'CMYK' ? 'Impresión CMYK' : 'Blanco y Negro';
   };
 
-  const getTintaBadgeColor = () => {
-    return tintaData.tipo_tinta === 'CMYK' ? 'primary' : 'secondary';
+  const getTintaBadgeColor = (): 'primary' | 'default' | 'success' | 'warning' | 'danger' | 'info' => {
+    return tintaData.tipo_tinta === 'CMYK' ? 'primary' : 'default';
   };
 
   const totalCombinaciones = tintaData.combinaciones.length;

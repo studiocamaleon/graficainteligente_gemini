@@ -95,7 +95,7 @@ export function CentroCopiadoResumenOrden({
         <div className="flex items-center gap-2 mb-4">
           <ShoppingCart className="w-5 h-5 text-blue-600" />
           <h3 className="text-base font-bold text-gray-900">Resumen de Orden</h3>
-          <Badge variant="secondary">{items.length}</Badge>
+          <Badge variant="default">{items.length}</Badge>
         </div>
 
         {items.length === 0 ? (

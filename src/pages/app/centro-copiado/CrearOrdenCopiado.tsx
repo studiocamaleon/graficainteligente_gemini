@@ -34,6 +34,7 @@ export function CrearOrdenCopiado() {
   const [descuento, setDescuento] = useState(0);
   const [guardando, setGuardando] = useState(false);
   const [infoGeneralCollapsed, setInfoGeneralCollapsed] = useState(false);
+  const [initialized, setInitialized] = useState(false);
 
   const { clients, loading: loadingClients } = useClients({ page: 1, itemsPerPage: 100 });
   const { createOrden } = useCentroCopiadoOrdenes();
@@ -42,13 +43,7 @@ export function CrearOrdenCopiado() {
 
   usePageHeader('Crea una nueva orden de copiado con items personalizados');
 
-  useEffect(() => {
-    if (items.length === 0) {
-      agregarItem();
-    }
-  }, []);
-
-  const agregarItem = () => {
+  const agregarItem = useCallback(() => {
     setItems((prev) =>
       prev.map(item => ({ ...item, isCollapsed: true }))
     );
@@ -61,7 +56,19 @@ export function CrearOrdenCopiado() {
       isCollapsed: false,
     };
     setItems((prev) => [...prev, nuevoItem]);
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!initialized) {
+      setItems([]);
+      setClienteId(clienteIdParam || '');
+      setFechaEntrega('');
+      setObservaciones('');
+      setDescuento(0);
+      agregarItem();
+      setInitialized(true);
+    }
+  }, [initialized, agregarItem, clienteIdParam]);
 
   const actualizarItem = useCallback((id: string, config: Partial<ItemCopiadoConfig>) => {
     setItems((prev) =>
