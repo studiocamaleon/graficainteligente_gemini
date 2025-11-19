@@ -3,8 +3,9 @@ import { Trash2, ChevronDown, ChevronUp, DollarSign } from 'lucide-react';
 import { Card } from '../ui/Card';
 import { Badge } from '../ui/Badge';
 import { Input } from '../ui/Input';
-import { Select } from '../ui/Select';
 import { CentroCopiadoItemTerminaciones } from './CentroCopiadoItemTerminaciones';
+import { TamaniosPapelSelector } from './TamaniosPapelSelector';
+import { TiposPapelSelector } from './TiposPapelSelector';
 import { useCentroCopiadoTamanios } from '../../hooks/useCentroCopiadoTamanios';
 import { useCentroCopiadoPapeles } from '../../hooks/useCentroCopiadoPapeles';
 import { useCentroCopiadoPriceCalculator } from '../../hooks/useCentroCopiadoPriceCalculator';
@@ -212,44 +213,29 @@ export function CentroCopiadoItemForm({
       {!isCollapsed && (
         <div className="p-4 pt-0">
 
-        <div className="space-y-3">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Tamaño de Papel *
-              </label>
-              <Select
-                value={value.tamanio_papel_id || ''}
-                onChange={(value) => handleFieldChange('tamanio_papel_id', value)}
-                disabled={loadingTamanios}
-              >
-                <option value="">Seleccionar tamaño</option>
-                {tamanios.map((tamanio) => (
-                  <option key={tamanio.id} value={tamanio.id}>
-                    {tamanio.nombre} ({tamanio.ancho_mm}x{tamanio.alto_mm}mm)
-                  </option>
-                ))}
-              </Select>
-            </div>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Tamaño de Papel *
+            </label>
+            <TamaniosPapelSelector
+              tamanios={tamanios}
+              selectedId={value.tamanio_papel_id}
+              onSelect={(id) => handleFieldChange('tamanio_papel_id', id)}
+              loading={loadingTamanios}
+            />
+          </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Tipo de Papel *
-              </label>
-              <Select
-                value={value.papel_id || ''}
-                onChange={(value) => handleFieldChange('papel_id', value)}
-                disabled={loadingPapeles}
-              >
-                <option value="">Seleccionar papel</option>
-                {papeles.map((papel) => (
-                  <option key={papel.id} value={papel.id}>
-                    {papel.variante_nombre}
-                    {papel.espesor && ` - ${papel.espesor}${papel.unidad_espesor}`}
-                  </option>
-                ))}
-              </Select>
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Tipo de Papel *
+            </label>
+            <TiposPapelSelector
+              papeles={papeles}
+              selectedId={value.papel_id}
+              onSelect={(id) => handleFieldChange('papel_id', id)}
+              loading={loadingPapeles}
+            />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
