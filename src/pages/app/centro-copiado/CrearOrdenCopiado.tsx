@@ -290,6 +290,8 @@ export function CrearOrdenCopiado() {
         isOpen={dialogState.isOpen}
         title={dialogState.title}
         message={dialogState.message}
+        variant={dialogState.variant}
+        buttonText={dialogState.buttonText}
         onClose={closeDialog}
       />
     </div>

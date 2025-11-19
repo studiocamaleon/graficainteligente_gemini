@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { InfoDialogVariant } from '../components/ui/InfoDialog';
 
 interface InfoDialogState {
@@ -19,27 +19,48 @@ const initialState: InfoDialogState = {
 
 export function useInfoDialog() {
   const [state, setState] = useState<InfoDialogState>(initialState);
+  const onCloseCallbackRef = useRef<(() => void) | undefined>();
 
   const openDialog = useCallback(
-    (options: {
-      title: string;
-      message: string;
-      variant?: InfoDialogVariant;
-      buttonText?: string;
-    }) => {
-      setState({
-        isOpen: true,
-        title: options.title,
-        message: options.message,
-        variant: options.variant || 'info',
-        buttonText: options.buttonText || 'Entendido',
-      });
+    (
+      titleOrOptions: string | {
+        title: string;
+        message: string;
+        variant?: InfoDialogVariant;
+        buttonText?: string;
+      },
+      message?: string,
+      onCloseCallback?: () => void
+    ) => {
+      if (typeof titleOrOptions === 'string') {
+        onCloseCallbackRef.current = onCloseCallback;
+        setState({
+          isOpen: true,
+          title: titleOrOptions,
+          message: message || '',
+          variant: 'info',
+          buttonText: 'Entendido',
+        });
+      } else {
+        onCloseCallbackRef.current = undefined;
+        setState({
+          isOpen: true,
+          title: titleOrOptions.title,
+          message: titleOrOptions.message,
+          variant: titleOrOptions.variant || 'info',
+          buttonText: titleOrOptions.buttonText || 'Entendido',
+        });
+      }
     },
     []
   );
 
   const closeDialog = useCallback(() => {
     setState(initialState);
+    if (onCloseCallbackRef.current) {
+      onCloseCallbackRef.current();
+      onCloseCallbackRef.current = undefined;
+    }
   }, []);
 
   const showInfo = useCallback(
@@ -72,7 +93,10 @@ export function useInfoDialog() {
 
   return {
     infoDialogState: state,
+    dialogState: state,
     closeInfoDialog: closeDialog,
+    closeDialog,
+    openDialog,
     showInfo,
     showWarning,
     showError,
