@@ -93,8 +93,8 @@ export function CentroCopiadoResumenOrden({
   };
 
   return (
-    <div className="sticky top-20 z-10">
-    <Card className="h-fit">
+    <div className="sticky top-[88px] z-20">
+    <Card className="h-fit shadow-lg">
       <div className="p-4">
         <div className="flex items-center gap-2 mb-4">
           <ShoppingCart className="w-5 h-5 text-blue-600" />
