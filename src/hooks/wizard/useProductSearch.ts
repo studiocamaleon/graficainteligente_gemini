@@ -62,14 +62,14 @@ export function useProductSearch(searchTerm: string) {
 
             supabase
               .from('productos_impresion_laser_precios')
-              .select('tinta_id, tecnologia_tintas(id, nombre, tipo)')
+              .select('tinta_id')
               .eq('producto_laser_id', laserData.id),
 
             supabase
               .from('productos_impresion_laser_precios')
-              .select('precio_base')
+              .select('precio')
               .eq('producto_laser_id', laserData.id)
-              .order('precio_base', { ascending: true })
+              .order('precio', { ascending: true })
               .limit(1)
               .maybeSingle()
           ]);
@@ -101,18 +101,26 @@ export function useProductSearch(searchTerm: string) {
 
           const tintasUnicas = new Map();
           if (tintasRes.data) {
-            tintasRes.data.forEach((t: any) => {
-              const tinta = Array.isArray(t.tecnologia_tintas)
-                ? t.tecnologia_tintas[0]
-                : t.tecnologia_tintas;
-              if (tinta && !tintasUnicas.has(tinta.id)) {
-                tintasUnicas.set(tinta.id, {
-                  tinta_id: tinta.id,
-                  nombre: tinta.nombre,
-                  tipo: tinta.tipo,
+            const tintaIds = tintasRes.data.map((t: any) => t.tinta_id).filter(Boolean);
+
+            if (tintaIds.length > 0) {
+              const { data: tintasInfo } = await supabase
+                .from('tecnologia_tintas_pasos')
+                .select('id, nombre, tipo')
+                .in('id', tintaIds);
+
+              if (tintasInfo) {
+                tintasInfo.forEach((tinta: any) => {
+                  if (!tintasUnicas.has(tinta.id)) {
+                    tintasUnicas.set(tinta.id, {
+                      tinta_id: tinta.id,
+                      nombre: tinta.nombre,
+                      tipo: tinta.tipo,
+                    });
+                  }
                 });
               }
-            });
+            }
           }
 
           const material = materialesRes.data?.materiales;
@@ -144,7 +152,7 @@ export function useProductSearch(searchTerm: string) {
             tintas_disponibles: Array.from(tintasUnicas.values()),
             caras_disponibles: laserData.caras_impresas || [],
             tiene_precios: medidasRes.data && medidasRes.data.length > 0,
-            precio_desde: precioMinRes.data?.precio_base || null,
+            precio_desde: precioMinRes.data?.precio || null,
           });
         }
 
