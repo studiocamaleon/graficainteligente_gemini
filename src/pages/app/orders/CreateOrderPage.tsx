@@ -1,34 +1,234 @@
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Package } from 'lucide-react';
+import { ArrowLeft, Save, Loader2 } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
-import { EmptyState } from '../../../components/ui/EmptyState';
+import { Tabs } from '../../../components/ui/Tabs';
 import { usePageHeader } from '../../../hooks/usePageHeader';
+import { useAuth } from '../../../hooks/useAuth';
+import { useOrdenTrabajo } from '../../../hooks/useOrdenTrabajo';
+import { OrdenGeneralSection } from '../../../components/orders/OrdenGeneralSection';
+import { OrdenItemsTab } from '../../../components/orders/OrdenItemsTab';
+import { OrdenPagosTab } from '../../../components/orders/OrdenPagosTab';
+import { OrdenRutasTab } from '../../../components/orders/OrdenRutasTab';
+import { OrdenHistorialTab } from '../../../components/orders/OrdenHistorialTab';
+import { OrdenFooterTotales } from '../../../components/orders/OrdenFooterTotales';
+import type { CanalVenta } from '../../../types/database';
 
 export function CreateOrderPage() {
   const navigate = useNavigate();
+  const { profile } = useAuth();
+  const { createOrdenConItems, loading, error } = useOrdenTrabajo();
 
   usePageHeader('Crear nueva orden de trabajo');
 
+  const [activeTab, setActiveTab] = useState('items');
+  const [clienteId, setClienteId] = useState('');
+  const [canalVenta, setCanalVenta] = useState<CanalVenta>('Mostrador');
+  const [fechaEntrega, setFechaEntrega] = useState('');
+  const [notasInternas, setNotasInternas] = useState('');
+  const [requiereFactura, setRequiereFactura] = useState(false);
+
+  const [items, setItems] = useState<any[]>([]);
+  const [descuentoTotal, setDescuentoTotal] = useState(0);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
+  const handleVolver = () => {
+    if (items.length > 0) {
+      const confirmar = window.confirm(
+        '¿Estás seguro de que deseas salir? Se perderán los cambios no guardados.'
+      );
+      if (!confirmar) return;
+    }
+    navigate('/app/orders/ordenes');
+  };
+
+  const calcularTotales = () => {
+    const subtotal = items.reduce((sum, item) => sum + item.precio_total, 0);
+    const descuentoAplicado = subtotal * (descuentoTotal / 100);
+    const subtotalConDescuento = subtotal - descuentoAplicado;
+    const iva = requiereFactura ? subtotalConDescuento * 0.21 : 0;
+    const total = subtotalConDescuento + iva;
+
+    return {
+      subtotal,
+      descuentoAplicado,
+      subtotalConDescuento,
+      iva,
+      total,
+    };
+  };
+
+  const validarFormulario = (): boolean => {
+    const errores: Record<string, string> = {};
+
+    if (!clienteId) {
+      errores.cliente = 'Debe seleccionar un cliente';
+    }
+
+    if (items.length === 0) {
+      errores.items = 'Debe agregar al menos un item a la orden';
+    }
+
+    if (fechaEntrega) {
+      const fecha = new Date(fechaEntrega);
+      const hoy = new Date();
+      hoy.setHours(0, 0, 0, 0);
+
+      if (fecha < hoy) {
+        errores.fechaEntrega = 'La fecha de entrega no puede ser anterior a hoy';
+      }
+    }
+
+    setFormErrors(errores);
+    return Object.keys(errores).length === 0;
+  };
+
+  const handleCrearOrden = async () => {
+    if (!validarFormulario()) {
+      alert('Por favor, complete todos los campos requeridos');
+      return;
+    }
+
+    const totales = calcularTotales();
+
+    const ordenData = {
+      cliente_id: clienteId,
+      canal_venta: canalVenta,
+      fecha_estimada_entrega: fechaEntrega || undefined,
+      notas_internas: notasInternas || undefined,
+    };
+
+    const result = await createOrdenConItems({
+      ordenData,
+      items: items.map(item => ({
+        producto_id: item.producto_id,
+        cantidad: item.cantidad,
+        configuracion: item.configuracion,
+        precio_base: item.precio_base,
+        precio_servicios: item.precio_servicios,
+        precio_acabados: item.precio_acabados,
+        precio_unitario_final: item.precio_unitario_final,
+        precio_total: item.precio_total,
+      })),
+      estadoInicial: 'pendiente',
+    });
+
+    if (result) {
+      navigate(`/app/orders/ordenes/${result.id}`);
+    } else {
+      alert('Error al crear la orden: ' + error);
+    }
+  };
+
+  const tabs = [
+    {
+      id: 'items',
+      label: 'Items',
+      count: items.length,
+    },
+    {
+      id: 'pagos',
+      label: 'Pagos',
+      disabled: true,
+    },
+    {
+      id: 'rutas',
+      label: 'Rutas de Producción',
+      disabled: true,
+    },
+    {
+      id: 'historial',
+      label: 'Historial',
+      disabled: true,
+    },
+  ];
+
+  const totales = calcularTotales();
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-32">
       <div className="flex items-center justify-between">
-        <Button
-          variant="secondary"
-          onClick={() => navigate('/app/orders/ordenes')}
-        >
+        <Button variant="secondary" onClick={handleVolver}>
           <ArrowLeft className="w-4 h-4" />
           Volver a órdenes
         </Button>
+
+        <Button
+          onClick={handleCrearOrden}
+          disabled={loading || items.length === 0 || !clienteId}
+          className="bg-blue-600 hover:bg-blue-700"
+        >
+          {loading ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Creando...
+            </>
+          ) : (
+            <>
+              <Save className="w-4 h-4" />
+              Crear Orden
+            </>
+          )}
+        </Button>
       </div>
 
-      <Card className="p-12">
-        <EmptyState
-          icon={Package}
-          title="Módulo en Construcción"
-          description="El módulo de creación de órdenes estará disponible próximamente. Primero necesitamos configurar el catálogo de productos."
+      <Card>
+        <OrdenGeneralSection
+          clienteId={clienteId}
+          setClienteId={setClienteId}
+          canalVenta={canalVenta}
+          setCanalVenta={setCanalVenta}
+          fechaEntrega={fechaEntrega}
+          setFechaEntrega={setFechaEntrega}
+          notasInternas={notasInternas}
+          setNotasInternas={setNotasInternas}
+          requiereFactura={requiereFactura}
+          setRequiereFactura={setRequiereFactura}
+          usuarioLogueado={profile?.full_name || 'Usuario'}
+          errors={formErrors}
         />
       </Card>
+
+      <Card>
+        <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
+
+        <div className="p-6">
+          {activeTab === 'items' && (
+            <OrdenItemsTab
+              items={items}
+              setItems={setItems}
+              descuentoTotal={descuentoTotal}
+              setDescuentoTotal={setDescuentoTotal}
+            />
+          )}
+
+          {activeTab === 'pagos' && (
+            <OrdenPagosTab
+              totales={totales}
+              pagos={[]}
+              onAgregarPago={() => {}}
+              readOnly={true}
+            />
+          )}
+
+          {activeTab === 'rutas' && (
+            <OrdenRutasTab items={items} />
+          )}
+
+          {activeTab === 'historial' && (
+            <OrdenHistorialTab eventos={[]} />
+          )}
+        </div>
+      </Card>
+
+      <OrdenFooterTotales
+        subtotal={totales.subtotal}
+        descuentoAplicado={totales.descuentoAplicado}
+        iva={totales.iva}
+        total={totales.total}
+        requiereFactura={requiereFactura}
+      />
     </div>
   );
 }
