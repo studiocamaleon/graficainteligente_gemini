@@ -98,7 +98,9 @@ export interface ProductSearchResult {
   cantidades_fijas: number[];
   cantidad_minima: number | null;
   medidas_disponibles: MedidaDisponible[];
+  material_id: string;
   material_nombre: string;
+  variante_id: string;
   variante_nombre: string;
   tintas_disponibles: TintaDisponible[];
   caras_disponibles: string[];

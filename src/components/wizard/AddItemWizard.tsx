@@ -69,6 +69,46 @@ export function AddItemWizard({ isOpen, onClose, onAgregar }: AddItemWizardProps
     state.config.acabados_seleccionados,
   ]);
 
+  const recalcularImpactosServiciosYAcabados = (nuevoPrecioBase: number) => {
+    const serviciosActualizados = state.config.servicios_seleccionados.map(s => {
+      let impacto = 0;
+
+      if (s.tipo_impacto === 'porcentaje' && s.valor_porcentaje !== null) {
+        impacto = nuevoPrecioBase * (s.valor_porcentaje / 100);
+      } else if (s.tipo_impacto === 'monto_fijo' && s.valor_monto !== null) {
+        impacto = s.valor_monto;
+      } else if (s.tipo_impacto === 'ambos') {
+        const impactoPorcentaje = s.valor_porcentaje !== null
+          ? nuevoPrecioBase * (s.valor_porcentaje / 100)
+          : 0;
+        const impactoMonto = s.valor_monto || 0;
+        impacto = impactoPorcentaje + impactoMonto;
+      }
+
+      return { ...s, impacto_calculado: impacto };
+    });
+
+    const acabadosActualizados = state.config.acabados_seleccionados.map(a => {
+      let impacto = 0;
+
+      if (a.tipo_impacto === 'porcentaje' && a.valor_porcentaje !== null) {
+        impacto = nuevoPrecioBase * (a.valor_porcentaje / 100);
+      } else if (a.tipo_impacto === 'monto_fijo' && a.valor_monto !== null) {
+        impacto = a.valor_monto;
+      } else if (a.tipo_impacto === 'ambos') {
+        const impactoPorcentaje = a.valor_porcentaje !== null
+          ? nuevoPrecioBase * (a.valor_porcentaje / 100)
+          : 0;
+        const impactoMonto = a.valor_monto || 0;
+        impacto = impactoPorcentaje + impactoMonto;
+      }
+
+      return { ...a, impacto_calculado: impacto };
+    });
+
+    return { serviciosActualizados, acabadosActualizados };
+  };
+
   const recalcularPrecio = async () => {
     if (
       !state.config.producto_laser_id ||
@@ -97,12 +137,19 @@ export function AddItemWizard({ isOpen, onClose, onAgregar }: AddItemWizardProps
         state.config.acabados_seleccionados
       );
 
+      const { serviciosActualizados, acabadosActualizados } = recalcularImpactosServiciosYAcabados(result.precio_base);
+
+      const totalServicios = serviciosActualizados.reduce((sum, s) => sum + s.impacto_calculado, 0);
+      const totalAcabados = acabadosActualizados.reduce((sum, a) => sum + a.impacto_calculado, 0);
+
       updateStepData({
         precio_base: result.precio_base,
-        precio_servicios: result.desglose.servicios,
-        precio_acabados: result.desglose.acabados,
-        precio_total: result.desglose.total,
+        precio_servicios: totalServicios,
+        precio_acabados: totalAcabados,
+        precio_total: result.precio_base + totalServicios + totalAcabados,
         tiene_precio_configurado: result.tiene_configuracion,
+        servicios_seleccionados: serviciosActualizados,
+        acabados_seleccionados: acabadosActualizados,
       });
     } catch (error) {
       console.error('Error calculating price:', error);
@@ -123,7 +170,9 @@ export function AddItemWizard({ isOpen, onClose, onAgregar }: AddItemWizardProps
       tipo_venta: product.tipo_venta,
       cantidades_fijas: product.cantidades_fijas,
       cantidad_minima: product.cantidad_minima,
+      material_id: product.material_id,
       material_nombre: product.material_nombre,
+      variante_id: product.variante_id,
       variante_nombre: product.variante_nombre,
       caras_disponibles: product.caras_disponibles,
     });
@@ -189,28 +238,29 @@ export function AddItemWizard({ isOpen, onClose, onAgregar }: AddItemWizardProps
 
     if (data && servicioData) {
       let impacto = 0;
-      if (state.config.precio_base) {
-        if (data.tipo_impacto === 'porcentaje' && data.valor_porcentaje !== null) {
-          impacto = state.config.precio_base * (data.valor_porcentaje / 100);
-        } else if (data.tipo_impacto === 'monto_fijo' && data.valor_monto !== null) {
-          impacto = data.valor_monto;
-        } else if (data.tipo_impacto === 'ambos') {
-          const impactoPorcentaje = data.valor_porcentaje !== null
-            ? state.config.precio_base * (data.valor_porcentaje / 100)
-            : 0;
-          const impactoMonto = data.valor_monto || 0;
-          impacto = impactoPorcentaje + impactoMonto;
-        }
+      const precioBase = state.config.precio_base || 0;
+      const tipoImpacto = data.tipo_impacto as 'porcentaje' | 'monto_fijo' | 'ambos';
+
+      if (tipoImpacto === 'porcentaje' && data.valor_porcentaje !== null) {
+        impacto = precioBase * (data.valor_porcentaje / 100);
+      } else if (tipoImpacto === 'monto_fijo' && data.valor_monto !== null) {
+        impacto = data.valor_monto;
+      } else if (tipoImpacto === 'ambos') {
+        const impactoPorcentaje = data.valor_porcentaje !== null
+          ? precioBase * (data.valor_porcentaje / 100)
+          : 0;
+        const impactoMonto = data.valor_monto || 0;
+        impacto = impactoPorcentaje + impactoMonto;
       }
 
       const newServicios = state.config.servicios_seleccionados.map(s =>
         s.servicio_id === servicioId
           ? {
               ...s,
-              servicio_nombre: servicioData.nombre,
+              servicio_nombre: servicioData.nombre as string,
               nivel_id: nivelId,
-              nivel_nombre: data.nombre,
-              tipo_impacto: data.tipo_impacto,
+              nivel_nombre: data.nombre as string,
+              tipo_impacto: tipoImpacto,
               valor_porcentaje: data.valor_porcentaje,
               valor_monto: data.valor_monto,
               impacto_calculado: impacto,
@@ -257,28 +307,29 @@ export function AddItemWizard({ isOpen, onClose, onAgregar }: AddItemWizardProps
 
     if (data && acabadoData) {
       let impacto = 0;
-      if (state.config.precio_base) {
-        if (data.tipo_impacto === 'porcentaje' && data.valor_porcentaje !== null) {
-          impacto = state.config.precio_base * (data.valor_porcentaje / 100);
-        } else if (data.tipo_impacto === 'monto_fijo' && data.valor_monto !== null) {
-          impacto = data.valor_monto;
-        } else if (data.tipo_impacto === 'ambos') {
-          const impactoPorcentaje = data.valor_porcentaje !== null
-            ? state.config.precio_base * (data.valor_porcentaje / 100)
-            : 0;
-          const impactoMonto = data.valor_monto || 0;
-          impacto = impactoPorcentaje + impactoMonto;
-        }
+      const precioBase = state.config.precio_base || 0;
+      const tipoImpacto = data.tipo_impacto as 'porcentaje' | 'monto_fijo' | 'ambos';
+
+      if (tipoImpacto === 'porcentaje' && data.valor_porcentaje !== null) {
+        impacto = precioBase * (data.valor_porcentaje / 100);
+      } else if (tipoImpacto === 'monto_fijo' && data.valor_monto !== null) {
+        impacto = data.valor_monto;
+      } else if (tipoImpacto === 'ambos') {
+        const impactoPorcentaje = data.valor_porcentaje !== null
+          ? precioBase * (data.valor_porcentaje / 100)
+          : 0;
+        const impactoMonto = data.valor_monto || 0;
+        impacto = impactoPorcentaje + impactoMonto;
       }
 
       const newAcabados = state.config.acabados_seleccionados.map(a =>
         a.acabado_id === acabadoId
           ? {
               ...a,
-              acabado_nombre: acabadoData.nombre,
+              acabado_nombre: acabadoData.nombre as string,
               nivel_id: nivelId,
-              nivel_nombre: data.nombre,
-              tipo_impacto: data.tipo_impacto,
+              nivel_nombre: data.nombre as string,
+              tipo_impacto: tipoImpacto,
               valor_porcentaje: data.valor_porcentaje,
               valor_monto: data.valor_monto,
               impacto_calculado: impacto,

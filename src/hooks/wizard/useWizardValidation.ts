@@ -61,9 +61,6 @@ export function useWizardValidation(config: ImpresionLaserConfig, step: WizardSt
           if (!servicio.servicio_id) {
             errors.push('Servicio con ID inválido');
           }
-          if (servicio.nivel_id === null && servicio.tipo_impacto !== 'porcentaje' && servicio.tipo_impacto !== 'monto_fijo') {
-            warnings.push(`El servicio "${servicio.servicio_nombre}" requiere seleccionar un nivel`);
-          }
         }
         break;
 
@@ -71,9 +68,6 @@ export function useWizardValidation(config: ImpresionLaserConfig, step: WizardSt
         for (const acabado of config.acabados_seleccionados) {
           if (!acabado.acabado_id) {
             errors.push('Acabado con ID inválido');
-          }
-          if (acabado.nivel_id === null && acabado.tipo_impacto !== 'porcentaje' && acabado.tipo_impacto !== 'monto_fijo') {
-            warnings.push(`El acabado "${acabado.acabado_nombre}" requiere seleccionar un nivel`);
           }
         }
         break;
