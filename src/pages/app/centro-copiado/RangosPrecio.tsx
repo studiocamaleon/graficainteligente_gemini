@@ -84,35 +84,33 @@ export function RangosPrecio() {
     }
   };
 
-  if (loading) {
+  const renderContent = () => {
+    if (loading) {
+      return (
+        <Card>
+          <div className="p-12 text-center">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+            <p className="text-gray-600">Cargando rangos...</p>
+          </div>
+        </Card>
+      );
+    }
+
+    if (rangos.length === 0) {
+      return (
+        <Card>
+          <div className="p-12">
+            <EmptyState
+              icon={Percent}
+              title="No hay rangos de precio configurados"
+              description="Comienza creando rangos de cantidad de hojas para aplicar precios escalonados. Por ejemplo: 1-50 hojas, 51-100 hojas, 101-500 hojas, etc."
+            />
+          </div>
+        </Card>
+      );
+    }
+
     return (
-      <Card>
-        <div className="p-12 text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-          <p className="text-gray-600">Cargando rangos...</p>
-        </div>
-      </Card>
-    );
-  }
-
-  if (rangos.length === 0) {
-    return (
-      <Card>
-        <div className="p-12">
-          <EmptyState
-            icon={Percent}
-            title="No hay rangos de precio configurados"
-            description="Comienza creando rangos de cantidad de hojas para aplicar precios escalonados. Por ejemplo: 1-50 hojas, 51-100 hojas, 101-500 hojas, etc."
-          />
-        </div>
-      </Card>
-    );
-  }
-
-  const maxOrden = Math.max(...rangos.map(r => r.orden), 0);
-
-  return (
-    <div className="space-y-6">
       <Card>
         <div className="p-6">
           <Table
@@ -154,6 +152,14 @@ export function RangosPrecio() {
           />
         </div>
       </Card>
+    );
+  };
+
+  const maxOrden = rangos.length > 0 ? Math.max(...rangos.map(r => r.orden), 0) : 0;
+
+  return (
+    <div className="space-y-6">
+      {renderContent()}
 
       <Modal
         isOpen={isModalOpen}
