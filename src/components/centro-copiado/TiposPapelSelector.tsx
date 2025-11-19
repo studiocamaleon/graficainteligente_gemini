@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Search, CheckCircle2, Star } from 'lucide-react';
+import { Search, CheckCircle2 } from 'lucide-react';
 import { Input } from '../ui/Input';
 import { Badge } from '../ui/Badge';
 import type { CentroCopiadoPapel } from '../../types/database';
@@ -17,11 +17,6 @@ interface TiposPapelSelectorProps {
   onSelect: (id: string) => void;
   loading?: boolean;
 }
-
-const isFrequentPaper = (nombre: string) => {
-  const frequent = ['BOND', 'OPALINA', 'COUCHE', 'KRAFT'];
-  return frequent.some(f => nombre.toUpperCase().includes(f));
-};
 
 const getMaterialColor = (materialNombre: string | undefined) => {
   if (!materialNombre) return 'bg-gray-100 text-gray-700 border-gray-200';
@@ -58,11 +53,6 @@ export function TiposPapelSelector({
     }
 
     const sorted = [...filtered].sort((a, b) => {
-      const aFrequent = isFrequentPaper(a.variante_nombre);
-      const bFrequent = isFrequentPaper(b.variante_nombre);
-      if (aFrequent && !bFrequent) return -1;
-      if (!aFrequent && bFrequent) return 1;
-
       if (a.orden !== b.orden) {
         return (a.orden || 999) - (b.orden || 999);
       }
@@ -120,7 +110,6 @@ export function TiposPapelSelector({
           <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-[400px] overflow-y-auto pr-1">
             {displayedPapeles.map((papel) => {
               const isSelected = selectedId === papel.id;
-              const isFrequent = isFrequentPaper(papel.variante_nombre);
               const colorClass = getMaterialColor(papel.material?.nombre);
 
               return (
@@ -141,18 +130,13 @@ export function TiposPapelSelector({
                   <div className="flex items-center gap-2">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-1 mb-0.5">
-                        <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                          {isFrequent && !isSelected && (
-                            <Star className="w-3 h-3 text-yellow-500 fill-yellow-500 flex-shrink-0" />
-                          )}
-                          <span
-                            className={`font-bold text-sm truncate ${
-                              isSelected ? 'text-blue-700' : 'text-gray-900'
-                            }`}
-                          >
-                            {papel.variante_nombre}
-                          </span>
-                        </div>
+                        <span
+                          className={`font-bold text-sm truncate ${
+                            isSelected ? 'text-blue-700' : 'text-gray-900'
+                          }`}
+                        >
+                          {papel.variante_nombre}
+                        </span>
                         {isSelected && (
                           <CheckCircle2 className="w-4 h-4 text-blue-600 flex-shrink-0" />
                         )}
