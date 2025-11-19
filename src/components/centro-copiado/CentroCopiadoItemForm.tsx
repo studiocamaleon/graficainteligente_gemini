@@ -87,7 +87,7 @@ export function CentroCopiadoItemForm({
           cantidad_copias: value.cantidad_copias || 1,
         };
 
-        const configAnillado = value.anillado && value.anillado.tipo
+        const configAnillado = value.anillado?.tipo
           ? {
               tipo_anillado: value.anillado.tipo,
               cantidad_hojas: value.cantidad_hojas || 0,
@@ -95,7 +95,7 @@ export function CentroCopiadoItemForm({
             }
           : undefined;
 
-        const configPlastificado = value.plastificado && value.plastificado.tipo
+        const configPlastificado = value.plastificado?.tipo
           ? {
               tipo_plastificado: value.plastificado.tipo,
               cantidad_hojas: value.plastificado.todas_hojas ? value.cantidad_hojas : undefined,

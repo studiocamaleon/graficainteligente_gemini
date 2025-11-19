@@ -105,6 +105,7 @@ export function CentroCopiadoItemTerminaciones({
       });
     } else {
       onChange({
+        anillado: undefined,
         plastificado,
       });
     }
@@ -130,6 +131,7 @@ export function CentroCopiadoItemTerminaciones({
     } else {
       onChange({
         anillado,
+        plastificado: undefined,
       });
     }
   };

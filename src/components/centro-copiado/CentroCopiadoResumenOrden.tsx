@@ -78,11 +78,11 @@ export function CentroCopiadoResumenOrden({
       partes.push(`x${config.cantidad_copias}`);
     }
 
-    if (config.anillado) {
+    if (config.anillado && config.anillado.tipo) {
       partes.push(`Anil.`);
     }
 
-    if (config.plastificado) {
+    if (config.plastificado && config.plastificado.tipo) {
       partes.push(`Plast.`);
     }
 
