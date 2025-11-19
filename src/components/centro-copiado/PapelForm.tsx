@@ -85,7 +85,7 @@ export function PapelForm({ onSubmit, onCancel }: PapelFormProps) {
       <Select
         label="Material"
         value={formData.material_id}
-        onChange={(e) => setFormData({ ...formData, material_id: e.target.value })}
+        onChange={(value) => setFormData({ ...formData, material_id: value })}
         error={errors.material_id}
         required
         disabled={loadingMateriales}
@@ -102,7 +102,7 @@ export function PapelForm({ onSubmit, onCancel }: PapelFormProps) {
         <Select
           label="Variante"
           value={formData.variante_nombre}
-          onChange={(e) => setFormData({ ...formData, variante_nombre: e.target.value })}
+          onChange={(value) => setFormData({ ...formData, variante_nombre: value })}
           error={errors.variante_nombre}
           required
         >
@@ -119,7 +119,7 @@ export function PapelForm({ onSubmit, onCancel }: PapelFormProps) {
         <Select
           label={`Espesor (${selectedMaterial.unidad_espesor})`}
           value={formData.espesor?.toString() || ''}
-          onChange={(e) => setFormData({ ...formData, espesor: parseFloat(e.target.value) || null })}
+          onChange={(value) => setFormData({ ...formData, espesor: parseFloat(value) || null })}
           error={errors.espesor}
           required
         >

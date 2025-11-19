@@ -76,7 +76,7 @@ export function EditMemberModal({ isOpen, onClose, member, onSuccess }: EditMemb
         <Select
           label="Rol"
           value={formData.role}
-          onChange={(e) => setFormData({ ...formData, role: e.target.value, custom_role_id: '' })}
+          onChange={(value) => setFormData({ ...formData, role: value, custom_role_id: '' })}
           required
         >
           <option value="viewer">Visualizador</option>
@@ -92,7 +92,7 @@ export function EditMemberModal({ isOpen, onClose, member, onSuccess }: EditMemb
           <Select
             label="Rol Personalizado (Opcional)"
             value={formData.custom_role_id}
-            onChange={(e) => setFormData({ ...formData, custom_role_id: e.target.value })}
+            onChange={(value) => setFormData({ ...formData, custom_role_id: value })}
           >
             <option value="">Sin rol personalizado</option>
             {roles.map((role) => (

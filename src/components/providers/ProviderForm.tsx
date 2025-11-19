@@ -189,7 +189,7 @@ export function ProviderForm({ provider, onSubmit, onCancel, isLoading }: Provid
                 label="Tipo de Documento"
                 required
                 value={formData.tipo_documento}
-                onChange={(e) => setFormData({ ...formData, tipo_documento: e.target.value as DocumentType })}
+                onChange={(value) => setFormData({ ...formData, tipo_documento: value as DocumentType })}
                 options={DOCUMENT_TYPES}
               />
 
@@ -302,14 +302,14 @@ export function ProviderForm({ provider, onSubmit, onCancel, isLoading }: Provid
               <Select
                 label="Tipo de Cuenta"
                 value={formData.tipo_cuenta}
-                onChange={(e) => setFormData({ ...formData, tipo_cuenta: e.target.value as AccountType })}
+                onChange={(value) => setFormData({ ...formData, tipo_cuenta: value as AccountType })}
                 options={ACCOUNT_TYPES}
               />
 
               <Select
                 label="Tipo de Identificador"
                 value={formData.tipo_identificador_bancario}
-                onChange={(e) => setFormData({ ...formData, tipo_identificador_bancario: e.target.value as BankIdentifierType })}
+                onChange={(value) => setFormData({ ...formData, tipo_identificador_bancario: value as BankIdentifierType })}
                 options={BANK_IDENTIFIER_TYPES}
               />
 
