@@ -128,6 +128,10 @@ export function useCentroCopiadoPriceCalculator() {
         throw new Error('No se pudo obtener la información del usuario');
       }
 
+      if (!config.tipo_anillado || !config.cantidad_hojas || !config.cantidad_copias) {
+        return 0;
+      }
+
       try {
         const { data: rangos, error: rangosError } = await supabase
           .from('centro_copiado_rangos_anillado')
@@ -178,8 +182,16 @@ export function useCentroCopiadoPriceCalculator() {
         throw new Error('No se pudo obtener la información del usuario');
       }
 
+      if (!config.tipo_plastificado || !config.cantidad_copias) {
+        return 0;
+      }
+
       try {
         const cantidadHojasPlastificar = config.cantidad_especifica || config.cantidad_hojas || 0;
+
+        if (cantidadHojasPlastificar <= 0) {
+          return 0;
+        }
 
         const { data: plastificados, error: plastificadosError } = await supabase
           .from('centro_copiado_plastificados')
