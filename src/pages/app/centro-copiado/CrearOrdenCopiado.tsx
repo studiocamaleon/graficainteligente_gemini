@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Plus, ArrowLeft, Save } from 'lucide-react';
+import { Plus, ArrowLeft, Save, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
 import { Input } from '../../../components/ui/Input';
@@ -18,6 +18,7 @@ interface ItemWithId {
   id: string;
   config: Partial<ItemCopiadoConfig>;
   precio?: number;
+  isCollapsed?: boolean;
 }
 
 export function CrearOrdenCopiado() {
@@ -32,6 +33,7 @@ export function CrearOrdenCopiado() {
   const [items, setItems] = useState<ItemWithId[]>([]);
   const [descuento, setDescuento] = useState(0);
   const [guardando, setGuardando] = useState(false);
+  const [infoGeneralCollapsed, setInfoGeneralCollapsed] = useState(false);
 
   const { clients, loading: loadingClients } = useClients({ page: 1, itemsPerPage: 100 });
   const { createOrden } = useCentroCopiadoOrdenes();
@@ -47,13 +49,18 @@ export function CrearOrdenCopiado() {
   }, []);
 
   const agregarItem = () => {
+    setItems((prev) =>
+      prev.map(item => ({ ...item, isCollapsed: true }))
+    );
+
     const nuevoItem: ItemWithId = {
       id: `item-${Date.now()}-${Math.random()}`,
       config: {
         cantidad_copias: 1,
       },
+      isCollapsed: false,
     };
-    setItems([...items, nuevoItem]);
+    setItems((prev) => [...prev, nuevoItem]);
   };
 
   const actualizarItem = useCallback((id: string, config: Partial<ItemCopiadoConfig>) => {
@@ -90,6 +97,16 @@ export function CrearOrdenCopiado() {
     if (items.length > 1) {
       setItems((prev) => prev.filter((item) => item.id !== id));
     }
+  };
+
+  const toggleItemCollapse = (id: string) => {
+    setItems((prev) =>
+      prev.map((item) =>
+        item.id === id
+          ? { ...item, isCollapsed: !item.isCollapsed }
+          : item
+      )
+    );
   };
 
   const validarFormulario = (): boolean => {
@@ -197,6 +214,16 @@ export function CrearOrdenCopiado() {
     label: `${client.nombre_fantasia} (${client.numero_documento})`,
   }));
 
+  const infoGeneralCompleta = clienteId && fechaEntrega;
+
+  useEffect(() => {
+    if (infoGeneralCompleta) {
+      setInfoGeneralCollapsed(true);
+    }
+  }, [infoGeneralCompleta]);
+
+  const clienteSeleccionado = clients.find(c => c.id === clienteId);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -210,56 +237,76 @@ export function CrearOrdenCopiado() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-4">
           <Card>
-            <div className="p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Información General</h2>
+            <button
+              onClick={() => setInfoGeneralCollapsed(!infoGeneralCollapsed)}
+              className="w-full p-4 text-left hover:bg-gray-50 transition-colors rounded-t-lg flex items-center justify-between"
+            >
+              <div className="flex items-center gap-3">
+                <h2 className="text-lg font-bold text-gray-900">Información General</h2>
+                {infoGeneralCollapsed && clienteSeleccionado && (
+                  <span className="text-sm text-gray-600">
+                    {clienteSeleccionado.nombre_fantasia}
+                    {fechaEntrega && ` • ${new Date(fechaEntrega).toLocaleDateString()}`}
+                  </span>
+                )}
+              </div>
+              {infoGeneralCollapsed ? (
+                <ChevronDown className="w-5 h-5 text-gray-500" />
+              ) : (
+                <ChevronUp className="w-5 h-5 text-gray-500" />
+              )}
+            </button>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Cliente *
-                  </label>
-                  <SearchableSelect
-                    options={clientesOptions}
-                    value={clienteId}
-                    onChange={setClienteId}
-                    placeholder="Buscar cliente..."
-                    disabled={!!clienteIdParam || loadingClients}
-                  />
-                  {clienteIdParam && (
-                    <p className="mt-1 text-xs text-gray-500">
-                      Cliente heredado de la orden de trabajo
-                    </p>
-                  )}
+            {!infoGeneralCollapsed && (
+              <div className="p-4 pt-0">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Cliente *
+                    </label>
+                    <SearchableSelect
+                      options={clientesOptions}
+                      value={clienteId}
+                      onChange={setClienteId}
+                      placeholder="Buscar cliente..."
+                      disabled={!!clienteIdParam || loadingClients}
+                    />
+                    {clienteIdParam && (
+                      <p className="mt-1 text-xs text-gray-500">
+                        Cliente heredado de la orden de trabajo
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Fecha Entrega Estimada
+                    </label>
+                    <Input
+                      type="date"
+                      value={fechaEntrega}
+                      onChange={(e) => setFechaEntrega(e.target.value)}
+                      min={new Date().toISOString().split('T')[0]}
+                    />
+                  </div>
                 </div>
 
-                <div>
+                <div className="mt-4">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Fecha Entrega Estimada
+                    Observaciones
                   </label>
-                  <Input
-                    type="date"
-                    value={fechaEntrega}
-                    onChange={(e) => setFechaEntrega(e.target.value)}
-                    min={new Date().toISOString().split('T')[0]}
+                  <textarea
+                    value={observaciones}
+                    onChange={(e) => setObservaciones(e.target.value)}
+                    rows={2}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Notas adicionales sobre la orden..."
                   />
                 </div>
               </div>
-
-              <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Observaciones
-                </label>
-                <textarea
-                  value={observaciones}
-                  onChange={(e) => setObservaciones(e.target.value)}
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Notas adicionales sobre la orden..."
-                />
-              </div>
-            </div>
+            )}
           </Card>
 
           <div className="flex items-center justify-between">
@@ -270,7 +317,7 @@ export function CrearOrdenCopiado() {
             </Button>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-3">
             {items.map((item, index) => (
               <CentroCopiadoItemForm
                 key={item.id}
@@ -279,6 +326,8 @@ export function CrearOrdenCopiado() {
                 onChange={(config) => actualizarItem(item.id, config)}
                 onRemove={() => eliminarItem(item.id)}
                 onPriceCalculated={priceCalculatedCallbacks[item.id]}
+                isCollapsed={item.isCollapsed}
+                onToggleCollapse={() => toggleItemCollapse(item.id)}
               />
             ))}
           </div>

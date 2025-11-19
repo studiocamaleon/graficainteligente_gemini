@@ -34,6 +34,8 @@ interface CentroCopiadoItemFormProps {
   onChange: (config: Partial<ItemCopiadoConfig>) => void;
   onRemove: () => void;
   onPriceCalculated?: (price: number) => void;
+  isCollapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
 export function CentroCopiadoItemForm({
@@ -42,6 +44,8 @@ export function CentroCopiadoItemForm({
   onChange,
   onRemove,
   onPriceCalculated,
+  isCollapsed = false,
+  onToggleCollapse,
 }: CentroCopiadoItemFormProps) {
   const [showTerminaciones, setShowTerminaciones] = useState(false);
   const [precioCalculado, setPrecioCalculado] = useState<number | null>(null);
@@ -142,33 +146,77 @@ export function CentroCopiadoItemForm({
     });
   };
 
+  const getResumenItem = () => {
+    const tamanio = tamanios.find(t => t.id === value.tamanio_papel_id);
+    const papel = papeles.find(p => p.id === value.papel_id);
+    const partes: string[] = [];
+
+    if (tamanio) partes.push(tamanio.nombre);
+    if (papel) partes.push(papel.variante_nombre);
+    if (value.cantidad_hojas) partes.push(`${value.cantidad_hojas} hojas`);
+    if (value.tipo_tinta === 'CMYK') partes.push('Color');
+    else if (value.tipo_tinta === 'K') partes.push('B/N');
+    if (value.cara_impresa === 'frente') partes.push('Frente');
+    else if (value.cara_impresa === 'frente_y_dorso') partes.push('F/D');
+    if (value.cantidad_copias && value.cantidad_copias > 1) partes.push(`x${value.cantidad_copias}`);
+
+    return partes.join(' • ');
+  };
+
   return (
     <Card className="relative">
-      <div className="absolute top-4 right-4 flex items-center gap-2">
-        {precioCalculado !== null && (
-          <Badge variant="success" className="text-lg font-bold">
-            <DollarSign className="w-4 h-4" />
-            ${precioCalculado.toFixed(2)}
-          </Badge>
-        )}
-        <button
-          onClick={onRemove}
-          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-          title="Eliminar item"
-        >
-          <Trash2 className="w-5 h-5" />
-        </button>
-      </div>
-
-      <div className="p-6">
-        <div className="mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">Item #{itemNumber}</h3>
+      <button
+        onClick={onToggleCollapse}
+        className="w-full p-4 text-left hover:bg-gray-50 transition-colors rounded-t-lg flex items-center justify-between"
+      >
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <Badge variant="primary">#{itemNumber}</Badge>
+          {isCollapsed && isConfigComplete && (
+            <>
+              <span className="text-sm text-gray-700 truncate">{getResumenItem()}</span>
+              {precioCalculado !== null && (
+                <Badge variant="success" className="ml-auto">
+                  ${precioCalculado.toFixed(2)}
+                </Badge>
+              )}
+            </>
+          )}
+          {!isCollapsed && (
+            <h3 className="text-lg font-semibold text-gray-900">Item #{itemNumber}</h3>
+          )}
         </div>
+        <div className="flex items-center gap-2 ml-4">
+          {!isCollapsed && precioCalculado !== null && (
+            <Badge variant="success" className="text-lg font-bold">
+              <DollarSign className="w-4 h-4" />
+              ${precioCalculado.toFixed(2)}
+            </Badge>
+          )}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onRemove();
+            }}
+            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            title="Eliminar item"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+          {isCollapsed ? (
+            <ChevronDown className="w-5 h-5 text-gray-500" />
+          ) : (
+            <ChevronUp className="w-5 h-5 text-gray-500" />
+          )}
+        </div>
+      </button>
 
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {!isCollapsed && (
+        <div className="p-4 pt-0">
+
+        <div className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Tamaño de Papel *
               </label>
               <Select
@@ -186,7 +234,7 @@ export function CentroCopiadoItemForm({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Tipo de Papel *
               </label>
               <Select
@@ -205,16 +253,16 @@ export function CentroCopiadoItemForm({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Tipo de Tinta *
               </label>
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={() => handleFieldChange('tipo_tinta', 'CMYK')}
-                  className={`p-4 border-2 rounded-lg transition-all ${
+                  className={`p-3 border-2 rounded-lg transition-all ${
                     value.tipo_tinta === 'CMYK'
                       ? 'border-blue-500 bg-blue-50 text-blue-700'
                       : 'border-gray-200 hover:border-gray-300'
@@ -227,13 +275,13 @@ export function CentroCopiadoItemForm({
                       <div className="w-3 h-3 rounded-full bg-yellow-400"></div>
                       <div className="w-3 h-3 rounded-full bg-black"></div>
                     </div>
-                    <span className="font-medium">Color</span>
+                    <span className="font-medium text-sm">Color</span>
                   </div>
                 </button>
                 <button
                   type="button"
                   onClick={() => handleFieldChange('tipo_tinta', 'K')}
-                  className={`p-4 border-2 rounded-lg transition-all ${
+                  className={`p-3 border-2 rounded-lg transition-all ${
                     value.tipo_tinta === 'K'
                       ? 'border-gray-700 bg-gray-50 text-gray-900'
                       : 'border-gray-200 hover:border-gray-300'
@@ -241,46 +289,46 @@ export function CentroCopiadoItemForm({
                 >
                   <div className="flex items-center justify-center gap-2">
                     <div className="w-3 h-3 rounded-full bg-gray-900"></div>
-                    <span className="font-medium">B/N</span>
+                    <span className="font-medium text-sm">B/N</span>
                   </div>
                 </button>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Caras Impresas *
               </label>
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={() => handleFieldChange('cara_impresa', 'frente')}
-                  className={`p-4 border-2 rounded-lg transition-all ${
+                  className={`p-3 border-2 rounded-lg transition-all ${
                     value.cara_impresa === 'frente'
                       ? 'border-blue-500 bg-blue-50 text-blue-700'
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
-                  <span className="font-medium">Frente</span>
+                  <span className="font-medium text-sm">Frente</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => handleFieldChange('cara_impresa', 'frente_y_dorso')}
-                  className={`p-4 border-2 rounded-lg transition-all ${
+                  className={`p-3 border-2 rounded-lg transition-all ${
                     value.cara_impresa === 'frente_y_dorso'
                       ? 'border-blue-500 bg-blue-50 text-blue-700'
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
-                  <span className="font-medium">Frente y Dorso</span>
+                  <span className="font-medium text-sm">Frente y Dorso</span>
                 </button>
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Cantidad de Hojas *
               </label>
               <Input
@@ -289,12 +337,11 @@ export function CentroCopiadoItemForm({
                 value={value.cantidad_hojas || ''}
                 onChange={(e) => handleFieldChange('cantidad_hojas', parseInt(e.target.value) || 0)}
                 placeholder="Ej: 50"
-                className="text-lg font-semibold"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Cantidad de Copias/Juegos *
               </label>
               <Input
@@ -303,40 +350,39 @@ export function CentroCopiadoItemForm({
                 value={value.cantidad_copias || ''}
                 onChange={(e) => handleFieldChange('cantidad_copias', parseInt(e.target.value) || 1)}
                 placeholder="Ej: 10"
-                className="text-lg font-semibold"
               />
             </div>
           </div>
 
           {errorCalculo && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-sm text-red-600">{errorCalculo}</p>
+            <div className="p-2 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-xs text-red-600">{errorCalculo}</p>
             </div>
           )}
 
           {calculating && (
             <div className="flex items-center justify-center py-2">
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
-              <span className="ml-2 text-sm text-gray-600">Calculando precio...</span>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+              <span className="ml-2 text-xs text-gray-600">Calculando precio...</span>
             </div>
           )}
 
-          <div className="border-t pt-4">
+          <div className="border-t pt-3">
             <button
               type="button"
               onClick={() => setShowTerminaciones(!showTerminaciones)}
-              className="flex items-center justify-between w-full p-3 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+              className="flex items-center justify-between w-full p-2 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
             >
-              <span className="font-medium text-gray-900">Terminaciones</span>
+              <span className="font-medium text-sm text-gray-900">Terminaciones</span>
               {showTerminaciones ? (
-                <ChevronUp className="w-5 h-5 text-gray-500" />
+                <ChevronUp className="w-4 h-4 text-gray-500" />
               ) : (
-                <ChevronDown className="w-5 h-5 text-gray-500" />
+                <ChevronDown className="w-4 h-4 text-gray-500" />
               )}
             </button>
 
             {showTerminaciones && (
-              <div className="mt-4">
+              <div className="mt-3">
                 <CentroCopiadoItemTerminaciones
                   cantidadHojas={value.cantidad_hojas || 0}
                   cantidadCopias={value.cantidad_copias || 1}
@@ -349,6 +395,7 @@ export function CentroCopiadoItemForm({
           </div>
         </div>
       </div>
+      )}
     </Card>
   );
 }

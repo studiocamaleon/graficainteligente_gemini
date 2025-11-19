@@ -3,6 +3,8 @@ import { Card } from '../ui/Card';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
+import { useCentroCopiadoTamanios } from '../../hooks/useCentroCopiadoTamanios';
+import { useCentroCopiadoPapeles } from '../../hooks/useCentroCopiadoPapeles';
 import type { ItemCopiadoConfig } from './CentroCopiadoItemForm';
 
 interface CentroCopiadoResumenOrdenProps {
@@ -22,6 +24,9 @@ export function CentroCopiadoResumenOrden({
   onCancelar,
   guardando,
 }: CentroCopiadoResumenOrdenProps) {
+  const { tamanios } = useCentroCopiadoTamanios();
+  const { papeles } = useCentroCopiadoPapeles();
+
   const itemsCompletos = items.filter(
     (item) =>
       item.config.tamanio_papel_id &&
@@ -42,8 +47,19 @@ export function CentroCopiadoResumenOrden({
     const config = item.config;
     const partes: string[] = [];
 
+    const tamanio = tamanios.find(t => t.id === config.tamanio_papel_id);
+    const papel = papeles.find(p => p.id === config.papel_id);
+
+    if (tamanio) {
+      partes.push(tamanio.nombre);
+    }
+
+    if (papel) {
+      partes.push(papel.variante_nombre);
+    }
+
     if (config.cantidad_hojas) {
-      partes.push(`${config.cantidad_hojas} hojas`);
+      partes.push(`${config.cantidad_hojas}h`);
     }
 
     if (config.tipo_tinta === 'CMYK') {
@@ -53,21 +69,21 @@ export function CentroCopiadoResumenOrden({
     }
 
     if (config.cara_impresa === 'frente') {
-      partes.push('Frente');
+      partes.push('1C');
     } else if (config.cara_impresa === 'frente_y_dorso') {
-      partes.push('F/D');
+      partes.push('2C');
     }
 
     if (config.cantidad_copias && config.cantidad_copias > 1) {
-      partes.push(`x${config.cantidad_copias} copias`);
+      partes.push(`x${config.cantidad_copias}`);
     }
 
     if (config.anillado) {
-      partes.push(`+ ${config.anillado.tipo === 'ring_wire' ? 'RW' : 'Plástico'}`);
+      partes.push(`Anil.`);
     }
 
     if (config.plastificado) {
-      partes.push(`+ Plastificado`);
+      partes.push(`Plast.`);
     }
 
     return partes.join(' • ') || 'Sin configurar';
@@ -75,10 +91,10 @@ export function CentroCopiadoResumenOrden({
 
   return (
     <Card className="sticky top-6 h-fit">
-      <div className="p-6">
-        <div className="flex items-center gap-2 mb-6">
+      <div className="p-4">
+        <div className="flex items-center gap-2 mb-4">
           <ShoppingCart className="w-5 h-5 text-blue-600" />
-          <h3 className="text-lg font-bold text-gray-900">Resumen de Orden</h3>
+          <h3 className="text-base font-bold text-gray-900">Resumen de Orden</h3>
           <Badge variant="secondary">{items.length}</Badge>
         </div>
 
@@ -89,23 +105,23 @@ export function CentroCopiadoResumenOrden({
           </div>
         ) : (
           <>
-            <div className="space-y-3 mb-6 max-h-96 overflow-y-auto">
+            <div className="space-y-2 mb-4 max-h-96 overflow-y-auto">
               {items.map((item, index) => (
                 <div
                   key={item.id}
-                  className="p-3 bg-gray-50 rounded-lg border border-gray-200"
+                  className="p-2 bg-gray-50 rounded-lg border border-gray-200"
                 >
                   <div className="flex items-start justify-between gap-2 mb-1">
-                    <div className="flex items-center gap-2 flex-1">
-                      <Badge variant="primary" className="text-xs">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <Badge variant="primary" className="text-xs flex-shrink-0">
                         #{index + 1}
                       </Badge>
-                      <span className="text-sm text-gray-700 line-clamp-2">
+                      <span className="text-xs text-gray-700 line-clamp-2 break-words">
                         {getItemDescripcion(item)}
                       </span>
                     </div>
                     {item.precio !== undefined && (
-                      <span className="text-sm font-semibold text-gray-900 whitespace-nowrap">
+                      <span className="text-xs font-semibold text-gray-900 whitespace-nowrap flex-shrink-0">
                         ${item.precio.toFixed(2)}
                       </span>
                     )}
@@ -120,16 +136,16 @@ export function CentroCopiadoResumenOrden({
               ))}
             </div>
 
-            <div className="border-t pt-4 space-y-3">
+            <div className="border-t pt-3 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-600">Subtotal</span>
-                <span className="text-base font-semibold text-gray-900">
+                <span className="text-sm font-semibold text-gray-900">
                   ${subtotal.toFixed(2)}
                 </span>
               </div>
 
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">
+              <div className="space-y-1">
+                <label className="block text-xs font-medium text-gray-700">
                   Descuento (%)
                 </label>
                 <div className="flex items-center gap-2">
@@ -142,21 +158,21 @@ export function CentroCopiadoResumenOrden({
                     onChange={(e) => onDescuentoChange(parseFloat(e.target.value) || 0)}
                     placeholder="0"
                   />
-                  <span className="text-sm text-gray-600">%</span>
+                  <span className="text-xs text-gray-600">%</span>
                 </div>
                 {montoDescuento > 0 && (
-                  <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center justify-between text-xs">
                     <span className="text-red-600">Monto descuento</span>
                     <span className="font-medium text-red-600">-${montoDescuento.toFixed(2)}</span>
                   </div>
                 )}
               </div>
 
-              <div className="border-t pt-3 flex items-center justify-between">
-                <span className="text-base font-bold text-gray-900">Total</span>
-                <div className="flex items-center gap-2">
-                  <DollarSign className="w-5 h-5 text-green-600" />
-                  <span className="text-2xl font-bold text-green-600">
+              <div className="border-t pt-2 flex items-center justify-between">
+                <span className="text-sm font-bold text-gray-900">Total</span>
+                <div className="flex items-center gap-1">
+                  <DollarSign className="w-4 h-4 text-green-600" />
+                  <span className="text-xl font-bold text-green-600">
                     ${total.toFixed(2)}
                   </span>
                 </div>
@@ -164,14 +180,14 @@ export function CentroCopiadoResumenOrden({
             </div>
 
             {itemsCompletos.length < items.length && (
-              <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+              <div className="mt-3 p-2 bg-amber-50 border border-amber-200 rounded-lg">
                 <p className="text-xs text-amber-700">
                   Completa todos los items para poder guardar la orden
                 </p>
               </div>
             )}
 
-            <div className="mt-6 space-y-2">
+            <div className="mt-4 space-y-2">
               <Button
                 variant="primary"
                 onClick={onGuardar}
