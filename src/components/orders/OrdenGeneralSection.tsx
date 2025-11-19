@@ -1,8 +1,10 @@
-import { MessageSquare, Globe, Store, User } from 'lucide-react';
+import { MessageSquare, Globe, Store, User, Calendar } from 'lucide-react';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import { Switch } from '../ui/Switch';
+import { Tooltip } from '../ui/Tooltip';
 import { useClients } from '../../hooks/useClients';
+import { useRef } from 'react';
 import type { CanalVenta } from '../../types/database';
 
 interface OrdenGeneralSectionProps {
@@ -35,6 +37,7 @@ export function OrdenGeneralSection({
   errors = {},
 }: OrdenGeneralSectionProps) {
   const { clients, loading } = useClients();
+  const dateInputRef = useRef<HTMLInputElement>(null);
 
   const canalesVenta: { value: CanalVenta; label: string; icon: any }[] = [
     { value: 'WhatsApp', label: 'WhatsApp', icon: MessageSquare },
@@ -48,6 +51,10 @@ export function OrdenGeneralSection({
   }));
 
   const minFecha = new Date().toISOString().split('T')[0];
+
+  const handleDateContainerClick = () => {
+    dateInputRef.current?.showPicker();
+  };
 
   return (
     <div className="p-6 space-y-6">
@@ -83,28 +90,28 @@ export function OrdenGeneralSection({
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Canal de Venta <span className="text-red-500">*</span>
           </label>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="flex items-center gap-3">
             {canalesVenta.map(canal => {
               const Icon = canal.icon;
               const isSelected = canalVenta === canal.value;
 
               return (
-                <button
-                  key={canal.value}
-                  type="button"
-                  onClick={() => setCanalVenta(canal.value)}
-                  className={`
-                    flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all
-                    ${
-                      isSelected
-                        ? 'border-blue-500 bg-blue-50 text-blue-700'
-                        : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
-                    }
-                  `}
-                >
-                  <Icon className="w-6 h-6 mb-2" />
-                  <span className="text-sm font-medium">{canal.label}</span>
-                </button>
+                <Tooltip key={canal.value} content={canal.label} position="top">
+                  <button
+                    type="button"
+                    onClick={() => setCanalVenta(canal.value)}
+                    className={`
+                      flex items-center justify-center p-4 rounded-lg border-2 transition-all
+                      ${
+                        isSelected
+                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                      }
+                    `}
+                  >
+                    <Icon className="w-6 h-6" />
+                  </button>
+                </Tooltip>
               );
             })}
           </div>
@@ -124,13 +131,23 @@ export function OrdenGeneralSection({
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Fecha Estimada de Entrega
           </label>
-          <Input
-            type="date"
-            value={fechaEntrega}
-            onChange={(e) => setFechaEntrega(e.target.value)}
-            min={minFecha}
-            className={errors.fechaEntrega ? 'border-red-500' : ''}
-          />
+          <div
+            onClick={handleDateContainerClick}
+            className={`
+              relative flex items-center cursor-pointer rounded-lg border transition-colors
+              ${errors.fechaEntrega ? 'border-red-500' : 'border-gray-300 hover:border-gray-400'}
+            `}
+          >
+            <input
+              ref={dateInputRef}
+              type="date"
+              value={fechaEntrega}
+              onChange={(e) => setFechaEntrega(e.target.value)}
+              min={minFecha}
+              className="w-full px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+            />
+            <Calendar className="absolute right-3 w-5 h-5 text-gray-400 pointer-events-none" />
+          </div>
           {errors.fechaEntrega && (
             <p className="mt-1 text-sm text-red-600">{errors.fechaEntrega}</p>
           )}

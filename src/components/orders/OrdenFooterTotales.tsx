@@ -16,8 +16,8 @@ export function OrdenFooterTotales({
   requiereFactura,
 }: OrdenFooterTotalesProps) {
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-40">
-      <div className="max-w-7xl mx-auto px-6 py-4">
+    <div className="fixed bottom-0 left-0 lg:left-72 right-0 bg-white border-t border-gray-200 shadow-lg z-40">
+      <div className="px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <Receipt className="w-5 h-5 text-gray-400" />
