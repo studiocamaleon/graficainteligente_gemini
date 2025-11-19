@@ -1,9 +1,8 @@
-import { useState } from 'react';
+import { motion } from 'framer-motion';
 import { Card } from '../../ui/Card';
 import { Select } from '../../ui/Select';
 import { Badge } from '../../ui/Badge';
-import { Wrench, Sparkles, Plus, X } from 'lucide-react';
-import { Button } from '../../ui/Button';
+import { Wrench, Sparkles, Check } from 'lucide-react';
 import type { ProductConfiguration } from '../../../hooks/wizard/useProductConfiguration';
 
 interface ServicesAndFinishingsStepProps {
@@ -41,87 +40,119 @@ export function ServicesAndFinishingsStep({
   onServiciosChange,
   onAcabadosChange
 }: ServicesAndFinishingsStepProps) {
-  const [showServicioSelector, setShowServicioSelector] = useState(false);
-  const [showAcabadoSelector, setShowAcabadoSelector] = useState(false);
-  const [tempServicioId, setTempServicioId] = useState('');
-  const [tempNivelServicioId, setTempNivelServicioId] = useState('');
-  const [tempAcabadoId, setTempAcabadoId] = useState('');
-  const [tempNivelAcabadoId, setTempNivelAcabadoId] = useState('');
 
-  const availableServicios = config.servicios.filter(
-    s => !selectedServicios.some(sel => sel.servicio_id === s.servicio_id)
-  );
+  const handleToggleServicio = (servicioConfig: typeof config.servicios[0]) => {
+    const isSelected = selectedServicios.some(s => s.servicio_id === servicioConfig.servicio_id);
 
-  const availableAcabados = config.acabados.filter(
-    a => !selectedAcabados.some(sel => sel.acabado_id === a.acabado_id)
-  );
+    if (isSelected) {
+      onServiciosChange(selectedServicios.filter(s => s.servicio_id !== servicioConfig.servicio_id));
+    } else {
+      if (servicioConfig.tiene_niveles && (!servicioConfig.niveles || servicioConfig.niveles.length === 0)) {
+        return;
+      }
 
-  const handleAgregarServicio = () => {
-    const servicio = config.servicios.find(s => s.servicio_id === tempServicioId);
-    if (!servicio) return;
+      const nivel = servicioConfig.tiene_niveles && servicioConfig.niveles && servicioConfig.niveles.length > 0
+        ? servicioConfig.niveles[0]
+        : null;
 
-    let nivel = null;
-    if (servicio.tiene_niveles && tempNivelServicioId) {
-      nivel = servicio.niveles?.find(n => n.id === tempNivelServicioId);
+      const newServicio: SelectedService = {
+        servicio_id: servicioConfig.servicio_id,
+        servicio_nombre: servicioConfig.servicio_nombre,
+        nivel_id: nivel?.id || null,
+        nivel_nombre: nivel?.nombre || null,
+        tipo_impacto: nivel?.tipo_impacto || 'sin_impacto',
+        valor_porcentaje: nivel?.valor_porcentaje || null,
+        valor_monto: nivel?.valor_monto || null
+      };
+
+      onServiciosChange([...selectedServicios, newServicio]);
     }
-
-    const newServicio: SelectedService = {
-      servicio_id: servicio.servicio_id,
-      servicio_nombre: servicio.servicio_nombre,
-      nivel_id: nivel?.id || null,
-      nivel_nombre: nivel?.nombre || null,
-      tipo_impacto: nivel?.tipo_impacto || 'sin_impacto',
-      valor_porcentaje: nivel?.valor_porcentaje || null,
-      valor_monto: nivel?.valor_monto || null
-    };
-
-    onServiciosChange([...selectedServicios, newServicio]);
-    setTempServicioId('');
-    setTempNivelServicioId('');
-    setShowServicioSelector(false);
   };
 
-  const handleAgregarAcabado = () => {
-    const acabado = config.acabados.find(a => a.acabado_id === tempAcabadoId);
-    if (!acabado) return;
+  const handleToggleAcabado = (acabadoConfig: typeof config.acabados[0]) => {
+    const isSelected = selectedAcabados.some(a => a.acabado_id === acabadoConfig.acabado_id);
 
-    let nivel = null;
-    if (acabado.tiene_niveles && tempNivelAcabadoId) {
-      nivel = acabado.niveles?.find(n => n.id === tempNivelAcabadoId);
+    if (isSelected) {
+      onAcabadosChange(selectedAcabados.filter(a => a.acabado_id !== acabadoConfig.acabado_id));
+    } else {
+      if (acabadoConfig.tiene_niveles && (!acabadoConfig.niveles || acabadoConfig.niveles.length === 0)) {
+        return;
+      }
+
+      const nivel = acabadoConfig.tiene_niveles && acabadoConfig.niveles && acabadoConfig.niveles.length > 0
+        ? acabadoConfig.niveles[0]
+        : null;
+
+      const newAcabado: SelectedFinishing = {
+        acabado_id: acabadoConfig.acabado_id,
+        acabado_nombre: acabadoConfig.acabado_nombre,
+        nivel_id: nivel?.id || null,
+        nivel_nombre: nivel?.nombre || null,
+        tipo_impacto: nivel?.tipo_impacto || 'sin_impacto',
+        valor_porcentaje: nivel?.valor_porcentaje || null,
+        valor_monto: nivel?.valor_monto || null
+      };
+
+      onAcabadosChange([...selectedAcabados, newAcabado]);
     }
-
-    const newAcabado: SelectedFinishing = {
-      acabado_id: acabado.acabado_id,
-      acabado_nombre: acabado.acabado_nombre,
-      nivel_id: nivel?.id || null,
-      nivel_nombre: nivel?.nombre || null,
-      tipo_impacto: nivel?.tipo_impacto || 'sin_impacto',
-      valor_porcentaje: nivel?.valor_porcentaje || null,
-      valor_monto: nivel?.valor_monto || null
-    };
-
-    onAcabadosChange([...selectedAcabados, newAcabado]);
-    setTempAcabadoId('');
-    setTempNivelAcabadoId('');
-    setShowAcabadoSelector(false);
   };
 
-  const handleRemoverServicio = (servicioId: string) => {
-    onServiciosChange(selectedServicios.filter(s => s.servicio_id !== servicioId));
+  const handleChangeNivelServicio = (servicioId: string, nivelId: string) => {
+    const servicioConfig = config.servicios.find(s => s.servicio_id === servicioId);
+    if (!servicioConfig || !servicioConfig.niveles) return;
+
+    const nivel = servicioConfig.niveles.find(n => n.id === nivelId);
+    if (!nivel) return;
+
+    const updatedServicios = selectedServicios.map(s => {
+      if (s.servicio_id === servicioId) {
+        return {
+          ...s,
+          nivel_id: nivel.id,
+          nivel_nombre: nivel.nombre,
+          tipo_impacto: nivel.tipo_impacto,
+          valor_porcentaje: nivel.valor_porcentaje,
+          valor_monto: nivel.valor_monto
+        };
+      }
+      return s;
+    });
+
+    onServiciosChange(updatedServicios);
   };
 
-  const handleRemoverAcabado = (acabadoId: string) => {
-    onAcabadosChange(selectedAcabados.filter(a => a.acabado_id !== acabadoId));
+  const handleChangeNivelAcabado = (acabadoId: string, nivelId: string) => {
+    const acabadoConfig = config.acabados.find(a => a.acabado_id === acabadoId);
+    if (!acabadoConfig || !acabadoConfig.niveles) return;
+
+    const nivel = acabadoConfig.niveles.find(n => n.id === nivelId);
+    if (!nivel) return;
+
+    const updatedAcabados = selectedAcabados.map(a => {
+      if (a.acabado_id === acabadoId) {
+        return {
+          ...a,
+          nivel_id: nivel.id,
+          nivel_nombre: nivel.nombre,
+          tipo_impacto: nivel.tipo_impacto,
+          valor_porcentaje: nivel.valor_porcentaje,
+          valor_monto: nivel.valor_monto
+        };
+      }
+      return a;
+    });
+
+    onAcabadosChange(updatedAcabados);
   };
 
-  const getImpactoBadgeText = (servicio: SelectedService | SelectedFinishing): string => {
-    if (!servicio.valor_porcentaje && !servicio.valor_monto) return 'Sin impacto';
+  const getImpactoBadgeText = (nivel: { valor_porcentaje: number | null; valor_monto: number | null }): string => {
+    if (!nivel.valor_porcentaje && !nivel.valor_monto) return 'Sin impacto';
 
     const parts = [];
-    if (servicio.valor_porcentaje) parts.push(`${servicio.valor_porcentaje}%`);
-    if (servicio.valor_monto) parts.push(`$${servicio.valor_monto}`);
+    if (nivel.valor_porcentaje) parts.push(`+${nivel.valor_porcentaje}%`);
+    if (nivel.valor_monto) parts.push(`+$${nivel.valor_monto}`);
 
-    return parts.join(' + ');
+    return parts.join(' ');
   };
 
   return (
@@ -129,262 +160,158 @@ export function ServicesAndFinishingsStep({
       <div>
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Servicios y Acabados</h2>
         <p className="text-gray-600">
-          Agrega servicios y acabados opcionales al producto (opcional)
+          Selecciona los servicios y acabados que deseas aplicar a este producto (opcional)
         </p>
       </div>
 
       {/* Servicios */}
-      {config.servicios.length > 0 && (
-        <Card className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Wrench className="w-5 h-5 text-blue-600" />
-              <h3 className="text-lg font-semibold text-gray-900">Servicios</h3>
-            </div>
-
-            {availableServicios.length > 0 && !showServicioSelector && (
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setShowServicioSelector(true)}
-              >
-                <Plus className="w-4 h-4 mr-1" />
-                Agregar Servicio
-              </Button>
-            )}
+      {config.servicios && config.servicios.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Wrench className="w-5 h-5 text-blue-600" />
+            <h3 className="text-lg font-semibold text-gray-900">Servicios Disponibles</h3>
           </div>
 
-          {selectedServicios.length === 0 && !showServicioSelector && (
-            <p className="text-sm text-gray-500 italic">
-              No se han agregado servicios
-            </p>
-          )}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {config.servicios.map((servicio) => {
+              const isSelected = selectedServicios.some(s => s.servicio_id === servicio.servicio_id);
+              const selectedServicio = selectedServicios.find(s => s.servicio_id === servicio.servicio_id);
 
-          {selectedServicios.length > 0 && (
-            <div className="space-y-2 mb-4">
-              {selectedServicios.map((servicio) => (
-                <div key={servicio.servicio_id} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                  <div>
-                    <p className="font-medium text-gray-900">{servicio.servicio_nombre}</p>
-                    {servicio.nivel_nombre && (
-                      <p className="text-sm text-gray-600">Nivel: {servicio.nivel_nombre}</p>
+              return (
+                <motion.div
+                  key={servicio.servicio_id}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <Card
+                    className={`p-4 cursor-pointer transition-all ${
+                      isSelected
+                        ? 'border-2 border-blue-500 bg-blue-50'
+                        : 'border border-gray-200 hover:border-blue-300 hover:shadow-md'
+                    }`}
+                    onClick={() => handleToggleServicio(servicio)}
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-gray-900">{servicio.servicio_nombre}</h4>
+                      </div>
+                      {isSelected && (
+                        <div className="flex-shrink-0 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
+                          <Check className="w-4 h-4 text-white" />
+                        </div>
+                      )}
+                    </div>
+
+                    {servicio.tiene_niveles && servicio.niveles && servicio.niveles.length > 0 && isSelected && (
+                      <div className="mt-3 pt-3 border-t border-gray-200" onClick={(e) => e.stopPropagation()}>
+                        <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                          Selecciona el nivel:
+                        </label>
+                        <Select
+                          value={selectedServicio?.nivel_id || ''}
+                          onChange={(e) => handleChangeNivelServicio(servicio.servicio_id, e.target.value)}
+                          className="text-sm"
+                        >
+                          {servicio.niveles.map((nivel) => (
+                            <option key={nivel.id} value={nivel.id}>
+                              {nivel.nombre} {getImpactoBadgeText(nivel) !== 'Sin impacto' && `- ${getImpactoBadgeText(nivel)}`}
+                            </option>
+                          ))}
+                        </Select>
+                      </div>
                     )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="blue">{getImpactoBadgeText(servicio)}</Badge>
-                    <button
-                      onClick={() => handleRemoverServicio(servicio.servicio_id)}
-                      className="text-red-600 hover:text-red-700"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
 
-          {showServicioSelector && (
-            <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Selecciona un servicio
-                </label>
-                <Select
-                  value={tempServicioId}
-                  onChange={(e) => {
-                    setTempServicioId(e.target.value);
-                    setTempNivelServicioId('');
-                  }}
-                >
-                  <option value="">Selecciona...</option>
-                  {availableServicios.map((servicio) => (
-                    <option key={servicio.servicio_id} value={servicio.servicio_id}>
-                      {servicio.servicio_nombre}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-
-              {tempServicioId && (() => {
-                const servicio = config.servicios.find(s => s.servicio_id === tempServicioId);
-                return servicio?.tiene_niveles && servicio.niveles && servicio.niveles.length > 0 && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Selecciona el nivel
-                    </label>
-                    <Select
-                      value={tempNivelServicioId}
-                      onChange={(e) => setTempNivelServicioId(e.target.value)}
-                    >
-                      <option value="">Selecciona un nivel...</option>
-                      {servicio.niveles.map((nivel) => (
-                        <option key={nivel.id} value={nivel.id}>
-                          {nivel.nombre}
-                          {(nivel.valor_porcentaje || nivel.valor_monto) && ` - `}
-                          {nivel.valor_porcentaje && `${nivel.valor_porcentaje}%`}
-                          {nivel.valor_porcentaje && nivel.valor_monto && ` + `}
-                          {nivel.valor_monto && `$${nivel.valor_monto}`}
-                        </option>
-                      ))}
-                    </Select>
-                  </div>
-                );
-              })()}
-
-              <div className="flex gap-2">
-                <Button
-                  onClick={handleAgregarServicio}
-                  disabled={!tempServicioId || ((() => {
-                    const servicio = config.servicios.find(s => s.servicio_id === tempServicioId);
-                    return servicio?.tiene_niveles && !tempNivelServicioId;
-                  })())}
-                >
-                  Agregar
-                </Button>
-                <Button
-                  variant="secondary"
-                  onClick={() => {
-                    setShowServicioSelector(false);
-                    setTempServicioId('');
-                    setTempNivelServicioId('');
-                  }}
-                >
-                  Cancelar
-                </Button>
-              </div>
-            </div>
-          )}
-        </Card>
+                    {!servicio.tiene_niveles && selectedServicio && (
+                      <div className="mt-2">
+                        <Badge variant="blue" size="sm">
+                          {getImpactoBadgeText(selectedServicio)}
+                        </Badge>
+                      </div>
+                    )}
+                  </Card>
+                </motion.div>
+              );
+            })}
+          </div>
+        </div>
       )}
 
       {/* Acabados */}
-      {config.acabados.length > 0 && (
-        <Card className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-blue-600" />
-              <h3 className="text-lg font-semibold text-gray-900">Acabados</h3>
-            </div>
-
-            {availableAcabados.length > 0 && !showAcabadoSelector && (
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setShowAcabadoSelector(true)}
-              >
-                <Plus className="w-4 h-4 mr-1" />
-                Agregar Acabado
-              </Button>
-            )}
+      {config.acabados && config.acabados.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-purple-600" />
+            <h3 className="text-lg font-semibold text-gray-900">Acabados Disponibles</h3>
           </div>
 
-          {selectedAcabados.length === 0 && !showAcabadoSelector && (
-            <p className="text-sm text-gray-500 italic">
-              No se han agregado acabados
-            </p>
-          )}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {config.acabados.map((acabado) => {
+              const isSelected = selectedAcabados.some(a => a.acabado_id === acabado.acabado_id);
+              const selectedAcabado = selectedAcabados.find(a => a.acabado_id === acabado.acabado_id);
 
-          {selectedAcabados.length > 0 && (
-            <div className="space-y-2 mb-4">
-              {selectedAcabados.map((acabado) => (
-                <div key={acabado.acabado_id} className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
-                  <div>
-                    <p className="font-medium text-gray-900">{acabado.acabado_nombre}</p>
-                    {acabado.nivel_nombre && (
-                      <p className="text-sm text-gray-600">Nivel: {acabado.nivel_nombre}</p>
+              return (
+                <motion.div
+                  key={acabado.acabado_id}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <Card
+                    className={`p-4 cursor-pointer transition-all ${
+                      isSelected
+                        ? 'border-2 border-purple-500 bg-purple-50'
+                        : 'border border-gray-200 hover:border-purple-300 hover:shadow-md'
+                    }`}
+                    onClick={() => handleToggleAcabado(acabado)}
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-gray-900">{acabado.acabado_nombre}</h4>
+                      </div>
+                      {isSelected && (
+                        <div className="flex-shrink-0 w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center">
+                          <Check className="w-4 h-4 text-white" />
+                        </div>
+                      )}
+                    </div>
+
+                    {acabado.tiene_niveles && acabado.niveles && acabado.niveles.length > 0 && isSelected && (
+                      <div className="mt-3 pt-3 border-t border-gray-200" onClick={(e) => e.stopPropagation()}>
+                        <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                          Selecciona el nivel:
+                        </label>
+                        <Select
+                          value={selectedAcabado?.nivel_id || ''}
+                          onChange={(e) => handleChangeNivelAcabado(acabado.acabado_id, e.target.value)}
+                          className="text-sm"
+                        >
+                          {acabado.niveles.map((nivel) => (
+                            <option key={nivel.id} value={nivel.id}>
+                              {nivel.nombre} {getImpactoBadgeText(nivel) !== 'Sin impacto' && `- ${getImpactoBadgeText(nivel)}`}
+                            </option>
+                          ))}
+                        </Select>
+                      </div>
                     )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="purple">{getImpactoBadgeText(acabado)}</Badge>
-                    <button
-                      onClick={() => handleRemoverAcabado(acabado.acabado_id)}
-                      className="text-red-600 hover:text-red-700"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
 
-          {showAcabadoSelector && (
-            <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Selecciona un acabado
-                </label>
-                <Select
-                  value={tempAcabadoId}
-                  onChange={(e) => {
-                    setTempAcabadoId(e.target.value);
-                    setTempNivelAcabadoId('');
-                  }}
-                >
-                  <option value="">Selecciona...</option>
-                  {availableAcabados.map((acabado) => (
-                    <option key={acabado.acabado_id} value={acabado.acabado_id}>
-                      {acabado.acabado_nombre}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-
-              {tempAcabadoId && (() => {
-                const acabado = config.acabados.find(a => a.acabado_id === tempAcabadoId);
-                return acabado?.tiene_niveles && acabado.niveles && acabado.niveles.length > 0 && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Selecciona el nivel
-                    </label>
-                    <Select
-                      value={tempNivelAcabadoId}
-                      onChange={(e) => setTempNivelAcabadoId(e.target.value)}
-                    >
-                      <option value="">Selecciona un nivel...</option>
-                      {acabado.niveles.map((nivel) => (
-                        <option key={nivel.id} value={nivel.id}>
-                          {nivel.nombre}
-                          {(nivel.valor_porcentaje || nivel.valor_monto) && ` - `}
-                          {nivel.valor_porcentaje && `${nivel.valor_porcentaje}%`}
-                          {nivel.valor_porcentaje && nivel.valor_monto && ` + `}
-                          {nivel.valor_monto && `$${nivel.valor_monto}`}
-                        </option>
-                      ))}
-                    </Select>
-                  </div>
-                );
-              })()}
-
-              <div className="flex gap-2">
-                <Button
-                  onClick={handleAgregarAcabado}
-                  disabled={!tempAcabadoId || ((() => {
-                    const acabado = config.acabados.find(a => a.acabado_id === tempAcabadoId);
-                    return acabado?.tiene_niveles && !tempNivelAcabadoId;
-                  })())}
-                >
-                  Agregar
-                </Button>
-                <Button
-                  variant="secondary"
-                  onClick={() => {
-                    setShowAcabadoSelector(false);
-                    setTempAcabadoId('');
-                    setTempNivelAcabadoId('');
-                  }}
-                >
-                  Cancelar
-                </Button>
-              </div>
-            </div>
-          )}
-        </Card>
+                    {!acabado.tiene_niveles && selectedAcabado && (
+                      <div className="mt-2">
+                        <Badge variant="purple" size="sm">
+                          {getImpactoBadgeText(selectedAcabado)}
+                        </Badge>
+                      </div>
+                    )}
+                  </Card>
+                </motion.div>
+              );
+            })}
+          </div>
+        </div>
       )}
 
       {config.servicios.length === 0 && config.acabados.length === 0 && (
-        <Card className="p-6">
+        <Card className="p-8">
           <p className="text-center text-gray-500">
             Este producto no tiene servicios ni acabados disponibles
           </p>
