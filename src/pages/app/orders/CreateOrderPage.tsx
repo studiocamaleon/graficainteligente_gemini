@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useBlocker } from 'react-router-dom';
 import { ArrowLeft, Save, Loader2 } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
@@ -32,9 +32,51 @@ export function CreateOrderPage() {
   const [items, setItems] = useState<any[]>([]);
   const [descuentoTotal, setDescuentoTotal] = useState(0);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [ordenCreada, setOrdenCreada] = useState(false);
+
+  const resetFormulario = () => {
+    setActiveTab('items');
+    setClienteId('');
+    setCanalVenta('Mostrador');
+    setFechaEntrega('');
+    setNotasInternas('');
+    setRequiereFactura(false);
+    setItems([]);
+    setDescuentoTotal(0);
+    setFormErrors({});
+    setOrdenCreada(false);
+  };
+
+  useEffect(() => {
+    resetFormulario();
+  }, []);
+
+  const formularioTieneDatos = () => {
+    return clienteId !== '' || items.length > 0 || notasInternas !== '' || fechaEntrega !== '';
+  };
+
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      !ordenCreada &&
+      formularioTieneDatos() &&
+      currentLocation.pathname !== nextLocation.pathname
+  );
+
+  useEffect(() => {
+    if (blocker.state === 'blocked') {
+      const confirmar = window.confirm(
+        '¿Estás seguro de que deseas salir? Se perderán los cambios no guardados.'
+      );
+      if (confirmar) {
+        blocker.proceed();
+      } else {
+        blocker.reset();
+      }
+    }
+  }, [blocker]);
 
   const handleVolver = () => {
-    if (items.length > 0) {
+    if (formularioTieneDatos()) {
       const confirmar = window.confirm(
         '¿Estás seguro de que deseas salir? Se perderán los cambios no guardados.'
       );
@@ -115,6 +157,7 @@ export function CreateOrderPage() {
     });
 
     if (result) {
+      setOrdenCreada(true);
       navigate(`/app/orders/ordenes/${result.id}`);
     } else {
       alert('Error al crear la orden: ' + error);
