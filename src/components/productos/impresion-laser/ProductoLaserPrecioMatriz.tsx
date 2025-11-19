@@ -17,7 +17,7 @@ interface Props {
   productoId: string;
   productoNombre: string;
   medida: { ancho: number; alto: number };
-  tinta: TintaInfo;
+  tinta: string; // TintaInfo es ahora un string simple
   cantidades: number[];
   caras: string[];
   materialInfo?: MaterialInfo;
@@ -51,7 +51,7 @@ export function ProductoLaserPrecioMatriz({
       (p) =>
         p.medida_ancho === medida.ancho &&
         p.medida_alto === medida.alto &&
-        p.tinta_id === tinta.id
+        p.tinta === tinta
     );
 
     // Build initial state
@@ -66,7 +66,7 @@ export function ProductoLaserPrecioMatriz({
     });
 
     setPreciosState(initialState);
-  }, [productoId, medida, tinta.id, cantidades, caras, preciosExistentes]);
+  }, [productoId, medida, tinta, cantidades, caras, preciosExistentes]);
 
   const handlePrecioChange = (cantidad: number, cara: string, value: string) => {
     const key = `${cantidad}-${cara}`;
@@ -91,7 +91,7 @@ export function ProductoLaserPrecioMatriz({
           preciosArray.push({
             medida_ancho: medida.ancho,
             medida_alto: medida.alto,
-            tinta_id: tinta.id,
+            tinta: tinta,
             cantidad: cant,
             cara_impresa: c as 'solo_frente' | 'frente_y_dorso',
             precio: p,

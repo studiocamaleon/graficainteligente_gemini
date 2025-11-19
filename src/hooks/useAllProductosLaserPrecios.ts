@@ -3,10 +3,8 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
 import type { ProductoLaserPrecio, PrecioInput } from './useProductosImpresionLaserPrecios';
 
-export interface TintaInfo {
-  id: string;
-  nombre: string;
-}
+// Las tintas ahora son strings simples después de la reversión de normalización
+export type TintaInfo = string;
 
 export interface ProductoLaserParaPrecios {
   id: string;
@@ -85,7 +83,7 @@ export function useAllProductosLaserPrecios() {
       const productoIds = productosData.map((p) => p.id);
 
       // 2. Fetch all related data in parallel
-      const [tecnologiasRes, preciosRes, tintasRes, materialesRes] = await Promise.all([
+      const [tecnologiasRes, preciosRes, materialesRes] = await Promise.all([
         // Tecnologías con sus tintas
         supabase
           .from('productos_impresion_laser_tecnologias')
@@ -97,8 +95,6 @@ export function useAllProductosLaserPrecios() {
           .select('*')
           .in('producto_laser_id', productoIds)
           .eq('company_id', profile.company_id),
-        // Todas las tintas disponibles para mapping
-        supabase.from('tecnologias_tintas_pasos').select('id, tinta'),
         // Materiales
         supabase
           .from('productos_impresion_laser_materiales')
@@ -108,19 +104,7 @@ export function useAllProductosLaserPrecios() {
 
       if (tecnologiasRes.error) throw tecnologiasRes.error;
       if (preciosRes.error) throw preciosRes.error;
-      if (tintasRes.error) throw tintasRes.error;
       if (materialesRes.error) throw materialesRes.error;
-
-      // 3. Create tintas lookup map (mapear por nombre de tinta)
-      // Si tecnologias_tintas_pasos tiene datos, usarlos; si no, crear el mapeo dinámicamente
-      const tintasMap = new Map<string, TintaInfo>();
-
-      if (tintasRes.data && tintasRes.data.length > 0) {
-        // Usar los datos de tecnologias_tintas_pasos
-        tintasRes.data.forEach((tinta: any) => {
-          tintasMap.set(tinta.tinta, { id: tinta.id, nombre: tinta.tinta });
-        });
-      }
 
       // 4. Group data by product
       const tecnologiasByProducto = new Map<string, any[]>();
@@ -150,18 +134,8 @@ export function useAllProductosLaserPrecios() {
       // 5. Build complete product objects
       const productosCompletos: ProductoLaserParaPrecios[] = productosData.map((producto) => {
         const tecnologias = (tecnologiasByProducto.get(producto.id) || []).map((tec: any) => {
-          // Mapear tintas: si no existe en tintasMap, crear la entrada dinámicamente
-          const tintasArray: TintaInfo[] = (tec.tintas || []).map((tintaNombre: string) => {
-            let tintaInfo = tintasMap.get(tintaNombre);
-
-            if (!tintaInfo) {
-              // Crear TintaInfo dinámicamente si no existe en el mapa
-              tintaInfo = { id: tintaNombre, nombre: tintaNombre };
-              tintasMap.set(tintaNombre, tintaInfo);
-            }
-
-            return tintaInfo;
-          });
+          // Las tintas ahora son strings simples
+          const tintasArray: TintaInfo[] = tec.tintas || [];
 
           return {
             tecnologia_id: tec.tecnologia_id,
@@ -198,7 +172,7 @@ export function useAllProductosLaserPrecios() {
         const preciosExistentes = producto.precios_existentes.map((precio) => ({
           medida_ancho: precio.medida_ancho,
           medida_alto: precio.medida_alto,
-          tinta_id: precio.tinta_id,
+          tinta: precio.tinta,
           cantidad: precio.cantidad,
           cara_impresa: precio.cara_impresa,
           precio: precio.precio,
@@ -216,7 +190,7 @@ export function useAllProductosLaserPrecios() {
 
   // Helper function to create a unique key for a precio
   const createPrecioKey = (precio: PrecioInput): string => {
-    return `${precio.medida_ancho}-${precio.medida_alto}-${precio.tinta_id}-${precio.cantidad}-${precio.cara_impresa}`;
+    return `${precio.medida_ancho}-${precio.medida_alto}-${precio.tinta}-${precio.cantidad}-${precio.cara_impresa}`;
   };
 
   // Helper function to compare two precio arrays and find actual changes
@@ -297,7 +271,7 @@ export function useAllProductosLaserPrecios() {
           producto_laser_id: productoId,
           medida_ancho: precio.medida_ancho,
           medida_alto: precio.medida_alto,
-          tinta_id: precio.tinta_id,
+          tinta: precio.tinta,
           cantidad: precio.cantidad,
           cara_impresa: precio.cara_impresa,
           precio: precio.precio,
@@ -311,7 +285,7 @@ export function useAllProductosLaserPrecios() {
           const { error: upsertError } = await supabase
             .from('productos_impresion_laser_precios')
             .upsert(preciosParaUpsert, {
-              onConflict: 'producto_laser_id,medida_ancho,medida_alto,tinta_id,cantidad,cara_impresa',
+              onConflict: 'producto_laser_id,medida_ancho,medida_alto,tinta,cantidad,cara_impresa',
               ignoreDuplicates: false,
             });
 
@@ -327,7 +301,7 @@ export function useAllProductosLaserPrecios() {
             .eq('company_id', profile.company_id)
             .eq('medida_ancho', precio.medida_ancho)
             .eq('medida_alto', precio.medida_alto)
-            .eq('tinta_id', precio.tinta_id)
+            .eq('tinta', precio.tinta)
             .eq('cantidad', precio.cantidad)
             .eq('cara_impresa', precio.cara_impresa);
 

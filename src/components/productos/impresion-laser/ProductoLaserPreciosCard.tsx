@@ -81,7 +81,7 @@ export function ProductoLaserPreciosCard({ producto, onPreciosChange }: Props) {
 
       // Group existing prices by combination key
       producto.precios_existentes.forEach((precio) => {
-        const key = `${precio.medida_ancho}-${precio.medida_alto}-${precio.tinta_id}`;
+        const key = `${precio.medida_ancho}-${precio.medida_alto}-${precio.tinta}`;
 
         if (!initialPreciosPorCombinacion[key]) {
           initialPreciosPorCombinacion[key] = [];
@@ -90,7 +90,7 @@ export function ProductoLaserPreciosCard({ producto, onPreciosChange }: Props) {
         initialPreciosPorCombinacion[key].push({
           medida_ancho: precio.medida_ancho,
           medida_alto: precio.medida_alto,
-          tinta_id: precio.tinta_id,
+          tinta: precio.tinta,
           cantidad: precio.cantidad,
           cara_impresa: precio.cara_impresa,
           precio: precio.precio,
@@ -175,7 +175,7 @@ export function ProductoLaserPreciosCard({ producto, onPreciosChange }: Props) {
 
                       return (
                         <ProductoLaserPrecioMatriz
-                          key={`${group.medida.ancho}-${group.medida.alto}-${tinta.id}`}
+                          key={`${group.medida.ancho}-${group.medida.alto}-${tinta}`}
                           productoId={producto.id}
                           productoNombre={producto.nombre}
                           medida={group.medida}
@@ -185,7 +185,7 @@ export function ProductoLaserPreciosCard({ producto, onPreciosChange }: Props) {
                           materialInfo={materialInfo}
                           preciosExistentes={producto.precios_existentes}
                           onChange={(precios) =>
-                            handleCombinacionChange(group.medida, tinta.id, precios)
+                            handleCombinacionChange(group.medida, tinta, precios)
                           }
                         />
                       );
@@ -203,7 +203,7 @@ export function ProductoLaserPreciosCard({ producto, onPreciosChange }: Props) {
 
                       return (
                         <ProductoLaserPrecioMatriz
-                          key={`${group.medida.ancho}-${group.medida.alto}-${tinta.id}`}
+                          key={`${group.medida.ancho}-${group.medida.alto}-${tinta}`}
                           productoId={producto.id}
                           productoNombre={producto.nombre}
                           medida={group.medida}
@@ -213,7 +213,7 @@ export function ProductoLaserPreciosCard({ producto, onPreciosChange }: Props) {
                           materialInfo={materialInfo}
                           preciosExistentes={producto.precios_existentes}
                           onChange={(precios) =>
-                            handleCombinacionChange(group.medida, tinta.id, precios)
+                            handleCombinacionChange(group.medida, tinta, precios)
                           }
                         />
                       );
