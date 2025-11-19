@@ -488,7 +488,7 @@ async function loadServiciosForProduct(
       if (servicio.tiene_niveles_precio) {
         const { data: nivelesData } = await supabase
           .from('servicios_niveles_precio')
-          .select('id, nombre, tipo_impacto')
+          .select('id, nombre, tipo_impacto, valor_porcentaje, valor_monto')
           .eq('servicio_id', rel.servicio_id)
           .order('orden');
 
@@ -496,8 +496,8 @@ async function loadServiciosForProduct(
           id: n.id,
           nombre: n.nombre,
           tipo_impacto: n.tipo_impacto,
-          valor_porcentaje: null,
-          valor_monto: null
+          valor_porcentaje: n.valor_porcentaje,
+          valor_monto: n.valor_monto
         })) || [];
       }
 
@@ -538,7 +538,7 @@ async function loadAcabadosForProduct(
       if (acabado.tiene_niveles_precio) {
         const { data: nivelesData } = await supabase
           .from('acabados_niveles_precio')
-          .select('id, nombre, tipo_impacto')
+          .select('id, nombre, tipo_impacto, valor_porcentaje, valor_monto')
           .eq('acabado_id', rel.acabado_id)
           .order('orden');
 
@@ -546,8 +546,8 @@ async function loadAcabadosForProduct(
           id: n.id,
           nombre: n.nombre,
           tipo_impacto: n.tipo_impacto,
-          valor_porcentaje: null,
-          valor_monto: null
+          valor_porcentaje: n.valor_porcentaje,
+          valor_monto: n.valor_monto
         })) || [];
       }
 
