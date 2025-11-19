@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useDebounce } from '../useDebounce';
+import { useAuth } from '../useAuth';
 import type { ProductSearchResult } from '../../types/wizard';
 
 export function useProductSearch(searchTerm: string) {
   const [products, setProducts] = useState<ProductSearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { profile } = useAuth();
 
   const debouncedSearch = useDebounce(searchTerm, 300);
 
@@ -16,37 +18,27 @@ export function useProductSearch(searchTerm: string) {
       return;
     }
 
+    if (!profile?.company_id) {
+      setError('No se encontró información de la empresa');
+      return;
+    }
+
     const searchProducts = async () => {
       setIsLoading(true);
       setError(null);
 
       try {
-        const { data: productsData, error: productsError } = await supabase
-          .from('productos')
-          .select(`
-            id,
-            nombre,
-            descripcion,
-            activo,
-            categorias!inner(nombre),
-            productos_impresion_laser!inner(
-              id,
-              tipo_venta,
-              cantidades_fijas,
-              cantidad_minima,
-              caras_impresas_disponibles,
-              materiales!inner(id, nombre),
-              material_variantes!inner(id, nombre)
-            )
-          `)
-          .eq('activo', true)
-          .eq('categorias.nombre', 'Impresión Laser')
-          .or(`nombre.ilike.%${debouncedSearch}%,descripcion.ilike.%${debouncedSearch}%`)
+        const { data: productsLaserData, error: productsError } = await supabase
+          .from('productos_impresion_laser')
+          .select('id, nombre, tipo_venta, cantidades_fijas, caras_impresas, is_active')
+          .eq('company_id', profile.company_id)
+          .eq('is_active', true)
+          .ilike('nombre', `%${debouncedSearch}%`)
           .order('nombre');
 
         if (productsError) throw productsError;
 
-        if (!productsData || productsData.length === 0) {
+        if (!productsLaserData || productsLaserData.length === 0) {
           setProducts([]);
           setIsLoading(false);
           return;
@@ -54,21 +46,46 @@ export function useProductSearch(searchTerm: string) {
 
         const results: ProductSearchResult[] = [];
 
-        for (const prod of productsData) {
-          const laserData = Array.isArray(prod.productos_impresion_laser)
-            ? prod.productos_impresion_laser[0]
-            : prod.productos_impresion_laser;
+        for (const laserData of productsLaserData) {
+          const [materialesRes, medidasRes, tintasRes, precioMinRes] = await Promise.all([
+            supabase
+              .from('productos_impresion_laser_materiales')
+              .select('material_id, variante_nombre, materiales(id, nombre)')
+              .eq('producto_laser_id', laserData.id)
+              .limit(1)
+              .maybeSingle(),
 
-          if (!laserData) continue;
+            supabase
+              .from('productos_impresion_laser_precios')
+              .select('medida_ancho, medida_alto')
+              .eq('producto_laser_id', laserData.id),
 
-          const { data: medidasData } = await supabase
-            .from('productos_impresion_laser_precios')
-            .select('medida_ancho, medida_alto')
-            .eq('producto_laser_id', laserData.id);
+            supabase
+              .from('productos_impresion_laser_precios')
+              .select('tinta_id, tecnologia_tintas(id, nombre, tipo)')
+              .eq('producto_laser_id', laserData.id),
+
+            supabase
+              .from('productos_impresion_laser_precios')
+              .select('precio_base')
+              .eq('producto_laser_id', laserData.id)
+              .order('precio_base', { ascending: true })
+              .limit(1)
+              .maybeSingle()
+          ]);
+
+          if (materialesRes.error || medidasRes.error || tintasRes.error) {
+            console.error('Error cargando datos del producto:', {
+              materialesRes: materialesRes.error,
+              medidasRes: medidasRes.error,
+              tintasRes: tintasRes.error
+            });
+            continue;
+          }
 
           const medidasUnicas = new Map<string, { ancho: number; alto: number }>();
-          if (medidasData) {
-            medidasData.forEach(m => {
+          if (medidasRes.data) {
+            medidasRes.data.forEach(m => {
               const key = `${m.medida_ancho}x${m.medida_alto}`;
               if (!medidasUnicas.has(key)) {
                 medidasUnicas.set(key, { ancho: m.medida_ancho, alto: m.medida_alto });
@@ -82,15 +99,12 @@ export function useProductSearch(searchTerm: string) {
             display: `${m.ancho} x ${m.alto} cm`,
           }));
 
-          const { data: tintasData } = await supabase
-            .from('productos_impresion_laser_precios')
-            .select('tecnologia_tintas!inner(id, nombre, tipo)')
-            .eq('producto_laser_id', laserData.id);
-
           const tintasUnicas = new Map();
-          if (tintasData) {
-            tintasData.forEach(t => {
-              const tinta = Array.isArray(t.tecnologia_tintas) ? t.tecnologia_tintas[0] : t.tecnologia_tintas;
+          if (tintasRes.data) {
+            tintasRes.data.forEach((t: any) => {
+              const tinta = Array.isArray(t.tecnologia_tintas)
+                ? t.tecnologia_tintas[0]
+                : t.tecnologia_tintas;
               if (tinta && !tintasUnicas.has(tinta.id)) {
                 tintasUnicas.set(tinta.id, {
                   tinta_id: tinta.id,
@@ -101,36 +115,36 @@ export function useProductSearch(searchTerm: string) {
             });
           }
 
-          const { data: precioMinData } = await supabase
-            .from('productos_impresion_laser_precios')
-            .select('precio_base')
-            .eq('producto_laser_id', laserData.id)
-            .order('precio_base', { ascending: true })
-            .limit(1)
-            .maybeSingle();
+          const material = materialesRes.data?.materiales;
+          const materialNombre = Array.isArray(material) ? material[0]?.nombre : material?.nombre;
+          const materialId = Array.isArray(material) ? material[0]?.id : material?.id;
 
-          const categoria = Array.isArray(prod.categorias) ? prod.categorias[0] : prod.categorias;
-          const material = Array.isArray(laserData.materiales) ? laserData.materiales[0] : laserData.materiales;
-          const variante = Array.isArray(laserData.material_variantes) ? laserData.material_variantes[0] : laserData.material_variantes;
+          const varianteNombre = materialesRes.data?.variante_nombre || '';
+          const varianteId = materialesRes.data?.material_id || '';
+
+          let cantidad_minima = null;
+          if (laserData.tipo_venta === 'cantidades_fijas' && laserData.cantidades_fijas && laserData.cantidades_fijas.length > 0) {
+            cantidad_minima = Math.min(...laserData.cantidades_fijas);
+          }
 
           results.push({
-            producto_id: prod.id,
+            producto_id: laserData.id,
             producto_laser_id: laserData.id,
-            nombre: prod.nombre,
-            descripcion: prod.descripcion,
-            categoria_nombre: categoria?.nombre || 'Impresión Laser',
-            tipo_venta: laserData.tipo_venta,
+            nombre: laserData.nombre,
+            descripcion: null,
+            categoria_nombre: 'Impresión Laser',
+            tipo_venta: laserData.tipo_venta === 'cantidades_fijas' ? 'cantidad_fija' : 'unidad',
             cantidades_fijas: laserData.cantidades_fijas || [],
-            cantidad_minima: laserData.cantidad_minima,
+            cantidad_minima,
             medidas_disponibles,
-            material_id: material?.id || '',
-            material_nombre: material?.nombre || '',
-            variante_id: variante?.id || '',
-            variante_nombre: variante?.nombre || '',
+            material_id: materialId || '',
+            material_nombre: materialNombre || '',
+            variante_id: varianteId || '',
+            variante_nombre: varianteNombre || '',
             tintas_disponibles: Array.from(tintasUnicas.values()),
-            caras_disponibles: laserData.caras_impresas_disponibles || [],
-            tiene_precios: medidasData && medidasData.length > 0,
-            precio_desde: precioMinData?.precio_base || null,
+            caras_disponibles: laserData.caras_impresas || [],
+            tiene_precios: medidasRes.data && medidasRes.data.length > 0,
+            precio_desde: precioMinRes.data?.precio_base || null,
           });
         }
 
@@ -144,7 +158,7 @@ export function useProductSearch(searchTerm: string) {
     };
 
     searchProducts();
-  }, [debouncedSearch]);
+  }, [debouncedSearch, profile?.company_id]);
 
   return { products, isLoading, error };
 }
