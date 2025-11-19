@@ -74,6 +74,7 @@ export function useCentroCopiadoPreciosImpresion() {
           `)
           .eq('company_id', company.id)
           .eq('is_active', true)
+          .order('orden', { ascending: true })
           .order('variante_nombre', { ascending: true }),
 
         supabase

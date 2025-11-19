@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { Settings2, FileText, Plus, Edit2, Trash2 } from 'lucide-react';
+import { Settings2, FileText, Plus, Edit2, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
 import { Card } from '../../../components/ui/Card';
 import { Tabs } from '../../../components/ui/Tabs';
 import { Button } from '../../../components/ui/Button';
@@ -48,6 +48,7 @@ export function Configuracion() {
     createPapel,
     deletePapel,
     fetchPapeles,
+    reorderPapeles,
   } = useCentroCopiadoPapeles();
 
   const {
@@ -152,6 +153,24 @@ export function Configuracion() {
       setIsModalOpen(false);
       await fetchPapeles();
     }
+  };
+
+  const handleMovePapelUp = async (index: number) => {
+    if (index === 0) return;
+
+    const newPapeles = [...papeles];
+    [newPapeles[index - 1], newPapeles[index]] = [newPapeles[index], newPapeles[index - 1]];
+
+    await reorderPapeles(newPapeles);
+  };
+
+  const handleMovePapelDown = async (index: number) => {
+    if (index === papeles.length - 1) return;
+
+    const newPapeles = [...papeles];
+    [newPapeles[index], newPapeles[index + 1]] = [newPapeles[index + 1], newPapeles[index]];
+
+    await reorderPapeles(newPapeles);
   };
 
   const renderTamaniosTab = () => {
@@ -275,8 +294,51 @@ export function Configuracion() {
             className="mb-4"
           />
 
+          {searchTerm && (
+            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-sm text-yellow-800">
+                El ordenamiento está deshabilitado durante la búsqueda. Limpia el filtro para reordenar los papeles.
+              </p>
+            </div>
+          )}
+
           <Table
             columns={[
+              {
+                key: 'orden',
+                header: 'Orden',
+                render: (papel: PapelWithMaterial, index: number) => (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-500 font-medium w-8">#{index! + 1}</span>
+                    <div className="flex flex-col gap-1">
+                      <button
+                        onClick={() => handleMovePapelUp(index!)}
+                        disabled={index === 0 || searchTerm !== ''}
+                        className={`p-1 rounded transition-colors ${
+                          index === 0 || searchTerm !== ''
+                            ? 'text-gray-300 cursor-not-allowed'
+                            : 'text-blue-600 hover:bg-blue-50'
+                        }`}
+                        title="Mover arriba"
+                      >
+                        <ArrowUp className="w-3 h-3" />
+                      </button>
+                      <button
+                        onClick={() => handleMovePapelDown(index!)}
+                        disabled={index === papeles.length - 1 || searchTerm !== ''}
+                        className={`p-1 rounded transition-colors ${
+                          index === papeles.length - 1 || searchTerm !== ''
+                            ? 'text-gray-300 cursor-not-allowed'
+                            : 'text-blue-600 hover:bg-blue-50'
+                        }`}
+                        title="Mover abajo"
+                      >
+                        <ArrowDown className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+                )
+              },
               {
                 key: 'material',
                 header: 'Material',

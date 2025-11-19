@@ -31,6 +31,7 @@ export function useCentroCopiadoPapeles() {
         `)
         .eq('company_id', company.id)
         .eq('is_active', true)
+        .order('orden', { ascending: true })
         .order('created_at', { ascending: false });
 
       if (fetchError) throw fetchError;
@@ -64,6 +65,7 @@ export function useCentroCopiadoPapeles() {
           variante_nombre: data.variante_nombre,
           espesor: data.espesor,
           unidad_espesor: data.unidad_espesor,
+          orden: data.orden ?? 999,
           is_active: true,
         })
         .select()
@@ -96,6 +98,51 @@ export function useCentroCopiadoPapeles() {
     }
   };
 
+  const updateOrden = async (papelId: string, newOrden: number): Promise<boolean> => {
+    try {
+      setError(null);
+
+      const { error: updateError } = await supabase
+        .from('centro_copiado_papeles')
+        .update({ orden: newOrden, updated_at: new Date().toISOString() })
+        .eq('id', papelId);
+
+      if (updateError) throw updateError;
+      return true;
+    } catch (err) {
+      console.error('Error updating orden:', err);
+      setError(err instanceof Error ? err.message : 'Error al actualizar el orden');
+      return false;
+    }
+  };
+
+  const reorderPapeles = async (papelesOrdenados: PapelWithMaterial[]): Promise<boolean> => {
+    try {
+      setError(null);
+
+      const updates = papelesOrdenados.map((papel, index) => ({
+        id: papel.id,
+        orden: index + 1,
+      }));
+
+      for (const update of updates) {
+        const { error: updateError } = await supabase
+          .from('centro_copiado_papeles')
+          .update({ orden: update.orden, updated_at: new Date().toISOString() })
+          .eq('id', update.id);
+
+        if (updateError) throw updateError;
+      }
+
+      await fetchPapeles();
+      return true;
+    } catch (err) {
+      console.error('Error reordering papeles:', err);
+      setError(err instanceof Error ? err.message : 'Error al reordenar los papeles');
+      return false;
+    }
+  };
+
   return {
     papeles,
     loading,
@@ -103,5 +150,7 @@ export function useCentroCopiadoPapeles() {
     fetchPapeles,
     createPapel,
     deletePapel,
+    updateOrden,
+    reorderPapeles,
   };
 }

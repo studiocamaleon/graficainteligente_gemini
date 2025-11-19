@@ -1410,6 +1410,7 @@ export interface CentroCopiadoPapel {
   variante_nombre: string;
   espesor: number | null;
   unidad_espesor: string | null;
+  orden: number;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -1510,6 +1511,7 @@ export interface CentroCopiadoPapelFormData {
   variante_nombre: string;
   espesor: number | null;
   unidad_espesor: string | null;
+  orden?: number;
 }
 
 export interface CentroCopiadoRangoAnilladoFormData {

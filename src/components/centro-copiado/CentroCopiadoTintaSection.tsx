@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { ChevronDown, ChevronUp, Palette, FileText } from 'lucide-react';
 import { Card } from '../ui/Card';
 import { Badge } from '../ui/Badge';
@@ -50,7 +50,7 @@ export function CentroCopiadoTintaSection({
     loadPrecios();
   }, [isExpanded, loadPreciosExistentes, preciosCargados.size]);
 
-  const preciosActuales = useCallback(() => {
+  const preciosActuales = useMemo(() => {
     const map = new Map<string, Map<string, number>>();
 
     preciosCargados.forEach((precios, combKey) => {
@@ -125,7 +125,7 @@ export function CentroCopiadoTintaSection({
               combinaciones={tintaData.combinaciones}
               tipoTinta={tintaData.tipo_tinta}
               rangos={rangos}
-              preciosActuales={preciosActuales()}
+              preciosActuales={preciosActuales}
               onPreciosChange={onPreciosChange}
             />
           )}

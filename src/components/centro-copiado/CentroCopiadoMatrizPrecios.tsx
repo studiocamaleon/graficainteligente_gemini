@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, Fragment } from 'react';
+import { useState, useEffect, useRef, Fragment, useMemo } from 'react';
 import { Input } from '../ui/Input';
 import type {
   CombinacionTamanioPapel,
@@ -25,8 +25,6 @@ export function CentroCopiadoMatrizPrecios({
   preciosActuales,
   onPreciosChange,
 }: Props) {
-  const [preciosState, setPreciosState] = useState<PrecioState>({});
-  const isInitialized = useRef(false);
   const hasLocalChanges = useRef(false);
 
   const getCombinacionKey = (combinacion: CombinacionTamanioPapel) => {
@@ -37,8 +35,8 @@ export function CentroCopiadoMatrizPrecios({
     return `${rangoId}-${cara}`;
   };
 
-  useEffect(() => {
-    if (isInitialized.current) return;
+  const initialPreciosState = useMemo(() => {
+    if (combinaciones.length === 0 || rangos.length === 0) return {};
 
     const initialState: PrecioState = {};
 
@@ -60,9 +58,16 @@ export function CentroCopiadoMatrizPrecios({
       }
     });
 
-    setPreciosState(initialState);
-    isInitialized.current = true;
-  }, []);
+    return initialState;
+  }, [combinaciones, rangos, preciosActuales]);
+
+  const [preciosState, setPreciosState] = useState<PrecioState>(initialPreciosState);
+
+  useEffect(() => {
+    if (!hasLocalChanges.current) {
+      setPreciosState(initialPreciosState);
+    }
+  }, [initialPreciosState]);
 
   const handlePrecioChange = (
     combinacion: CombinacionTamanioPapel,
@@ -86,7 +91,7 @@ export function CentroCopiadoMatrizPrecios({
   };
 
   useEffect(() => {
-    if (!isInitialized.current || !hasLocalChanges.current) return;
+    if (!hasLocalChanges.current) return;
 
     const preciosArray: PrecioImpresionInput[] = [];
 
@@ -123,13 +128,38 @@ export function CentroCopiadoMatrizPrecios({
     return `${rango.hojas_desde}-${rango.hojas_hasta} hojas`;
   };
 
-  return (
+  const combinacionesPorTamanio = useMemo(() => {
+    const grupos = new Map<string, CombinacionTamanioPapel[]>();
+
+    combinaciones.forEach(combinacion => {
+      const key = combinacion.tamanio_id;
+      if (!grupos.has(key)) {
+        grupos.set(key, []);
+      }
+      grupos.get(key)!.push(combinacion);
+    });
+
+    return Array.from(grupos.entries()).map(([tamanioId, combs]) => ({
+      tamanioId,
+      tamanioNombre: combs[0].tamanio_nombre,
+      tamanioAncho: combs[0].tamanio_ancho_mm,
+      tamanioAlto: combs[0].tamanio_alto_mm,
+      combinaciones: combs,
+    }));
+  }, [combinaciones]);
+
+  const renderTablaSeccion = (
+    tamanioNombre: string,
+    tamanioAncho: number,
+    tamanioAlto: number,
+    combinacionesSeccion: CombinacionTamanioPapel[]
+  ) => (
     <div className="overflow-x-auto">
       <table className="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
         <thead className="bg-gray-50">
           <tr>
             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 w-80 min-w-[320px]">
-              Tamaño / Papel
+              Papel
             </th>
             {rangos.map(rango => (
               <th
@@ -156,19 +186,13 @@ export function CentroCopiadoMatrizPrecios({
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
-          {combinaciones.map(combinacion => {
+          {combinacionesSeccion.map(combinacion => {
             const combKey = getCombinacionKey(combinacion);
             return (
               <tr key={combKey} className="hover:bg-gray-50 transition-colors">
                 <td className="px-4 py-3 text-sm border-r border-gray-200 w-80 min-w-[320px]">
                   <div className="space-y-1">
-                    <div className="font-medium text-gray-900">
-                      {combinacion.tamanio_nombre}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      {combinacion.tamanio_ancho_mm} × {combinacion.tamanio_alto_mm} mm
-                    </div>
-                    <div className="text-sm text-gray-700 mt-1">
+                    <div className="text-sm text-gray-700">
                       {combinacion.papel_material_nombre} - {combinacion.papel_variante_nombre}
                       {combinacion.papel_espesor && (
                         <span className="text-gray-500 ml-1">
@@ -220,6 +244,22 @@ export function CentroCopiadoMatrizPrecios({
           })}
         </tbody>
       </table>
+    </div>
+  );
+
+  return (
+    <div className="space-y-6">
+      {combinacionesPorTamanio.map(({ tamanioId, tamanioNombre, tamanioAncho, tamanioAlto, combinaciones: combs }) => (
+        <div key={tamanioId} className="space-y-3">
+          <div className="flex items-center gap-3 px-4 py-3 bg-blue-50 border-l-4 border-blue-500 rounded-r-lg">
+            <h3 className="text-lg font-semibold text-blue-900">{tamanioNombre}</h3>
+            <span className="text-sm text-blue-700">
+              {tamanioAncho} × {tamanioAlto} mm
+            </span>
+          </div>
+          {renderTablaSeccion(tamanioNombre, tamanioAncho, tamanioAlto, combs)}
+        </div>
+      ))}
     </div>
   );
 }
