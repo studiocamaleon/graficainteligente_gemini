@@ -56,6 +56,9 @@ export function CentroCopiadoResumenOrden({
 
     if (papel) {
       partes.push(papel.variante_nombre);
+      if (papel.espesor && papel.unidad_espesor) {
+        partes.push(`${papel.espesor}${papel.unidad_espesor}`);
+      }
     }
 
     if (config.cantidad_hojas) {
@@ -90,7 +93,8 @@ export function CentroCopiadoResumenOrden({
   };
 
   return (
-    <Card className="sticky top-6 h-fit">
+    <div className="sticky top-20 z-10">
+    <Card className="h-fit">
       <div className="p-4">
         <div className="flex items-center gap-2 mb-4">
           <ShoppingCart className="w-5 h-5 text-blue-600" />
@@ -210,5 +214,6 @@ export function CentroCopiadoResumenOrden({
         )}
       </div>
     </Card>
+    </div>
   );
 }
