@@ -115,40 +115,56 @@ export function RangosPrecio() {
         <div className="p-6">
           <Table
             columns={[
-              { key: 'orden', label: 'Orden' },
-              { key: 'nombre', label: 'Nombre del Rango' },
-              { key: 'rango', label: 'Cantidad de Hojas' },
-              { key: 'actions', label: 'Acciones', align: 'right' },
+              {
+                key: 'orden',
+                header: 'Orden',
+                render: (rango: CentroCopiadoRangoPrecioImpresion) => (
+                  <Badge variant="secondary">{rango.orden}</Badge>
+                )
+              },
+              {
+                key: 'nombre',
+                header: 'Nombre del Rango',
+                render: (rango: CentroCopiadoRangoPrecioImpresion) => (
+                  <span className="font-medium">{rango.nombre}</span>
+                )
+              },
+              {
+                key: 'rango',
+                header: 'Cantidad de Hojas',
+                render: (rango: CentroCopiadoRangoPrecioImpresion) => (
+                  <div className="flex items-center gap-2">
+                    <Badge variant="primary">
+                      {rango.hojas_desde} - {rango.hojas_hasta || '∞'}
+                    </Badge>
+                  </div>
+                )
+              },
+              {
+                key: 'actions',
+                header: 'Acciones',
+                render: (rango: CentroCopiadoRangoPrecioImpresion) => (
+                  <div className="flex items-center justify-end gap-2">
+                    <button
+                      onClick={() => handleEdit(rango)}
+                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      title="Editar"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(rango)}
+                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Eliminar"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                )
+              },
             ]}
-            data={rangos.map((rango) => ({
-              orden: <Badge variant="secondary">{rango.orden}</Badge>,
-              nombre: <span className="font-medium">{rango.nombre}</span>,
-              rango: (
-                <div className="flex items-center gap-2">
-                  <Badge variant="primary">
-                    {rango.hojas_desde} - {rango.hojas_hasta || '∞'}
-                  </Badge>
-                </div>
-              ),
-              actions: (
-                <div className="flex items-center justify-end gap-2">
-                  <button
-                    onClick={() => handleEdit(rango)}
-                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                    title="Editar"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(rango)}
-                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                    title="Eliminar"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              ),
-            }))}
+            data={rangos}
+            keyExtractor={(rango) => rango.id}
           />
         </div>
       </Card>
