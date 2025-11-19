@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Plus, ArrowLeft, Save } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
@@ -75,6 +75,16 @@ export function CrearOrdenCopiado() {
       )
     );
   }, []);
+
+  const priceCalculatedCallbacks = useMemo(() => {
+    const callbacks: Record<string, (precio: number) => void> = {};
+    items.forEach((item) => {
+      callbacks[item.id] = (precio: number) => {
+        actualizarPrecioItem(item.id, precio);
+      };
+    });
+    return callbacks;
+  }, [items.map(i => i.id).join(','), actualizarPrecioItem]);
 
   const eliminarItem = (id: string) => {
     if (items.length > 1) {
@@ -268,7 +278,7 @@ export function CrearOrdenCopiado() {
                 value={item.config}
                 onChange={(config) => actualizarItem(item.id, config)}
                 onRemove={() => eliminarItem(item.id)}
-                onPriceCalculated={(precio) => actualizarPrecioItem(item.id, precio)}
+                onPriceCalculated={priceCalculatedCallbacks[item.id]}
               />
             ))}
           </div>

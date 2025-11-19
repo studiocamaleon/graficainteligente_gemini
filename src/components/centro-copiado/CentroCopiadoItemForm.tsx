@@ -66,6 +66,9 @@ export function CentroCopiadoItemForm({
       if (!isConfigComplete) {
         setPrecioCalculado(null);
         setErrorCalculo(null);
+        if (onPriceCalculated) {
+          onPriceCalculated(0);
+        }
         return;
       }
 
@@ -113,11 +116,14 @@ export function CentroCopiadoItemForm({
         console.error('Error al calcular precio:', error);
         setErrorCalculo(error instanceof Error ? error.message : 'Error al calcular precio');
         setPrecioCalculado(null);
+        if (onPriceCalculated) {
+          onPriceCalculated(0);
+        }
       }
     };
 
     calcularPrecio();
-  }, [debouncedConfig, isConfigComplete, onPriceCalculated]);
+  }, [debouncedConfig, isConfigComplete, calcularPrecioCompleto]);
 
   const handleFieldChange = (field: string, newValue: any) => {
     onChange({
