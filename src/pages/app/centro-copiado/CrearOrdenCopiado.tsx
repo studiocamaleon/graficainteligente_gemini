@@ -29,6 +29,7 @@ export function CrearOrdenCopiado() {
 
   const [clienteId, setClienteId] = useState<string>(clienteIdParam || '');
   const [fechaEntrega, setFechaEntrega] = useState('');
+  const [horaEntrega, setHoraEntrega] = useState('09:00');
   const [observaciones, setObservaciones] = useState('');
   const [items, setItems] = useState<ItemWithId[]>([]);
   const [descuento, setDescuento] = useState(0);
@@ -63,6 +64,7 @@ export function CrearOrdenCopiado() {
       setItems([]);
       setClienteId(clienteIdParam || '');
       setFechaEntrega('');
+      setHoraEntrega('09:00');
       setObservaciones('');
       setDescuento(0);
       agregarItem();
@@ -148,10 +150,14 @@ export function CrearOrdenCopiado() {
     setGuardando(true);
 
     try {
+      const fechaEntregaCompleta = fechaEntrega && horaEntrega
+        ? `${fechaEntrega}T${horaEntrega}:00`
+        : undefined;
+
       const datosOrden = {
         cliente_id: clienteId,
         orden_trabajo_id: ordenTrabajoIdParam || undefined,
-        fecha_entrega_estimada: fechaEntrega || undefined,
+        fecha_entrega_estimada: fechaEntregaCompleta,
         observaciones: observaciones || undefined,
       };
 
@@ -256,6 +262,7 @@ export function CrearOrdenCopiado() {
                   <span className="text-sm text-gray-600">
                     {clienteSeleccionado.nombre_fantasia}
                     {fechaEntrega && ` • ${new Date(fechaEntrega).toLocaleDateString()}`}
+                    {fechaEntrega && horaEntrega && ` a las ${horaEntrega}`}
                   </span>
                 )}
               </div>
@@ -268,7 +275,7 @@ export function CrearOrdenCopiado() {
 
             {!infoGeneralCollapsed && (
               <div className="p-4 pt-0">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Cliente *
@@ -287,16 +294,29 @@ export function CrearOrdenCopiado() {
                     )}
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Fecha Entrega Estimada
-                    </label>
-                    <Input
-                      type="date"
-                      value={fechaEntrega}
-                      onChange={(e) => setFechaEntrega(e.target.value)}
-                      min={new Date().toISOString().split('T')[0]}
-                    />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Fecha Entrega Estimada
+                      </label>
+                      <Input
+                        type="date"
+                        value={fechaEntrega}
+                        onChange={(e) => setFechaEntrega(e.target.value)}
+                        min={new Date().toISOString().split('T')[0]}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Hora Entrega
+                      </label>
+                      <Input
+                        type="time"
+                        value={horaEntrega}
+                        onChange={(e) => setHoraEntrega(e.target.value)}
+                      />
+                    </div>
                   </div>
                 </div>
 
