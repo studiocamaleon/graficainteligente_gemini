@@ -167,7 +167,7 @@ export function CentroCopiadoItemForm({
               </label>
               <Select
                 value={value.tamanio_papel_id || ''}
-                onChange={(e) => handleFieldChange('tamanio_papel_id', e.target.value)}
+                onChange={(value) => handleFieldChange('tamanio_papel_id', value)}
                 disabled={loadingTamanios}
               >
                 <option value="">Seleccionar tamaño</option>
@@ -185,7 +185,7 @@ export function CentroCopiadoItemForm({
               </label>
               <Select
                 value={value.papel_id || ''}
-                onChange={(e) => handleFieldChange('papel_id', e.target.value)}
+                onChange={(value) => handleFieldChange('papel_id', value)}
                 disabled={loadingPapeles}
               >
                 <option value="">Seleccionar papel</option>

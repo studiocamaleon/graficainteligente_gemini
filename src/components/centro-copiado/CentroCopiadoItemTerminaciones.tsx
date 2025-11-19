@@ -38,7 +38,7 @@ export function CentroCopiadoItemTerminaciones({
 
   useEffect(() => {
     const calcularPrecios = async () => {
-      if (anilladoEnabled && anillado && cantidadHojas > 0) {
+      if (anilladoEnabled && anillado && cantidadHojas > 0 && cantidadCopias > 0) {
         try {
           const precio = await calcularPrecioAnillado({
             tipo_anillado: anillado.tipo,
@@ -54,7 +54,7 @@ export function CentroCopiadoItemTerminaciones({
         setPrecioAnillado(null);
       }
 
-      if (plastificadoEnabled && plastificado && cantidadHojas > 0) {
+      if (plastificadoEnabled && plastificado && cantidadHojas > 0 && cantidadCopias > 0) {
         try {
           const cantidadHojasPlastificar = plastificado.todas_hojas
             ? cantidadHojas
@@ -68,6 +68,8 @@ export function CentroCopiadoItemTerminaciones({
               cantidad_copias: cantidadCopias,
             });
             setPrecioPlastificado(precio);
+          } else {
+            setPrecioPlastificado(null);
           }
         } catch (error) {
           console.error('Error calculando precio plastificado:', error);
