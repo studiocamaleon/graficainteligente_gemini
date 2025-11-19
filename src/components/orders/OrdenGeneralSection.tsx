@@ -79,7 +79,7 @@ export function OrdenGeneralSection({
           </label>
           <Select
             value={clienteId}
-            onChange={(e) => setClienteId(e.target.value)}
+            onChange={(value) => setClienteId(value)}
             options={clientesOptions}
             disabled={loading}
             className={errors.cliente ? 'border-red-500' : ''}
