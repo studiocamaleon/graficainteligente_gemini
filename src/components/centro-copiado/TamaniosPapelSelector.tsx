@@ -33,10 +33,10 @@ export function TamaniosPapelSelector({
 }: TamaniosPapelSelectorProps) {
   if (loading) {
     return (
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
         {[1, 2, 3, 4].map((i) => (
           <div key={i} className="animate-pulse">
-            <div className="h-24 bg-gray-200 rounded-lg"></div>
+            <div className="h-14 bg-gray-200 rounded-lg"></div>
           </div>
         ))}
       </div>
@@ -52,8 +52,8 @@ export function TamaniosPapelSelector({
   });
 
   return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+    <div className="space-y-2">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
         {sortedTamanios.map((tamanio) => {
           const isSelected = selectedId === tamanio.id;
           const isCommon = isCommonSize(tamanio.nombre);
@@ -64,52 +64,50 @@ export function TamaniosPapelSelector({
               type="button"
               onClick={() => onSelect(tamanio.id)}
               className={`
-                relative p-4 rounded-lg border-2 transition-all duration-200 text-left
-                hover:shadow-md hover:scale-102
+                relative px-3 py-2.5 rounded-lg border-2 transition-all duration-200 text-left
+                hover:shadow-sm
                 ${
                   isSelected
-                    ? 'border-blue-500 bg-blue-50 shadow-sm'
+                    ? 'border-blue-500 bg-blue-50'
                     : 'border-gray-200 bg-white hover:border-gray-300'
                 }
               `}
             >
-              <div className="flex flex-col items-center justify-center space-y-2 min-h-[80px]">
-                <div className="flex items-center gap-2">
-                  <FileText
-                    className={`${getTamanioIcon(tamanio.nombre)} ${
-                      isSelected ? 'text-blue-600' : 'text-gray-400'
-                    }`}
-                  />
-                  {isCommon && !isSelected && (
-                    <span className="text-[10px] font-medium text-green-600 bg-green-50 px-1.5 py-0.5 rounded">
-                      Común
+              <div className="flex items-center gap-2">
+                <FileText
+                  className={`w-5 h-6 flex-shrink-0 ${
+                    isSelected ? 'text-blue-600' : 'text-gray-400'
+                  }`}
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-1">
+                    <span
+                      className={`font-bold text-sm truncate ${
+                        isSelected ? 'text-blue-700' : 'text-gray-900'
+                      }`}
+                    >
+                      {tamanio.nombre}
                     </span>
-                  )}
-                </div>
-
-                <div className="text-center w-full">
-                  <div
-                    className={`font-bold text-base ${
-                      isSelected ? 'text-blue-700' : 'text-gray-900'
-                    }`}
-                  >
-                    {tamanio.nombre}
+                    {isSelected && (
+                      <CheckCircle2 className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                    )}
                   </div>
-                  <div
-                    className={`text-xs mt-1 ${
-                      isSelected ? 'text-blue-600' : 'text-gray-500'
-                    }`}
-                  >
-                    {tamanio.ancho_mm} × {tamanio.alto_mm} mm
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span
+                      className={`text-[10px] ${
+                        isSelected ? 'text-blue-600' : 'text-gray-500'
+                      }`}
+                    >
+                      {tamanio.ancho_mm} × {tamanio.alto_mm} mm
+                    </span>
+                    {isCommon && (
+                      <span className="text-[9px] font-medium text-green-600 bg-green-50 px-1 py-0.5 rounded">
+                        Común
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
-
-              {isSelected && (
-                <div className="absolute top-2 right-2">
-                  <CheckCircle2 className="w-5 h-5 text-blue-600" />
-                </div>
-              )}
             </button>
           );
         })}

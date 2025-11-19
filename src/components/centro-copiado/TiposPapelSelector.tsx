@@ -80,9 +80,9 @@ export function TiposPapelSelector({
     return (
       <div className="space-y-3">
         <div className="animate-pulse h-10 bg-gray-200 rounded-lg"></div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="animate-pulse h-16 bg-gray-200 rounded-lg"></div>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="animate-pulse h-14 bg-gray-200 rounded-lg"></div>
           ))}
         </div>
       </div>
@@ -117,7 +117,7 @@ export function TiposPapelSelector({
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-[400px] overflow-y-auto pr-1">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-[400px] overflow-y-auto pr-1">
             {displayedPapeles.map((papel) => {
               const isSelected = selectedId === papel.id;
               const isFrequent = isFrequentPaper(papel.variante_nombre);
@@ -129,7 +129,7 @@ export function TiposPapelSelector({
                   type="button"
                   onClick={() => onSelect(papel.id)}
                   className={`
-                    relative px-3 py-2.5 rounded-lg border-2 transition-all duration-200 text-left
+                    relative px-2.5 py-2 rounded-lg border-2 transition-all duration-200 text-left
                     hover:shadow-sm
                     ${
                       isSelected
@@ -138,47 +138,47 @@ export function TiposPapelSelector({
                     }
                   `}
                 >
-                  <div className="flex items-start gap-2">
+                  <div className="flex items-center gap-2">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        {isFrequent && !isSelected && (
-                          <Star className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500 flex-shrink-0" />
+                      <div className="flex items-center justify-between gap-1 mb-0.5">
+                        <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                          {isFrequent && !isSelected && (
+                            <Star className="w-3 h-3 text-yellow-500 fill-yellow-500 flex-shrink-0" />
+                          )}
+                          <span
+                            className={`font-bold text-sm truncate ${
+                              isSelected ? 'text-blue-700' : 'text-gray-900'
+                            }`}
+                          >
+                            {papel.variante_nombre}
+                          </span>
+                        </div>
+                        {isSelected && (
+                          <CheckCircle2 className="w-4 h-4 text-blue-600 flex-shrink-0" />
                         )}
-                        <span
-                          className={`font-semibold text-sm truncate ${
-                            isSelected ? 'text-blue-700' : 'text-gray-900'
-                          }`}
-                        >
-                          {papel.variante_nombre}
-                        </span>
                       </div>
 
-                      <div className="flex flex-wrap items-center gap-1.5">
+                      <div className="flex items-center justify-between gap-2">
                         {papel.material && (
                           <span
-                            className={`text-[10px] font-medium px-2 py-0.5 rounded border ${colorClass}`}
+                            className={`text-[9px] font-medium px-1.5 py-0.5 rounded border truncate ${colorClass}`}
                           >
                             {papel.material.nombre}
                           </span>
                         )}
                         {papel.espesor && (
                           <span
-                            className={`text-[10px] px-1.5 py-0.5 rounded ${
+                            className={`text-base font-bold flex-shrink-0 ${
                               isSelected
-                                ? 'bg-blue-100 text-blue-600'
-                                : 'bg-gray-100 text-gray-600'
+                                ? 'text-blue-700'
+                                : 'text-gray-800'
                             }`}
                           >
-                            {papel.espesor}
-                            {papel.unidad_espesor}
+                            {papel.espesor}{papel.unidad_espesor}
                           </span>
                         )}
                       </div>
                     </div>
-
-                    {isSelected && (
-                      <CheckCircle2 className="w-5 h-5 text-blue-600 flex-shrink-0" />
-                    )}
                   </div>
                 </button>
               );
