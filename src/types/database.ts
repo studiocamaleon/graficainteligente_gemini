@@ -1381,6 +1381,156 @@ export interface OrdenItemRuta {
   updated_at: string;
 }
 
+// ============================================================================
+// CENTRO DE COPIADO - Types
+// ============================================================================
+
+export type TipoTintaCopiado = 'CMYK' | 'K';
+export type CaraImpresaCopiado = 'frente' | 'frente_y_dorso';
+export type TipoAnillado = 'ring_wire' | 'plastico';
+export type TipoPlastificado = 'A4' | 'SRA3' | 'Carnet';
+export type TipoItemCopiado = 'impresion' | 'anillado' | 'plastificado';
+export type EstadoOrdenCopiado = 'pendiente' | 'en_proceso' | 'finalizada' | 'entregada' | 'cancelada';
+
+export interface CentroCopiadoTamanioPapel {
+  id: string;
+  company_id: string;
+  nombre: string;
+  ancho_mm: number;
+  alto_mm: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CentroCopiadoPapel {
+  id: string;
+  company_id: string;
+  material_id: string;
+  variante_nombre: string;
+  espesor: number | null;
+  unidad_espesor: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CentroCopiadoRangoAnillado {
+  id: string;
+  company_id: string;
+  hojas_desde: number;
+  hojas_hasta: number | null;
+  precio_ring_wire: number;
+  precio_plastico: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CentroCopiadoPlastificado {
+  id: string;
+  company_id: string;
+  tipo: TipoPlastificado;
+  precio: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CentroCopiadoRangoPrecioImpresion {
+  id: string;
+  company_id: string;
+  nombre: string;
+  hojas_desde: number;
+  hojas_hasta: number | null;
+  orden: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CentroCopiadoPrecioImpresion {
+  id: string;
+  company_id: string;
+  tamanio_papel_id: string;
+  papel_id: string;
+  tipo_tinta: TipoTintaCopiado;
+  rango_precio_id: string;
+  cara_impresa: CaraImpresaCopiado;
+  precio: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CentroCopiadoOrden {
+  id: string;
+  company_id: string;
+  numero_orden: string;
+  orden_trabajo_id: string | null;
+  cliente_id: string | null;
+  estado: EstadoOrdenCopiado;
+  fecha_solicitud: string;
+  fecha_entrega_estimada: string | null;
+  fecha_entrega_real: string | null;
+  total: number;
+  observaciones: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CentroCopiadoOrdenItem {
+  id: string;
+  orden_copiado_id: string;
+  tipo_item: TipoItemCopiado;
+  tamanio_papel_id: string | null;
+  papel_id: string | null;
+  tipo_tinta: TipoTintaCopiado | null;
+  cara_impresa: CaraImpresaCopiado | null;
+  cantidad_hojas: number | null;
+  tipo_anillado: TipoAnillado | null;
+  tipo_plastificado: TipoPlastificado | null;
+  cantidad_unidades: number;
+  precio_unitario: number;
+  subtotal: number;
+  descripcion: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// Form Data Types
+export interface CentroCopiadoTamanioPapelFormData {
+  nombre: string;
+  ancho_mm: number;
+  alto_mm: number;
+}
+
+export interface CentroCopiadoPapelFormData {
+  material_id: string;
+  variante_nombre: string;
+  espesor: number | null;
+  unidad_espesor: string | null;
+}
+
+export interface CentroCopiadoRangoAnilladoFormData {
+  hojas_desde: number;
+  hojas_hasta: number | null;
+  precio_ring_wire: number;
+  precio_plastico: number;
+}
+
+export interface CentroCopiadoPlastificadoFormData {
+  tipo: TipoPlastificado;
+  precio: number;
+}
+
+export interface CentroCopiadoRangoPrecioImpresionFormData {
+  nombre: string;
+  hojas_desde: number;
+  hojas_hasta: number | null;
+  orden: number;
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -1573,6 +1723,46 @@ export interface Database {
         Row: RutaProduccionPaso;
         Insert: Omit<RutaProduccionPaso, 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Omit<RutaProduccionPaso, 'id' | 'created_at' | 'ruta_id'>>;
+      };
+      centro_copiado_tamanios_papel: {
+        Row: CentroCopiadoTamanioPapel;
+        Insert: Omit<CentroCopiadoTamanioPapel, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<CentroCopiadoTamanioPapel, 'id' | 'created_at' | 'company_id'>>;
+      };
+      centro_copiado_papeles: {
+        Row: CentroCopiadoPapel;
+        Insert: Omit<CentroCopiadoPapel, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<CentroCopiadoPapel, 'id' | 'created_at' | 'company_id'>>;
+      };
+      centro_copiado_rangos_anillado: {
+        Row: CentroCopiadoRangoAnillado;
+        Insert: Omit<CentroCopiadoRangoAnillado, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<CentroCopiadoRangoAnillado, 'id' | 'created_at' | 'company_id'>>;
+      };
+      centro_copiado_plastificados: {
+        Row: CentroCopiadoPlastificado;
+        Insert: Omit<CentroCopiadoPlastificado, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<CentroCopiadoPlastificado, 'id' | 'created_at' | 'company_id'>>;
+      };
+      centro_copiado_rangos_precio_impresion: {
+        Row: CentroCopiadoRangoPrecioImpresion;
+        Insert: Omit<CentroCopiadoRangoPrecioImpresion, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<CentroCopiadoRangoPrecioImpresion, 'id' | 'created_at' | 'company_id'>>;
+      };
+      centro_copiado_precios_impresion: {
+        Row: CentroCopiadoPrecioImpresion;
+        Insert: Omit<CentroCopiadoPrecioImpresion, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<CentroCopiadoPrecioImpresion, 'id' | 'created_at' | 'company_id'>>;
+      };
+      centro_copiado_ordenes: {
+        Row: CentroCopiadoOrden;
+        Insert: Omit<CentroCopiadoOrden, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<CentroCopiadoOrden, 'id' | 'created_at' | 'company_id'>>;
+      };
+      centro_copiado_ordenes_items: {
+        Row: CentroCopiadoOrdenItem;
+        Insert: Omit<CentroCopiadoOrdenItem, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<CentroCopiadoOrdenItem, 'id' | 'created_at'>>;
       };
     };
   };

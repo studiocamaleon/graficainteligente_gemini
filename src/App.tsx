@@ -32,6 +32,10 @@ import { MaterialesRigidos } from './pages/app/productos/MaterialesRigidos';
 import { PlotterCorte } from './pages/app/productos/PlotterCorte';
 import { Sellos } from './pages/app/productos/Sellos';
 import { Portabanners } from './pages/app/productos/Portabanners';
+import { Configuracion as CentroCopiadoConfiguracion } from './pages/app/centro-copiado/Configuracion';
+import { RangosPrecio as CentroCopiadoRangosPrecio } from './pages/app/centro-copiado/RangosPrecio';
+import { Precios as CentroCopiadoPrecios } from './pages/app/centro-copiado/Precios';
+import { Ordenes as CentroCopiadoOrdenes } from './pages/app/centro-copiado/Ordenes';
 
 function AppRoutes() {
   const { user, loading } = useAuth();
@@ -85,6 +89,10 @@ function AppRoutes() {
                 <Route path="productos/plotter-corte" element={<PlotterCorte />} />
                 <Route path="productos/sellos" element={<Sellos />} />
                 <Route path="productos/portabanners" element={<Portabanners />} />
+                <Route path="centro-copiado/configuracion" element={<CentroCopiadoConfiguracion />} />
+                <Route path="centro-copiado/rangos-precio" element={<CentroCopiadoRangosPrecio />} />
+                <Route path="centro-copiado/precios" element={<CentroCopiadoPrecios />} />
+                <Route path="centro-copiado/ordenes" element={<CentroCopiadoOrdenes />} />
                 <Route path="orders" element={<Navigate to="/app/orders/ordenes" replace />} />
                 <Route path="orders/ordenes" element={<OrdersListPage />} />
                 <Route path="orders/crear-ot" element={<CreateOrderPage />} />

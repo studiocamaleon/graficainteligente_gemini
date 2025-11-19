@@ -29,6 +29,9 @@ import {
   Scissors,
   Stamp,
   Frame,
+  Copy,
+  FileText,
+  Settings2,
 } from 'lucide-react';
 
 export interface SubModule {
@@ -189,6 +192,44 @@ export const MODULES: Module[] = [
         description: 'Productos de portabanners y expositores',
         path: '/app/productos/portabanners',
         icon: Frame,
+      },
+    ],
+  },
+  {
+    id: 'centro-copiado',
+    name: 'Centro de Copiado',
+    description: 'Gestión de centro de copiado',
+    icon: Copy,
+    path: '/app/centro-copiado',
+    color: 'text-teal-600',
+    children: [
+      {
+        id: 'centro-copiado-configuracion',
+        name: 'Configuración',
+        description: 'Configuración de tamaños y papeles',
+        path: '/app/centro-copiado/configuracion',
+        icon: Settings2,
+      },
+      {
+        id: 'centro-copiado-rangos-precio',
+        name: 'Rangos de Precio',
+        description: 'Rangos de cantidad de hojas',
+        path: '/app/centro-copiado/rangos-precio',
+        icon: Percent,
+      },
+      {
+        id: 'centro-copiado-precios',
+        name: 'Precios de Impresión',
+        description: 'Gestión de precios de impresión',
+        path: '/app/centro-copiado/precios',
+        icon: DollarSign,
+      },
+      {
+        id: 'centro-copiado-ordenes',
+        name: 'Órdenes de Copiado',
+        description: 'Gestión de órdenes de copiado',
+        path: '/app/centro-copiado/ordenes',
+        icon: FileText,
       },
     ],
   },
