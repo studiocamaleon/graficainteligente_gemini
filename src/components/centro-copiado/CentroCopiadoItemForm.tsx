@@ -270,7 +270,7 @@ export function CentroCopiadoItemForm({
                   <div className="flex items-center justify-center gap-2">
                     <div className="flex gap-1">
                       <div className="w-3 h-3 rounded-full bg-cyan-500"></div>
-                      <div className="w-3 h-3 rounded-full bg-magenta-500"></div>
+                      <div className="w-3 h-3 rounded-full bg-fuchsia-500"></div>
                       <div className="w-3 h-3 rounded-full bg-yellow-400"></div>
                       <div className="w-3 h-3 rounded-full bg-black"></div>
                     </div>
