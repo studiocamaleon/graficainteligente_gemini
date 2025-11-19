@@ -17,28 +17,18 @@ export function useImpresionLaserPricing() {
     try {
       const { data: precioData, error: precioError } = await supabase
         .from('productos_impresion_laser_precios')
-        .select(`
-          precio_base,
-          rango_precio_id,
-          rangos_precio!inner(
-            id,
-            nombre,
-            rangos_precio_valores(
-              cantidad_desde,
-              cantidad_hasta
-            )
-          )
-        `)
+        .select('precio')
         .eq('producto_laser_id', params.producto_laser_id)
         .eq('medida_ancho', params.medida_ancho)
         .eq('medida_alto', params.medida_alto)
         .eq('tinta_id', params.tinta_id)
+        .eq('cantidad', params.cantidad)
         .eq('cara_impresa', params.cara_impresa)
         .maybeSingle();
 
       if (precioError) throw precioError;
 
-      if (!precioData) {
+      if (!precioData || !precioData.precio) {
         return {
           precio_base: 0,
           tiene_configuracion: false,
@@ -51,32 +41,7 @@ export function useImpresionLaserPricing() {
         };
       }
 
-      const rangos = Array.isArray(precioData.rangos_precio)
-        ? precioData.rangos_precio[0]
-        : precioData.rangos_precio;
-
-      const valores = rangos?.rangos_precio_valores || [];
-
-      const rangoValido = valores.find((v: any) => {
-        const desde = v.cantidad_desde || 0;
-        const hasta = v.cantidad_hasta || 999999;
-        return params.cantidad >= desde && params.cantidad <= hasta;
-      });
-
-      if (!rangoValido) {
-        return {
-          precio_base: 0,
-          tiene_configuracion: false,
-          desglose: {
-            base: 0,
-            servicios: 0,
-            acabados: 0,
-            total: 0,
-          },
-        };
-      }
-
-      const precioBase = precioData.precio_base;
+      const precioBase = precioData.precio;
 
       let totalServicios = 0;
       for (const servicio of servicios) {

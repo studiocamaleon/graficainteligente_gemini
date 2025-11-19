@@ -34,7 +34,7 @@ export interface ImpresionLaserConfig {
   tinta_nombre: string | null;
   tipo_tinta: 'CMYK' | 'K' | null;
 
-  cara_impresa: 'solo_frente' | 'frente_dorso' | null;
+  cara_impresa: 'solo_frente' | 'frente_y_dorso' | null;
   caras_disponibles: string[];
 
   servicios_seleccionados: ServicioSeleccionado[];

@@ -198,7 +198,7 @@ export function AddItemWizard({ isOpen, onClose, onAgregar }: AddItemWizardProps
     });
   };
 
-  const handleCaraSelect = (cara: 'solo_frente' | 'frente_dorso') => {
+  const handleCaraSelect = (cara: 'solo_frente' | 'frente_y_dorso') => {
     updateStepData({ cara_impresa: cara });
   };
 

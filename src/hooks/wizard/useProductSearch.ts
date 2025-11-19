@@ -105,9 +105,9 @@ export function useProductSearch(searchTerm: string) {
           if (tecnologiasRes.data && tecnologiasRes.data.tintas) {
             const tintas = tecnologiasRes.data.tintas.filter(Boolean);
 
-            tintas.forEach((tinta: string, index: number) => {
+            tintas.forEach((tinta: string) => {
               tintasDisponibles.push({
-                tinta_id: `${tinta}_${index}`,
+                tinta_id: tinta,
                 nombre: tinta,
                 tipo: tinta,
               });

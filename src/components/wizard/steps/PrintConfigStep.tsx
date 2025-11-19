@@ -6,9 +6,9 @@ interface PrintConfigStepProps {
   tintasDisponibles: TintaDisponible[];
   carasDisponibles: string[];
   tintaSeleccionada: string | null;
-  caraSeleccionada: 'solo_frente' | 'frente_dorso' | null;
+  caraSeleccionada: 'solo_frente' | 'frente_y_dorso' | null;
   onSelectTinta: (tintaId: string, tipo: 'CMYK' | 'K') => void;
-  onSelectCara: (cara: 'solo_frente' | 'frente_dorso') => void;
+  onSelectCara: (cara: 'solo_frente' | 'frente_y_dorso') => void;
 }
 
 export function PrintConfigStep({
@@ -107,14 +107,14 @@ export function PrintConfigStep({
             </Card>
           )}
 
-          {carasDisponibles.includes('frente_dorso') && (
+          {carasDisponibles.includes('frente_y_dorso') && (
             <Card
               className={`p-6 cursor-pointer transition-all hover:shadow-lg ${
-                caraSeleccionada === 'frente_dorso'
+                caraSeleccionada === 'frente_y_dorso'
                   ? 'ring-2 ring-blue-600 bg-blue-50'
                   : 'hover:border-blue-300'
               }`}
-              onClick={() => onSelectCara('frente_dorso')}
+              onClick={() => onSelectCara('frente_y_dorso')}
             >
               <div className="flex items-center gap-3 mb-3">
                 <div className="relative">
