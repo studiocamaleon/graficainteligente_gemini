@@ -227,7 +227,7 @@ export function CrearOrdenCopiado() {
     label: `${client.nombre_fantasia} (${client.numero_documento})`,
   }));
 
-  const infoGeneralCompleta = clienteId && fechaEntrega;
+  const infoGeneralCompleta = clienteId && fechaEntrega && horaEntrega;
 
   useEffect(() => {
     if (infoGeneralCompleta) {
@@ -299,11 +299,24 @@ export function CrearOrdenCopiado() {
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Fecha Entrega Estimada
                       </label>
-                      <Input
+                      <input
                         type="date"
                         value={fechaEntrega}
                         onChange={(e) => setFechaEntrega(e.target.value)}
                         min={new Date().toISOString().split('T')[0]}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer"
+                        style={{
+                          colorScheme: 'light',
+                          WebkitAppearance: 'none',
+                          MozAppearance: 'none'
+                        }}
+                        onFocus={(e) => {
+                          try {
+                            e.target.showPicker?.();
+                          } catch (err) {
+                            // Fallback para navegadores que no soportan showPicker
+                          }
+                        }}
                       />
                     </div>
 
@@ -311,10 +324,23 @@ export function CrearOrdenCopiado() {
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Hora Entrega
                       </label>
-                      <Input
+                      <input
                         type="time"
                         value={horaEntrega}
                         onChange={(e) => setHoraEntrega(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer"
+                        style={{
+                          colorScheme: 'light',
+                          WebkitAppearance: 'none',
+                          MozAppearance: 'none'
+                        }}
+                        onFocus={(e) => {
+                          try {
+                            e.target.showPicker?.();
+                          } catch (err) {
+                            // Fallback para navegadores que no soportan showPicker
+                          }
+                        }}
                       />
                     </div>
                   </div>
