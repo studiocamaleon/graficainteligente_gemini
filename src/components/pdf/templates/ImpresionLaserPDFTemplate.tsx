@@ -23,14 +23,9 @@ const formatCaraLabel = (cara: string): string => {
   return cara;
 };
 
-interface TintaData {
-  id: string;
-  nombre: string;
-}
-
 interface MedidaGroup {
   medida: { ancho: number; alto: number };
-  tintas: TintaData[];
+  tintas: string[]; // Las tintas ahora son strings simples
 }
 
 export const ImpresionLaserPDFTemplate = forwardRef<HTMLDivElement, ImpresionLaserPDFTemplateProps>(
@@ -52,21 +47,18 @@ export const ImpresionLaserPDFTemplate = forwardRef<HTMLDivElement, ImpresionLas
         const key = `${medida.ancho}x${medida.alto}`;
 
         if (!groups.has(key)) {
-          const todasLasTintas: TintaData[] = [];
+          const todasLasTintas: string[] = [];
           producto.tecnologias.forEach((tecnologia) => {
             tecnologia.tintas.forEach((tinta) => {
               todasLasTintas.push(tinta);
             });
           });
 
-          const tintasOrdenadas = sortTintas(todasLasTintas.map(t => t.nombre));
-          const tintasOrdenadaData = tintasOrdenadas.map(nombre =>
-            todasLasTintas.find(t => t.nombre === nombre)!
-          );
+          const tintasOrdenadas = sortTintas(todasLasTintas);
 
           groups.set(key, {
             medida,
-            tintas: tintasOrdenadaData,
+            tintas: tintasOrdenadas,
           });
         }
       });
@@ -130,7 +122,7 @@ export const ImpresionLaserPDFTemplate = forwardRef<HTMLDivElement, ImpresionLas
                                       (p) =>
                                         p.medida_ancho === group.medida.ancho &&
                                         p.medida_alto === group.medida.alto &&
-                                        p.tinta === tinta.id &&
+                                        p.tinta === tinta &&
                                         p.cantidad === cantidad &&
                                         p.cara_impresa === cara
                                     );
@@ -141,10 +133,10 @@ export const ImpresionLaserPDFTemplate = forwardRef<HTMLDivElement, ImpresionLas
                                 });
 
                                 return (
-                                  <div key={tinta.id} className="space-y-1.5">
+                                  <div key={tinta} className="space-y-1.5">
                                     <div className="flex items-center gap-2 px-2.5 py-1.5 bg-blue-50 rounded-lg border border-blue-200">
-                                      <InkColorCircles tinta={tinta.nombre} size="sm" />
-                                      <span className="text-sm font-bold text-gray-800">{tinta.nombre}</span>
+                                      <InkColorCircles tinta={tinta} size="sm" />
+                                      <span className="text-sm font-bold text-gray-800">{tinta}</span>
                                     </div>
                                     <PDFTable columns={columns} data={tableData} />
                                   </div>
@@ -172,7 +164,7 @@ export const ImpresionLaserPDFTemplate = forwardRef<HTMLDivElement, ImpresionLas
                                       (p) =>
                                         p.medida_ancho === group.medida.ancho &&
                                         p.medida_alto === group.medida.alto &&
-                                        p.tinta === tinta.id &&
+                                        p.tinta === tinta &&
                                         p.cantidad === cantidad &&
                                         p.cara_impresa === cara
                                     );
@@ -183,10 +175,10 @@ export const ImpresionLaserPDFTemplate = forwardRef<HTMLDivElement, ImpresionLas
                                 });
 
                                 return (
-                                  <div key={tinta.id} className="space-y-1.5">
+                                  <div key={tinta} className="space-y-1.5">
                                     <div className="flex items-center gap-2 px-2.5 py-1.5 bg-blue-50 rounded-lg border border-blue-200">
-                                      <InkColorCircles tinta={tinta.nombre} size="sm" />
-                                      <span className="text-sm font-bold text-gray-800">{tinta.nombre}</span>
+                                      <InkColorCircles tinta={tinta} size="sm" />
+                                      <span className="text-sm font-bold text-gray-800">{tinta}</span>
                                     </div>
                                     <PDFTable columns={columns} data={tableData} />
                                   </div>
