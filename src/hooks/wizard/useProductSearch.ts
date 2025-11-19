@@ -62,7 +62,7 @@ export function useProductSearch(searchTerm: string) {
 
             supabase
               .from('productos_impresion_laser_tecnologias')
-              .select('tecnologia_id, tintas')
+              .select('tecnologia_id, tintas, tintas_info:get_tintas_info(tintas)')
               .eq('producto_laser_id', laserData.id)
               .limit(1)
               .maybeSingle(),
@@ -101,17 +101,23 @@ export function useProductSearch(searchTerm: string) {
             display: `${m.ancho} x ${m.alto} cm`,
           }));
 
-          const tintasDisponibles = [];
-          if (tecnologiasRes.data && tecnologiasRes.data.tintas) {
-            const tintas = tecnologiasRes.data.tintas.filter(Boolean);
+          // Obtener información de tintas desde la tabla tintas usando la función helper
+          let tintasDisponibles = [];
+          if (tecnologiasRes.data && tecnologiasRes.data.tintas && tecnologiasRes.data.tintas.length > 0) {
+            // Consultar la tabla tintas directamente con los IDs
+            const { data: tintasData } = await supabase
+              .from('tintas')
+              .select('id, codigo, nombre')
+              .in('id', tecnologiasRes.data.tintas)
+              .eq('activo', true);
 
-            tintas.forEach((tinta: string) => {
-              tintasDisponibles.push({
-                tinta_id: tinta,
-                nombre: tinta,
-                tipo: tinta,
-              });
-            });
+            if (tintasData) {
+              tintasDisponibles = tintasData.map(tinta => ({
+                tinta_id: tinta.id,
+                nombre: tinta.nombre,
+                tipo: tinta.codigo,
+              }));
+            }
           }
 
           const material = materialesRes.data?.materiales;

@@ -1,7 +1,9 @@
+import { useState, useEffect } from 'react';
 import { Modal } from '../../ui/Modal';
 import { Badge } from '../../ui/Badge';
 import { Button } from '../../ui/Button';
 import { Edit2 } from 'lucide-react';
+import { supabase } from '../../../lib/supabase';
 import type { ProductoLaserConRelaciones } from '../../../hooks/useProductosImpresionLaser';
 
 interface ProductoLaserDetalleProps {
@@ -19,8 +21,40 @@ export function ProductoLaserDetalle({
   onEdit,
   canEdit = true,
 }: ProductoLaserDetalleProps) {
-  console.log('ProductoLaserDetalle - producto:', producto);
-  console.log('ProductoLaserDetalle - tecnologias:', producto.tecnologias);
+  const [tintasInfo, setTintasInfo] = useState<Record<string, { codigo: string; nombre: string }>>({});
+  const [loadingTintas, setLoadingTintas] = useState(false);
+
+  useEffect(() => {
+    if (producto.tecnologias.length > 0 && producto.tecnologias[0].tintas && producto.tecnologias[0].tintas.length > 0) {
+      loadTintasInfo();
+    }
+  }, [producto.tecnologias]);
+
+  const loadTintasInfo = async () => {
+    try {
+      setLoadingTintas(true);
+      const tintaIds = producto.tecnologias[0].tintas;
+
+      const { data, error } = await supabase
+        .from('tintas')
+        .select('id, codigo, nombre')
+        .in('id', tintaIds);
+
+      if (error) throw error;
+
+      const tintasMap: Record<string, { codigo: string; nombre: string }> = {};
+      if (data) {
+        data.forEach(tinta => {
+          tintasMap[tinta.id] = { codigo: tinta.codigo, nombre: tinta.nombre };
+        });
+      }
+      setTintasInfo(tintasMap);
+    } catch (error) {
+      console.error('Error loading tintas info:', error);
+    } finally {
+      setLoadingTintas(false);
+    }
+  };
 
   const tipoVentaLabels = {
     unidades: 'Por Unidades',
@@ -102,13 +136,20 @@ export function ProductoLaserDetalle({
               {producto.tecnologias[0].tintas && producto.tecnologias[0].tintas.length > 0 ? (
                 <div>
                   <p className="text-xs font-medium text-gray-500 mb-2">Tintas Seleccionadas</p>
-                  <div className="flex flex-wrap gap-2">
-                    {producto.tecnologias[0].tintas.map((tinta, index) => (
-                      <Badge key={index} variant="secondary">
-                        {tinta}
-                      </Badge>
-                    ))}
-                  </div>
+                  {loadingTintas ? (
+                    <p className="text-xs text-gray-400">Cargando...</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {producto.tecnologias[0].tintas.map((tintaId, index) => {
+                        const tintaInfo = tintasInfo[tintaId];
+                        return (
+                          <Badge key={index} variant="secondary">
+                            {tintaInfo ? `${tintaInfo.nombre} (${tintaInfo.codigo})` : tintaId.substring(0, 8) + '...'}
+                          </Badge>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div>

@@ -3,6 +3,12 @@ import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../hooks/useAuth';
 import { TECNOLOGIA_IMPRESION_LASER_ID } from '../../../constants/tecnologias';
 
+interface Tinta {
+  id: string;
+  codigo: string;
+  nombre: string;
+}
+
 interface TecnologiaTintasSelectorProps {
   tintasSeleccionadas: string[];
   onTintasChange: (tintas: string[]) => void;
@@ -16,7 +22,7 @@ export function TecnologiaTintasSelector({
   onTecnologiaChange,
   error,
 }: TecnologiaTintasSelectorProps) {
-  const [tintas, setTintas] = useState<string[]>([]);
+  const [tintas, setTintas] = useState<Tinta[]>([]);
   const [tecnologiaId, setTecnologiaId] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const { user, profile } = useAuth();
@@ -35,6 +41,7 @@ export function TecnologiaTintasSelector({
     try {
       setIsLoading(true);
 
+      // Obtener la tecnología con sus tintas (ahora son IDs)
       const { data: tecnologiaData, error } = await supabase
         .from('tecnologias')
         .select('id, tintas')
@@ -49,14 +56,28 @@ export function TecnologiaTintasSelector({
         return;
       }
 
-      if (!tecnologiaData) {
+      if (!tecnologiaData || !tecnologiaData.tintas || tecnologiaData.tintas.length === 0) {
         setTintas([]);
         return;
       }
 
       setTecnologiaId(tecnologiaData.id);
       onTecnologiaChange(tecnologiaData.id);
-      setTintas(tecnologiaData.tintas || []);
+
+      // Obtener la información completa de las tintas desde la tabla tintas
+      const { data: tintasData, error: tintasError } = await supabase
+        .from('tintas')
+        .select('id, codigo, nombre')
+        .in('id', tecnologiaData.tintas)
+        .eq('activo', true);
+
+      if (tintasError) {
+        console.error('[TecnologiaTintasSelector] Error cargando tintas:', tintasError);
+        setTintas([]);
+        return;
+      }
+
+      setTintas(tintasData || []);
     } catch (err) {
       console.error('❌ [TecnologiaTintasSelector] Error cargando tecnología y tintas:', err);
       setTintas([]);
@@ -65,11 +86,11 @@ export function TecnologiaTintasSelector({
     }
   };
 
-  const toggleTinta = (tinta: string) => {
-    if (tintasSeleccionadas.includes(tinta)) {
-      onTintasChange(tintasSeleccionadas.filter((t) => t !== tinta));
+  const toggleTinta = (tintaId: string) => {
+    if (tintasSeleccionadas.includes(tintaId)) {
+      onTintasChange(tintasSeleccionadas.filter((t) => t !== tintaId));
     } else {
-      onTintasChange([...tintasSeleccionadas, tinta]);
+      onTintasChange([...tintasSeleccionadas, tintaId]);
     }
   };
 
@@ -113,20 +134,21 @@ export function TecnologiaTintasSelector({
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
         {tintas.map((tinta) => {
-          const isSelected = tintasSeleccionadas.includes(tinta);
+          const isSelected = tintasSeleccionadas.includes(tinta.id);
           return (
             <button
-              key={tinta}
+              key={tinta.id}
               type="button"
-              onClick={() => toggleTinta(tinta)}
+              onClick={() => toggleTinta(tinta.id)}
               className={`relative p-3 rounded-lg border-2 transition-all ${
                 isSelected
                   ? 'border-blue-500 bg-blue-50 shadow-sm'
                   : 'border-gray-200 bg-white hover:border-gray-300'
               }`}
             >
-              <div className="flex items-center justify-center">
-                <p className="text-sm font-medium text-gray-900">{tinta}</p>
+              <div className="flex flex-col items-center justify-center">
+                <p className="text-sm font-medium text-gray-900">{tinta.nombre}</p>
+                <p className="text-xs text-gray-500 mt-1">{tinta.codigo}</p>
               </div>
               {isSelected && (
                 <div className="absolute top-2 right-2 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
