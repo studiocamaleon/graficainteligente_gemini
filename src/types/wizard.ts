@@ -30,9 +30,8 @@ export interface ImpresionLaserConfig {
   medida_alto: number | null;
   medida_display: string | null;
 
-  tinta_id: string | null;
+  tinta: string | null;
   tinta_nombre: string | null;
-  tipo_tinta: 'CMYK' | 'K' | null;
 
   cara_impresa: 'solo_frente' | 'frente_y_dorso' | null;
   caras_disponibles: string[];
@@ -115,16 +114,15 @@ export interface MedidaDisponible {
 }
 
 export interface TintaDisponible {
-  tinta_id: string;
+  tinta: string;
   nombre: string;
-  tipo: 'CMYK' | 'K';
 }
 
 export interface PriceQueryParams {
   producto_laser_id: string;
   medida_ancho: number;
   medida_alto: number;
-  tinta_id: string;
+  tinta: string;
   cantidad: number;
   cara_impresa: 'solo_frente' | 'frente_dorso';
 }

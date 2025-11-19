@@ -52,7 +52,7 @@ export function AddItemWizard({ isOpen, onClose, onAgregar }: AddItemWizardProps
       state.config.producto_laser_id &&
       state.config.medida_ancho &&
       state.config.medida_alto &&
-      state.config.tinta_id &&
+      state.config.tinta &&
       state.config.cantidad &&
       state.config.cara_impresa
     ) {
@@ -129,7 +129,7 @@ export function AddItemWizard({ isOpen, onClose, onAgregar }: AddItemWizardProps
           producto_laser_id: state.config.producto_laser_id,
           medida_ancho: state.config.medida_ancho,
           medida_alto: state.config.medida_alto,
-          tinta_id: state.config.tinta_id,
+          tinta: state.config.tinta,
           cantidad: state.config.cantidad,
           cara_impresa: state.config.cara_impresa,
         },
@@ -190,11 +190,17 @@ export function AddItemWizard({ isOpen, onClose, onAgregar }: AddItemWizardProps
     });
   };
 
-  const handleTintaSelect = (tintaId: string, tipo: 'CMYK' | 'K') => {
+  const handleTintaSelect = (tinta: string) => {
+    const nombresMap: Record<string, string> = {
+      'K': 'Negro (K)',
+      'CMYK': 'Cuatricromía (CMYK)',
+      'CMYK+W': 'CMYK + Blanco',
+      'CMYK+V': 'CMYK + Barniz',
+      'CMYK+W+V': 'CMYK + Blanco + Barniz'
+    };
     updateStepData({
-      tinta_id: tintaId,
-      tipo_tinta: tipo,
-      tinta_nombre: tipo === 'CMYK' ? 'Color' : 'Blanco y Negro',
+      tinta: tinta,
+      tinta_nombre: nombresMap[tinta] || tinta,
     });
   };
 
@@ -413,7 +419,7 @@ export function AddItemWizard({ isOpen, onClose, onAgregar }: AddItemWizardProps
           <PrintConfigStep
             tintasDisponibles={tintasDisponibles}
             carasDisponibles={state.config.caras_disponibles}
-            tintaSeleccionada={state.config.tinta_id}
+            tintaSeleccionada={state.config.tinta}
             caraSeleccionada={state.config.cara_impresa}
             onSelectTinta={handleTintaSelect}
             onSelectCara={handleCaraSelect}

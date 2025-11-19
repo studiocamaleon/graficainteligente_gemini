@@ -101,23 +101,22 @@ export function useProductSearch(searchTerm: string) {
             display: `${m.ancho} x ${m.alto} cm`,
           }));
 
-          // Obtener información de tintas desde la tabla tintas usando la función helper
+          // Obtener información de tintas desde el array de texto
           let tintasDisponibles = [];
           if (tecnologiasRes.data && tecnologiasRes.data.tintas && tecnologiasRes.data.tintas.length > 0) {
-            // Consultar la tabla tintas directamente con los IDs
-            const { data: tintasData } = await supabase
-              .from('tintas')
-              .select('id, codigo, nombre')
-              .in('id', tecnologiasRes.data.tintas)
-              .eq('activo', true);
-
-            if (tintasData) {
-              tintasDisponibles = tintasData.map(tinta => ({
-                tinta_id: tinta.id,
-                nombre: tinta.nombre,
-                tipo: tinta.codigo,
-              }));
-            }
+            tintasDisponibles = tecnologiasRes.data.tintas.map((codigo: string) => {
+              const nombresMap: Record<string, string> = {
+                'K': 'Negro (K)',
+                'CMYK': 'Cuatricromía (CMYK)',
+                'CMYK+W': 'CMYK + Blanco',
+                'CMYK+V': 'CMYK + Barniz',
+                'CMYK+W+V': 'CMYK + Blanco + Barniz'
+              };
+              return {
+                tinta: codigo,
+                nombre: nombresMap[codigo] || codigo,
+              };
+            });
           }
 
           const material = materialesRes.data?.materiales;

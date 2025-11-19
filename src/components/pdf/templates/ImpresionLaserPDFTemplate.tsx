@@ -130,7 +130,7 @@ export const ImpresionLaserPDFTemplate = forwardRef<HTMLDivElement, ImpresionLas
                                       (p) =>
                                         p.medida_ancho === group.medida.ancho &&
                                         p.medida_alto === group.medida.alto &&
-                                        p.tinta_id === tinta.id &&
+                                        p.tinta === tinta.id &&
                                         p.cantidad === cantidad &&
                                         p.cara_impresa === cara
                                     );
@@ -172,7 +172,7 @@ export const ImpresionLaserPDFTemplate = forwardRef<HTMLDivElement, ImpresionLas
                                       (p) =>
                                         p.medida_ancho === group.medida.ancho &&
                                         p.medida_alto === group.medida.alto &&
-                                        p.tinta_id === tinta.id &&
+                                        p.tinta === tinta.id &&
                                         p.cantidad === cantidad &&
                                         p.cara_impresa === cara
                                     );

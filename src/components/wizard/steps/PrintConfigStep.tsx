@@ -7,7 +7,7 @@ interface PrintConfigStepProps {
   carasDisponibles: string[];
   tintaSeleccionada: string | null;
   caraSeleccionada: 'solo_frente' | 'frente_y_dorso' | null;
-  onSelectTinta: (tintaId: string, tipo: 'CMYK' | 'K') => void;
+  onSelectTinta: (tinta: string) => void;
   onSelectCara: (cara: 'solo_frente' | 'frente_y_dorso') => void;
 }
 
@@ -19,8 +19,8 @@ export function PrintConfigStep({
   onSelectTinta,
   onSelectCara,
 }: PrintConfigStepProps) {
-  const tintasCMYK = tintasDisponibles.filter(t => t.tipo === 'CMYK');
-  const tintasK = tintasDisponibles.filter(t => t.tipo === 'K');
+  const tintasCMYK = tintasDisponibles.filter(t => t.tinta.includes('CMYK'));
+  const tintasK = tintasDisponibles.filter(t => t.tinta === 'K');
 
   return (
     <div className="space-y-8">
@@ -40,11 +40,11 @@ export function PrintConfigStep({
           {tintasCMYK.length > 0 && (
             <Card
               className={`p-6 cursor-pointer transition-all hover:shadow-lg ${
-                tintaSeleccionada && tintasCMYK.some(t => t.tinta_id === tintaSeleccionada)
+                tintaSeleccionada && tintasCMYK.some(t => t.tinta === tintaSeleccionada)
                   ? 'ring-2 ring-blue-600 bg-blue-50'
                   : 'hover:border-blue-300'
               }`}
-              onClick={() => onSelectTinta(tintasCMYK[0].tinta_id, 'CMYK')}
+              onClick={() => onSelectTinta(tintasCMYK[0].tinta)}
             >
               <div className="flex items-center gap-3 mb-3">
                 <div className="flex gap-1">
@@ -64,11 +64,11 @@ export function PrintConfigStep({
           {tintasK.length > 0 && (
             <Card
               className={`p-6 cursor-pointer transition-all hover:shadow-lg ${
-                tintaSeleccionada && tintasK.some(t => t.tinta_id === tintaSeleccionada)
+                tintaSeleccionada && tintasK.some(t => t.tinta === tintaSeleccionada)
                   ? 'ring-2 ring-blue-600 bg-blue-50'
                   : 'hover:border-blue-300'
               }`}
-              onClick={() => onSelectTinta(tintasK[0].tinta_id, 'K')}
+              onClick={() => onSelectTinta(tintasK[0].tinta)}
             >
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-8 h-8 rounded-full bg-gray-800" />

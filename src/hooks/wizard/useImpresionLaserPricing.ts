@@ -21,7 +21,7 @@ export function useImpresionLaserPricing() {
         .eq('producto_laser_id', params.producto_laser_id)
         .eq('medida_ancho', params.medida_ancho)
         .eq('medida_alto', params.medida_alto)
-        .eq('tinta_id', params.tinta_id)
+        .eq('tinta', params.tinta)
         .eq('cantidad', params.cantidad)
         .eq('cara_impresa', params.cara_impresa)
         .maybeSingle();
