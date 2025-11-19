@@ -139,7 +139,7 @@ export function useCentroCopiadoPriceCalculator() {
         if (rangosError) throw rangosError;
 
         if (!rangos || rangos.length === 0) {
-          throw new Error('No hay rangos de anillado configurados');
+          throw new Error('No hay rangos de anillado configurados. Por favor, configure los rangos en la sección de Terminaciones.');
         }
 
         const rangoAplicable = rangos.find(
@@ -149,7 +149,12 @@ export function useCentroCopiadoPriceCalculator() {
         );
 
         if (!rangoAplicable) {
-          throw new Error('No se encontró un rango de anillado aplicable para esta cantidad');
+          const rangoMin = rangos[0]?.hojas_desde || 0;
+          const rangoMax = rangos[rangos.length - 1]?.hojas_hasta;
+          const rangoInfo = rangoMax
+            ? `entre ${rangoMin} y ${rangoMax} hojas`
+            : `desde ${rangoMin} hojas`;
+          throw new Error(`No hay rango de anillado para ${config.cantidad_hojas} hojas. Los rangos configurados son ${rangoInfo}.`);
         }
 
         const precioUnitario =
@@ -186,7 +191,7 @@ export function useCentroCopiadoPriceCalculator() {
         if (plastificadosError) throw plastificadosError;
 
         if (!plastificados || plastificados.length === 0) {
-          throw new Error('No hay precios de plastificado configurados para este tipo');
+          throw new Error(`No hay precios de plastificado configurados para el tipo "${config.tipo_plastificado}". Por favor, configure los precios en la sección de Terminaciones.`);
         }
 
         const rangoAplicable = plastificados.find(
@@ -196,7 +201,12 @@ export function useCentroCopiadoPriceCalculator() {
         );
 
         if (!rangoAplicable) {
-          throw new Error('No se encontró un rango de plastificado aplicable para esta cantidad');
+          const rangoMin = plastificados[0]?.unidades_desde || 0;
+          const rangoMax = plastificados[plastificados.length - 1]?.unidades_hasta;
+          const rangoInfo = rangoMax
+            ? `entre ${rangoMin} y ${rangoMax} hojas`
+            : `desde ${rangoMin} hojas`;
+          throw new Error(`No hay rango de plastificado para ${cantidadHojasPlastificar} hojas. Los rangos configurados son ${rangoInfo}.`);
         }
 
         const precioUnitario = Number(rangoAplicable.precio);
