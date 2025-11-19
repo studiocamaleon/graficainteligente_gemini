@@ -32,6 +32,7 @@ import {
   Copy,
   FileText,
   Settings2,
+  Briefcase,
 } from 'lucide-react';
 
 export interface SubModule {
@@ -209,6 +210,13 @@ export const MODULES: Module[] = [
         description: 'Configuración de tamaños y papeles',
         path: '/app/centro-copiado/configuracion',
         icon: Settings2,
+      },
+      {
+        id: 'centro-copiado-terminaciones',
+        name: 'Terminaciones',
+        description: 'Gestión de anillados y plastificados',
+        path: '/app/centro-copiado/terminaciones',
+        icon: Scissors,
       },
       {
         id: 'centro-copiado-rangos-precio',
