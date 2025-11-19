@@ -1531,6 +1531,15 @@ export interface CentroCopiadoRangoPrecioImpresionFormData {
   orden: number;
 }
 
+export interface CentroCopiadoPrecioImpresionFormData {
+  tamanio_papel_id: string;
+  papel_id: string;
+  tipo_tinta: TipoTintaCopiado;
+  rango_precio_id: string;
+  cara_impresa: CaraImpresaCopiado;
+  precio: number;
+}
+
 export interface Database {
   public: {
     Tables: {
