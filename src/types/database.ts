@@ -639,7 +639,7 @@ export interface ProductoImpresionLaser {
   updated_at: string;
 }
 
-export type TipoVenta = 'mt2' | 'mt_lineal';
+export type TipoVenta = 'mt2' | 'mt_lineal' | 'unidades';
 
 export interface ProductoGranFormato {
   id: string;

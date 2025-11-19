@@ -189,7 +189,7 @@ export function ProductoPortabannerForm({
       <Card>
         <div className="p-6">
           <RangoPrecioSelector
-            tipoVenta="unidad"
+            tipoVenta="unidades"
             rangoSeleccionado={rangoPrecioId}
             onChange={setRangoPrecioId}
           />

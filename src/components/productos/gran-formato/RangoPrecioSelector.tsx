@@ -37,6 +37,13 @@ export function RangoPrecioSelector({
     );
   }
 
+  const getTipoVentaLabel = () => {
+    if (tipoVenta === 'mt2') return 'M²';
+    if (tipoVenta === 'mt_lineal') return 'Metro Lineal';
+    if (tipoVenta === 'unidades') return 'Unidades';
+    return tipoVenta;
+  };
+
   return (
     <div>
       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -44,7 +51,7 @@ export function RangoPrecioSelector({
         <span className="text-gray-500 ml-1">(Opcional)</span>
       </label>
       <p className="text-sm text-gray-500 mb-2">
-        Asocia un rango de precios existente (debe coincidir con el tipo de venta: {tipoVenta === 'mt2' ? 'M²' : 'Metro Lineal'})
+        Asocia un rango de precios existente (debe coincidir con el tipo de venta: {getTipoVentaLabel()})
       </p>
       <Select
         value={rangoSeleccionado || ''}
@@ -62,7 +69,7 @@ export function RangoPrecioSelector({
       {error && <p className="text-sm text-red-600 mt-1">{error}</p>}
       {rangosFiltrados.length === 0 && !loading && (
         <p className="text-sm text-amber-600 mt-2">
-          No hay rangos de precios disponibles para "{tipoVenta === 'mt2' ? 'M²' : 'Metro Lineal'}".
+          No hay rangos de precios disponibles para "{getTipoVentaLabel()}".
           Puedes crear uno en el módulo ABM Core.
         </p>
       )}
