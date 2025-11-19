@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { ChevronDown, ChevronUp, Palette, FileText } from 'lucide-react';
 import { Card } from '../ui/Card';
 import { Badge } from '../ui/Badge';
@@ -31,15 +31,17 @@ export function CentroCopiadoTintaSection({
   const [isExpanded, setIsExpanded] = useState(false);
   const [preciosCargados, setPreciosCargados] = useState<Map<string, PrecioCargado[]>>(new Map());
   const [isLoading, setIsLoading] = useState(false);
+  const hasLoadedRef = useRef(false);
 
   useEffect(() => {
     async function loadPrecios() {
-      if (!isExpanded || preciosCargados.size > 0) return;
+      if (!isExpanded || hasLoadedRef.current) return;
 
       setIsLoading(true);
       try {
         const precios = await loadPreciosExistentes();
         setPreciosCargados(precios);
+        hasLoadedRef.current = true;
       } catch (error) {
         console.error('Error loading precios:', error);
       } finally {
@@ -48,7 +50,7 @@ export function CentroCopiadoTintaSection({
     }
 
     loadPrecios();
-  }, [isExpanded, loadPreciosExistentes, preciosCargados.size]);
+  }, [isExpanded, loadPreciosExistentes]);
 
   const preciosActuales = useMemo(() => {
     const map = new Map<string, Map<string, number>>();
@@ -78,7 +80,15 @@ export function CentroCopiadoTintaSection({
   };
 
   const totalCombinaciones = tintaData.combinaciones.length;
-  const totalPrecios = preciosCargados.size;
+
+  const totalPrecios = useMemo(() => {
+    let count = 0;
+    preciosCargados.forEach(precios => {
+      count += precios.length;
+    });
+    return count;
+  }, [preciosCargados]);
+
   const TintaIcon = getTintaIcon();
 
   return (

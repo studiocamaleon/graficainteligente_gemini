@@ -26,6 +26,7 @@ export function CentroCopiadoMatrizPrecios({
   onPreciosChange,
 }: Props) {
   const hasLocalChanges = useRef(false);
+  const isInitialized = useRef(false);
 
   const getCombinacionKey = (combinacion: CombinacionTamanioPapel) => {
     return `${combinacion.tamanio_id}-${combinacion.papel_id}`;
@@ -35,8 +36,11 @@ export function CentroCopiadoMatrizPrecios({
     return `${rangoId}-${cara}`;
   };
 
-  const initialPreciosState = useMemo(() => {
-    if (combinaciones.length === 0 || rangos.length === 0) return {};
+  const [preciosState, setPreciosState] = useState<PrecioState>({});
+
+  useEffect(() => {
+    if (isInitialized.current) return;
+    if (combinaciones.length === 0 || rangos.length === 0) return;
 
     const initialState: PrecioState = {};
 
@@ -58,16 +62,9 @@ export function CentroCopiadoMatrizPrecios({
       }
     });
 
-    return initialState;
+    setPreciosState(initialState);
+    isInitialized.current = true;
   }, [combinaciones, rangos, preciosActuales]);
-
-  const [preciosState, setPreciosState] = useState<PrecioState>(initialPreciosState);
-
-  useEffect(() => {
-    if (!hasLocalChanges.current) {
-      setPreciosState(initialPreciosState);
-    }
-  }, [initialPreciosState]);
 
   const handlePrecioChange = (
     combinacion: CombinacionTamanioPapel,
