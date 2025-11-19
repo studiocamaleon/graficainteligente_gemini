@@ -82,6 +82,14 @@ export function Precios() {
     );
   }, [tintasData, activeTab]);
 
+  const handleTintaChange = useCallback((tipoTinta: TipoTintaCopiado, precios: PrecioImpresionInput[]) => {
+    setPreciosPorTinta(prev => {
+      const newMap = new Map(prev);
+      newMap.set(tipoTinta, precios);
+      return newMap;
+    });
+  }, []);
+
   const handleCurrentTintaChange = useCallback((precios: PrecioImpresionInput[]) => {
     if (currentTintaData) {
       handleTintaChange(currentTintaData.tipo_tinta, precios);
@@ -99,14 +107,6 @@ export function Precios() {
     { id: 'cmyk', name: 'Impresión CMYK', icon: Palette },
     { id: 'bn', name: 'Blanco y Negro', icon: DollarSign },
   ];
-
-  const handleTintaChange = useCallback((tipoTinta: TipoTintaCopiado, precios: PrecioImpresionInput[]) => {
-    setPreciosPorTinta(prev => {
-      const newMap = new Map(prev);
-      newMap.set(tipoTinta, precios);
-      return newMap;
-    });
-  }, []);
 
   const hasUnsavedChanges = useMemo(() => {
     // Si no hay precios por tinta, no hay cambios
