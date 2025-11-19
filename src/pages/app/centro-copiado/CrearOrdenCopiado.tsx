@@ -249,8 +249,8 @@ export function CrearOrdenCopiado() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 relative">
+        <div className="lg:col-span-2 space-y-4 lg:pr-6">
           <Card>
             <button
               onClick={() => setInfoGeneralCollapsed(!infoGeneralCollapsed)}
@@ -387,14 +387,16 @@ export function CrearOrdenCopiado() {
         </div>
 
         <div className="lg:col-span-1">
-          <CentroCopiadoResumenOrden
-            items={items}
-            descuento={descuento}
-            onDescuentoChange={setDescuento}
-            onGuardar={guardarOrden}
-            onCancelar={cancelar}
-            guardando={guardando}
-          />
+          <div className="lg:w-full">
+            <CentroCopiadoResumenOrden
+              items={items}
+              descuento={descuento}
+              onDescuentoChange={setDescuento}
+              onGuardar={guardarOrden}
+              onCancelar={cancelar}
+              guardando={guardando}
+            />
+          </div>
         </div>
       </div>
 

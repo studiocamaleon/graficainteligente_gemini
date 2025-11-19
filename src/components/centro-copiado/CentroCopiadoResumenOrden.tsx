@@ -93,7 +93,7 @@ export function CentroCopiadoResumenOrden({
   };
 
   return (
-    <div className="sticky top-[88px] z-20">
+    <div className="lg:fixed lg:top-[88px] lg:right-8 lg:w-[calc((100%-4rem)/3-1.5rem)] lg:max-h-[calc(100vh-104px)] lg:overflow-y-auto z-20">
     <Card className="h-fit shadow-lg">
       <div className="p-4">
         <div className="flex items-center gap-2 mb-4">
