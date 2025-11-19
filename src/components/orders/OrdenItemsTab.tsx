@@ -39,14 +39,14 @@ export function OrdenItemsTab({
     const nuevoItem: OrdenItem = {
       id: `temp-${Date.now()}`,
       producto_id: itemData.producto_id,
-      producto_nombre: itemData.configuracion?.categoria_nombre || 'Producto',
+      producto_nombre: itemData.producto_nombre,
       cantidad: itemData.cantidad,
       configuracion: itemData.configuracion,
-      precio_base: itemData.configuracion?.desglose_precio?.precio_base || 0,
-      precio_servicios: itemData.configuracion?.desglose_precio?.precio_servicios || 0,
-      precio_acabados: itemData.configuracion?.desglose_precio?.precio_acabados || 0,
-      precio_unitario_final: itemData.precio_unitario,
-      precio_total: itemData.subtotal,
+      precio_base: itemData.precio_base,
+      precio_servicios: itemData.precio_servicios,
+      precio_acabados: itemData.precio_acabados,
+      precio_unitario_final: itemData.precio_unitario_final,
+      precio_total: itemData.precio_total,
       descuento_individual: 0,
     };
 
@@ -86,38 +86,59 @@ export function OrdenItemsTab({
 
     const parts: string[] = [];
 
-    if (config.tipo_tinta) {
-      parts.push(config.tipo_tinta === 'CMYK' ? 'Color' : 'B/N');
+    if (config.categoria) {
+      parts.push(config.categoria);
     }
 
-    if (config.medida_seleccionada) {
-      const medida = config.medida_seleccionada;
-      if (medida.display) {
-        parts.push(medida.display);
-      } else if (medida.ancho && medida.alto) {
-        parts.push(`${medida.ancho}x${medida.alto} cm`);
+    if (config.medida_ancho && config.medida_alto) {
+      parts.push(`${config.medida_ancho}x${config.medida_alto} cm`);
+    } else if (config.medida_ancho) {
+      parts.push(`${config.medida_ancho} cm`);
+    }
+
+    if (config.material_nombre) {
+      if (config.variante_nombre) {
+        parts.push(`${config.material_nombre} - ${config.variante_nombre}`);
+      } else {
+        parts.push(config.material_nombre);
+      }
+
+      if (config.espesor) {
+        parts.push(`${config.espesor}mm`);
       }
     }
 
-    if (config.cara_impresion) {
-      const caraTexto = config.cara_impresion === 'solo_frente' ? 'Frente' : 'Frente/Dorso';
+    if (config.tecnologia_nombre) {
+      parts.push(config.tecnologia_nombre);
+    }
+
+    if (config.tinta_nombre) {
+      parts.push(config.tinta_nombre);
+    }
+
+    if (config.cara_impresa) {
+      const caraTexto = config.cara_impresa === '1/0' ? 'Frente' : config.cara_impresa === '1/1' ? 'Frente/Dorso' : config.cara_impresa;
       parts.push(caraTexto);
     }
 
-    if (config.material_nombre && config.variante_nombre) {
-      parts.push(`${config.material_nombre} ${config.variante_nombre}`);
+    if (config.color) {
+      parts.push(config.color);
     }
 
-    if (config.servicios_seleccionados && config.servicios_seleccionados.length > 0) {
-      const servicios = config.servicios_seleccionados
-        .map((s: any) => s.nivel ? `${s.nombre} (${s.nivel})` : s.nombre)
+    if (config.marca) {
+      parts.push(config.marca);
+    }
+
+    if (config.servicios && config.servicios.length > 0) {
+      const servicios = config.servicios
+        .map((s: any) => s.nivel_nombre ? `${s.servicio_nombre} (${s.nivel_nombre})` : s.servicio_nombre)
         .join(', ');
       parts.push(`Servicios: ${servicios}`);
     }
 
-    if (config.acabados_seleccionados && config.acabados_seleccionados.length > 0) {
-      const acabados = config.acabados_seleccionados
-        .map((a: any) => a.nivel ? `${a.nombre} (${a.nivel})` : a.nombre)
+    if (config.acabados && config.acabados.length > 0) {
+      const acabados = config.acabados
+        .map((a: any) => a.nivel_nombre ? `${a.acabado_nombre} (${a.nivel_nombre})` : a.acabado_nombre)
         .join(', ');
       parts.push(`Acabados: ${acabados}`);
     }
