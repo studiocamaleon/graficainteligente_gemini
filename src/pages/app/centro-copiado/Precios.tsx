@@ -75,6 +75,26 @@ export function Precios() {
     loadInitialSnapshot();
   }, [tintasData]);
 
+  const currentTintaData = useMemo(() => {
+    return tintasData.find(t =>
+      (activeTab === 'cmyk' && t.tipo_tinta === 'CMYK') ||
+      (activeTab === 'bn' && t.tipo_tinta === 'K')
+    );
+  }, [tintasData, activeTab]);
+
+  const handleCurrentTintaChange = useCallback((precios: PrecioImpresionInput[]) => {
+    if (currentTintaData) {
+      handleTintaChange(currentTintaData.tipo_tinta, precios);
+    }
+  }, [currentTintaData, handleTintaChange]);
+
+  const loadCurrentPreciosExistentes = useCallback(() => {
+    if (currentTintaData) {
+      return loadPreciosExistentes(currentTintaData.tipo_tinta);
+    }
+    return Promise.resolve(new Map());
+  }, [currentTintaData, loadPreciosExistentes]);
+
   const tabs = [
     { id: 'cmyk', name: 'Impresión CMYK', icon: Palette },
     { id: 'bn', name: 'Blanco y Negro', icon: DollarSign },
@@ -188,22 +208,9 @@ export function Precios() {
       );
     }
 
-    const currentTintaData = tintasData.find(t =>
-      (activeTab === 'cmyk' && t.tipo_tinta === 'CMYK') ||
-      (activeTab === 'bn' && t.tipo_tinta === 'K')
-    );
-
     if (!currentTintaData) {
       return null;
     }
-
-    const handleCurrentTintaChange = useCallback((precios: PrecioImpresionInput[]) => {
-      handleTintaChange(currentTintaData.tipo_tinta, precios);
-    }, [currentTintaData.tipo_tinta, handleTintaChange]);
-
-    const loadCurrentPreciosExistentes = useCallback(() => {
-      return loadPreciosExistentes(currentTintaData.tipo_tinta);
-    }, [currentTintaData.tipo_tinta, loadPreciosExistentes]);
 
     return (
       <div className="space-y-6">
