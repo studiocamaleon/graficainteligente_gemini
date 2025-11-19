@@ -29,7 +29,7 @@ export function CrearOrdenCopiado() {
 
   const [clienteId, setClienteId] = useState<string>(clienteIdParam || '');
   const [fechaEntrega, setFechaEntrega] = useState('');
-  const [horaEntrega, setHoraEntrega] = useState('09:00');
+  const [horaEntrega, setHoraEntrega] = useState('');
   const [observaciones, setObservaciones] = useState('');
   const [items, setItems] = useState<ItemWithId[]>([]);
   const [descuento, setDescuento] = useState(0);
@@ -64,7 +64,7 @@ export function CrearOrdenCopiado() {
       setItems([]);
       setClienteId(clienteIdParam || '');
       setFechaEntrega('');
-      setHoraEntrega('09:00');
+      setHoraEntrega('');
       setObservaciones('');
       setDescuento(0);
       agregarItem();
