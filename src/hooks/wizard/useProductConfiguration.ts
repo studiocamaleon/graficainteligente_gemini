@@ -488,17 +488,22 @@ async function loadServiciosForProduct(
       if (servicio.tiene_niveles_precio) {
         const { data: nivelesData } = await supabase
           .from('servicios_niveles_precio')
-          .select('id, nombre, tipo_impacto, valor_porcentaje, valor_monto')
+          .select('id, nombre, tipo_impacto, valor_impacto, valor_impacto_secundario')
           .eq('servicio_id', rel.servicio_id)
           .order('orden');
 
-        niveles = nivelesData?.map(n => ({
-          id: n.id,
-          nombre: n.nombre,
-          tipo_impacto: n.tipo_impacto,
-          valor_porcentaje: n.valor_porcentaje,
-          valor_monto: n.valor_monto
-        })) || [];
+        niveles = nivelesData?.map(n => {
+          const isPorcentaje = n.tipo_impacto === 'porcentaje' || n.tipo_impacto === 'porcentaje_mas_monto';
+          const isMonto = n.tipo_impacto === 'monto_fijo' || n.tipo_impacto === 'porcentaje_mas_monto';
+
+          return {
+            id: n.id,
+            nombre: n.nombre,
+            tipo_impacto: n.tipo_impacto,
+            valor_porcentaje: isPorcentaje ? n.valor_impacto : null,
+            valor_monto: isMonto ? (n.tipo_impacto === 'porcentaje_mas_monto' ? n.valor_impacto_secundario : n.valor_impacto) : null
+          };
+        }) || [];
       }
 
       return {
@@ -538,17 +543,22 @@ async function loadAcabadosForProduct(
       if (acabado.tiene_niveles_precio) {
         const { data: nivelesData } = await supabase
           .from('acabados_niveles_precio')
-          .select('id, nombre, tipo_impacto, valor_porcentaje, valor_monto')
+          .select('id, nombre, tipo_impacto, valor_impacto, valor_impacto_secundario')
           .eq('acabado_id', rel.acabado_id)
           .order('orden');
 
-        niveles = nivelesData?.map(n => ({
-          id: n.id,
-          nombre: n.nombre,
-          tipo_impacto: n.tipo_impacto,
-          valor_porcentaje: n.valor_porcentaje,
-          valor_monto: n.valor_monto
-        })) || [];
+        niveles = nivelesData?.map(n => {
+          const isPorcentaje = n.tipo_impacto === 'porcentaje' || n.tipo_impacto === 'porcentaje_mas_monto';
+          const isMonto = n.tipo_impacto === 'monto_fijo' || n.tipo_impacto === 'porcentaje_mas_monto';
+
+          return {
+            id: n.id,
+            nombre: n.nombre,
+            tipo_impacto: n.tipo_impacto,
+            valor_porcentaje: isPorcentaje ? n.valor_impacto : null,
+            valor_monto: isMonto ? (n.tipo_impacto === 'porcentaje_mas_monto' ? n.valor_impacto_secundario : n.valor_impacto) : null
+          };
+        }) || [];
       }
 
       return {
