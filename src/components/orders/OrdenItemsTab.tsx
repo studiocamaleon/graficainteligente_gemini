@@ -4,7 +4,7 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Table } from '../ui/Table';
 import { EmptyState } from '../ui/EmptyState';
-import { AddItemWizard } from '../wizard/AddItemWizard';
+import { UniversalAddItemWizard } from '../wizard/UniversalAddItemWizard';
 
 interface OrdenItem {
   id?: string;
@@ -248,7 +248,7 @@ export function OrdenItemsTab({
         </>
       )}
 
-      <AddItemWizard
+      <UniversalAddItemWizard
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
         onAgregar={handleAgregarItem}
