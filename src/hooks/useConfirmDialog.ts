@@ -159,5 +159,6 @@ export function useConfirmDialog() {
     confirmDeactivate,
     confirmActivate,
     confirmAction,
+    openConfirm: confirmAction, // Alias para compatibilidad
   };
 }

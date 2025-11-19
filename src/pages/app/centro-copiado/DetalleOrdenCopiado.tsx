@@ -152,11 +152,12 @@ export function DetalleOrdenCopiado() {
             <Button
               variant="primary"
               onClick={() => {
-                openConfirm(
-                  '¿Iniciar Proceso?',
-                  '¿Deseas marcar esta orden como "En Proceso"?',
-                  () => handleCambiarEstado('en_proceso')
-                );
+                openConfirm({
+                  title: '¿Iniciar Proceso?',
+                  message: '¿Deseas marcar esta orden como "En Proceso"?',
+                  variant: 'info',
+                  onConfirm: () => handleCambiarEstado('en_proceso')
+                });
               }}
             >
               Iniciar Proceso
@@ -167,11 +168,12 @@ export function DetalleOrdenCopiado() {
             <Button
               variant="success"
               onClick={() => {
-                openConfirm(
-                  '¿Finalizar Orden?',
-                  '¿Deseas marcar esta orden como "Finalizada"?',
-                  () => handleCambiarEstado('finalizada')
-                );
+                openConfirm({
+                  title: '¿Finalizar Orden?',
+                  message: '¿Deseas marcar esta orden como "Finalizada"?',
+                  variant: 'info',
+                  onConfirm: () => handleCambiarEstado('finalizada')
+                });
               }}
             >
               Finalizar
@@ -182,11 +184,12 @@ export function DetalleOrdenCopiado() {
             <Button
               variant="success"
               onClick={() => {
-                openConfirm(
-                  '¿Marcar como Entregada?',
-                  'Se registrará la fecha de entrega actual. ¿Continuar?',
-                  () => handleCambiarEstado('entregada')
-                );
+                openConfirm({
+                  title: '¿Marcar como Entregada?',
+                  message: 'Se registrará la fecha de entrega actual. ¿Continuar?',
+                  variant: 'info',
+                  onConfirm: () => handleCambiarEstado('entregada')
+                });
               }}
             >
               Marcar Entregada

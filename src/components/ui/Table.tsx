@@ -4,7 +4,7 @@ import { ChevronRight, ChevronDown } from 'lucide-react';
 interface Column<T> {
   key: string;
   header: string;
-  render: (item: T) => ReactNode;
+  render: (item: T, index: number) => ReactNode;
   width?: string;
 }
 
@@ -142,7 +142,7 @@ export function Table<T>({
                       )}
                       {columns.map((column) => (
                         <td key={column.key} className={cellPadding}>
-                          {column.render(item)}
+                          {column.render(item, data.indexOf(item))}
                         </td>
                       ))}
                     </tr>
@@ -213,7 +213,7 @@ export function Table<T>({
                   )}
                   {columns.map((column) => (
                     <td key={column.key} className={cellPadding}>
-                      {column.render(item)}
+                      {column.render(item, data.indexOf(item))}
                     </td>
                   ))}
                 </tr>
