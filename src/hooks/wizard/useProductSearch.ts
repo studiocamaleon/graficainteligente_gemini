@@ -101,28 +101,17 @@ export function useProductSearch(searchTerm: string) {
             display: `${m.ancho} x ${m.alto} cm`,
           }));
 
-          const tintasUnicas = new Map();
+          const tintasDisponibles = [];
           if (tecnologiasRes.data && tecnologiasRes.data.tintas) {
-            const tintaIds = tecnologiasRes.data.tintas.filter(Boolean);
+            const tintas = tecnologiasRes.data.tintas.filter(Boolean);
 
-            if (tintaIds.length > 0) {
-              const { data: tintasInfo } = await supabase
-                .from('tecnologias_tintas_pasos')
-                .select('id, tinta, tecnologia_id')
-                .in('id', tintaIds);
-
-              if (tintasInfo) {
-                tintasInfo.forEach((tinta: any) => {
-                  if (!tintasUnicas.has(tinta.id)) {
-                    tintasUnicas.set(tinta.id, {
-                      tinta_id: tinta.id,
-                      nombre: tinta.tinta,
-                      tipo: tinta.tinta,
-                    });
-                  }
-                });
-              }
-            }
+            tintas.forEach((tinta: string, index: number) => {
+              tintasDisponibles.push({
+                tinta_id: `${tinta}_${index}`,
+                nombre: tinta,
+                tipo: tinta,
+              });
+            });
           }
 
           const material = materialesRes.data?.materiales;
@@ -151,7 +140,7 @@ export function useProductSearch(searchTerm: string) {
             material_nombre: materialNombre || '',
             variante_id: varianteId || '',
             variante_nombre: varianteNombre || '',
-            tintas_disponibles: Array.from(tintasUnicas.values()),
+            tintas_disponibles: tintasDisponibles,
             caras_disponibles: laserData.caras_impresas || [],
             tiene_precios: medidasRes.data && medidasRes.data.length > 0,
             precio_desde: precioMinRes.data?.precio || null,
