@@ -474,7 +474,7 @@ async function loadServiciosForProduct(
     .select(`
       id,
       servicio_id,
-      servicios!inner(id, nombre, tiene_niveles)
+      servicios!inner(id, nombre, tiene_niveles_precio)
     `)
     .eq(foreignKey, productId);
 
@@ -485,22 +485,27 @@ async function loadServiciosForProduct(
       const servicio = rel.servicios;
       let niveles = [];
 
-      if (servicio.tiene_niveles) {
+      if (servicio.tiene_niveles_precio) {
         const { data: nivelesData } = await supabase
-          .from('servicio_niveles')
-          .select('id, nombre, tipo_impacto, valor_porcentaje, valor_monto')
+          .from('servicios_niveles_precio')
+          .select('id, nombre, tipo_impacto')
           .eq('servicio_id', rel.servicio_id)
-          .eq('is_active', true)
           .order('orden');
 
-        niveles = nivelesData || [];
+        niveles = nivelesData?.map(n => ({
+          id: n.id,
+          nombre: n.nombre,
+          tipo_impacto: n.tipo_impacto,
+          valor_porcentaje: null,
+          valor_monto: null
+        })) || [];
       }
 
       return {
         id: rel.id,
         servicio_id: rel.servicio_id,
         servicio_nombre: servicio.nombre,
-        tiene_niveles: servicio.tiene_niveles,
+        tiene_niveles: servicio.tiene_niveles_precio,
         niveles
       };
     })
@@ -519,7 +524,7 @@ async function loadAcabadosForProduct(
     .select(`
       id,
       acabado_id,
-      acabados!inner(id, nombre, tiene_niveles)
+      acabados!inner(id, nombre, tiene_niveles_precio)
     `)
     .eq(foreignKey, productId);
 
@@ -530,22 +535,27 @@ async function loadAcabadosForProduct(
       const acabado = rel.acabados;
       let niveles = [];
 
-      if (acabado.tiene_niveles) {
+      if (acabado.tiene_niveles_precio) {
         const { data: nivelesData } = await supabase
-          .from('acabado_niveles')
-          .select('id, nombre, tipo_impacto, valor_porcentaje, valor_monto')
+          .from('acabados_niveles_precio')
+          .select('id, nombre, tipo_impacto')
           .eq('acabado_id', rel.acabado_id)
-          .eq('is_active', true)
           .order('orden');
 
-        niveles = nivelesData || [];
+        niveles = nivelesData?.map(n => ({
+          id: n.id,
+          nombre: n.nombre,
+          tipo_impacto: n.tipo_impacto,
+          valor_porcentaje: null,
+          valor_monto: null
+        })) || [];
       }
 
       return {
         id: rel.id,
         acabado_id: rel.acabado_id,
         acabado_nombre: acabado.nombre,
-        tiene_niveles: acabado.tiene_niveles,
+        tiene_niveles: acabado.tiene_niveles_precio,
         niveles
       };
     })

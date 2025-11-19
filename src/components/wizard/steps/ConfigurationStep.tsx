@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from '../../ui/Card';
 import { Input } from '../../ui/Input';
 import { Select } from '../../ui/Select';
+import { Button } from '../../ui/Button';
 import { Ruler, Package, Layers, Palette, FileText } from 'lucide-react';
 import type { ProductConfiguration } from '../../../hooks/wizard/useProductConfiguration';
 
@@ -44,11 +45,45 @@ export interface SelectedConfiguration {
 export function ConfigurationStep({ config, selectedConfig, onConfigChange }: ConfigurationStepProps) {
   const [localConfig, setLocalConfig] = useState(selectedConfig);
 
+  // Auto-seleccionar opciones únicas al cargar
+  useEffect(() => {
+    const autoSelections: Partial<SelectedConfiguration> = {};
+
+    // Auto-seleccionar medida única
+    if (config.medidas && config.medidas.length === 1) {
+      autoSelections.medida_ancho = config.medidas[0].ancho;
+      autoSelections.medida_alto = config.medidas[0].alto;
+    }
+
+    // Auto-seleccionar material único (solo para Impresión Láser que siempre tiene 1)
+    if (config.categoria === 'Impresion Laser' && config.materiales && config.materiales.length === 1) {
+      const material = config.materiales[0];
+      autoSelections.material_id = material.material_id;
+      autoSelections.material_nombre = material.material_nombre;
+      autoSelections.variante_id = material.variante_id;
+      autoSelections.variante_nombre = material.variante_nombre;
+      autoSelections.espesor = material.espesor || null;
+    }
+
+    // Auto-seleccionar tecnología única (solo para Impresión Láser que siempre es laser)
+    if (config.categoria === 'Impresion Laser' && config.tecnologias && config.tecnologias.length === 1) {
+      const tecnologia = config.tecnologias[0];
+      autoSelections.tecnologia_id = tecnologia.tecnologia_id;
+      autoSelections.tecnologia_nombre = tecnologia.tecnologia_nombre;
+    }
+
+    if (Object.keys(autoSelections).length > 0) {
+      handleChange(autoSelections);
+    }
+  }, [config]);
+
   const handleChange = (changes: Partial<SelectedConfiguration>) => {
     const newConfig = { ...localConfig, ...changes };
     setLocalConfig(newConfig);
     onConfigChange(changes);
   };
+
+  const isImpresionLaser = config.categoria === 'Impresion Laser';
 
   return (
     <div className="space-y-6">
@@ -68,20 +103,21 @@ export function ConfigurationStep({ config, selectedConfig, onConfigChange }: Co
 
         {config.tipo_venta === 'cantidades_fijas' && config.cantidades_fijas && config.cantidades_fijas.length > 0 ? (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-3">
               Selecciona la cantidad
             </label>
-            <Select
-              value={localConfig.cantidad.toString()}
-              onChange={(e) => handleChange({ cantidad: parseInt(e.target.value) })}
-            >
-              <option value="">Selecciona una cantidad</option>
+            <div className="grid grid-cols-4 gap-3">
               {config.cantidades_fijas.map((cant) => (
-                <option key={cant} value={cant}>
-                  {cant} {cant === 1 ? 'unidad' : 'unidades'}
-                </option>
+                <Button
+                  key={cant}
+                  variant={localConfig.cantidad === cant ? 'primary' : 'secondary'}
+                  onClick={() => handleChange({ cantidad: cant })}
+                  className="w-full"
+                >
+                  {cant}
+                </Button>
               ))}
-            </Select>
+            </div>
           </div>
         ) : (
           <div>
@@ -92,7 +128,12 @@ export function ConfigurationStep({ config, selectedConfig, onConfigChange }: Co
               type="number"
               min={config.cantidad_minima || 1}
               value={localConfig.cantidad}
-              onChange={(e) => handleChange({ cantidad: parseInt(e.target.value) || 1 })}
+              onChange={(e) => {
+                const value = parseInt(e.target.value);
+                if (!isNaN(value)) {
+                  handleChange({ cantidad: value });
+                }
+              }}
               placeholder="Ingresa la cantidad"
             />
           </div>
@@ -121,8 +162,9 @@ export function ConfigurationStep({ config, selectedConfig, onConfigChange }: Co
               <Select
                 value={localConfig.medida_ancho && localConfig.medida_alto ? `${localConfig.medida_ancho}x${localConfig.medida_alto}` : ''}
                 onChange={(e) => {
-                  if (e.target.value) {
-                    const [ancho, alto] = e.target.value.split('x').map(Number);
+                  const value = e.target?.value;
+                  if (value) {
+                    const [ancho, alto] = value.split('x').map(Number);
                     handleChange({ medida_ancho: ancho, medida_alto: alto });
                   }
                 }}
@@ -153,7 +195,12 @@ export function ConfigurationStep({ config, selectedConfig, onConfigChange }: Co
             </label>
             <Select
               value={localConfig.medida_ancho?.toString() || ''}
-              onChange={(e) => handleChange({ medida_ancho: parseFloat(e.target.value) })}
+              onChange={(e) => {
+                const value = e.target?.value;
+                if (value) {
+                  handleChange({ medida_ancho: parseFloat(value) });
+                }
+              }}
             >
               <option value="">Selecciona un ancho</option>
               {config.anchos_disponibles.map((ancho) => (
@@ -174,7 +221,12 @@ export function ConfigurationStep({ config, selectedConfig, onConfigChange }: Co
                 min="0.1"
                 step="0.1"
                 value={localConfig.medida_alto || ''}
-                onChange={(e) => handleChange({ medida_alto: parseFloat(e.target.value) || 0 })}
+                onChange={(e) => {
+                  const value = parseFloat(e.target.value);
+                  if (!isNaN(value)) {
+                    handleChange({ medida_alto: value });
+                  }
+                }}
                 placeholder="Ingresa el alto en metros"
               />
             </div>
@@ -182,8 +234,8 @@ export function ConfigurationStep({ config, selectedConfig, onConfigChange }: Co
         </Card>
       )}
 
-      {/* Material */}
-      {config.materiales && config.materiales.length > 0 && (
+      {/* Material - NO mostrar para Impresión Láser */}
+      {!isImpresionLaser && config.materiales && config.materiales.length > 0 && (
         <Card className="p-6">
           <div className="flex items-center gap-2 mb-4">
             <Layers className="w-5 h-5 text-blue-600" />
@@ -198,7 +250,10 @@ export function ConfigurationStep({ config, selectedConfig, onConfigChange }: Co
               <Select
                 value={localConfig.material_id || ''}
                 onChange={(e) => {
-                  const material = config.materiales?.find(m => m.material_id === e.target.value);
+                  const value = e.target?.value;
+                  if (!value) return;
+
+                  const material = config.materiales?.find(m => m.material_id === value);
                   if (material) {
                     handleChange({
                       material_id: material.material_id,
@@ -223,42 +278,51 @@ export function ConfigurationStep({ config, selectedConfig, onConfigChange }: Co
         </Card>
       )}
 
-      {/* Tecnología y Tintas */}
+      {/* Tecnología y Tintas - NO mostrar tecnología para Impresión Láser */}
       {config.tecnologias && config.tecnologias.length > 0 && (
         <Card className="p-6">
           <div className="flex items-center gap-2 mb-4">
             <Palette className="w-5 h-5 text-blue-600" />
-            <h3 className="text-lg font-semibold text-gray-900">Tecnología e Impresión</h3>
+            <h3 className="text-lg font-semibold text-gray-900">
+              {isImpresionLaser ? 'Impresión' : 'Tecnología e Impresión'}
+            </h3>
           </div>
 
           <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Tecnología
-              </label>
-              <Select
-                value={localConfig.tecnologia_id || ''}
-                onChange={(e) => {
-                  const tecnologia = config.tecnologias?.find(t => t.tecnologia_id === e.target.value);
-                  if (tecnologia) {
-                    handleChange({
-                      tecnologia_id: tecnologia.tecnologia_id,
-                      tecnologia_nombre: tecnologia.tecnologia_nombre,
-                      tinta: null,
-                      tinta_nombre: null
-                    });
-                  }
-                }}
-              >
-                <option value="">Selecciona una tecnología</option>
-                {config.tecnologias.map((tec) => (
-                  <option key={tec.tecnologia_id} value={tec.tecnologia_id}>
-                    {tec.tecnologia_nombre}
-                  </option>
-                ))}
-              </Select>
-            </div>
+            {/* Solo mostrar selector de tecnología si NO es Impresión Láser */}
+            {!isImpresionLaser && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Tecnología
+                </label>
+                <Select
+                  value={localConfig.tecnologia_id || ''}
+                  onChange={(e) => {
+                    const value = e.target?.value;
+                    if (!value) return;
 
+                    const tecnologia = config.tecnologias?.find(t => t.tecnologia_id === value);
+                    if (tecnologia) {
+                      handleChange({
+                        tecnologia_id: tecnologia.tecnologia_id,
+                        tecnologia_nombre: tecnologia.tecnologia_nombre,
+                        tinta: null,
+                        tinta_nombre: null
+                      });
+                    }
+                  }}
+                >
+                  <option value="">Selecciona una tecnología</option>
+                  {config.tecnologias.map((tec) => (
+                    <option key={tec.tecnologia_id} value={tec.tecnologia_id}>
+                      {tec.tecnologia_nombre}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            )}
+
+            {/* Selector de tintas */}
             {localConfig.tecnologia_id && (() => {
               const tecnologia = config.tecnologias?.find(t => t.tecnologia_id === localConfig.tecnologia_id);
               return tecnologia && tecnologia.tintas.length > 0 && (
@@ -269,6 +333,9 @@ export function ConfigurationStep({ config, selectedConfig, onConfigChange }: Co
                   <Select
                     value={localConfig.tinta || ''}
                     onChange={(e) => {
+                      const value = e.target?.value;
+                      if (!value) return;
+
                       const nombresMap: Record<string, string> = {
                         'K': 'Negro (K)',
                         'CMYK': 'Cuatricromía (CMYK)',
@@ -277,8 +344,8 @@ export function ConfigurationStep({ config, selectedConfig, onConfigChange }: Co
                         'CMYK+W+V': 'CMYK + Blanco + Barniz'
                       };
                       handleChange({
-                        tinta: e.target.value,
-                        tinta_nombre: nombresMap[e.target.value] || e.target.value
+                        tinta: value,
+                        tinta_nombre: nombresMap[value] || value
                       });
                     }}
                   >
