@@ -176,7 +176,7 @@ export function CentroCopiadoResumenOrden({
                 variant="primary"
                 onClick={onGuardar}
                 disabled={!puedeGuardar}
-                loading={guardando}
+                isLoading={guardando}
                 className="w-full"
               >
                 {guardando ? 'Guardando...' : 'Guardar Orden'}

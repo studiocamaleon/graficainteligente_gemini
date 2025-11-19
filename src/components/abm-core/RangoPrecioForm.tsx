@@ -297,7 +297,7 @@ export function RangoPrecioForm({ initialData, onSubmit, onCancel, loading }: Ra
         <Button type="button" variant="secondary" onClick={onCancel} disabled={loading}>
           Cancelar
         </Button>
-        <Button type="submit" variant="primary" loading={loading}>
+        <Button type="submit" variant="primary" isLoading={loading}>
           {initialData ? 'Actualizar' : 'Crear'} Rango
         </Button>
       </div>
