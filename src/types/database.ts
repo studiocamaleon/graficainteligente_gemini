@@ -1432,6 +1432,8 @@ export interface CentroCopiadoPlastificado {
   id: string;
   company_id: string;
   tipo: TipoPlastificado;
+  unidades_desde: number;
+  unidades_hasta: number | null;
   precio: number;
   is_active: boolean;
   created_at: string;
@@ -1523,6 +1525,8 @@ export interface CentroCopiadoRangoAnilladoFormData {
 
 export interface CentroCopiadoPlastificadoFormData {
   tipo: TipoPlastificado;
+  unidades_desde: number;
+  unidades_hasta: number | null;
   precio: number;
 }
 

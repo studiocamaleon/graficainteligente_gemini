@@ -39,7 +39,9 @@ export function Terminaciones() {
   const {
     plastificados,
     loading: loadingPlastificados,
-    upsertPlastificado,
+    createPlastificado,
+    updatePlastificado,
+    deletePlastificado,
     fetchPlastificados,
   } = useCentroCopiadoPlastificados();
 
@@ -124,6 +126,18 @@ export function Terminaciones() {
     );
   };
 
+  const handleDeletePlastificado = async (plastificado: CentroCopiadoPlastificado) => {
+    confirmDelete(
+      `Rango ${plastificado.tipo}: ${plastificado.unidades_desde} - ${plastificado.unidades_hasta || '∞'} unidades`,
+      async () => {
+        const success = await deletePlastificado(plastificado.id);
+        if (success) {
+          await fetchPlastificados();
+        }
+      }
+    );
+  };
+
   const handleSubmitAnillado = async (data: any) => {
     if (modalMode === 'create') {
       const result = await createAnillado(data);
@@ -141,10 +155,18 @@ export function Terminaciones() {
   };
 
   const handleSubmitPlastificado = async (data: any) => {
-    const result = await upsertPlastificado(data);
-    if (result) {
-      setIsModalOpen(false);
-      await fetchPlastificados();
+    if (modalMode === 'create') {
+      const result = await createPlastificado(data);
+      if (result) {
+        setIsModalOpen(false);
+        await fetchPlastificados();
+      }
+    } else if (selectedPlastificado) {
+      const result = await updatePlastificado(selectedPlastificado.id, data);
+      if (result) {
+        setIsModalOpen(false);
+        await fetchPlastificados();
+      }
     }
   };
 
@@ -264,8 +286,8 @@ export function Terminaciones() {
           <div className="p-12">
             <EmptyState
               icon={Scissors}
-              title="No hay precios de plastificado configurados"
-              description="Agrega los precios para los diferentes tipos de plastificado: A4, SRA3 y Carnet."
+              title="No hay rangos de plastificado configurados"
+              description="Comienza agregando rangos de cantidad de unidades con precios para plastificados A4, SRA3 y Carnet."
             />
           </div>
         </Card>
@@ -292,6 +314,17 @@ export function Terminaciones() {
                 )
               },
               {
+                key: 'rango',
+                header: 'Rango de Unidades',
+                render: (plastificado: CentroCopiadoPlastificado) => (
+                  <div className="flex items-center gap-2">
+                    <Badge variant="primary">
+                      {plastificado.unidades_desde} - {plastificado.unidades_hasta || '∞'}
+                    </Badge>
+                  </div>
+                )
+              },
+              {
                 key: 'precio',
                 header: 'Precio',
                 render: (plastificado: CentroCopiadoPlastificado) => (
@@ -311,6 +344,13 @@ export function Terminaciones() {
                       title="Editar"
                     >
                       <Edit2 className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDeletePlastificado(plastificado)}
+                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Eliminar"
+                    >
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 )

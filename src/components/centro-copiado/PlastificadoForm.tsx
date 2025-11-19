@@ -19,17 +19,23 @@ const TIPOS_PLASTIFICADO = [
 export function PlastificadoForm({ plastificado, onSubmit, onCancel }: PlastificadoFormProps) {
   const [formData, setFormData] = useState<CentroCopiadoPlastificadoFormData>({
     tipo: 'A4',
+    unidades_desde: 1,
+    unidades_hasta: null,
     precio: 0,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [esInfinito, setEsInfinito] = useState(false);
 
   useEffect(() => {
     if (plastificado) {
       setFormData({
         tipo: plastificado.tipo,
+        unidades_desde: plastificado.unidades_desde,
+        unidades_hasta: plastificado.unidades_hasta,
         precio: plastificado.precio,
       });
+      setEsInfinito(plastificado.unidades_hasta === null);
     }
   }, [plastificado]);
 
@@ -38,6 +44,14 @@ export function PlastificadoForm({ plastificado, onSubmit, onCancel }: Plastific
 
     if (!formData.tipo) {
       newErrors.tipo = 'Debes seleccionar un tipo de plastificado';
+    }
+
+    if (formData.unidades_desde <= 0) {
+      newErrors.unidades_desde = 'Debe ser mayor a 0';
+    }
+
+    if (!esInfinito && formData.unidades_hasta !== null && formData.unidades_hasta < formData.unidades_desde) {
+      newErrors.unidades_hasta = 'Debe ser mayor o igual al límite inferior';
     }
 
     if (formData.precio < 0) {
@@ -57,9 +71,14 @@ export function PlastificadoForm({ plastificado, onSubmit, onCancel }: Plastific
 
     if (!validate()) return;
 
+    const dataToSubmit = {
+      ...formData,
+      unidades_hasta: esInfinito ? null : formData.unidades_hasta,
+    };
+
     setIsSubmitting(true);
     try {
-      await onSubmit(formData);
+      await onSubmit(dataToSubmit);
     } finally {
       setIsSubmitting(false);
     }
@@ -74,8 +93,39 @@ export function PlastificadoForm({ plastificado, onSubmit, onCancel }: Plastific
         options={TIPOS_PLASTIFICADO}
         error={errors.tipo}
         required
-        disabled={!!plastificado}
       />
+
+      <div className="grid grid-cols-2 gap-4">
+        <Input
+          label="Unidades Desde"
+          type="number"
+          value={formData.unidades_desde}
+          onChange={(e) => setFormData({ ...formData, unidades_desde: parseInt(e.target.value) || 0 })}
+          error={errors.unidades_desde}
+          required
+        />
+
+        <div>
+          <Input
+            label="Unidades Hasta"
+            type="number"
+            value={esInfinito ? '' : (formData.unidades_hasta || '')}
+            onChange={(e) => setFormData({ ...formData, unidades_hasta: parseInt(e.target.value) || null })}
+            error={errors.unidades_hasta}
+            disabled={esInfinito}
+            placeholder={esInfinito ? '∞' : ''}
+          />
+          <label className="flex items-center mt-2 text-sm">
+            <input
+              type="checkbox"
+              checked={esInfinito}
+              onChange={(e) => setEsInfinito(e.target.checked)}
+              className="mr-2"
+            />
+            Sin límite superior (infinito)
+          </label>
+        </div>
+      </div>
 
       <Input
         label="Precio"
