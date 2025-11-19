@@ -87,10 +87,10 @@ export function CentroCopiadoMatrizPrecios({
     setPreciosState(newState);
   };
 
-  useEffect(() => {
-    if (!hasLocalChanges.current) return;
+  const preciosArray = useMemo(() => {
+    if (!hasLocalChanges.current) return [];
 
-    const preciosArray: PrecioImpresionInput[] = [];
+    const result: PrecioImpresionInput[] = [];
 
     combinaciones.forEach(combinacion => {
       const combKey = getCombinacionKey(combinacion);
@@ -102,7 +102,7 @@ export function CentroCopiadoMatrizPrecios({
           const precio = preciosState[key] || 0;
 
           if (precio > 0) {
-            preciosArray.push({
+            result.push({
               tamanio_papel_id: combinacion.tamanio_id,
               papel_id: combinacion.papel_id,
               tipo_tinta: tipoTinta,
@@ -115,8 +115,13 @@ export function CentroCopiadoMatrizPrecios({
       });
     });
 
+    return result;
+  }, [preciosState, combinaciones, rangos, tipoTinta]);
+
+  useEffect(() => {
+    if (!hasLocalChanges.current) return;
     onPreciosChange(preciosArray);
-  }, [preciosState, combinaciones, rangos, tipoTinta, onPreciosChange]);
+  }, [preciosArray, onPreciosChange]);
 
   const formatRango = (rango: CentroCopiadoRangoPrecioImpresion) => {
     if (rango.hojas_hasta === null) {
@@ -146,9 +151,9 @@ export function CentroCopiadoMatrizPrecios({
   }, [combinaciones]);
 
   const renderTablaSeccion = (
-    tamanioNombre: string,
-    tamanioAncho: number,
-    tamanioAlto: number,
+    _tamanioNombre: string,
+    _tamanioAncho: number,
+    _tamanioAlto: number,
     combinacionesSeccion: CombinacionTamanioPapel[]
   ) => (
     <div className="overflow-x-auto">

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Palette, FileText } from 'lucide-react';
 import { Card } from '../ui/Card';
 import { Badge } from '../ui/Badge';
@@ -49,7 +49,7 @@ export function CentroCopiadoTintaSection({
     }
 
     loadPrecios();
-  }, [loadPreciosExistentes]);
+  }, []);
 
   const preciosActuales = useMemo(() => {
     const map = new Map<string, Map<string, number>>();
