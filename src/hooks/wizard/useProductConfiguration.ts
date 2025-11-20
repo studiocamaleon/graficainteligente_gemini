@@ -404,7 +404,7 @@ async function loadPlotterCorteConfig(productId: string): Promise<ProductConfigu
 async function loadPortabannersConfig(productId: string): Promise<ProductConfiguration> {
   const { data: producto, error: prodError } = await supabase
     .from('productos_portabanners')
-    .select('id, nombre, medida_ancho, medida_alto, cantidad_minima')
+    .select('id, nombre, medida_ancho, medida_alto')
     .eq('id', productId)
     .single();
 
@@ -437,7 +437,7 @@ async function loadPortabannersConfig(productId: string): Promise<ProductConfigu
     nombre: producto.nombre,
     categoria: 'Portabanners',
     medidas: [{ ancho: producto.medida_ancho, alto: producto.medida_alto }],
-    cantidad_minima: producto.cantidad_minima,
+    cantidad_minima: null, // Portabanners no usa cantidad mínima
     tecnologias: tecnologias?.map(t => ({
       id: t.id,
       tecnologia_id: t.tecnologia_id,
