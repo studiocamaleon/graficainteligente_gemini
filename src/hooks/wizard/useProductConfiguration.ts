@@ -157,7 +157,6 @@ async function loadImpresionLaserConfig(productId: string): Promise<ProductConfi
     .select(`
       id,
       material_id,
-      variante_id,
       variante_nombre,
       espesor,
       materiales!inner(id, nombre, unidad_espesor, variantes)
@@ -222,7 +221,7 @@ async function loadImpresionLaserConfig(productId: string): Promise<ProductConfi
         id: m.id,
         material_id: m.material_id,
         material_nombre: material.nombre,
-        variante_id: m.variante_id,
+        variante_id: m.material_id, // Usar material_id como variante_id ya que no existe variante_id
         variante_nombre: m.variante_nombre,
         espesor: m.espesor,
         unidad_espesor: material.unidad_espesor,
