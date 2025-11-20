@@ -233,19 +233,19 @@ export function AddLineModal({
 
   const formatImpacto = (item: { tipo_impacto: string; valor_monto: number | null; valor_porcentaje: number | null }) => {
     if (item.tipo_impacto === 'precio_fijo' && item.valor_monto) {
-      return `+ $${item.valor_monto.toFixed(2)} (precio fijo)`;
+      return `💰 $${item.valor_monto.toFixed(2)} (precio fijo)`;
     }
     if (item.tipo_impacto === 'por_unidad' && item.valor_monto) {
-      return `+ $${item.valor_monto.toFixed(2)}/unidad`;
+      return `📦 $${item.valor_monto.toFixed(2)} por unidad`;
     }
     if (item.tipo_impacto === 'porcentual' && item.valor_porcentaje) {
-      return `+ ${item.valor_porcentaje}% sobre precio base`;
+      return `📊 +${item.valor_porcentaje}% sobre precio base`;
     }
     if (item.tipo_impacto === 'por_mt2' && item.valor_monto) {
-      return `+ $${item.valor_monto.toFixed(2)}/MT2`;
+      return `📐 $${item.valor_monto.toFixed(2)} por MT2`;
     }
     if (item.tipo_impacto === 'por_metro_lineal' && item.valor_monto) {
-      return `+ $${item.valor_monto.toFixed(2)}/metro lineal`;
+      return `📏 $${item.valor_monto.toFixed(2)} por metro lineal`;
     }
     return '';
   };
@@ -411,24 +411,38 @@ export function AddLineModal({
                       <div className="flex-1">
                         <div className="font-medium text-gray-900">{servicioConfig.servicio_nombre}</div>
 
-                        {/* Dropdown de niveles si los tiene y son más de 1 */}
-                        {servicioConfig.tiene_niveles && servicioConfig.niveles && servicioConfig.niveles.length > 1 && (
-                          <select
-                            value={servicioSeleccionado?.nivel_id || ''}
-                            onChange={(e) => handleChangeNivelServicio(servicioConfig, e.target.value)}
-                            disabled={!isSelected}
-                            className="mt-2 text-sm border border-gray-300 rounded px-2 py-1 w-full disabled:opacity-50"
-                          >
+                        {/* Radio buttons para niveles si los tiene y son más de 1 */}
+                        {servicioConfig.tiene_niveles && servicioConfig.niveles && servicioConfig.niveles.length > 1 && isSelected && (
+                          <div className="mt-3 space-y-2 pl-6">
+                            <div className="text-xs font-medium text-gray-600 mb-2">Selecciona un nivel:</div>
                             {servicioConfig.niveles.map(nivel => (
-                              <option key={nivel.id} value={nivel.id}>
-                                {nivel.nombre} - {formatImpacto(nivel)}
-                              </option>
+                              <label
+                                key={nivel.id}
+                                className={`flex items-center gap-2 p-2 rounded border cursor-pointer transition-colors ${
+                                  servicioSeleccionado?.nivel_id === nivel.id
+                                    ? 'border-blue-500 bg-blue-50'
+                                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                                }`}
+                              >
+                                <input
+                                  type="radio"
+                                  name={`nivel-servicio-${servicioConfig.servicio_id}`}
+                                  value={nivel.id}
+                                  checked={servicioSeleccionado?.nivel_id === nivel.id}
+                                  onChange={() => handleChangeNivelServicio(servicioConfig, nivel.id)}
+                                  className="text-blue-600"
+                                />
+                                <div className="flex-1">
+                                  <div className="font-medium text-sm text-gray-900">{nivel.nombre}</div>
+                                  <div className="text-xs text-gray-500">{formatImpacto(nivel)}</div>
+                                </div>
+                              </label>
                             ))}
-                          </select>
+                          </div>
                         )}
 
-                        {/* Mostrar impacto del servicio/nivel seleccionado */}
-                        {servicioSeleccionado && (
+                        {/* Mostrar impacto solo si NO tiene niveles o solo tiene 1 */}
+                        {servicioSeleccionado && (!servicioConfig.tiene_niveles || servicioConfig.niveles?.length === 1) && (
                           <div className="text-sm text-gray-500 mt-1">
                             {formatImpacto(servicioSeleccionado)}
                           </div>
@@ -467,24 +481,38 @@ export function AddLineModal({
                       <div className="flex-1">
                         <div className="font-medium text-gray-900">{acabadoConfig.acabado_nombre}</div>
 
-                        {/* Dropdown de niveles si los tiene y son más de 1 */}
-                        {acabadoConfig.tiene_niveles && acabadoConfig.niveles && acabadoConfig.niveles.length > 1 && (
-                          <select
-                            value={acabadoSeleccionado?.nivel_id || ''}
-                            onChange={(e) => handleChangeNivelAcabado(acabadoConfig, e.target.value)}
-                            disabled={!isSelected}
-                            className="mt-2 text-sm border border-gray-300 rounded px-2 py-1 w-full disabled:opacity-50"
-                          >
+                        {/* Radio buttons para niveles si los tiene y son más de 1 */}
+                        {acabadoConfig.tiene_niveles && acabadoConfig.niveles && acabadoConfig.niveles.length > 1 && isSelected && (
+                          <div className="mt-3 space-y-2 pl-6">
+                            <div className="text-xs font-medium text-gray-600 mb-2">Selecciona un nivel:</div>
                             {acabadoConfig.niveles.map(nivel => (
-                              <option key={nivel.id} value={nivel.id}>
-                                {nivel.nombre} - {formatImpacto(nivel)}
-                              </option>
+                              <label
+                                key={nivel.id}
+                                className={`flex items-center gap-2 p-2 rounded border cursor-pointer transition-colors ${
+                                  acabadoSeleccionado?.nivel_id === nivel.id
+                                    ? 'border-green-500 bg-green-50'
+                                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                                }`}
+                              >
+                                <input
+                                  type="radio"
+                                  name={`nivel-acabado-${acabadoConfig.acabado_id}`}
+                                  value={nivel.id}
+                                  checked={acabadoSeleccionado?.nivel_id === nivel.id}
+                                  onChange={() => handleChangeNivelAcabado(acabadoConfig, nivel.id)}
+                                  className="text-green-600"
+                                />
+                                <div className="flex-1">
+                                  <div className="font-medium text-sm text-gray-900">{nivel.nombre}</div>
+                                  <div className="text-xs text-gray-500">{formatImpacto(nivel)}</div>
+                                </div>
+                              </label>
                             ))}
-                          </select>
+                          </div>
                         )}
 
-                        {/* Mostrar impacto del acabado/nivel seleccionado */}
-                        {acabadoSeleccionado && (
+                        {/* Mostrar impacto solo si NO tiene niveles o solo tiene 1 */}
+                        {acabadoSeleccionado && (!acabadoConfig.tiene_niveles || acabadoConfig.niveles?.length === 1) && (
                           <div className="text-sm text-gray-500 mt-1">
                             {formatImpacto(acabadoSeleccionado)}
                           </div>

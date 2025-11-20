@@ -92,17 +92,7 @@ export function MeasurementLinesTable({
   const totalMetrosLineales = lines.reduce((sum, line) => sum + (line.metros_lineales || 0) * line.cantidad, 0);
   const totalPrecio = lines.reduce((sum, line) => sum + (line.precio_total_linea || 0), 0);
 
-  // Obtener nombre de servicio por ID
-  const getServicioNombre = (servicioId: string): string => {
-    const servicio = selectedServicios.find((s) => s.servicio_id === servicioId);
-    return servicio?.servicio_nombre || '';
-  };
-
-  // Obtener nombre de acabado por ID
-  const getAcabadoNombre = (acabadoId: string): string => {
-    const acabado = selectedAcabados.find((a) => a.acabado_id === acabadoId);
-    return acabado?.acabado_nombre || '';
-  };
+  // Ya no necesitamos estas funciones - usaremos los datos directamente de las líneas
 
   // Formatear medidas
   const formatMedidas = (line: MeasurementLine): string => {
@@ -144,8 +134,11 @@ export function MeasurementLinesTable({
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Medidas</th>
                   {config.tipo_venta_real === 'mt2' && <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">MT2</th>}
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cantidad</th>
-                  {selectedServicios.length > 0 && <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Servicios</th>}
-                  {selectedAcabados.length > 0 && <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acabados</th>}
+                  {config.servicios.length > 0 && <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Servicios</th>}
+                  {config.acabados.length > 0 && <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acabados</th>}
+                  {lines.some(l => l.precio_base_unitario) && <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Base</th>}
+                  {lines.some(l => l.precio_servicios_unitario && l.precio_servicios_unitario > 0) && <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">+ Serv.</th>}
+                  {lines.some(l => l.precio_acabados_unitario && l.precio_acabados_unitario > 0) && <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">+ Acab.</th>}
                   {lines.some(l => l.precio_unitario_final) && <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Precio Unit.</th>}
                   {lines.some(l => l.precio_total_linea) && <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subtotal</th>}
                   <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
@@ -161,34 +154,63 @@ export function MeasurementLinesTable({
                       </td>
                     )}
                     <td className="px-4 py-3 whitespace-nowrap">{line.cantidad}</td>
-                    {selectedServicios.length > 0 && (
+                    {config.servicios.length > 0 && (
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-1">
-                          {line.servicios_ids.length === 0 ? (
+                          {!line.servicios || line.servicios.length === 0 ? (
                             <span className="text-gray-400 text-sm">Ninguno</span>
                           ) : (
-                            line.servicios_ids.map((id) => (
-                              <Badge key={id} variant="warning" size="sm">
-                                {getServicioNombre(id)}
+                            line.servicios.map((servicio) => (
+                              <Badge key={servicio.servicio_id} variant="warning" size="sm">
+                                {servicio.servicio_nombre}
+                                {servicio.nivel_nombre && ` (${servicio.nivel_nombre})`}
                               </Badge>
                             ))
                           )}
                         </div>
                       </td>
                     )}
-                    {selectedAcabados.length > 0 && (
+                    {config.acabados.length > 0 && (
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-1">
-                          {line.acabados_ids.length === 0 ? (
+                          {!line.acabados || line.acabados.length === 0 ? (
                             <span className="text-gray-400 text-sm">Ninguno</span>
                           ) : (
-                            line.acabados_ids.map((id) => (
-                              <Badge key={id} variant="success" size="sm">
-                                {getAcabadoNombre(id)}
+                            line.acabados.map((acabado) => (
+                              <Badge key={acabado.acabado_id} variant="success" size="sm">
+                                {acabado.acabado_nombre}
+                                {acabado.nivel_nombre && ` (${acabado.nivel_nombre})`}
                               </Badge>
                             ))
                           )}
                         </div>
+                      </td>
+                    )}
+                    {lines.some(l => l.precio_base_unitario) && (
+                      <td className="px-4 py-3 whitespace-nowrap text-gray-700">
+                        {line.precio_base_unitario ? (
+                          `$${line.precio_base_unitario.toFixed(2)}`
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </td>
+                    )}
+                    {lines.some(l => l.precio_servicios_unitario && l.precio_servicios_unitario > 0) && (
+                      <td className="px-4 py-3 whitespace-nowrap text-green-600">
+                        {line.precio_servicios_unitario && line.precio_servicios_unitario > 0 ? (
+                          `+$${line.precio_servicios_unitario.toFixed(2)}`
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </td>
+                    )}
+                    {lines.some(l => l.precio_acabados_unitario && l.precio_acabados_unitario > 0) && (
+                      <td className="px-4 py-3 whitespace-nowrap text-green-600">
+                        {line.precio_acabados_unitario && line.precio_acabados_unitario > 0 ? (
+                          `+$${line.precio_acabados_unitario.toFixed(2)}`
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
                       </td>
                     )}
                     {lines.some(l => l.precio_unitario_final) && (

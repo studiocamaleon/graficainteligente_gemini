@@ -340,23 +340,19 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
       // Si el producto permite m\u00faltiples l\u00edneas, crear un item por cada l\u00ednea
       if (config.permite_multiples_lineas && selectedConfig.lineas_medidas.length > 0) {
         for (const linea of selectedConfig.lineas_medidas) {
-          // Filtrar servicios para esta l\u00ednea
-          const serviciosLinea = selectedServicios
-            .filter(s => linea.servicios_ids.includes(s.servicio_id))
-            .map(s => ({
-              servicio_id: s.servicio_id,
-              nombre: s.servicio_nombre,
-              nivel: s.nivel_nombre,
-            }));
+          // Usar servicios directamente de la línea
+          const serviciosLinea = (linea.servicios || []).map(s => ({
+            servicio_id: s.servicio_id,
+            nombre: s.servicio_nombre,
+            nivel: s.nivel_nombre,
+          }));
 
-          // Filtrar acabados para esta l\u00ednea
-          const acabadosLinea = selectedAcabados
-            .filter(a => linea.acabados_ids.includes(a.acabado_id))
-            .map(a => ({
-              acabado_id: a.acabado_id,
-              nombre: a.acabado_nombre,
-              nivel: a.nivel_nombre,
-            }));
+          // Usar acabados directamente de la línea
+          const acabadosLinea = (linea.acabados || []).map(a => ({
+            acabado_id: a.acabado_id,
+            nombre: a.acabado_nombre,
+            nivel: a.nivel_nombre,
+          }));
 
           // Construir configuraci\u00f3n JSONB para esta l\u00ednea
           const itemData = {
