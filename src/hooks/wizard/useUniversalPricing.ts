@@ -335,25 +335,18 @@ async function getPrecioSellos(
 ): Promise<number | null> {
   const { data, error } = await supabase
     .from('productos_sellos_precios')
-    .select('precio, rango_precio_min, rango_precio_max')
-    .eq('producto_id', productId);
+    .select('precio_unitario')
+    .eq('producto_id', productId)
+    .maybeSingle();
 
   if (error) {
     console.error('Error buscando precio sellos:', error);
     return null;
   }
 
-  if (!data || data.length === 0) return null;
+  if (!data) return null;
 
-  // Buscar en qué rango cae
-  const precioEnRango = data.find(p => {
-    if (p.rango_precio_max === null) {
-      return config.cantidad >= p.rango_precio_min;
-    }
-    return config.cantidad >= p.rango_precio_min && config.cantidad <= p.rango_precio_max;
-  });
-
-  return precioEnRango?.precio || null;
+  return data.precio_unitario;
 }
 
 // ===============================================
