@@ -324,10 +324,9 @@ async function loadMaterialesRigidosConfig(productId: string): Promise<ProductCo
     .select(`
       id,
       material_id,
-      variante_id,
+      variante_nombre,
       espesor,
-      materiales!inner(id, nombre, unidad_espesor),
-      variantes:material_variantes!inner(id, nombre)
+      materiales!inner(id, nombre, unidad_espesor)
     `)
     .eq('producto_materiales_rigidos_id', productId);
 
@@ -361,8 +360,8 @@ async function loadMaterialesRigidosConfig(productId: string): Promise<ProductCo
       id: m.id,
       material_id: m.material_id,
       material_nombre: (m.materiales as any).nombre,
-      variante_id: m.variante_id,
-      variante_nombre: (m.variantes as any).nombre,
+      variante_id: m.material_id,
+      variante_nombre: m.variante_nombre,
       espesor: m.espesor,
       unidad_espesor: (m.materiales as any).unidad_espesor
     })) || [],

@@ -237,35 +237,28 @@ async function getPrecioMaterialesRigidos(
 
   const { data, error } = await supabase
     .from('productos_materiales_rigidos_precios')
-    .select('precio, rango_precio_min, rango_precio_max')
+    .select('precio_mt2')
     .eq('producto_materiales_rigidos_id', productId)
     .eq('material_id', config.material_id)
-    .eq('variante_id', config.variante_id)
-    .eq('espesor', config.espesor);
+    .eq('variante_nombre', config.variante_nombre)
+    .eq('espesor', config.espesor)
+    .single();
 
   if (error) {
     console.error('Error buscando precio materiales rígidos:', error);
     return null;
   }
 
-  if (!data || data.length === 0) return null;
-
-  // Buscar en qué rango cae
-  const precioEnRango = data.find(p => {
-    if (p.rango_precio_max === null) {
-      return config.cantidad >= p.rango_precio_min;
-    }
-    return config.cantidad >= p.rango_precio_min && config.cantidad <= p.rango_precio_max;
-  });
-
-  if (!precioEnRango) return null;
+  if (!data) return null;
 
   // Calcular por mt2
   const mt2 = config.medida_ancho && config.medida_alto
     ? (config.medida_ancho / 100) * (config.medida_alto / 100)
     : 1;
 
-  return precioEnRango.precio * mt2;
+  // MR tiene precio único por combinación, no rangos
+  // La cantidad_minima se aplica a nivel de UI o en el cálculo de múltiples líneas
+  return data.precio_mt2 * mt2;
 }
 
 async function getPrecioPlotterCorte(
@@ -489,17 +482,18 @@ export async function determinarPrecioPorUnidadRango(
 
         const { data, error } = await supabase
           .from('productos_materiales_rigidos_precios')
-          .select('precio, rango_precio_min, rango_precio_max')
+          .select('precio_mt2')
           .eq('producto_materiales_rigidos_id', productId)
           .eq('material_id', baseConfig.material_id)
-          .eq('variante_id', baseConfig.variante_id)
-          .eq('espesor', baseConfig.espesor);
+          .eq('variante_nombre', baseConfig.variante_nombre)
+          .eq('espesor', baseConfig.espesor)
+          .single();
 
-        if (error || !data || data.length === 0) return null;
+        if (error || !data) return null;
 
-        rangos = data;
-        valorParaRango = totalMT2;
-        break;
+        // MR NO usa rangos, tiene precio único por combinación
+        // Retornar directamente el precio_mt2
+        return data.precio_mt2;
       }
 
       case 'Plotter de Corte': {
@@ -746,24 +740,18 @@ async function getPrecioMaterialesRigidosLine(
   // Fallback: lógica original (para compatibilidad con código que no usa múltiples líneas)
   const { data, error } = await supabase
     .from('productos_materiales_rigidos_precios')
-    .select('precio, rango_precio_min, rango_precio_max')
+    .select('precio_mt2')
     .eq('producto_materiales_rigidos_id', productId)
     .eq('material_id', config.material_id)
-    .eq('variante_id', config.variante_id)
-    .eq('espesor', config.espesor);
+    .eq('variante_nombre', config.variante_nombre)
+    .eq('espesor', config.espesor)
+    .single();
 
-  if (error || !data || data.length === 0) return null;
+  if (error || !data) return null;
 
-  // Buscar precio en rango según cantidad de la línea
-  const precioRango = data.find(p =>
-    line.cantidad >= p.rango_precio_min &&
-    (p.rango_precio_max === null || line.cantidad <= p.rango_precio_max)
-  );
-
-  if (!precioRango) return null;
-
+  // MR tiene precio único, no rangos
   // Precio es por MT2
-  return precioRango.precio * (line.mt2_calculado || 0);
+  return data.precio_mt2 * (line.mt2_calculado || 0);
 }
 
 async function getPrecioPlotterCorteLine(
