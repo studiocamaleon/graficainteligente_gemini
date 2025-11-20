@@ -254,6 +254,12 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
 
     setIsSubmitting(true);
     try {
+      // Para productos con cantidades fijas (como Impresión Laser), el precio ya incluye la cantidad
+      // Para otros productos, el precio es unitario y se multiplica por cantidad
+      const esCantidadFija = config.cantidades_fijas && config.cantidades_fijas.length > 0;
+      const precioUnitario = esCantidadFija ? precioTotal / selectedConfig.cantidad : precioTotal;
+      const precioTotalFinal = esCantidadFija ? precioTotal : precioTotal * selectedConfig.cantidad;
+
       const itemData = {
         producto_id: selectedProduct.id,
         producto_nombre: selectedProduct.nombre,
@@ -282,8 +288,8 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
         precio_base: precioBase || 0,
         precio_servicios: precioServicios,
         precio_acabados: precioAcabados,
-        precio_unitario_final: precioTotal,
-        precio_total: precioTotal * selectedConfig.cantidad,
+        precio_unitario_final: precioUnitario,
+        precio_total: precioTotalFinal,
         impuesto_iva: config.impuesto_iva
       };
 
