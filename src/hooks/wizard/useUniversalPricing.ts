@@ -271,7 +271,7 @@ async function getPrecioPlotterCorte(
 
   const { data, error } = await supabase
     .from('productos_plotter_corte_precios')
-    .select('precio, rango_precio_min, rango_precio_max')
+    .select('precio, cantidad_desde, cantidad_hasta')
     .eq('producto_id', productId)
     .eq('ancho', config.medida_ancho);
 
@@ -284,10 +284,10 @@ async function getPrecioPlotterCorte(
 
   // Buscar en qué rango cae
   const precioEnRango = data.find(p => {
-    if (p.rango_precio_max === null) {
-      return config.cantidad >= p.rango_precio_min;
+    if (p.cantidad_hasta === null) {
+      return config.cantidad >= p.cantidad_desde;
     }
-    return config.cantidad >= p.rango_precio_min && config.cantidad <= p.rango_precio_max;
+    return config.cantidad >= p.cantidad_desde && config.cantidad <= p.cantidad_hasta;
   });
 
   if (!precioEnRango) return null;
@@ -497,13 +497,13 @@ export async function determinarPrecioPorUnidadRango(
       }
 
       case 'Plotter de Corte': {
-        if (!baseConfig.color) return null;
+        if (!baseConfig.medida_ancho) return null;
 
         const { data, error } = await supabase
           .from('productos_plotter_corte_precios')
-          .select('precio, rango_precio_min, rango_precio_max')
+          .select('precio, cantidad_desde, cantidad_hasta')
           .eq('producto_id', productId)
-          .eq('color', baseConfig.color);
+          .eq('ancho', baseConfig.medida_ancho);
 
         if (error || !data || data.length === 0) return null;
 
@@ -519,8 +519,8 @@ export async function determinarPrecioPorUnidadRango(
 
     // Buscar el rango que contiene el valor acumulado
     const rangoAplicable = rangos.find(r =>
-      valorParaRango >= r.rango_precio_min &&
-      (r.rango_precio_max === null || valorParaRango <= r.rango_precio_max)
+      valorParaRango >= r.cantidad_desde &&
+      (r.cantidad_hasta === null || valorParaRango <= r.cantidad_hasta)
     );
 
     if (!rangoAplicable) {
@@ -530,7 +530,7 @@ export async function determinarPrecioPorUnidadRango(
 
     console.log(`✅ Rango determinado para ${categoria}:`, {
       valorParaRango,
-      rango: `${rangoAplicable.rango_precio_min}-${rangoAplicable.rango_precio_max || '∞'}`,
+      rango: `${rangoAplicable.cantidad_desde}-${rangoAplicable.cantidad_hasta || '∞'}`,
       precioPorUnidad: rangoAplicable.precio
     });
 
@@ -760,7 +760,7 @@ async function getPrecioPlotterCorteLine(
   line: MeasurementLine,
   precioPorUnidadRango?: number
 ): Promise<number | null> {
-  if (!config.color) return null;
+  if (!config.medida_ancho) return null;
 
   // Si se proporciona precio del rango correcto (calculado con totales acumulados), usarlo
   if (precioPorUnidadRango !== undefined && precioPorUnidadRango !== null) {
@@ -770,16 +770,16 @@ async function getPrecioPlotterCorteLine(
   // Fallback: lógica original (para compatibilidad con código que no usa múltiples líneas)
   const { data, error } = await supabase
     .from('productos_plotter_corte_precios')
-    .select('precio, rango_precio_min, rango_precio_max')
+    .select('precio, cantidad_desde, cantidad_hasta')
     .eq('producto_id', productId)
-    .eq('color', config.color);
+    .eq('ancho', config.medida_ancho);
 
   if (error || !data || data.length === 0) return null;
 
   // Buscar precio en rango según cantidad de la línea
   const precioRango = data.find(p =>
-    line.cantidad >= p.rango_precio_min &&
-    (p.rango_precio_max === null || line.cantidad <= p.rango_precio_max)
+    line.cantidad >= p.cantidad_desde &&
+    (p.cantidad_hasta === null || line.cantidad <= p.cantidad_hasta)
   );
 
   if (!precioRango) return null;
