@@ -439,6 +439,115 @@ function calcularImpacto(
 }
 
 // ===============================================
+// FUNCIÓN PARA DETERMINAR PRECIO POR UNIDAD SEGÚN RANGO
+// ===============================================
+
+/**
+ * Determina el precio por unidad (MT2 o metro lineal) basado en el total acumulado
+ * de todas las líneas. Esto asegura que se use el rango de precio correcto cuando
+ * hay múltiples líneas que suman un volumen mayor.
+ *
+ * @param productId - ID del producto
+ * @param categoria - Categoría del producto
+ * @param totalMT2 - Total acumulado de MT2 de todas las líneas
+ * @param totalMetrosLineales - Total acumulado de metros lineales de todas las líneas
+ * @param baseConfig - Configuración base (material, tecnología, tinta, etc.)
+ * @param tipoVentaReal - Tipo de venta real del producto
+ * @returns Precio por unidad del rango correcto, o null si no se encuentra
+ */
+export async function determinarPrecioPorUnidadRango(
+  productId: string,
+  categoria: ProductCategory,
+  totalMT2: number,
+  totalMetrosLineales: number,
+  baseConfig: Omit<SelectedConfiguration, 'lineas_medidas'>,
+  tipoVentaReal?: 'mt2' | 'mt_lineal' | 'unidad' | 'cantidades_fijas'
+): Promise<number | null> {
+  try {
+    let rangos: any[] = [];
+    let valorParaRango = 0;
+
+    switch (categoria) {
+      case 'Impresion Gran Formato': {
+        if (!baseConfig.tinta) return null;
+
+        const { data, error } = await supabase
+          .from('productos_gran_formato_precios')
+          .select('precio, rango_precio_min, rango_precio_max')
+          .eq('producto_gran_formato_id', productId)
+          .eq('tinta', baseConfig.tinta);
+
+        if (error || !data || data.length === 0) return null;
+
+        rangos = data;
+        valorParaRango = tipoVentaReal === 'mt2' ? totalMT2 : totalMetrosLineales;
+        break;
+      }
+
+      case 'Materiales Rigidos': {
+        if (!baseConfig.material_id || !baseConfig.espesor) return null;
+
+        const { data, error } = await supabase
+          .from('productos_materiales_rigidos_precios')
+          .select('precio, rango_precio_min, rango_precio_max')
+          .eq('producto_materiales_rigidos_id', productId)
+          .eq('material_id', baseConfig.material_id)
+          .eq('variante_id', baseConfig.variante_id)
+          .eq('espesor', baseConfig.espesor);
+
+        if (error || !data || data.length === 0) return null;
+
+        rangos = data;
+        valorParaRango = totalMT2;
+        break;
+      }
+
+      case 'Plotter de Corte': {
+        if (!baseConfig.color) return null;
+
+        const { data, error } = await supabase
+          .from('productos_plotter_corte_precios')
+          .select('precio, rango_precio_min, rango_precio_max')
+          .eq('producto_id', productId)
+          .eq('color', baseConfig.color);
+
+        if (error || !data || data.length === 0) return null;
+
+        rangos = data;
+        valorParaRango = totalMetrosLineales;
+        break;
+      }
+
+      default:
+        // Para otras categorías, no aplicamos lógica de rangos acumulados
+        return null;
+    }
+
+    // Buscar el rango que contiene el valor acumulado
+    const rangoAplicable = rangos.find(r =>
+      valorParaRango >= r.rango_precio_min &&
+      (r.rango_precio_max === null || valorParaRango <= r.rango_precio_max)
+    );
+
+    if (!rangoAplicable) {
+      console.warn(`No se encontró rango para valor: ${valorParaRango} en categoría: ${categoria}`);
+      return null;
+    }
+
+    console.log(`✅ Rango determinado para ${categoria}:`, {
+      valorParaRango,
+      rango: `${rangoAplicable.rango_precio_min}-${rangoAplicable.rango_precio_max || '∞'}`,
+      precioPorUnidad: rangoAplicable.precio
+    });
+
+    return rangoAplicable.precio;
+  } catch (error) {
+    console.error('Error determinando precio por unidad del rango:', error);
+    return null;
+  }
+}
+
+// ===============================================
 // FUNCIÓN PARA CALCULAR PRECIO DE UNA LÍNEA INDIVIDUAL
 // ===============================================
 
@@ -451,6 +560,7 @@ function calcularImpacto(
  * @param allServicios - Todos los servicios disponibles
  * @param allAcabados - Todos los acabados disponibles
  * @param tipoVentaReal - Tipo de venta real del producto
+ * @param precioPorUnidadRango - Precio por unidad determinado por el rango total (opcional)
  * @returns Precio calculado para la línea
  */
 export async function calculateLinePrice(
@@ -460,7 +570,8 @@ export async function calculateLinePrice(
   baseConfig: Omit<SelectedConfiguration, 'lineas_medidas'>,
   allServicios: SelectedService[],
   allAcabados: SelectedFinishing[],
-  tipoVentaReal?: 'mt2' | 'mt_lineal' | 'unidad' | 'cantidades_fijas'
+  tipoVentaReal?: 'mt2' | 'mt_lineal' | 'unidad' | 'cantidades_fijas',
+  precioPorUnidadRango?: number
 ): Promise<{
   precio_base_unitario: number;
   precio_servicios_unitario: number;
@@ -484,13 +595,13 @@ export async function calculateLinePrice(
 
     switch (categoria) {
       case 'Impresion Gran Formato':
-        precioBaseUnitario = await getPrecioGranFormatoLine(productId, lineConfig, line, tipoVentaReal);
+        precioBaseUnitario = await getPrecioGranFormatoLine(productId, lineConfig, line, tipoVentaReal, precioPorUnidadRango);
         break;
       case 'Materiales Rigidos':
-        precioBaseUnitario = await getPrecioMaterialesRigidosLine(productId, lineConfig, line);
+        precioBaseUnitario = await getPrecioMaterialesRigidosLine(productId, lineConfig, line, precioPorUnidadRango);
         break;
       case 'Plotter de Corte':
-        precioBaseUnitario = await getPrecioPlotterCorteLine(productId, lineConfig, line);
+        precioBaseUnitario = await getPrecioPlotterCorteLine(productId, lineConfig, line, precioPorUnidadRango);
         break;
       default:
         // Para otras categorías, usar el método tradicional
@@ -578,10 +689,21 @@ async function getPrecioGranFormatoLine(
   productId: string,
   config: SelectedConfiguration,
   line: MeasurementLine,
-  tipoVentaReal?: string
+  tipoVentaReal?: string,
+  precioPorUnidadRango?: number
 ): Promise<number | null> {
   if (!config.tinta) return null;
 
+  // Si se proporciona precio del rango correcto (calculado con totales acumulados), usarlo
+  if (precioPorUnidadRango !== undefined && precioPorUnidadRango !== null) {
+    if (tipoVentaReal === 'mt2') {
+      return precioPorUnidadRango * (line.mt2_calculado || 0);
+    } else {
+      return precioPorUnidadRango * (line.metros_lineales || 0);
+    }
+  }
+
+  // Fallback: lógica original (para compatibilidad con código que no usa múltiples líneas)
   const { data, error } = await supabase
     .from('productos_gran_formato_precios')
     .select('precio, rango_precio_min, rango_precio_max')
@@ -611,10 +733,17 @@ async function getPrecioGranFormatoLine(
 async function getPrecioMaterialesRigidosLine(
   productId: string,
   config: SelectedConfiguration,
-  line: MeasurementLine
+  line: MeasurementLine,
+  precioPorUnidadRango?: number
 ): Promise<number | null> {
   if (!config.material_id || !config.espesor) return null;
 
+  // Si se proporciona precio del rango correcto (calculado con totales acumulados), usarlo
+  if (precioPorUnidadRango !== undefined && precioPorUnidadRango !== null) {
+    return precioPorUnidadRango * (line.mt2_calculado || 0);
+  }
+
+  // Fallback: lógica original (para compatibilidad con código que no usa múltiples líneas)
   const { data, error } = await supabase
     .from('productos_materiales_rigidos_precios')
     .select('precio, rango_precio_min, rango_precio_max')
@@ -640,10 +769,17 @@ async function getPrecioMaterialesRigidosLine(
 async function getPrecioPlotterCorteLine(
   productId: string,
   config: SelectedConfiguration,
-  line: MeasurementLine
+  line: MeasurementLine,
+  precioPorUnidadRango?: number
 ): Promise<number | null> {
   if (!config.color) return null;
 
+  // Si se proporciona precio del rango correcto (calculado con totales acumulados), usarlo
+  if (precioPorUnidadRango !== undefined && precioPorUnidadRango !== null) {
+    return precioPorUnidadRango * (line.metros_lineales || 0);
+  }
+
+  // Fallback: lógica original (para compatibilidad con código que no usa múltiples líneas)
   const { data, error } = await supabase
     .from('productos_plotter_corte_precios')
     .select('precio, rango_precio_min, rango_precio_max')

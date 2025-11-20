@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { calculateLinePrice } from './useUniversalPricing';
+import { calculateLinePrice, determinarPrecioPorUnidadRango } from './useUniversalPricing';
 import type { ProductCategory } from './useUniversalProductSearch';
 import type { MeasurementLine, SelectedConfiguration } from '../../components/wizard/steps/ConfigurationStep';
 import type { SelectedService, SelectedFinishing } from '../../components/wizard/steps/ServicesAndFinishingsStep';
@@ -23,6 +23,42 @@ export function useMeasurementLinesPricing(
     const calculateAllLinesPrices = async () => {
       const updatedLines: MeasurementLine[] = [];
 
+      // PASO 1: Calcular totales acumulados de todas las líneas
+      // Esto es necesario para determinar el rango de precio correcto
+      const totalMT2Acumulado = lines.reduce((sum, line) =>
+        sum + (line.mt2_calculado || 0) * line.cantidad, 0
+      );
+
+      const totalMetrosLinealesAcumulado = lines.reduce((sum, line) =>
+        sum + (line.metros_lineales || 0) * line.cantidad, 0
+      );
+
+      console.log('📊 Totales acumulados:', {
+        totalMT2: totalMT2Acumulado.toFixed(2),
+        totalMetrosLineales: totalMetrosLinealesAcumulado.toFixed(2),
+        cantidadLineas: lines.length
+      });
+
+      // PASO 2: Determinar precio por unidad del rango correcto basado en totales
+      // Solo para categorías que usan rangos de precio (Gran Formato, Materiales Rígidos, Plotter)
+      let precioPorUnidadRango: number | null = null;
+
+      if (['Impresion Gran Formato', 'Materiales Rigidos', 'Plotter de Corte'].includes(categoria)) {
+        precioPorUnidadRango = await determinarPrecioPorUnidadRango(
+          productId,
+          categoria,
+          totalMT2Acumulado,
+          totalMetrosLinealesAcumulado,
+          baseConfig,
+          tipoVentaReal
+        );
+
+        if (precioPorUnidadRango) {
+          console.log(`💰 Precio por unidad del rango: $${precioPorUnidadRango.toFixed(2)}`);
+        }
+      }
+
+      // PASO 3: Calcular precio de cada línea usando el precio del rango correcto
       for (const line of lines) {
         const precio = await calculateLinePrice(
           productId,
@@ -31,7 +67,8 @@ export function useMeasurementLinesPricing(
           baseConfig,
           allServicios,
           allAcabados,
-          tipoVentaReal
+          tipoVentaReal,
+          precioPorUnidadRango || undefined  // Pasar el precio del rango
         );
 
         if (precio) {
