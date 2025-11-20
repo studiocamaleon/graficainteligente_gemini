@@ -229,6 +229,8 @@ export function CreateOrderPage() {
               setItems={setItems}
               descuentoTotal={descuentoTotal}
               setDescuentoTotal={setDescuentoTotal}
+              requiereFactura={requiereFactura}
+              setRequiereFactura={setRequiereFactura}
             />
           )}
 

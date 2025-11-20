@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Plus, Trash2, Package } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
+import { Switch } from '../ui/Switch';
 import { Table } from '../ui/Table';
 import { EmptyState } from '../ui/EmptyState';
 import { UniversalAddItemWizard } from '../wizard/UniversalAddItemWizard';
@@ -25,6 +26,8 @@ interface OrdenItemsTabProps {
   setItems: (items: OrdenItem[]) => void;
   descuentoTotal: number;
   setDescuentoTotal: (descuento: number) => void;
+  requiereFactura?: boolean;
+  setRequiereFactura?: (requiere: boolean) => void;
 }
 
 export function OrdenItemsTab({
@@ -32,6 +35,8 @@ export function OrdenItemsTab({
   setItems,
   descuentoTotal,
   setDescuentoTotal,
+  requiereFactura = false,
+  setRequiereFactura,
 }: OrdenItemsTabProps) {
   const [showAddModal, setShowAddModal] = useState(false);
 
@@ -228,10 +233,21 @@ export function OrdenItemsTab({
             Agrega los productos que conforman esta orden
           </p>
         </div>
-        <Button onClick={() => setShowAddModal(true)}>
-          <Plus className="w-4 h-4" />
-          Agregar Item
-        </Button>
+        <div className="flex items-center gap-4">
+          {setRequiereFactura && (
+            <div className="flex items-center gap-2">
+              <Switch
+                checked={requiereFactura}
+                onChange={setRequiereFactura}
+              />
+              <span className="text-sm text-gray-700">Requiere factura</span>
+            </div>
+          )}
+          <Button onClick={() => setShowAddModal(true)}>
+            <Plus className="w-4 h-4" />
+            Agregar Item
+          </Button>
+        </div>
       </div>
 
       {items.length === 0 ? (

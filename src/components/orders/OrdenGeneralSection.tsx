@@ -61,15 +61,8 @@ export function OrdenGeneralSection({
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between border-b border-gray-200 pb-4">
+      <div className="border-b border-gray-200 pb-4">
         <h3 className="text-lg font-semibold text-gray-900">Datos Generales</h3>
-        <div className="flex items-center space-x-3">
-          <Switch
-            checked={requiereFactura}
-            onChange={setRequiereFactura}
-            label="Requiere factura"
-          />
-        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
