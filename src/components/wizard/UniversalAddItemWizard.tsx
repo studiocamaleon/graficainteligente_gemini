@@ -303,16 +303,32 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
 
     const steps: WizardStep[] = ['search', 'configuration', 'services', 'summary'];
     const currentIndex = steps.indexOf(currentStep);
+
     if (currentIndex < steps.length - 1) {
-      setCurrentStep(steps[currentIndex + 1]);
+      let nextStep = steps[currentIndex + 1];
+
+      // Si el siguiente paso es 'services' y el producto permite múltiples líneas, saltarlo
+      if (nextStep === 'services' && config?.permite_multiples_lineas) {
+        nextStep = 'summary';
+      }
+
+      setCurrentStep(nextStep);
     }
   };
 
   const handlePrevious = () => {
     const steps: WizardStep[] = ['search', 'configuration', 'services', 'summary'];
     const currentIndex = steps.indexOf(currentStep);
+
     if (currentIndex > 0) {
-      setCurrentStep(steps[currentIndex - 1]);
+      let prevStep = steps[currentIndex - 1];
+
+      // Si el paso anterior es 'services' y el producto permite múltiples líneas, saltarlo
+      if (prevStep === 'services' && config?.permite_multiples_lineas) {
+        prevStep = 'configuration';
+      }
+
+      setCurrentStep(prevStep);
     }
   };
 
@@ -442,8 +458,16 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
 
   if (!isOpen) return null;
 
+  const getActiveSteps = (): WizardStep[] => {
+    // Para productos con múltiples líneas, omitir el paso de servicios
+    if (config?.permite_multiples_lineas) {
+      return ['search', 'configuration', 'summary'];
+    }
+    return ['search', 'configuration', 'services', 'summary'];
+  };
+
   const renderStepIndicator = () => {
-    const steps: WizardStep[] = ['search', 'configuration', 'services', 'summary'];
+    const steps = getActiveSteps();
     const currentIndex = steps.indexOf(currentStep);
 
     return (

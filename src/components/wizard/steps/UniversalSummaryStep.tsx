@@ -34,17 +34,8 @@ export function UniversalSummaryStep({
     return `$${value.toFixed(2)}`;
   };
 
-  // Obtener nombre de servicio por ID
-  const getServicioNombre = (servicioId: string): string => {
-    const servicio = selectedServicios.find((s) => s.servicio_id === servicioId);
-    return servicio?.servicio_nombre || '';
-  };
-
-  // Obtener nombre de acabado por ID
-  const getAcabadoNombre = (acabadoId: string): string => {
-    const acabado = selectedAcabados.find((a) => a.acabado_id === acabadoId);
-    return acabado?.acabado_nombre || '';
-  };
+  // Nota: Ya no necesitamos funciones para obtener nombres
+  // porque los servicios y acabados de cada línea ya contienen toda la información
 
   // Determinar si hay múltiples líneas
   const hasMultipleLines = config.permite_multiples_lineas && selectedConfig.lineas_medidas.length > 0;
@@ -198,13 +189,14 @@ export function UniversalSummaryStep({
                   </div>
 
                   {/* Servicios */}
-                  {linea.servicios_ids.length > 0 && (
+                  {linea.servicios && linea.servicios.length > 0 && (
                     <div className="flex justify-between items-start">
                       <span className="text-gray-600">Servicios:</span>
                       <div className="flex flex-wrap gap-1 justify-end max-w-xs">
-                        {linea.servicios_ids.map((id) => (
-                          <Badge key={id} variant="warning" size="sm">
-                            {getServicioNombre(id)}
+                        {linea.servicios.map((servicio) => (
+                          <Badge key={servicio.servicio_id} variant="warning" size="sm">
+                            {servicio.servicio_nombre}
+                            {servicio.nivel_nombre && ` (${servicio.nivel_nombre})`}
                           </Badge>
                         ))}
                       </div>
@@ -212,13 +204,14 @@ export function UniversalSummaryStep({
                   )}
 
                   {/* Acabados */}
-                  {linea.acabados_ids.length > 0 && (
+                  {linea.acabados && linea.acabados.length > 0 && (
                     <div className="flex justify-between items-start">
                       <span className="text-gray-600">Acabados:</span>
                       <div className="flex flex-wrap gap-1 justify-end max-w-xs">
-                        {linea.acabados_ids.map((id) => (
-                          <Badge key={id} variant="success" size="sm">
-                            {getAcabadoNombre(id)}
+                        {linea.acabados.map((acabado) => (
+                          <Badge key={acabado.acabado_id} variant="success" size="sm">
+                            {acabado.acabado_nombre}
+                            {acabado.nivel_nombre && ` (${acabado.nivel_nombre})`}
                           </Badge>
                         ))}
                       </div>

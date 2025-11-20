@@ -36,8 +36,24 @@ export function AddLineModal({
   const [anchoSeleccionado, setAnchoSeleccionado] = useState<number | null>(null);
   const [metrosLineales, setMetrosLineales] = useState<number>(0);
   const [cantidad, setCantidad] = useState<number>(1);
-  const [serviciosIds, setServiciosIds] = useState<string[]>([]);
-  const [acabadosIds, setAcabadosIds] = useState<string[]>([]);
+  const [serviciosSeleccionados, setServiciosSeleccionados] = useState<Array<{
+    servicio_id: string;
+    servicio_nombre: string;
+    nivel_id: string | null;
+    nivel_nombre: string | null;
+    tipo_impacto: string;
+    valor_porcentaje: number | null;
+    valor_monto: number | null;
+  }>>([]);
+  const [acabadosSeleccionados, setAcabadosSeleccionados] = useState<Array<{
+    acabado_id: string;
+    acabado_nombre: string;
+    nivel_id: string | null;
+    nivel_nombre: string | null;
+    tipo_impacto: string;
+    valor_porcentaje: number | null;
+    valor_monto: number | null;
+  }>>([]);
 
   // Errores
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -50,14 +66,14 @@ export function AddLineModal({
       setAnchoSeleccionado(existingLine.ancho_seleccionado || null);
       setMetrosLineales(existingLine.metros_lineales || 0);
       setCantidad(existingLine.cantidad);
-      setServiciosIds(existingLine.servicios_ids);
-      setAcabadosIds(existingLine.acabados_ids);
+      setServiciosSeleccionados(existingLine.servicios || []);
+      setAcabadosSeleccionados(existingLine.acabados || []);
     } else {
-      // Pre-seleccionar servicios y acabados globales
-      setServiciosIds(selectedServicios.map(s => s.servicio_id));
-      setAcabadosIds(selectedAcabados.map(a => a.acabado_id));
+      // Pre-seleccionar servicios y acabados globales si existen
+      setServiciosSeleccionados(selectedServicios || []);
+      setAcabadosSeleccionados(selectedAcabados || []);
     }
-  }, [existingLine, selectedServicios, selectedAcabados]);
+  }, [existingLine]);
 
   // Resetear al cerrar
   useEffect(() => {
@@ -67,8 +83,8 @@ export function AddLineModal({
       setAnchoSeleccionado(null);
       setMetrosLineales(0);
       setCantidad(1);
-      setServiciosIds([]);
-      setAcabadosIds([]);
+      setServiciosSeleccionados([]);
+      setAcabadosSeleccionados([]);
       setErrors({});
     }
   }, [isOpen]);
@@ -121,28 +137,117 @@ export function AddLineModal({
       ancho_seleccionado: config.tipo_venta_real === 'mt_lineal' ? anchoSeleccionado || undefined : undefined,
       metros_lineales: config.tipo_venta_real === 'mt_lineal' ? metrosLineales : undefined,
       cantidad,
-      servicios_ids: serviciosIds,
-      acabados_ids: acabadosIds
+      servicios: serviciosSeleccionados,
+      acabados: acabadosSeleccionados
     };
 
     onSave(newLine);
     onClose();
   };
 
-  const toggleServicio = (servicioId: string) => {
-    setServiciosIds(prev =>
-      prev.includes(servicioId)
-        ? prev.filter(id => id !== servicioId)
-        : [...prev, servicioId]
-    );
+  const handleToggleServicio = (servicioConfig: typeof config.servicios[0]) => {
+    const isSelected = serviciosSeleccionados.some(s => s.servicio_id === servicioConfig.servicio_id);
+
+    if (isSelected) {
+      setServiciosSeleccionados(prev => prev.filter(s => s.servicio_id !== servicioConfig.servicio_id));
+    } else {
+      // Seleccionar con el primer nivel
+      const nivel = servicioConfig.niveles?.[0];
+      if (!nivel) return;
+
+      const newServicio = {
+        servicio_id: servicioConfig.servicio_id,
+        servicio_nombre: servicioConfig.servicio_nombre,
+        nivel_id: servicioConfig.tiene_niveles ? nivel.id : null,
+        nivel_nombre: servicioConfig.tiene_niveles ? nivel.nombre : null,
+        tipo_impacto: nivel.tipo_impacto,
+        valor_porcentaje: nivel.valor_porcentaje,
+        valor_monto: nivel.valor_monto
+      };
+
+      setServiciosSeleccionados(prev => [...prev, newServicio]);
+    }
   };
 
-  const toggleAcabado = (acabadoId: string) => {
-    setAcabadosIds(prev =>
-      prev.includes(acabadoId)
-        ? prev.filter(id => id !== acabadoId)
-        : [...prev, acabadoId]
-    );
+  const handleChangeNivelServicio = (servicioConfig: typeof config.servicios[0], nivelId: string) => {
+    const nivel = servicioConfig.niveles?.find(n => n.id === nivelId);
+    if (!nivel) return;
+
+    setServiciosSeleccionados(prev => prev.map(s => {
+      if (s.servicio_id === servicioConfig.servicio_id) {
+        return {
+          ...s,
+          nivel_id: nivel.id,
+          nivel_nombre: nivel.nombre,
+          tipo_impacto: nivel.tipo_impacto,
+          valor_porcentaje: nivel.valor_porcentaje,
+          valor_monto: nivel.valor_monto
+        };
+      }
+      return s;
+    }));
+  };
+
+  const handleToggleAcabado = (acabadoConfig: typeof config.acabados[0]) => {
+    const isSelected = acabadosSeleccionados.some(a => a.acabado_id === acabadoConfig.acabado_id);
+
+    if (isSelected) {
+      setAcabadosSeleccionados(prev => prev.filter(a => a.acabado_id !== acabadoConfig.acabado_id));
+    } else {
+      // Seleccionar con el primer nivel
+      const nivel = acabadoConfig.niveles?.[0];
+      if (!nivel) return;
+
+      const newAcabado = {
+        acabado_id: acabadoConfig.acabado_id,
+        acabado_nombre: acabadoConfig.acabado_nombre,
+        nivel_id: acabadoConfig.tiene_niveles ? nivel.id : null,
+        nivel_nombre: acabadoConfig.tiene_niveles ? nivel.nombre : null,
+        tipo_impacto: nivel.tipo_impacto,
+        valor_porcentaje: nivel.valor_porcentaje,
+        valor_monto: nivel.valor_monto
+      };
+
+      setAcabadosSeleccionados(prev => [...prev, newAcabado]);
+    }
+  };
+
+  const handleChangeNivelAcabado = (acabadoConfig: typeof config.acabados[0], nivelId: string) => {
+    const nivel = acabadoConfig.niveles?.find(n => n.id === nivelId);
+    if (!nivel) return;
+
+    setAcabadosSeleccionados(prev => prev.map(a => {
+      if (a.acabado_id === acabadoConfig.acabado_id) {
+        return {
+          ...a,
+          nivel_id: nivel.id,
+          nivel_nombre: nivel.nombre,
+          tipo_impacto: nivel.tipo_impacto,
+          valor_porcentaje: nivel.valor_porcentaje,
+          valor_monto: nivel.valor_monto
+        };
+      }
+      return a;
+    }));
+  };
+
+  const formatImpacto = (item: { tipo_impacto: string; valor_monto: number | null; valor_porcentaje: number | null }) => {
+    if (item.tipo_impacto === 'precio_fijo' && item.valor_monto) {
+      return `+ $${item.valor_monto.toFixed(2)} (precio fijo)`;
+    }
+    if (item.tipo_impacto === 'por_unidad' && item.valor_monto) {
+      return `+ $${item.valor_monto.toFixed(2)}/unidad`;
+    }
+    if (item.tipo_impacto === 'porcentual' && item.valor_porcentaje) {
+      return `+ ${item.valor_porcentaje}% sobre precio base`;
+    }
+    if (item.tipo_impacto === 'por_mt2' && item.valor_monto) {
+      return `+ $${item.valor_monto.toFixed(2)}/MT2`;
+    }
+    if (item.tipo_impacto === 'por_metro_lineal' && item.valor_monto) {
+      return `+ $${item.valor_monto.toFixed(2)}/metro lineal`;
+    }
+    return '';
   };
 
   return (
@@ -282,99 +387,113 @@ export function AddLineModal({
         </Card>
 
         {/* Sección 3: Servicios */}
-        {selectedServicios.length > 0 && (
+        {config.servicios.length > 0 && (
           <Card className="p-6">
             <div className="flex items-center gap-2 mb-4">
               <Wrench className="w-5 h-5 text-blue-600" />
               <h3 className="text-lg font-semibold text-gray-900">Servicios para esta línea</h3>
             </div>
 
-            <div className="space-y-2">
-              {selectedServicios.map((servicio) => (
-                <label
-                  key={servicio.servicio_id}
-                  className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 cursor-pointer border border-gray-200"
-                >
-                  <input
-                    type="checkbox"
-                    checked={serviciosIds.includes(servicio.servicio_id)}
-                    onChange={() => toggleServicio(servicio.servicio_id)}
-                    className="mt-1"
-                  />
-                  <div className="flex-1">
-                    <div className="font-medium text-gray-900">{servicio.servicio_nombre}</div>
-                    {servicio.nivel_nombre && (
-                      <div className="text-sm text-gray-600">Nivel: {servicio.nivel_nombre}</div>
-                    )}
-                    <div className="text-sm text-gray-500">
-                      {servicio.tipo_impacto === 'precio_fijo' && servicio.valor_monto && (
-                        `+ $${servicio.valor_monto.toFixed(2)} (precio fijo)`
-                      )}
-                      {servicio.tipo_impacto === 'por_unidad' && servicio.valor_monto && (
-                        `+ $${servicio.valor_monto.toFixed(2)}/unidad`
-                      )}
-                      {servicio.tipo_impacto === 'porcentual' && servicio.valor_porcentaje && (
-                        `+ ${servicio.valor_porcentaje}% sobre precio base`
-                      )}
-                      {servicio.tipo_impacto === 'por_mt2' && servicio.valor_monto && (
-                        `+ $${servicio.valor_monto.toFixed(2)}/MT2`
-                      )}
-                      {servicio.tipo_impacto === 'por_metro_lineal' && servicio.valor_monto && (
-                        `+ $${servicio.valor_monto.toFixed(2)}/metro lineal`
-                      )}
-                    </div>
+            <div className="space-y-3">
+              {config.servicios.map((servicioConfig) => {
+                const servicioSeleccionado = serviciosSeleccionados.find(s => s.servicio_id === servicioConfig.servicio_id);
+                const isSelected = !!servicioSeleccionado;
+
+                return (
+                  <div key={servicioConfig.servicio_id} className="border border-gray-200 rounded-lg p-3">
+                    <label className="flex items-start gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => handleToggleServicio(servicioConfig)}
+                        className="mt-1"
+                      />
+                      <div className="flex-1">
+                        <div className="font-medium text-gray-900">{servicioConfig.servicio_nombre}</div>
+
+                        {/* Dropdown de niveles si los tiene y son más de 1 */}
+                        {servicioConfig.tiene_niveles && servicioConfig.niveles && servicioConfig.niveles.length > 1 && (
+                          <select
+                            value={servicioSeleccionado?.nivel_id || ''}
+                            onChange={(e) => handleChangeNivelServicio(servicioConfig, e.target.value)}
+                            disabled={!isSelected}
+                            className="mt-2 text-sm border border-gray-300 rounded px-2 py-1 w-full disabled:opacity-50"
+                          >
+                            {servicioConfig.niveles.map(nivel => (
+                              <option key={nivel.id} value={nivel.id}>
+                                {nivel.nombre} - {formatImpacto(nivel)}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+
+                        {/* Mostrar impacto del servicio/nivel seleccionado */}
+                        {servicioSeleccionado && (
+                          <div className="text-sm text-gray-500 mt-1">
+                            {formatImpacto(servicioSeleccionado)}
+                          </div>
+                        )}
+                      </div>
+                    </label>
                   </div>
-                </label>
-              ))}
+                );
+              })}
             </div>
           </Card>
         )}
 
         {/* Sección 4: Acabados */}
-        {selectedAcabados.length > 0 && (
+        {config.acabados.length > 0 && (
           <Card className="p-6">
             <div className="flex items-center gap-2 mb-4">
               <Sparkles className="w-5 h-5 text-blue-600" />
               <h3 className="text-lg font-semibold text-gray-900">Acabados para esta línea</h3>
             </div>
 
-            <div className="space-y-2">
-              {selectedAcabados.map((acabado) => (
-                <label
-                  key={acabado.acabado_id}
-                  className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 cursor-pointer border border-gray-200"
-                >
-                  <input
-                    type="checkbox"
-                    checked={acabadosIds.includes(acabado.acabado_id)}
-                    onChange={() => toggleAcabado(acabado.acabado_id)}
-                    className="mt-1"
-                  />
-                  <div className="flex-1">
-                    <div className="font-medium text-gray-900">{acabado.acabado_nombre}</div>
-                    {acabado.nivel_nombre && (
-                      <div className="text-sm text-gray-600">Nivel: {acabado.nivel_nombre}</div>
-                    )}
-                    <div className="text-sm text-gray-500">
-                      {acabado.tipo_impacto === 'precio_fijo' && acabado.valor_monto && (
-                        `+ $${acabado.valor_monto.toFixed(2)} (precio fijo)`
-                      )}
-                      {acabado.tipo_impacto === 'por_unidad' && acabado.valor_monto && (
-                        `+ $${acabado.valor_monto.toFixed(2)}/unidad`
-                      )}
-                      {acabado.tipo_impacto === 'porcentual' && acabado.valor_porcentaje && (
-                        `+ ${acabado.valor_porcentaje}% sobre precio base`
-                      )}
-                      {acabado.tipo_impacto === 'por_mt2' && acabado.valor_monto && (
-                        `+ $${acabado.valor_monto.toFixed(2)}/MT2`
-                      )}
-                      {acabado.tipo_impacto === 'por_metro_lineal' && acabado.valor_monto && (
-                        `+ $${acabado.valor_monto.toFixed(2)}/metro lineal`
-                      )}
-                    </div>
+            <div className="space-y-3">
+              {config.acabados.map((acabadoConfig) => {
+                const acabadoSeleccionado = acabadosSeleccionados.find(a => a.acabado_id === acabadoConfig.acabado_id);
+                const isSelected = !!acabadoSeleccionado;
+
+                return (
+                  <div key={acabadoConfig.acabado_id} className="border border-gray-200 rounded-lg p-3">
+                    <label className="flex items-start gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => handleToggleAcabado(acabadoConfig)}
+                        className="mt-1"
+                      />
+                      <div className="flex-1">
+                        <div className="font-medium text-gray-900">{acabadoConfig.acabado_nombre}</div>
+
+                        {/* Dropdown de niveles si los tiene y son más de 1 */}
+                        {acabadoConfig.tiene_niveles && acabadoConfig.niveles && acabadoConfig.niveles.length > 1 && (
+                          <select
+                            value={acabadoSeleccionado?.nivel_id || ''}
+                            onChange={(e) => handleChangeNivelAcabado(acabadoConfig, e.target.value)}
+                            disabled={!isSelected}
+                            className="mt-2 text-sm border border-gray-300 rounded px-2 py-1 w-full disabled:opacity-50"
+                          >
+                            {acabadoConfig.niveles.map(nivel => (
+                              <option key={nivel.id} value={nivel.id}>
+                                {nivel.nombre} - {formatImpacto(nivel)}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+
+                        {/* Mostrar impacto del acabado/nivel seleccionado */}
+                        {acabadoSeleccionado && (
+                          <div className="text-sm text-gray-500 mt-1">
+                            {formatImpacto(acabadoSeleccionado)}
+                          </div>
+                        )}
+                      </div>
+                    </label>
                   </div>
-                </label>
-              ))}
+                );
+              })}
             </div>
           </Card>
         )}

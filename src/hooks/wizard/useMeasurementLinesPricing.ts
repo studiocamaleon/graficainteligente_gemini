@@ -65,8 +65,8 @@ export function useMeasurementLinesPricing(
           categoria,
           line,
           baseConfig,
-          allServicios,
-          allAcabados,
+          line.servicios || [],  // Servicios de la línea
+          line.acabados || [],   // Acabados de la línea
           tipoVentaReal,
           precioPorUnidadRango || undefined  // Pasar el precio del rango
         );
@@ -111,16 +111,14 @@ export function useMeasurementLinesPricing(
       alto: l.alto,
       ancho_seleccionado: l.ancho_seleccionado,
       metros_lineales: l.metros_lineales,
-      servicios_ids: l.servicios_ids,
-      acabados_ids: l.acabados_ids
+      servicios: l.servicios,
+      acabados: l.acabados
     }))),
     baseConfig.material_id,
     baseConfig.tecnologia_id,
     baseConfig.tinta,
     baseConfig.espesor,
     baseConfig.color,
-    allServicios.length,
-    allAcabados.length,
     tipoVentaReal
   ]);
 }

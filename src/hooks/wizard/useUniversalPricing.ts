@@ -639,8 +639,9 @@ export async function calculateLinePrice(
     const mt2 = line.mt2_calculado || 0;
     const metrosLineales = line.metros_lineales || 0;
 
-    // Filtrar servicios aplicables a esta línea
-    const serviciosLinea = allServicios.filter(s => line.servicios_ids.includes(s.servicio_id));
+    // Usar servicios y acabados directamente de la línea
+    const serviciosLinea = line.servicios || [];
+    const acabadosLinea = line.acabados || [];
 
     // Calcular impacto de servicios
     let precioServiciosTotal = 0;
@@ -656,9 +657,6 @@ export async function calculateLinePrice(
       );
       precioServiciosTotal += impacto;
     }
-
-    // Filtrar acabados aplicables a esta línea
-    const acabadosLinea = allAcabados.filter(a => line.acabados_ids.includes(a.acabado_id));
 
     // Calcular impacto de acabados
     let precioAcabadosTotal = 0;
