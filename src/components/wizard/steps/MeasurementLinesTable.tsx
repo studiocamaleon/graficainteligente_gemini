@@ -5,8 +5,10 @@ import { Badge } from '../../ui/Badge';
 import { Table } from '../../ui/Table';
 import { Plus, Edit2, Trash2, Layers } from 'lucide-react';
 import { AddLineModal } from './AddLineModal';
+import { useMeasurementLinesPricing } from '../../../hooks/wizard/useMeasurementLinesPricing';
 import type { ProductConfiguration } from '../../../hooks/wizard/useProductConfiguration';
-import type { MeasurementLine } from './ConfigurationStep';
+import type { ProductCategory } from '../../../hooks/wizard/useUniversalProductSearch';
+import type { MeasurementLine, SelectedConfiguration } from './ConfigurationStep';
 import type { SelectedService, SelectedFinishing } from './ServicesAndFinishingsStep';
 
 interface MeasurementLinesTableProps {
@@ -14,6 +16,7 @@ interface MeasurementLinesTableProps {
   lines: MeasurementLine[];
   selectedServicios: SelectedService[];
   selectedAcabados: SelectedFinishing[];
+  baseConfig: Omit<SelectedConfiguration, 'lineas_medidas'>;
   onChange: (lines: MeasurementLine[]) => void;
 }
 
@@ -22,10 +25,23 @@ export function MeasurementLinesTable({
   lines,
   selectedServicios,
   selectedAcabados,
+  baseConfig,
   onChange
 }: MeasurementLinesTableProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingLine, setEditingLine] = useState<MeasurementLine | undefined>(undefined);
+
+  // Calcular precios de las líneas automáticamente
+  useMeasurementLinesPricing(
+    config.id,
+    config.categoria as ProductCategory,
+    lines,
+    baseConfig,
+    selectedServicios,
+    selectedAcabados,
+    config.tipo_venta_real,
+    onChange
+  );
 
   const handleAddLine = (line: MeasurementLine) => {
     onChange([...lines, line]);

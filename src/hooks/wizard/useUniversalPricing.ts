@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
 import type { ProductCategory } from './useUniversalProductSearch';
-import type { SelectedConfiguration } from '../../components/wizard/steps/ConfigurationStep';
+import type { SelectedConfiguration, MeasurementLine } from '../../components/wizard/steps/ConfigurationStep';
 import type { SelectedService, SelectedFinishing } from '../../components/wizard/steps/ServicesAndFinishingsStep';
 
 export interface PriceCalculationResult {
@@ -436,4 +436,230 @@ function calcularImpacto(
     default:
       return 0;
   }
+}
+
+// ===============================================
+// FUNCIÓN PARA CALCULAR PRECIO DE UNA LÍNEA INDIVIDUAL
+// ===============================================
+
+/**
+ * Calcula el precio de una línea individual de medida/cantidad
+ * @param productId - ID del producto
+ * @param categoria - Categoría del producto
+ * @param line - Línea con medidas, cantidad, servicios y acabados
+ * @param baseConfig - Configuración base (material, tecnología, etc.)
+ * @param allServicios - Todos los servicios disponibles
+ * @param allAcabados - Todos los acabados disponibles
+ * @param tipoVentaReal - Tipo de venta real del producto
+ * @returns Precio calculado para la línea
+ */
+export async function calculateLinePrice(
+  productId: string,
+  categoria: ProductCategory,
+  line: MeasurementLine,
+  baseConfig: Omit<SelectedConfiguration, 'lineas_medidas'>,
+  allServicios: SelectedService[],
+  allAcabados: SelectedFinishing[],
+  tipoVentaReal?: 'mt2' | 'mt_lineal' | 'unidad' | 'cantidades_fijas'
+): Promise<{
+  precio_base_unitario: number;
+  precio_servicios_unitario: number;
+  precio_acabados_unitario: number;
+  precio_unitario_final: number;
+  precio_total_linea: number;
+} | null> {
+  try {
+    // Crear configuración temporal para esta línea
+    const lineConfig: SelectedConfiguration = {
+      ...baseConfig,
+      lineas_medidas: [],
+      cantidad: line.cantidad,
+      medida_ancho: line.ancho || line.ancho_seleccionado || null,
+      medida_alto: line.alto || null,
+      medida_mt2: line.mt2_calculado || null
+    };
+
+    // Calcular precio base según categoría
+    let precioBaseUnitario: number | null = null;
+
+    switch (categoria) {
+      case 'Impresion Gran Formato':
+        precioBaseUnitario = await getPrecioGranFormatoLine(productId, lineConfig, line, tipoVentaReal);
+        break;
+      case 'Materiales Rigidos':
+        precioBaseUnitario = await getPrecioMaterialesRigidosLine(productId, lineConfig, line);
+        break;
+      case 'Plotter de Corte':
+        precioBaseUnitario = await getPrecioPlotterCorteLine(productId, lineConfig, line);
+        break;
+      default:
+        // Para otras categorías, usar el método tradicional
+        switch (categoria) {
+          case 'Impresion Laser':
+            precioBaseUnitario = await getPrecioImpresionLaser(productId, lineConfig);
+            break;
+          case 'Portabanners':
+            precioBaseUnitario = await getPrecioPortabanners(productId, lineConfig);
+            break;
+          case 'Sellos':
+            precioBaseUnitario = await getPrecioSellos(productId, lineConfig);
+            break;
+        }
+    }
+
+    if (precioBaseUnitario === null) {
+      return null;
+    }
+
+    const precioBaseTotal = precioBaseUnitario * line.cantidad;
+
+    // Calcular MT2 y metros lineales para esta línea
+    const mt2 = line.mt2_calculado || 0;
+    const metrosLineales = line.metros_lineales || 0;
+
+    // Filtrar servicios aplicables a esta línea
+    const serviciosLinea = allServicios.filter(s => line.servicios_ids.includes(s.servicio_id));
+
+    // Calcular impacto de servicios
+    let precioServiciosTotal = 0;
+    for (const servicio of serviciosLinea) {
+      const impacto = calcularImpacto(
+        servicio.tipo_impacto,
+        servicio.valor_monto,
+        servicio.valor_porcentaje,
+        precioBaseTotal,
+        mt2,
+        metrosLineales,
+        line.cantidad
+      );
+      precioServiciosTotal += impacto;
+    }
+
+    // Filtrar acabados aplicables a esta línea
+    const acabadosLinea = allAcabados.filter(a => line.acabados_ids.includes(a.acabado_id));
+
+    // Calcular impacto de acabados
+    let precioAcabadosTotal = 0;
+    for (const acabado of acabadosLinea) {
+      const impacto = calcularImpacto(
+        acabado.tipo_impacto,
+        acabado.valor_monto,
+        acabado.valor_porcentaje,
+        precioBaseTotal,
+        mt2,
+        metrosLineales,
+        line.cantidad
+      );
+      precioAcabadosTotal += impacto;
+    }
+
+    // Calcular precios unitarios y totales
+    const precioServiciosUnitario = precioServiciosTotal / line.cantidad;
+    const precioAcabadosUnitario = precioAcabadosTotal / line.cantidad;
+    const precioUnitarioFinal = precioBaseUnitario + precioServiciosUnitario + precioAcabadosUnitario;
+    const precioTotalLinea = precioBaseTotal + precioServiciosTotal + precioAcabadosTotal;
+
+    return {
+      precio_base_unitario: precioBaseUnitario,
+      precio_servicios_unitario: precioServiciosUnitario,
+      precio_acabados_unitario: precioAcabadosUnitario,
+      precio_unitario_final: precioUnitarioFinal,
+      precio_total_linea: precioTotalLinea
+    };
+  } catch (error) {
+    console.error('Error calculando precio de línea:', error);
+    return null;
+  }
+}
+
+// Funciones auxiliares para calcular precio base por línea
+
+async function getPrecioGranFormatoLine(
+  productId: string,
+  config: SelectedConfiguration,
+  line: MeasurementLine,
+  tipoVentaReal?: string
+): Promise<number | null> {
+  if (!config.tinta) return null;
+
+  const { data, error } = await supabase
+    .from('productos_gran_formato_precios')
+    .select('precio, rango_precio_min, rango_precio_max')
+    .eq('producto_gran_formato_id', productId)
+    .eq('tinta', config.tinta);
+
+  if (error || !data || data.length === 0) return null;
+
+  // Buscar precio en rango según cantidad de la línea
+  const precioRango = data.find(p =>
+    line.cantidad >= p.rango_precio_min &&
+    (p.rango_precio_max === null || line.cantidad <= p.rango_precio_max)
+  );
+
+  if (!precioRango) return null;
+
+  // Determinar si es MT2 o Metro Lineal
+  if (tipoVentaReal === 'mt2') {
+    // Precio por MT2 * MT2 de la línea
+    return precioRango.precio * (line.mt2_calculado || 0);
+  } else {
+    // Precio por metro lineal * metros lineales de la línea
+    return precioRango.precio * (line.metros_lineales || 0);
+  }
+}
+
+async function getPrecioMaterialesRigidosLine(
+  productId: string,
+  config: SelectedConfiguration,
+  line: MeasurementLine
+): Promise<number | null> {
+  if (!config.material_id || !config.espesor) return null;
+
+  const { data, error } = await supabase
+    .from('productos_materiales_rigidos_precios')
+    .select('precio, rango_precio_min, rango_precio_max')
+    .eq('producto_materiales_rigidos_id', productId)
+    .eq('material_id', config.material_id)
+    .eq('variante_id', config.variante_id)
+    .eq('espesor', config.espesor);
+
+  if (error || !data || data.length === 0) return null;
+
+  // Buscar precio en rango según cantidad de la línea
+  const precioRango = data.find(p =>
+    line.cantidad >= p.rango_precio_min &&
+    (p.rango_precio_max === null || line.cantidad <= p.rango_precio_max)
+  );
+
+  if (!precioRango) return null;
+
+  // Precio es por MT2
+  return precioRango.precio * (line.mt2_calculado || 0);
+}
+
+async function getPrecioPlotterCorteLine(
+  productId: string,
+  config: SelectedConfiguration,
+  line: MeasurementLine
+): Promise<number | null> {
+  if (!config.color) return null;
+
+  const { data, error } = await supabase
+    .from('productos_plotter_corte_precios')
+    .select('precio, rango_precio_min, rango_precio_max')
+    .eq('producto_id', productId)
+    .eq('color', config.color);
+
+  if (error || !data || data.length === 0) return null;
+
+  // Buscar precio en rango según cantidad de la línea
+  const precioRango = data.find(p =>
+    line.cantidad >= p.rango_precio_min &&
+    (p.rango_precio_max === null || line.cantidad <= p.rango_precio_max)
+  );
+
+  if (!precioRango) return null;
+
+  // Precio es por metro lineal
+  return precioRango.precio * (line.metros_lineales || 0);
 }

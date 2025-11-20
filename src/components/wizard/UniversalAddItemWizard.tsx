@@ -124,6 +124,61 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
   const isConfigurationComplete = (): boolean => {
     if (!config) return false;
 
+    // Si permite m\u00faltiples l\u00edneas, validar l\u00edneas
+    if (config.permite_multiples_lineas) {
+      // Debe haber al menos una l\u00ednea
+      if (!selectedConfig.lineas_medidas || selectedConfig.lineas_medidas.length === 0) {
+        return false;
+      }
+
+      // Validar cada l\u00ednea
+      for (const linea of selectedConfig.lineas_medidas) {
+        // Validar medidas seg\u00fan tipo
+        if (config.tipo_venta_real === 'mt2') {
+          if (!linea.ancho || linea.ancho <= 0 || !linea.alto || linea.alto <= 0) {
+            return false;
+          }
+
+          // Validar cantidad m\u00ednima en MT2 si aplica
+          if (config.cantidad_minima && linea.mt2_calculado && linea.mt2_calculado < config.cantidad_minima) {
+            return false;
+          }
+        } else if (config.tipo_venta_real === 'mt_lineal') {
+          if (!linea.ancho_seleccionado || !linea.metros_lineales || linea.metros_lineales <= 0) {
+            return false;
+          }
+
+          // Validar cantidad m\u00ednima en metros lineales si aplica
+          if (config.cantidad_minima && linea.metros_lineales < config.cantidad_minima) {
+            return false;
+          }
+        }
+
+        // Validar cantidad de unidades
+        if (!linea.cantidad || linea.cantidad <= 0) {
+          return false;
+        }
+      }
+
+      // Validar material si es necesario y no se auto-selecciona
+      const shouldValidateMaterial = config.materiales && config.materiales.length > 1;
+      if (shouldValidateMaterial && !selectedConfig.material_id) {
+        return false;
+      }
+
+      // Validar tecnolog\u00eda si es necesario
+      if (config.tecnologias && config.tecnologias.length > 0) {
+        if (!selectedConfig.tecnologia_id) return false;
+
+        // Validar tinta si la tecnolog\u00eda tiene tintas
+        const tec = config.tecnologias.find(t => t.tecnologia_id === selectedConfig.tecnologia_id);
+        if (tec && tec.tintas.length > 0 && !selectedConfig.tinta) return false;
+      }
+
+      return true;
+    }
+
+    // L\u00f3gica tradicional para productos sin m\u00faltiples l\u00edneas
     // Validar cantidad
     if (selectedConfig.cantidad < 1) return false;
     if (config.cantidad_minima && selectedConfig.cantidad < config.cantidad_minima) return false;
@@ -184,6 +239,7 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
     setSearchTerm('');
     setSelectedProduct(null);
     setSelectedConfig({
+      lineas_medidas: [],
       cantidad: 1,
       medida_ancho: null,
       medida_alto: null,
@@ -254,58 +310,124 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
   };
 
   const handleAgregar = async () => {
-    if (!selectedProduct || !config || precioTotal === null) return;
+    if (!selectedProduct || !config) return;
 
     setIsSubmitting(true);
     try {
-      // Ahora precioTotal, precioBase, precioServicios y precioAcabados son todos unitarios
-      const itemData = {
-        producto_id: selectedProduct.id,
-        producto_nombre: selectedProduct.nombre,
-        categoria: selectedProduct.categoria,
-        categoria_id: selectedProduct.categoria_id,
-        cantidad: selectedConfig.cantidad,
-        configuracion: {
-          categoria: selectedProduct.categoria,
-          medida_ancho: selectedConfig.medida_ancho,
-          medida_alto: selectedConfig.medida_alto,
-          material_id: selectedConfig.material_id,
-          material_nombre: selectedConfig.material_nombre,
-          variante_id: selectedConfig.variante_id,
-          variante_nombre: selectedConfig.variante_nombre,
-          espesor: selectedConfig.espesor,
-          unidad_espesor: selectedConfig.unidad_espesor,
-          gramaje: selectedConfig.gramaje,
-          tecnologia_id: selectedConfig.tecnologia_id,
-          tecnologia_nombre: selectedConfig.tecnologia_nombre,
-          tinta: selectedConfig.tinta,
-          tinta_nombre: selectedConfig.tinta_nombre,
-          cara_impresa: selectedConfig.cara_impresa,
-          color: selectedConfig.color,
-          marca: selectedConfig.marca,
-          servicios_seleccionados: selectedServicios.map(s => ({
-            servicio_id: s.servicio_id,
-            nombre: s.servicio_nombre,
-            nivel: s.nivel_nombre,
-          })),
-          acabados_seleccionados: selectedAcabados.map(a => ({
-            acabado_id: a.acabado_id,
-            nombre: a.acabado_nombre,
-            nivel: a.nivel_nombre,
-          }))
-        },
-        precio_base: precioBase || 0,
-        precio_servicios: precioServicios,
-        precio_acabados: precioAcabados,
-        precio_unitario_final: precioTotal,
-        precio_total: precioTotal * selectedConfig.cantidad,
-        impuesto_iva: config.impuesto_iva
-      };
+      // Si el producto permite m\u00faltiples l\u00edneas, crear un item por cada l\u00ednea
+      if (config.permite_multiples_lineas && selectedConfig.lineas_medidas.length > 0) {
+        for (const linea of selectedConfig.lineas_medidas) {
+          // Filtrar servicios para esta l\u00ednea
+          const serviciosLinea = selectedServicios
+            .filter(s => linea.servicios_ids.includes(s.servicio_id))
+            .map(s => ({
+              servicio_id: s.servicio_id,
+              nombre: s.servicio_nombre,
+              nivel: s.nivel_nombre,
+            }));
 
-      await onAgregar(itemData);
+          // Filtrar acabados para esta l\u00ednea
+          const acabadosLinea = selectedAcabados
+            .filter(a => linea.acabados_ids.includes(a.acabado_id))
+            .map(a => ({
+              acabado_id: a.acabado_id,
+              nombre: a.acabado_nombre,
+              nivel: a.nivel_nombre,
+            }));
+
+          // Construir configuraci\u00f3n JSONB para esta l\u00ednea
+          const itemData = {
+            producto_id: selectedProduct.id,
+            producto_nombre: selectedProduct.nombre,
+            categoria: selectedProduct.categoria,
+            categoria_id: selectedProduct.categoria_id,
+            cantidad: linea.cantidad,
+            configuracion: {
+              categoria: selectedProduct.categoria,
+              medida_ancho: linea.ancho || linea.ancho_seleccionado || null,
+              medida_alto: linea.alto || null,
+              mt2_total: linea.mt2_calculado,
+              mt_lineal_total: linea.metros_lineales,
+              material_id: selectedConfig.material_id,
+              material_nombre: selectedConfig.material_nombre,
+              variante_id: selectedConfig.variante_id,
+              variante_nombre: selectedConfig.variante_nombre,
+              espesor: selectedConfig.espesor,
+              unidad_espesor: selectedConfig.unidad_espesor,
+              gramaje: selectedConfig.gramaje,
+              tecnologia_id: selectedConfig.tecnologia_id,
+              tecnologia_nombre: selectedConfig.tecnologia_nombre,
+              tinta: selectedConfig.tinta,
+              tinta_nombre: selectedConfig.tinta_nombre,
+              cara_impresa: selectedConfig.cara_impresa,
+              color: selectedConfig.color,
+              marca: selectedConfig.marca,
+              servicios_seleccionados: serviciosLinea,
+              acabados_seleccionados: acabadosLinea
+            },
+            precio_base: linea.precio_base_unitario || 0,
+            precio_servicios: linea.precio_servicios_unitario || 0,
+            precio_acabados: linea.precio_acabados_unitario || 0,
+            precio_unitario_final: linea.precio_unitario_final || 0,
+            precio_total: linea.precio_total_linea || 0,
+            impuesto_iva: config.impuesto_iva
+          };
+
+          await onAgregar(itemData);
+        }
+      } else {
+        // L\u00f3gica tradicional para productos sin m\u00faltiples l\u00edneas
+        if (precioTotal === null) return;
+
+        const itemData = {
+          producto_id: selectedProduct.id,
+          producto_nombre: selectedProduct.nombre,
+          categoria: selectedProduct.categoria,
+          categoria_id: selectedProduct.categoria_id,
+          cantidad: selectedConfig.cantidad,
+          configuracion: {
+            categoria: selectedProduct.categoria,
+            medida_ancho: selectedConfig.medida_ancho,
+            medida_alto: selectedConfig.medida_alto,
+            material_id: selectedConfig.material_id,
+            material_nombre: selectedConfig.material_nombre,
+            variante_id: selectedConfig.variante_id,
+            variante_nombre: selectedConfig.variante_nombre,
+            espesor: selectedConfig.espesor,
+            unidad_espesor: selectedConfig.unidad_espesor,
+            gramaje: selectedConfig.gramaje,
+            tecnologia_id: selectedConfig.tecnologia_id,
+            tecnologia_nombre: selectedConfig.tecnologia_nombre,
+            tinta: selectedConfig.tinta,
+            tinta_nombre: selectedConfig.tinta_nombre,
+            cara_impresa: selectedConfig.cara_impresa,
+            color: selectedConfig.color,
+            marca: selectedConfig.marca,
+            servicios_seleccionados: selectedServicios.map(s => ({
+              servicio_id: s.servicio_id,
+              nombre: s.servicio_nombre,
+              nivel: s.nivel_nombre,
+            })),
+            acabados_seleccionados: selectedAcabados.map(a => ({
+              acabado_id: a.acabado_id,
+              nombre: a.acabado_nombre,
+              nivel: a.nivel_nombre,
+            }))
+          },
+          precio_base: precioBase || 0,
+          precio_servicios: precioServicios,
+          precio_acabados: precioAcabados,
+          precio_unitario_final: precioTotal,
+          precio_total: precioTotal * selectedConfig.cantidad,
+          impuesto_iva: config.impuesto_iva
+        };
+
+        await onAgregar(itemData);
+      }
+
       handleClose();
     } catch (error) {
-      console.error('Error agregando item:', error);
+      console.error('Error agregando item(s):', error);
     } finally {
       setIsSubmitting(false);
     }

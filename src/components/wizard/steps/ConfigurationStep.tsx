@@ -457,6 +457,26 @@ export function ConfigurationStep({
           lines={localConfig.lineas_medidas}
           selectedServicios={selectedServicios}
           selectedAcabados={selectedAcabados}
+          baseConfig={{
+            cantidad: localConfig.cantidad,
+            medida_ancho: localConfig.medida_ancho,
+            medida_alto: localConfig.medida_alto,
+            medida_mt2: localConfig.medida_mt2,
+            material_id: localConfig.material_id,
+            material_nombre: localConfig.material_nombre,
+            variante_id: localConfig.variante_id,
+            variante_nombre: localConfig.variante_nombre,
+            espesor: localConfig.espesor,
+            unidad_espesor: localConfig.unidad_espesor,
+            gramaje: localConfig.gramaje,
+            tecnologia_id: localConfig.tecnologia_id,
+            tecnologia_nombre: localConfig.tecnologia_nombre,
+            tinta: localConfig.tinta,
+            tinta_nombre: localConfig.tinta_nombre,
+            cara_impresa: localConfig.cara_impresa,
+            color: localConfig.color,
+            marca: localConfig.marca
+          }}
           onChange={(lines) => handleChange({ lineas_medidas: lines })}
         />
       )}
