@@ -180,16 +180,17 @@ export function OrdenItemsTab({
         </div>
 
         {/* Línea 2: Servicios y Acabados con badges */}
-        {((config.servicios && config.servicios.length > 0) || (config.acabados && config.acabados.length > 0)) && (
+        {((config.servicios_seleccionados && config.servicios_seleccionados.length > 0) ||
+          (config.acabados_seleccionados && config.acabados_seleccionados.length > 0)) && (
           <div className="flex flex-wrap gap-1.5">
-            {config.servicios?.map((s: any, idx: number) => (
+            {config.servicios_seleccionados?.map((s: any, idx: number) => (
               <Badge key={`servicio-${idx}`} variant="blue" size="sm">
-                {s.nivel_nombre ? `${s.servicio_nombre} (${s.nivel_nombre})` : s.servicio_nombre}
+                {s.nivel ? `${s.nombre} (${s.nivel})` : s.nombre}
               </Badge>
             ))}
-            {config.acabados?.map((a: any, idx: number) => (
+            {config.acabados_seleccionados?.map((a: any, idx: number) => (
               <Badge key={`acabado-${idx}`} variant="purple" size="sm">
-                {a.nivel_nombre ? `${a.acabado_nombre} (${a.nivel_nombre})` : a.acabado_nombre}
+                {a.nivel ? `${a.nombre} (${a.nivel})` : a.nombre}
               </Badge>
             ))}
           </div>
