@@ -237,7 +237,7 @@ async function loadImpresionLaserConfig(productId: string): Promise<ProductConfi
 async function loadGranFormatoConfig(productId: string): Promise<ProductConfiguration> {
   const { data: producto, error: prodError } = await supabase
     .from('productos_gran_formato')
-    .select('id, nombre, tipo_venta, cantidad_minima, tipo_medida, anchos_disponibles, impuesto_iva')
+    .select('id, nombre, tipo_venta, cantidad_minima, anchos_disponibles, impuesto_iva')
     .eq('id', productId)
     .single();
 
@@ -281,9 +281,8 @@ async function loadGranFormatoConfig(productId: string): Promise<ProductConfigur
     id: producto.id,
     nombre: producto.nombre,
     categoria: 'Impresion Gran Formato',
-    tipo_medida: producto.tipo_medida,
     anchos_disponibles: producto.anchos_disponibles || [],
-    tipo_venta: 'unidad',
+    tipo_venta: producto.tipo_venta as 'unidad' | 'cantidades_fijas',
     cantidad_minima: producto.cantidad_minima,
     materiales: materiales?.map(m => ({
       id: m.id,
@@ -307,7 +306,7 @@ async function loadGranFormatoConfig(productId: string): Promise<ProductConfigur
 async function loadMaterialesRigidosConfig(productId: string): Promise<ProductConfiguration> {
   const { data: producto, error: prodError } = await supabase
     .from('productos_materiales_rigidos')
-    .select('id, nombre, tipo_venta, cantidad_minima, tipo_medida, impuesto_iva')
+    .select('id, nombre, tipo_venta, cantidad_minima, medidas_ancho, medidas_alto, impuesto_iva')
     .eq('id', productId)
     .single();
 
@@ -346,7 +345,7 @@ async function loadMaterialesRigidosConfig(productId: string): Promise<ProductCo
     id: producto.id,
     nombre: producto.nombre,
     categoria: 'Materiales Rigidos',
-    tipo_medida: producto.tipo_medida,
+    medidas: [{ ancho: producto.medidas_ancho, alto: producto.medidas_alto }],
     tipo_venta: producto.tipo_venta as 'unidad' | 'cantidades_fijas',
     cantidad_minima: producto.cantidad_minima,
     espesores_disponibles: espesores,
@@ -368,7 +367,7 @@ async function loadMaterialesRigidosConfig(productId: string): Promise<ProductCo
 async function loadPlotterCorteConfig(productId: string): Promise<ProductConfiguration> {
   const { data: producto, error: prodError } = await supabase
     .from('productos_plotter_corte')
-    .select('id, nombre, tipo_medida, anchos_disponibles, color, marca, cantidad_minima')
+    .select('id, nombre, anchos_disponibles, color, marca, cantidad_minima, material_id, variante_nombre, espesor, impuesto_iva')
     .eq('id', productId)
     .single();
 
@@ -390,14 +389,13 @@ async function loadPlotterCorteConfig(productId: string): Promise<ProductConfigu
     id: producto.id,
     nombre: producto.nombre,
     categoria: 'Plotter de Corte',
-    tipo_medida: producto.tipo_medida,
     anchos_disponibles: producto.anchos_disponibles || [],
     cantidad_minima: producto.cantidad_minima,
     color: producto.color,
     marca: producto.marca,
     servicios,
     acabados,
-    impuesto_iva: 0
+    impuesto_iva: producto.impuesto_iva || 0
   };
 }
 
