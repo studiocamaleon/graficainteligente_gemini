@@ -518,19 +518,36 @@ export async function determinarPrecioPorUnidadRango(
     }
 
     // Buscar el rango que contiene el valor acumulado
-    const rangoAplicable = rangos.find(r =>
-      valorParaRango >= r.cantidad_desde &&
-      (r.cantidad_hasta === null || valorParaRango <= r.cantidad_hasta)
-    );
+    // Nota: Los nombres de campos varían según la categoría
+    let rangoAplicable;
+
+    if (categoria === 'Plotter de Corte') {
+      // Plotter usa cantidad_desde y cantidad_hasta
+      rangoAplicable = rangos.find(r =>
+        valorParaRango >= r.cantidad_desde &&
+        (r.cantidad_hasta === null || valorParaRango <= r.cantidad_hasta)
+      );
+    } else if (categoria === 'Impresion Gran Formato') {
+      // Gran Formato usa rango_precio_min y rango_precio_max
+      rangoAplicable = rangos.find(r =>
+        valorParaRango >= r.rango_precio_min &&
+        (r.rango_precio_max === null || valorParaRango <= r.rango_precio_max)
+      );
+    }
 
     if (!rangoAplicable) {
       console.warn(`No se encontró rango para valor: ${valorParaRango} en categoría: ${categoria}`);
       return null;
     }
 
+    // Console.log también específico según categoría
+    const rangoStr = categoria === 'Plotter de Corte'
+      ? `${rangoAplicable.cantidad_desde}-${rangoAplicable.cantidad_hasta || '∞'}`
+      : `${rangoAplicable.rango_precio_min}-${rangoAplicable.rango_precio_max || '∞'}`;
+
     console.log(`✅ Rango determinado para ${categoria}:`, {
       valorParaRango,
-      rango: `${rangoAplicable.cantidad_desde}-${rangoAplicable.cantidad_hasta || '∞'}`,
+      rango: rangoStr,
       precioPorUnidad: rangoAplicable.precio
     });
 
