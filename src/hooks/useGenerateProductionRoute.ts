@@ -276,34 +276,36 @@ export function useGenerateProductionRoute({
 
               case 'tecnologia_tinta': {
                 const tecnologiaId = configuracion?.tecnologia_id;
-                const tintaNombre = configuracion?.tinta_nombre || configuracion?.tinta;
+                // CORRECCION: Usar tipo_tinta (código) en lugar de tinta_nombre (nombre legible)
+                // tipo_tinta contiene: 'K', 'CMYK', 'CMYK+W', etc (coincide con BD)
+                // tinta_nombre contiene: 'Color (CMYK)', 'Negro (K)', etc (para display)
+                const tintaCodigo = configuracion?.tipo_tinta || configuracion?.tinta;
+                const tintaNombreDisplay = configuracion?.tinta_nombre || tintaCodigo;
 
-                if (tecnologiaId) {
+                if (tecnologiaId && tintaCodigo) {
                   incluir = true;
 
                   // SOLUCION: Consultar directamente en tecnologias_tintas_pasos
                   const mapeoTintas = paso.configuracion_condicion?.mapeo_tintas || {};
 
-                  // Primero intentar con mapeo manual
-                  if (tintaNombre && mapeoTintas[tintaNombre]) {
-                    pasoIdEspecifico = mapeoTintas[tintaNombre];
+                  // Primero intentar con mapeo manual (usa código de tinta)
+                  if (mapeoTintas[tintaCodigo]) {
+                    pasoIdEspecifico = mapeoTintas[tintaCodigo];
                   } else {
-                    // Consulta dinámica a la BD
-                    if (tintaNombre) {
-                      const { data: tintaData } = await supabase
-                        .from('tecnologias_tintas_pasos')
-                        .select('paso_id')
-                        .eq('tecnologia_id', tecnologiaId)
-                        .eq('tinta', tintaNombre)
-                        .maybeSingle();
+                    // Consulta dinámica a la BD usando código de tinta
+                    const { data: tintaData } = await supabase
+                      .from('tecnologias_tintas_pasos')
+                      .select('paso_id')
+                      .eq('tecnologia_id', tecnologiaId)
+                      .eq('tinta', tintaCodigo)
+                      .maybeSingle();
 
-                      if (tintaData?.paso_id) {
-                        pasoIdEspecifico = tintaData.paso_id;
-                      }
+                    if (tintaData?.paso_id) {
+                      pasoIdEspecifico = tintaData.paso_id;
                     }
                   }
 
-                  razon = tintaNombre ? `Impresión ${tintaNombre}` : 'Tecnología configurada';
+                  razon = `Impresión ${tintaNombreDisplay}`;
                 }
                 break;
               }

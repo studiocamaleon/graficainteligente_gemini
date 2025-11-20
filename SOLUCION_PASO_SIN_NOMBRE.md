@@ -121,3 +121,43 @@ Para probar la solución:
 - Se eliminaron logs de debug innecesarios
 - El código es más limpio y mantenible
 - No requiere cambios en la base de datos
+
+---
+
+## Corrección Adicional: Mapeo de Tintas (19/11/2024)
+
+### Problema Detectado
+
+El sistema estaba fallando al buscar pasos para tecnologías/tintas debido a un **desajuste de formatos**:
+
+**En Base de Datos (`tecnologias_tintas_pasos.tinta`):**
+- `'K'`, `'CMYK'`, `'CMYK+W'`, `'CMYK+V'`, `'CMYK+W+V'`
+
+**En Configuración (`configuracion.tinta_nombre`):**
+- `'Negro (K)'`, `'Color (CMYK)'`, `'Color + Blanco'`, etc.
+
+El hook estaba usando `tinta_nombre` (nombre legible) para buscar en la BD, cuando debía usar `tipo_tinta` (código).
+
+### Solución Implementada
+
+Modificado `useGenerateProductionRoute.ts` línea 279-283:
+
+```typescript
+// Antes ❌
+const tintaNombre = configuracion?.tinta_nombre || configuracion?.tinta;
+
+// Después ✅
+const tintaCodigo = configuracion?.tipo_tinta || configuracion?.tinta;
+const tintaNombreDisplay = configuracion?.tinta_nombre || tintaCodigo;
+```
+
+**Cambios:**
+1. Usa `tipo_tinta` (código: 'CMYK') para consultar BD
+2. Mantiene `tinta_nombre` (legible: 'Color (CMYK)') solo para display
+3. La consulta ahora encuentra matches correctamente
+
+### Resultado
+
+- ✅ Búsqueda usa códigos: `'CMYK'`, `'K'`, etc.
+- ✅ Display usa nombres legibles: `'Color (CMYK)'`, `'Negro (K)'`
+- ✅ Los pasos de impresión ahora se resuelven correctamente
