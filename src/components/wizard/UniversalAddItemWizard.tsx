@@ -282,8 +282,16 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
           cara_impresa: selectedConfig.cara_impresa,
           color: selectedConfig.color,
           marca: selectedConfig.marca,
-          servicios: selectedServicios,
-          acabados: selectedAcabados
+          servicios_seleccionados: selectedServicios.map(s => ({
+            servicio_id: s.servicio_id,
+            nombre: s.servicio_nombre,
+            nivel: s.nivel_nombre,
+          })),
+          acabados_seleccionados: selectedAcabados.map(a => ({
+            acabado_id: a.acabado_id,
+            nombre: a.acabado_nombre,
+            nivel: a.nivel_nombre,
+          }))
         },
         precio_base: precioBase || 0,
         precio_servicios: precioServicios,

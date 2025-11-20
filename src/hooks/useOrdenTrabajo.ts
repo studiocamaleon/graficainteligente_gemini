@@ -555,16 +555,27 @@ export function useOrdenTrabajo() {
 
         if (itemsError) throw itemsError;
 
-        // 3. Copiar rutas desde plantillas para cada item
+        // 3. Generar rutas de producción para cada item
         for (const item of insertedItems) {
           try {
-            await supabase.rpc('fn_copiar_ruta_desde_plantilla', {
+            // Obtener categoría de la configuración del item
+            const categoria = item.configuracion?.categoria || 'Impresion Laser';
+
+            const { data: rutaCount, error: rutaError } = await supabase.rpc('fn_generar_ruta_produccion_item', {
               p_orden_item_id: item.id,
               p_producto_id: item.producto_id,
+              p_categoria: categoria,
+              p_configuracion: item.configuracion || {},
               p_company_id: profile.company_id,
             });
+
+            if (rutaError) {
+              console.error(`Error generando ruta para item ${item.id}:`, rutaError);
+            } else {
+              console.log(`✓ Ruta generada para item ${item.id}: ${rutaCount || 0} pasos creados`);
+            }
           } catch (rutaError) {
-            console.error(`Error copiando ruta para item ${item.id}:`, rutaError);
+            console.error(`Error generando ruta para item ${item.id}:`, rutaError);
             // No lanzar error, continuar con los demás items
           }
         }
