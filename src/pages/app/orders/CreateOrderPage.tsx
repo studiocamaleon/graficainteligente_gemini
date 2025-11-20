@@ -130,6 +130,8 @@ export function CreateOrderPage() {
       ordenData,
       items: items.map(item => ({
         producto_id: item.producto_id,
+        producto_nombre: item.producto_nombre,
+        producto_categoria: item.producto_categoria || item.categoria || 'Sin categoría',
         cantidad: item.cantidad,
         configuracion: item.configuracion,
         precio_base: item.precio_base,
@@ -143,8 +145,13 @@ export function CreateOrderPage() {
     });
 
     if (result) {
+      // Marcar orden como creada ANTES de navegar para evitar el prompt de confirmación
       setOrdenCreada(true);
-      navigate(`/app/orders/ordenes/${result.id}`);
+
+      // Dar tiempo a React para procesar el cambio de estado antes de navegar
+      setTimeout(() => {
+        navigate(`/app/orders/ordenes/${result.id}`);
+      }, 0);
     } else {
       alert('Error al crear la orden: ' + error);
     }
