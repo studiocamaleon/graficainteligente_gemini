@@ -285,6 +285,13 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
       case 'services':
         return true; // Los servicios son opcionales
       case 'summary':
+        // Para productos con múltiples líneas, verificar que todas tengan precio
+        if (config?.permite_multiples_lineas && selectedConfig.lineas_medidas.length > 0) {
+          return selectedConfig.lineas_medidas.every(line =>
+            line.precio_total_linea !== undefined && line.precio_total_linea !== null
+          );
+        }
+        // Para productos sin múltiples líneas, verificar precioTotal
         return precioTotal !== null;
       default:
         return false;
