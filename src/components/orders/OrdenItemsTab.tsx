@@ -43,7 +43,7 @@ export function OrdenItemsTab({
 
   const handleAgregarItem = async (itemData: any) => {
     const nuevoItem: OrdenItem = {
-      id: `temp-${Date.now()}`,
+      id: `temp-${Date.now()}-${Math.random()}`,
       producto_id: itemData.producto_id,
       producto_nombre: itemData.producto_nombre,
       cantidad: itemData.cantidad,
@@ -56,7 +56,7 @@ export function OrdenItemsTab({
       descuento_individual: 0,
     };
 
-    setItems([...items, nuevoItem]);
+    setItems(prevItems => [...prevItems, nuevoItem]);
     setShowAddModal(false);
   };
 
