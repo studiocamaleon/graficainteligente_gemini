@@ -2,7 +2,7 @@ import { ReactNode } from 'react';
 
 interface BadgeProps {
   children: ReactNode;
-  variant?: 'default' | 'primary' | 'success' | 'warning' | 'danger' | 'info';
+  variant?: 'default' | 'primary' | 'success' | 'warning' | 'danger' | 'info' | 'blue' | 'purple';
   size?: 'sm' | 'md' | 'lg';
   className?: string;
 }
@@ -14,6 +14,8 @@ const variantStyles = {
   warning: 'bg-yellow-100 text-yellow-800 border-yellow-300',
   danger: 'bg-red-100 text-red-800 border-red-300',
   info: 'bg-cyan-100 text-cyan-800 border-cyan-300',
+  blue: 'bg-blue-100 text-blue-800 border-blue-300',
+  purple: 'bg-purple-100 text-purple-800 border-purple-300',
 };
 
 const sizeStyles = {

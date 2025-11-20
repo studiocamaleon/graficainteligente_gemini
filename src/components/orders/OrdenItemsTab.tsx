@@ -93,50 +93,50 @@ export function OrdenItemsTab({
     const formatCaraImpresa = (cara: string) => {
       if (cara === '1/0') return 'Frente';
       if (cara === '1/1') return 'Frente y Dorso';
-      if (cara === 'frente_y_dorso') return 'Frente y Dorso';
+      if (cara === 'frente_y_dorso' || cara === 'solo_frente') return cara === 'frente_y_dorso' ? 'Frente y Dorso' : 'Frente';
       return cara;
     };
 
-    const formatEspesor = (espesor: number, unidad?: string) => {
-      if (!espesor) return '';
-      return unidad ? `${espesor}${unidad}` : `${espesor}mm`;
+    const formatEspesorOGramaje = () => {
+      // Si tiene gramaje (papeles), mostrarlo con 'g' y espacio
+      if (config.gramaje) {
+        return `${config.gramaje} g`;
+      }
+      // Si tiene espesor, usar la unidad configurada o 'mm' por defecto
+      if (config.espesor) {
+        const unidad = config.unidad_espesor || 'mm';
+        return `${config.espesor}${unidad}`;
+      }
+      return null;
     };
+
+    const espesorFormateado = formatEspesorOGramaje();
 
     return (
       <div className="space-y-2">
         {/* Línea 1: Info básica */}
         <div className="flex flex-wrap gap-1.5 text-sm text-gray-600">
-          {config.categoria && <span>{config.categoria}</span>}
           {(config.medida_ancho || config.medida_alto) && (
-            <>
-              <span className="text-gray-400">|</span>
-              <span>
-                {config.medida_ancho && config.medida_alto
-                  ? `${config.medida_ancho}x${config.medida_alto} cm`
-                  : `${config.medida_ancho || config.medida_alto} cm`
-                }
-              </span>
-            </>
+            <span>
+              {config.medida_ancho && config.medida_alto
+                ? `${config.medida_ancho}x${config.medida_alto} cm`
+                : `${config.medida_ancho || config.medida_alto} cm`
+              }
+            </span>
           )}
           {config.material_nombre && (
             <>
-              <span className="text-gray-400">|</span>
+              {(config.medida_ancho || config.medida_alto) && <span className="text-gray-400">|</span>}
               <span>
                 {config.material_nombre}
                 {config.variante_nombre && ` - ${config.variante_nombre}`}
               </span>
             </>
           )}
-          {config.espesor && (
+          {espesorFormateado && (
             <>
               <span className="text-gray-400">|</span>
-              <span>{formatEspesor(config.espesor, config.unidad_espesor)}</span>
-            </>
-          )}
-          {config.gramaje && (
-            <>
-              <span className="text-gray-400">|</span>
-              <span>{config.gramaje}g</span>
+              <span>{espesorFormateado}</span>
             </>
           )}
           {config.tecnologia_nombre && (
