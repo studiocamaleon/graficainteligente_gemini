@@ -54,7 +54,8 @@ export function OrdenItemsTab({
       precio_unitario_final: itemData.precio_unitario_final,
       precio_total: itemData.precio_total,
       descuento_individual: 0,
-    };
+      rutas_generadas: itemData.rutas_generadas || [], // Guardar rutas pregeneradas
+    } as any;
 
     setItems(prevItems => [...prevItems, nuevoItem]);
     setShowAddModal(false);

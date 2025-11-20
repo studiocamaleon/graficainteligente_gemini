@@ -137,6 +137,7 @@ export function CreateOrderPage() {
         precio_acabados: item.precio_acabados,
         precio_unitario_final: item.precio_unitario_final,
         precio_total: item.precio_total,
+        rutas_generadas: (item as any).rutas_generadas || [], // Incluir rutas pregeneradas
       })),
       estadoInicial: 'pendiente',
     });

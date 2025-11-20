@@ -555,28 +555,41 @@ export function useOrdenTrabajo() {
 
         if (itemsError) throw itemsError;
 
-        // 3. Generar rutas de producción para cada item
-        for (const item of insertedItems) {
-          try {
-            // Obtener categoría de la configuración del item
-            const categoria = item.configuracion?.categoria || 'Impresion Laser';
+        // 3. Insertar rutas pregeneradas para cada item
+        for (let i = 0; i < insertedItems.length; i++) {
+          const item = insertedItems[i];
+          const itemOriginal = data.items[i];
 
-            const { data: rutaCount, error: rutaError } = await supabase.rpc('fn_generar_ruta_produccion_item', {
-              p_orden_item_id: item.id,
-              p_producto_id: item.producto_id,
-              p_categoria: categoria,
-              p_configuracion: item.configuracion || {},
-              p_company_id: profile.company_id,
-            });
+          // Si el item tiene rutas pregeneradas, insertarlas
+          if (itemOriginal.rutas_generadas && itemOriginal.rutas_generadas.length > 0) {
+            try {
+              const rutasToInsert = itemOriginal.rutas_generadas.map((ruta: any) => ({
+                company_id: profile.company_id,
+                orden_item_id: item.id,
+                tipo_etapa: ruta.etapa,
+                paso_id: ruta.paso_id,
+                paso_nombre: ruta.paso_nombre,
+                orden: ruta.orden,
+                es_modificado: false,
+                origen_plantilla_id: ruta.origen_plantilla_id || null,
+                comentario_vendedor: null,
+              }));
 
-            if (rutaError) {
-              console.error(`Error generando ruta para item ${item.id}:`, rutaError);
-            } else {
-              console.log(`✓ Ruta generada para item ${item.id}: ${rutaCount || 0} pasos creados`);
+              const { error: rutasError } = await supabase
+                .from('ordenes_trabajo_items_rutas')
+                .insert(rutasToInsert);
+
+              if (rutasError) {
+                console.error(`Error insertando rutas para item ${item.id}:`, rutasError);
+              } else {
+                console.log(`✓ ${rutasToInsert.length} rutas insertadas para item ${item.id}`);
+              }
+            } catch (rutaError) {
+              console.error(`Error insertando rutas para item ${item.id}:`, rutaError);
+              // No lanzar error, continuar con los demás items
             }
-          } catch (rutaError) {
-            console.error(`Error generando ruta para item ${item.id}:`, rutaError);
-            // No lanzar error, continuar con los demás items
+          } else {
+            console.warn(`⚠ Item ${item.id} no tiene rutas pregeneradas`);
           }
         }
 

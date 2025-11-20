@@ -9,6 +9,7 @@ import { UniversalSummaryStep } from './steps/UniversalSummaryStep';
 import { useProductConfiguration } from '../../hooks/wizard/useProductConfiguration';
 import { useUniversalPricing } from '../../hooks/wizard/useUniversalPricing';
 import type { UniversalProductSearchResult } from '../../hooks/wizard/useUniversalProductSearch';
+import { generateProductionRoutes } from '../../utils/generateProductionRoutes';
 
 interface UniversalAddItemWizardProps {
   isOpen: boolean;
@@ -355,59 +356,12 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
           }));
 
           // Construir configuraci\u00f3n JSONB para esta l\u00ednea
-          const itemData = {
-            producto_id: selectedProduct.id,
-            producto_nombre: selectedProduct.nombre,
+          const configuracionLinea = {
             categoria: selectedProduct.categoria,
-            categoria_id: selectedProduct.categoria_id,
-            cantidad: linea.cantidad,
-            configuracion: {
-              categoria: selectedProduct.categoria,
-              medida_ancho: linea.ancho || linea.ancho_seleccionado || null,
-              medida_alto: linea.alto || null,
-              mt2_total: linea.mt2_calculado,
-              mt_lineal_total: linea.metros_lineales,
-              material_id: selectedConfig.material_id,
-              material_nombre: selectedConfig.material_nombre,
-              variante_id: selectedConfig.variante_id,
-              variante_nombre: selectedConfig.variante_nombre,
-              espesor: selectedConfig.espesor,
-              unidad_espesor: selectedConfig.unidad_espesor,
-              gramaje: selectedConfig.gramaje,
-              tecnologia_id: selectedConfig.tecnologia_id,
-              tecnologia_nombre: selectedConfig.tecnologia_nombre,
-              tinta: selectedConfig.tinta,
-              tinta_nombre: selectedConfig.tinta_nombre,
-              cara_impresa: selectedConfig.cara_impresa,
-              color: selectedConfig.color,
-              marca: selectedConfig.marca,
-              servicios_seleccionados: serviciosLinea,
-              acabados_seleccionados: acabadosLinea
-            },
-            precio_base: linea.precio_base_unitario || 0,
-            precio_servicios: linea.precio_servicios_unitario || 0,
-            precio_acabados: linea.precio_acabados_unitario || 0,
-            precio_unitario_final: linea.precio_unitario_final || 0,
-            precio_total: linea.precio_total_linea || 0,
-            impuesto_iva: config.impuesto_iva
-          };
-
-          await onAgregar(itemData);
-        }
-      } else {
-        // L\u00f3gica tradicional para productos sin m\u00faltiples l\u00edneas
-        if (precioTotal === null) return;
-
-        const itemData = {
-          producto_id: selectedProduct.id,
-          producto_nombre: selectedProduct.nombre,
-          categoria: selectedProduct.categoria,
-          categoria_id: selectedProduct.categoria_id,
-          cantidad: selectedConfig.cantidad,
-          configuracion: {
-            categoria: selectedProduct.categoria,
-            medida_ancho: selectedConfig.medida_ancho,
-            medida_alto: selectedConfig.medida_alto,
+            medida_ancho: linea.ancho || linea.ancho_seleccionado || null,
+            medida_alto: linea.alto || null,
+            mt2_total: linea.mt2_calculado,
+            mt_lineal_total: linea.metros_lineales,
             material_id: selectedConfig.material_id,
             material_nombre: selectedConfig.material_nombre,
             variante_id: selectedConfig.variante_id,
@@ -422,23 +376,90 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
             cara_impresa: selectedConfig.cara_impresa,
             color: selectedConfig.color,
             marca: selectedConfig.marca,
-            servicios_seleccionados: selectedServicios.map(s => ({
-              servicio_id: s.servicio_id,
-              nombre: s.servicio_nombre,
-              nivel: s.nivel_nombre,
-            })),
-            acabados_seleccionados: selectedAcabados.map(a => ({
-              acabado_id: a.acabado_id,
-              nombre: a.acabado_nombre,
-              nivel: a.nivel_nombre,
-            }))
-          },
+            servicios_seleccionados: serviciosLinea,
+            acabados_seleccionados: acabadosLinea
+          };
+
+          // Generar rutas de producci\u00f3n para esta l\u00ednea
+          const rutasGeneradas = await generateProductionRoutes({
+            productoId: selectedProduct.id,
+            categoria: selectedProduct.categoria,
+            configuracion: configuracionLinea,
+          });
+
+          const itemData = {
+            producto_id: selectedProduct.id,
+            producto_nombre: selectedProduct.nombre,
+            categoria: selectedProduct.categoria,
+            categoria_id: selectedProduct.categoria_id,
+            cantidad: linea.cantidad,
+            configuracion: configuracionLinea,
+            precio_base: linea.precio_base_unitario || 0,
+            precio_servicios: linea.precio_servicios_unitario || 0,
+            precio_acabados: linea.precio_acabados_unitario || 0,
+            precio_unitario_final: linea.precio_unitario_final || 0,
+            precio_total: linea.precio_total_linea || 0,
+            impuesto_iva: config.impuesto_iva,
+            rutas_generadas: rutasGeneradas
+          };
+
+          await onAgregar(itemData);
+        }
+      } else {
+        // L\u00f3gica tradicional para productos sin m\u00faltiples l\u00edneas
+        if (precioTotal === null) return;
+
+        const configuracionItem = {
+          categoria: selectedProduct.categoria,
+          medida_ancho: selectedConfig.medida_ancho,
+          medida_alto: selectedConfig.medida_alto,
+          material_id: selectedConfig.material_id,
+          material_nombre: selectedConfig.material_nombre,
+          variante_id: selectedConfig.variante_id,
+          variante_nombre: selectedConfig.variante_nombre,
+          espesor: selectedConfig.espesor,
+          unidad_espesor: selectedConfig.unidad_espesor,
+          gramaje: selectedConfig.gramaje,
+          tecnologia_id: selectedConfig.tecnologia_id,
+          tecnologia_nombre: selectedConfig.tecnologia_nombre,
+          tinta: selectedConfig.tinta,
+          tinta_nombre: selectedConfig.tinta_nombre,
+          cara_impresa: selectedConfig.cara_impresa,
+          color: selectedConfig.color,
+          marca: selectedConfig.marca,
+          servicios_seleccionados: selectedServicios.map(s => ({
+            servicio_id: s.servicio_id,
+            nombre: s.servicio_nombre,
+            nivel: s.nivel_nombre,
+          })),
+          acabados_seleccionados: selectedAcabados.map(a => ({
+            acabado_id: a.acabado_id,
+            nombre: a.acabado_nombre,
+            nivel: a.nivel_nombre,
+          }))
+        };
+
+        // Generar rutas de producci\u00f3n para este item
+        const rutasGeneradas = await generateProductionRoutes({
+          productoId: selectedProduct.id,
+          categoria: selectedProduct.categoria,
+          configuracion: configuracionItem,
+        });
+
+        const itemData = {
+          producto_id: selectedProduct.id,
+          producto_nombre: selectedProduct.nombre,
+          categoria: selectedProduct.categoria,
+          categoria_id: selectedProduct.categoria_id,
+          cantidad: selectedConfig.cantidad,
+          configuracion: configuracionItem,
           precio_base: precioBase || 0,
           precio_servicios: precioServicios,
           precio_acabados: precioAcabados,
           precio_unitario_final: precioTotal,
           precio_total: precioTotal * selectedConfig.cantidad,
-          impuesto_iva: config.impuesto_iva
+          impuesto_iva: config.impuesto_iva,
+          rutas_generadas: rutasGeneradas
         };
 
         await onAgregar(itemData);
