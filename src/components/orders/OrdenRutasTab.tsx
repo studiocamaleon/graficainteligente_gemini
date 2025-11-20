@@ -1,6 +1,8 @@
-import { Route, AlertCircle } from 'lucide-react';
+import { Route, AlertCircle, Loader2, Package, CheckCircle, Info } from 'lucide-react';
 import { EmptyState } from '../ui/EmptyState';
 import { Badge } from '../ui/Badge';
+import { Tooltip } from '../ui/Tooltip';
+import { useGenerateProductionRoute, type GeneratedStep } from '../../hooks/useGenerateProductionRoute';
 
 interface OrdenRutasTabProps {
   items: any[];
@@ -20,44 +22,166 @@ export function OrdenRutasTab({ items }: OrdenRutasTabProps) {
   return (
     <div className="space-y-6">
       <div className="flex items-center space-x-2 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-        <AlertCircle className="w-5 h-5 text-blue-600" />
-        <p className="text-sm text-blue-800">
-          Las rutas de producción se generarán automáticamente desde las plantillas configuradas cuando se cree la orden.
-        </p>
+        <Info className="w-5 h-5 text-blue-600 flex-shrink-0" />
+        <div className="text-sm text-blue-800">
+          <p className="font-medium mb-1">Vista previa de rutas de producción</p>
+          <p className="text-blue-700">
+            Estas rutas se generarán automáticamente en la base de datos al crear la orden.
+            Los pasos se evalúan según los servicios y acabados seleccionados en cada producto.
+          </p>
+        </div>
       </div>
 
-      <div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">
-          Items en esta orden
-        </h3>
-        <div className="space-y-4">
-          {items.map((item, index) => (
-            <div
-              key={index}
-              className="p-4 bg-gray-50 border border-gray-200 rounded-lg"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <div className="font-medium text-gray-900">
-                  {item.producto_nombre}
-                </div>
-                <Badge>Cantidad: {item.cantidad}</Badge>
-              </div>
+      <div className="space-y-4">
+        {items.map((item, index) => (
+          <ItemRoutePreview
+            key={item.id || index}
+            item={item}
+            index={index}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
 
-              <div className="space-y-2">
-                <div className="text-sm text-gray-600">
-                  Se generará una ruta de producción automática con las etapas:
-                </div>
-                <div className="flex items-center space-x-2 ml-4">
-                  <Badge variant="secondary">Pre-prensa</Badge>
-                  <span className="text-gray-400">→</span>
-                  <Badge variant="secondary">Principal</Badge>
-                  <span className="text-gray-400">→</span>
-                  <Badge variant="secondary">Post-prensa</Badge>
-                </div>
+interface ItemRoutePreviewProps {
+  item: any;
+  index: number;
+}
+
+function ItemRoutePreview({ item, index }: ItemRoutePreviewProps) {
+  const { steps, loading, error } = useGenerateProductionRoute({
+    productoId: item.producto_id,
+    categoria: item.configuracion?.categoria || item.categoria || 'Impresion Laser',
+    configuracion: item.configuracion || {},
+  });
+
+  // Agrupar pasos por etapa
+  const pasosPorEtapa = steps.reduce((acc, paso) => {
+    if (!acc[paso.etapa]) {
+      acc[paso.etapa] = [];
+    }
+    acc[paso.etapa].push(paso);
+    return acc;
+  }, {} as Record<string, GeneratedStep[]>);
+
+  const etapas = ['Pre-prensa', 'Produccion', 'Terminacion'];
+  const totalPasos = steps.length;
+
+  return (
+    <div className="border-2 border-gray-200 rounded-lg overflow-hidden bg-white">
+      {/* Header del Item */}
+      <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3 flex-1">
+            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-700 font-semibold text-sm flex-shrink-0">
+              {index + 1}
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <Package className="w-4 h-4 text-gray-400" />
+                <p className="font-medium text-gray-900">{item.producto_nombre}</p>
+              </div>
+              <div className="flex items-center gap-3 mt-0.5 text-sm text-gray-500">
+                <span>Cantidad: {item.cantidad}</span>
+                {loading ? (
+                  <span className="flex items-center gap-1 text-blue-600">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    Generando ruta...
+                  </span>
+                ) : error ? (
+                  <span className="text-red-600">Error al generar ruta</span>
+                ) : (
+                  <span className="flex items-center gap-1 text-green-600">
+                    <CheckCircle className="w-3 h-3" />
+                    {totalPasos} {totalPasos === 1 ? 'paso' : 'pasos'}
+                  </span>
+                )}
               </div>
             </div>
-          ))}
+          </div>
         </div>
+      </div>
+
+      {/* Contenido de Rutas */}
+      <div className="p-4">
+        {loading ? (
+          <div className="flex items-center justify-center py-8 text-gray-500">
+            <Loader2 className="w-5 h-5 animate-spin mr-2" />
+            <span>Cargando plantilla de ruta...</span>
+          </div>
+        ) : error ? (
+          <div className="flex items-center gap-2 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+            <AlertCircle className="w-5 h-5 flex-shrink-0" />
+            <div>
+              <p className="font-medium">Error al generar ruta</p>
+              <p className="text-sm">{error}</p>
+            </div>
+          </div>
+        ) : totalPasos === 0 ? (
+          <div className="flex items-center gap-2 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-700">
+            <AlertCircle className="w-5 h-5 flex-shrink-0" />
+            <div>
+              <p className="font-medium">Sin ruta de producción</p>
+              <p className="text-sm">Este producto no tiene una ruta asignada o no tiene pasos configurados</p>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {etapas.map((etapa) => {
+              const pasosEtapa = pasosPorEtapa[etapa] || [];
+              if (pasosEtapa.length === 0) return null;
+
+              return (
+                <div key={etapa} className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
+                      {etapa}
+                    </h4>
+                    <div className="h-px flex-1 bg-gray-200" />
+                  </div>
+
+                  <div className="space-y-2 ml-4">
+                    {pasosEtapa.map((paso, pasoIndex) => (
+                      <div
+                        key={paso.id}
+                        className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200"
+                      >
+                        <div className="flex items-center justify-center w-6 h-6 rounded-full bg-white border-2 border-gray-300 text-gray-600 text-xs font-medium flex-shrink-0 mt-0.5">
+                          {pasoIndex + 1}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium text-gray-900">
+                              {paso.paso_nombre}
+                            </p>
+                            {paso.es_obligatorio ? (
+                              <Tooltip content="Este paso es obligatorio y siempre se incluye">
+                                <Badge variant="primary" className="text-xs">
+                                  Obligatorio
+                                </Badge>
+                              </Tooltip>
+                            ) : (
+                              <Tooltip content={paso.razon_inclusion}>
+                                <Badge variant="secondary" className="text-xs">
+                                  Condicional
+                                </Badge>
+                              </Tooltip>
+                            )}
+                          </div>
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            {paso.razon_inclusion}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

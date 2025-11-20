@@ -156,13 +156,14 @@ export function CreateOrderPage() {
       count: items.length,
     },
     {
-      id: 'pagos',
-      label: 'Pagos',
-      disabled: true,
-    },
-    {
       id: 'rutas',
       label: 'Rutas de Producción',
+      disabled: items.length === 0,
+      count: items.length > 0 ? items.length : undefined,
+    },
+    {
+      id: 'pagos',
+      label: 'Pagos',
       disabled: true,
     },
     {
