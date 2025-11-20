@@ -145,14 +145,52 @@ export function ServicesAndFinishingsStep({
     onAcabadosChange(updatedAcabados);
   };
 
-  const getImpactoBadgeText = (nivel: { valor_porcentaje: number | null; valor_monto: number | null }): string => {
-    if (!nivel.valor_porcentaje && !nivel.valor_monto) return 'Sin impacto';
+  const getImpactoBadgeText = (nivel: { tipo_impacto: string; valor_porcentaje: number | null; valor_monto: number | null }): string => {
+    if (nivel.tipo_impacto === 'sin_impacto' || (!nivel.valor_porcentaje && !nivel.valor_monto)) {
+      return 'Sin impacto';
+    }
 
-    const parts = [];
-    if (nivel.valor_porcentaje) parts.push(`+${nivel.valor_porcentaje}%`);
-    if (nivel.valor_monto) parts.push(`+$${nivel.valor_monto}`);
+    switch (nivel.tipo_impacto) {
+      case 'precio_fijo':
+        return nivel.valor_monto ? `$${nivel.valor_monto.toFixed(2)}` : 'Sin impacto';
 
-    return parts.join(' ');
+      case 'por_unidad':
+        return nivel.valor_monto ? `$${nivel.valor_monto.toFixed(2)}/unidad` : 'Sin impacto';
+
+      case 'porcentual':
+        return nivel.valor_porcentaje ? `+${nivel.valor_porcentaje}%` : 'Sin impacto';
+
+      case 'por_mt2':
+        return nivel.valor_monto ? `$${nivel.valor_monto.toFixed(2)}/m²` : 'Sin impacto';
+
+      case 'por_metro_lineal':
+        return nivel.valor_monto ? `$${nivel.valor_monto.toFixed(2)}/ml` : 'Sin impacto';
+
+      case 'fijo_porcentual':
+        const parts1 = [];
+        if (nivel.valor_monto) parts1.push(`$${nivel.valor_monto.toFixed(2)}`);
+        if (nivel.valor_porcentaje) parts1.push(`+${nivel.valor_porcentaje}%`);
+        return parts1.length > 0 ? parts1.join(' + ') : 'Sin impacto';
+
+      case 'fijo_metro_cuadrado':
+        const parts2 = [];
+        if (nivel.valor_monto) parts2.push(`$${nivel.valor_monto.toFixed(2)}`);
+        if (nivel.valor_porcentaje) parts2.push(`$${nivel.valor_porcentaje.toFixed(2)}/m²`);
+        return parts2.length > 0 ? parts2.join(' + ') : 'Sin impacto';
+
+      case 'fijo_metro_lineal':
+        const parts3 = [];
+        if (nivel.valor_monto) parts3.push(`$${nivel.valor_monto.toFixed(2)}`);
+        if (nivel.valor_porcentaje) parts3.push(`$${nivel.valor_porcentaje.toFixed(2)}/ml`);
+        return parts3.length > 0 ? parts3.join(' + ') : 'Sin impacto';
+
+      case 'por_minuto':
+      case 'fijo_por_minuto':
+        return nivel.valor_monto ? `$${nivel.valor_monto.toFixed(2)}/min` : 'Sin impacto';
+
+      default:
+        return 'Sin impacto';
+    }
   };
 
   return (
@@ -213,11 +251,14 @@ export function ServicesAndFinishingsStep({
                           onChange={(value) => handleChangeNivelServicio(servicio.servicio_id, value)}
                           className="text-sm"
                         >
-                          {servicio.niveles.map((nivel) => (
-                            <option key={nivel.id} value={nivel.id}>
-                              {nivel.nombre} {getImpactoBadgeText(nivel) !== 'Sin impacto' && `- ${getImpactoBadgeText(nivel)}`}
-                            </option>
-                          ))}
+                          {servicio.niveles.map((nivel) => {
+                            const impactoText = getImpactoBadgeText(nivel);
+                            return (
+                              <option key={nivel.id} value={nivel.id}>
+                                {nivel.nombre} {impactoText !== 'Sin impacto' && `(${impactoText})`}
+                              </option>
+                            );
+                          })}
                         </Select>
                       </div>
                     )}
@@ -286,11 +327,14 @@ export function ServicesAndFinishingsStep({
                           onChange={(value) => handleChangeNivelAcabado(acabado.acabado_id, value)}
                           className="text-sm"
                         >
-                          {acabado.niveles.map((nivel) => (
-                            <option key={nivel.id} value={nivel.id}>
-                              {nivel.nombre} {getImpactoBadgeText(nivel) !== 'Sin impacto' && `- ${getImpactoBadgeText(nivel)}`}
-                            </option>
-                          ))}
+                          {acabado.niveles.map((nivel) => {
+                            const impactoText = getImpactoBadgeText(nivel);
+                            return (
+                              <option key={nivel.id} value={nivel.id}>
+                                {nivel.nombre} {impactoText !== 'Sin impacto' && `(${impactoText})`}
+                              </option>
+                            );
+                          })}
                         </Select>
                       </div>
                     )}

@@ -200,20 +200,20 @@ export function UniversalSummaryStep({
           <div className="space-y-3">
             <div className="flex justify-between text-gray-700">
               <span>Precio base:</span>
-              <span className="font-medium">{formatCurrency(precioBase)}</span>
+              <span className="font-medium">{formatCurrency(precioBase ? precioBase * selectedConfig.cantidad : null)}</span>
             </div>
 
             {precioServicios > 0 && (
               <div className="flex justify-between text-gray-700">
                 <span>Servicios:</span>
-                <span className="font-medium">{formatCurrency(precioServicios)}</span>
+                <span className="font-medium">{formatCurrency(precioServicios * selectedConfig.cantidad)}</span>
               </div>
             )}
 
             {precioAcabados > 0 && (
               <div className="flex justify-between text-gray-700">
                 <span>Acabados:</span>
-                <span className="font-medium">{formatCurrency(precioAcabados)}</span>
+                <span className="font-medium">{formatCurrency(precioAcabados * selectedConfig.cantidad)}</span>
               </div>
             )}
 
