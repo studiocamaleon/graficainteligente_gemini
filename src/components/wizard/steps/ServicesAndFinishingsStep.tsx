@@ -210,7 +210,7 @@ export function ServicesAndFinishingsStep({
                         </label>
                         <Select
                           value={selectedServicio?.nivel_id || ''}
-                          onChange={(e) => handleChangeNivelServicio(servicio.servicio_id, e.target.value)}
+                          onChange={(value) => handleChangeNivelServicio(servicio.servicio_id, value)}
                           className="text-sm"
                         >
                           {servicio.niveles.map((nivel) => (
@@ -283,7 +283,7 @@ export function ServicesAndFinishingsStep({
                         </label>
                         <Select
                           value={selectedAcabado?.nivel_id || ''}
-                          onChange={(e) => handleChangeNivelAcabado(acabado.acabado_id, e.target.value)}
+                          onChange={(value) => handleChangeNivelAcabado(acabado.acabado_id, value)}
                           className="text-sm"
                         >
                           {acabado.niveles.map((nivel) => (
