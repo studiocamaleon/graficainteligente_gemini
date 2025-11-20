@@ -64,6 +64,8 @@ export function ConfigurationStep({ config, selectedConfig, onConfigChange }: Co
       autoSelections.variante_id = material.variante_id;
       autoSelections.variante_nombre = material.variante_nombre;
       autoSelections.espesor = material.espesor || null;
+      autoSelections.unidad_espesor = material.unidad_espesor || null;
+      autoSelections.gramaje = material.gramaje || null;
     }
 
     // Auto-seleccionar tecnología única (solo para Impresión Láser que siempre es laser)
@@ -283,7 +285,7 @@ export function ConfigurationStep({ config, selectedConfig, onConfigChange }: Co
                         variante_nombre: material.variante_nombre,
                         espesor: material.espesor || null,
                         unidad_espesor: material.unidad_espesor || null,
-                        gramaje: (material as any).gramaje || null
+                        gramaje: material.gramaje || null
                       });
                     }}
                   >
