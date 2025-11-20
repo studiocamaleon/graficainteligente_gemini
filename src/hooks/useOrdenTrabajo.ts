@@ -545,7 +545,15 @@ export function useOrdenTrabajo() {
       if (data.items.length > 0) {
         const itemsToInsert = data.items.map(item => ({
           orden_id: newOrden.id,
-          ...item,
+          producto_id: item.producto_id,
+          cantidad: item.cantidad,
+          configuracion: item.configuracion,
+          precio_base: item.precio_base,
+          precio_servicios: item.precio_servicios,
+          precio_acabados: item.precio_acabados,
+          precio_unitario_final: item.precio_unitario_final,
+          precio_total: item.precio_total,
+          // Excluir rutas_generadas - se insertan por separado en ordenes_trabajo_items_rutas
         }));
 
         const { data: insertedItems, error: itemsError } = await supabase
