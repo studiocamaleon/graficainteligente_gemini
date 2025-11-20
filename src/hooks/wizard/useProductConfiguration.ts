@@ -18,6 +18,10 @@ export interface ProductConfiguration {
   cantidades_fijas?: number[];
   cantidad_minima?: number;
 
+  // Nuevos campos para múltiples líneas
+  tipo_venta_real?: 'mt2' | 'mt_lineal' | 'unidad' | 'cantidades_fijas';
+  permite_multiples_lineas?: boolean;
+
   // Material y variantes
   materiales?: Array<{
     id: string;
@@ -284,6 +288,8 @@ async function loadGranFormatoConfig(productId: string): Promise<ProductConfigur
     anchos_disponibles: producto.anchos_disponibles || [],
     tipo_venta: producto.tipo_venta as 'unidad' | 'cantidades_fijas',
     cantidad_minima: producto.cantidad_minima,
+    tipo_venta_real: producto.tipo_venta as 'mt2' | 'mt_lineal',
+    permite_multiples_lineas: true,
     materiales: materiales?.map(m => ({
       id: m.id,
       material_id: m.material_id,
@@ -348,6 +354,8 @@ async function loadMaterialesRigidosConfig(productId: string): Promise<ProductCo
     medidas: [{ ancho: producto.medidas_ancho, alto: producto.medidas_alto }],
     tipo_venta: producto.tipo_venta as 'unidad' | 'cantidades_fijas',
     cantidad_minima: producto.cantidad_minima,
+    tipo_venta_real: 'mt2',
+    permite_multiples_lineas: true,
     espesores_disponibles: espesores,
     materiales: materiales?.map(m => ({
       id: m.id,
@@ -385,14 +393,35 @@ async function loadPlotterCorteConfig(productId: string): Promise<ProductConfigu
     productId
   );
 
+  // Cargar material del producto (Plotter tiene material único asignado)
+  let materialData = null;
+  if (producto.material_id) {
+    const { data: material } = await supabase
+      .from('materiales')
+      .select('id, nombre')
+      .eq('id', producto.material_id)
+      .single();
+    materialData = material;
+  }
+
   return {
     id: producto.id,
     nombre: producto.nombre,
     categoria: 'Plotter de Corte',
     anchos_disponibles: producto.anchos_disponibles || [],
     cantidad_minima: producto.cantidad_minima,
+    tipo_venta_real: 'mt_lineal',
+    permite_multiples_lineas: true,
     color: producto.color,
     marca: producto.marca,
+    materiales: materialData ? [{
+      id: producto.id,
+      material_id: producto.material_id,
+      material_nombre: materialData.nombre,
+      variante_id: producto.material_id,
+      variante_nombre: producto.variante_nombre || '',
+      espesor: producto.espesor
+    }] : [],
     servicios,
     acabados,
     impuesto_iva: producto.impuesto_iva || 0

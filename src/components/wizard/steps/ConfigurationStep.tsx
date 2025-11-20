@@ -4,18 +4,55 @@ import { Input } from '../../ui/Input';
 import { Button } from '../../ui/Button';
 import { Ruler, Package, Layers, Palette, FileText, Check } from 'lucide-react';
 import type { ProductConfiguration } from '../../../hooks/wizard/useProductConfiguration';
+import { MeasurementLinesTable } from './MeasurementLinesTable';
+import type { SelectedService, SelectedFinishing } from './ServicesAndFinishingsStep';
 
 interface ConfigurationStepProps {
   config: ProductConfiguration;
   selectedConfig: SelectedConfiguration;
+  selectedServicios?: SelectedService[];
+  selectedAcabados?: SelectedFinishing[];
   onConfigChange: (config: Partial<SelectedConfiguration>) => void;
 }
 
-export interface SelectedConfiguration {
-  // Cantidad
+// Interface para una línea de medida/cantidad individual
+export interface MeasurementLine {
+  id: string; // UUID temporal para identificar la línea
+
+  // Para MT2 (Gran Formato y Materiales Rígidos)
+  ancho?: number;
+  alto?: number;
+  mt2_calculado?: number;
+
+  // Para Metro Lineal (Gran Formato y Plotter)
+  ancho_seleccionado?: number;
+  metros_lineales?: number;
+
+  // Cantidad de unidades de esta línea
   cantidad: number;
 
-  // Medidas
+  // Servicios aplicables a esta línea (IDs de servicios seleccionados)
+  servicios_ids: string[];
+
+  // Acabados aplicables a esta línea (IDs de acabados seleccionados)
+  acabados_ids: string[];
+
+  // Precios calculados para esta línea
+  precio_base_unitario?: number;
+  precio_servicios_unitario?: number;
+  precio_acabados_unitario?: number;
+  precio_unitario_final?: number;
+  precio_total_linea?: number;
+}
+
+export interface SelectedConfiguration {
+  // Líneas de medidas (para productos que permiten múltiples líneas)
+  lineas_medidas: MeasurementLine[];
+
+  // Cantidad (solo para productos sin múltiples líneas)
+  cantidad: number;
+
+  // Medidas (solo para productos sin múltiples líneas)
   medida_ancho: number | null;
   medida_alto: number | null;
   medida_mt2?: number | null;
@@ -43,7 +80,13 @@ export interface SelectedConfiguration {
   marca: string | null;
 }
 
-export function ConfigurationStep({ config, selectedConfig, onConfigChange }: ConfigurationStepProps) {
+export function ConfigurationStep({
+  config,
+  selectedConfig,
+  selectedServicios = [],
+  selectedAcabados = [],
+  onConfigChange
+}: ConfigurationStepProps) {
   const [localConfig, setLocalConfig] = useState(selectedConfig);
 
   // Auto-seleccionar opciones únicas al cargar
@@ -405,6 +448,17 @@ export function ConfigurationStep({ config, selectedConfig, onConfigChange }: Co
             })()}
           </div>
         </Card>
+      )}
+
+      {/* M\u00faltiples l\u00edneas de medidas (para Gran Formato, Materiales R\u00edgidos y Plotter) */}
+      {config.permite_multiples_lineas && (
+        <MeasurementLinesTable
+          config={config}
+          lines={localConfig.lineas_medidas}
+          selectedServicios={selectedServicios}
+          selectedAcabados={selectedAcabados}
+          onChange={(lines) => handleChange({ lineas_medidas: lines })}
+        />
       )}
 
       {/* Caras de impresión (solo para laser) */}

@@ -33,6 +33,7 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
 
   // Configuración del producto
   const [selectedConfig, setSelectedConfig] = useState<SelectedConfiguration>({
+    lineas_medidas: [],
     cantidad: 1,
     medida_ancho: null,
     medida_alto: null,
@@ -395,6 +396,8 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
               <ConfigurationStep
                 config={config}
                 selectedConfig={selectedConfig}
+                selectedServicios={selectedServicios}
+                selectedAcabados={selectedAcabados}
                 onConfigChange={handleConfigChange}
               />
             )
