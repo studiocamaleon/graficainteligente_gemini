@@ -21,7 +21,8 @@ export function useUniversalPricing() {
     categoria: ProductCategory,
     config: SelectedConfiguration,
     servicios: SelectedService[],
-    acabados: SelectedFinishing[]
+    acabados: SelectedFinishing[],
+    cantidadesFijas?: number[]
   ): Promise<PriceCalculationResult> => {
     setIsCalculating(true);
     setError(null);
@@ -61,35 +62,43 @@ export function useUniversalPricing() {
         };
       }
 
-      // Calcular impacto de servicios
-      let precioServicios = 0;
+      // Para productos con cantidades fijas, el precio base es para toda la cantidad
+      // Necesitamos calcular el precio unitario para aplicar servicios y acabados correctamente
+      const esCantidadFija = cantidadesFijas && cantidadesFijas.length > 0;
+      const precioBaseUnitario = esCantidadFija ? precioBase / config.cantidad : precioBase;
+
+      // Calcular impacto de servicios sobre el precio base UNITARIO
+      let precioServiciosUnitario = 0;
       for (const servicio of servicios) {
         if (servicio.valor_porcentaje) {
-          precioServicios += precioBase * (servicio.valor_porcentaje / 100);
+          precioServiciosUnitario += precioBaseUnitario * (servicio.valor_porcentaje / 100);
         }
         if (servicio.valor_monto) {
-          precioServicios += servicio.valor_monto;
+          precioServiciosUnitario += servicio.valor_monto;
         }
       }
 
-      // Calcular impacto de acabados
-      let precioAcabados = 0;
+      // Calcular impacto de acabados sobre el precio base UNITARIO
+      let precioAcabadosUnitario = 0;
       for (const acabado of acabados) {
         if (acabado.valor_porcentaje) {
-          precioAcabados += precioBase * (acabado.valor_porcentaje / 100);
+          precioAcabadosUnitario += precioBaseUnitario * (acabado.valor_porcentaje / 100);
         }
         if (acabado.valor_monto) {
-          precioAcabados += acabado.valor_monto;
+          precioAcabadosUnitario += acabado.valor_monto;
         }
       }
 
-      const precioTotal = precioBase + precioServicios + precioAcabados;
+      // Precio total es el precio unitario (con servicios y acabados)
+      const precioTotalUnitario = precioBaseUnitario + precioServiciosUnitario + precioAcabadosUnitario;
 
+      // Para cantidades fijas, devolvemos los precios unitarios
+      // Para cantidades variables, el precio base ya era unitario
       return {
-        precio_base: precioBase,
-        precio_servicios: precioServicios,
-        precio_acabados: precioAcabados,
-        precio_total: precioTotal,
+        precio_base: precioBaseUnitario,
+        precio_servicios: precioServiciosUnitario,
+        precio_acabados: precioAcabadosUnitario,
+        precio_total: precioTotalUnitario,
         tiene_precio: true
       };
     } catch (err) {
