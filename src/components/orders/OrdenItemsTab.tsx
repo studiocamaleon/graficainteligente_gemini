@@ -98,14 +98,22 @@ export function OrdenItemsTab({
     };
 
     const formatEspesorOGramaje = () => {
-      // Si tiene gramaje (papeles), mostrarlo con 'g' y espacio
+      // Si tiene espesor, usar la unidad del material
+      if (config.espesor && config.unidad_espesor) {
+        // Para gramajes, agregar espacio antes de la unidad
+        if (config.unidad_espesor === 'gr' || config.unidad_espesor === 'g') {
+          return `${config.espesor} ${config.unidad_espesor}`;
+        }
+        // Para otras unidades (mm, cm, etc), no agregar espacio
+        return `${config.espesor}${config.unidad_espesor}`;
+      }
+      // Fallback: si solo tiene espesor sin unidad
+      if (config.espesor) {
+        return `${config.espesor}mm`;
+      }
+      // Fallback legacy: si tiene gramaje (por compatibilidad con datos antiguos)
       if (config.gramaje) {
         return `${config.gramaje} g`;
-      }
-      // Si tiene espesor, usar la unidad configurada o 'mm' por defecto
-      if (config.espesor) {
-        const unidad = config.unidad_espesor || 'mm';
-        return `${config.espesor}${unidad}`;
       }
       return null;
     };

@@ -206,25 +206,10 @@ async function loadImpresionLaserConfig(productId: string): Promise<ProductConfi
     materiales: materiales?.map(m => {
       const material = m.materiales as any;
 
-      // IMPORTANTE: En productos_impresion_laser_materiales, el campo "espesor"
-      // puede contener gramaje o espesor según el tipo de material:
-      // - Si material.unidad_espesor = 'gr', entonces m.espesor es el gramaje
-      // - Si material.unidad_espesor = 'mm', entonces m.espesor es el espesor
-
-      let gramaje = null;
-      let espesor = null;
-
-      if (m.espesor) {
-        if (material.unidad_espesor === 'gr') {
-          // El campo espesor contiene el gramaje
-          gramaje = parseFloat(m.espesor);
-          espesor = null;
-        } else {
-          // El campo espesor contiene el espesor real
-          espesor = parseFloat(m.espesor);
-          gramaje = null;
-        }
-      }
+      // IMPORTANTE: El campo "espesor" en productos_impresion_laser_materiales
+      // contiene el valor numérico (sea espesor o gramaje).
+      // El campo "unidad_espesor" de la tabla materiales define la unidad (mm, gr, etc).
+      // Se debe mantener el espesor tal como está en la BD y la unidad_espesor del material.
 
       return {
         id: m.id,
@@ -232,9 +217,9 @@ async function loadImpresionLaserConfig(productId: string): Promise<ProductConfi
         material_nombre: material.nombre,
         variante_id: m.material_id,
         variante_nombre: m.variante_nombre,
-        espesor: espesor,
+        espesor: m.espesor ? parseFloat(m.espesor) : null,
         unidad_espesor: material.unidad_espesor,
-        gramaje: gramaje
+        gramaje: null // Se determina en el renderizado según unidad_espesor
       };
     }) || [],
     tecnologias: tecnologias?.map(t => ({
