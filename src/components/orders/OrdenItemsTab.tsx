@@ -149,7 +149,7 @@ export function OrdenItemsTab({
   const columns = [
     {
       key: 'cantidad',
-      label: 'Cantidad',
+      header: 'Cantidad',
       render: (item: OrdenItem, index: number) => (
         <Input
           type="number"
@@ -162,7 +162,7 @@ export function OrdenItemsTab({
     },
     {
       key: 'producto',
-      label: 'Item y Configuración',
+      header: 'Item y Configuración',
       render: (item: OrdenItem) => (
         <div>
           <div className="font-medium text-gray-900">{item.producto_nombre}</div>
@@ -174,7 +174,7 @@ export function OrdenItemsTab({
     },
     {
       key: 'precio_unitario',
-      label: 'Precio Unitario',
+      header: 'Precio Unitario',
       render: (item: OrdenItem) => (
         <span className="font-medium">
           ${item.precio_unitario_final.toFixed(2)}
@@ -183,7 +183,7 @@ export function OrdenItemsTab({
     },
     {
       key: 'descuento_individual',
-      label: 'Desc. %',
+      header: 'Desc. %',
       render: (item: OrdenItem, index: number) => (
         <Input
           type="number"
@@ -197,7 +197,7 @@ export function OrdenItemsTab({
     },
     {
       key: 'precio_total',
-      label: 'Precio Total',
+      header: 'Precio Total',
       render: (item: OrdenItem) => (
         <span className="font-semibold text-blue-600">
           ${item.precio_total.toFixed(2)}
@@ -206,7 +206,7 @@ export function OrdenItemsTab({
     },
     {
       key: 'acciones',
-      label: '',
+      header: '',
       render: (_: OrdenItem, index: number) => (
         <Button
           variant="danger"
@@ -248,7 +248,11 @@ export function OrdenItemsTab({
         />
       ) : (
         <>
-          <Table columns={columns} data={items} />
+          <Table
+            columns={columns}
+            data={items}
+            keyExtractor={(item) => item.id || `item-${items.indexOf(item)}`}
+          />
 
           <div className="flex items-center justify-end space-x-4 pt-4 border-t border-gray-200">
             <label className="text-sm font-medium text-gray-700">
