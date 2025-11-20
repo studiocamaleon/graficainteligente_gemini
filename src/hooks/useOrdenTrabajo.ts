@@ -55,6 +55,8 @@ interface UpdateOrdenData {
 
 interface AddItemData {
   producto_id: string;
+  producto_nombre: string;
+  producto_categoria: string;
   cantidad: number;
   configuracion: ItemConfiguracion;
   precio_base: number;
@@ -137,7 +139,7 @@ export function useOrdenTrabajo() {
       const [itemsRes, pagosRes, historialRes] = await Promise.all([
         supabase
           .from('ordenes_trabajo_items')
-          .select('*, producto:productos(id, nombre, categoria_id)')
+          .select('*')
           .eq('orden_id', id)
           .order('created_at', { ascending: true }),
         supabase
@@ -546,6 +548,8 @@ export function useOrdenTrabajo() {
         const itemsToInsert = data.items.map(item => ({
           orden_id: newOrden.id,
           producto_id: item.producto_id,
+          producto_nombre: item.producto_nombre,
+          producto_categoria: item.producto_categoria,
           cantidad: item.cantidad,
           configuracion: item.configuracion,
           precio_base: item.precio_base,

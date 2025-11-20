@@ -1312,6 +1312,8 @@ export interface OrdenTrabajoItem {
   id: string;
   orden_id: string;
   producto_id: string;
+  producto_nombre: string | null;
+  producto_categoria: string | null;
   cantidad: number;
   configuracion: ItemConfiguracion;
   precio_base: number;

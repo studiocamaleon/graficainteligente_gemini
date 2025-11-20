@@ -12,6 +12,7 @@ interface OrdenItem {
   id?: string;
   producto_id: string;
   producto_nombre: string;
+  producto_categoria?: string;
   cantidad: number;
   configuracion: any;
   precio_base: number;
@@ -46,6 +47,7 @@ export function OrdenItemsTab({
       id: `temp-${Date.now()}-${Math.random()}`,
       producto_id: itemData.producto_id,
       producto_nombre: itemData.producto_nombre,
+      producto_categoria: itemData.categoria || itemData.producto_categoria,
       cantidad: itemData.cantidad,
       configuracion: itemData.configuracion,
       precio_base: itemData.precio_base,
