@@ -307,7 +307,7 @@ async function getPrecioPortabanners(
 
   const { data, error } = await supabase
     .from('productos_portabanners_precios')
-    .select('precio, rango_precio_min, rango_precio_max')
+    .select('precio, cantidad_desde, cantidad_hasta')
     .eq('producto_id', productId)
     .eq('tecnologia_id', config.tecnologia_id);
 
@@ -320,10 +320,10 @@ async function getPrecioPortabanners(
 
   // Buscar en qué rango cae
   const precioEnRango = data.find(p => {
-    if (p.rango_precio_max === null) {
-      return config.cantidad >= p.rango_precio_min;
+    if (p.cantidad_hasta === null) {
+      return config.cantidad >= p.cantidad_desde;
     }
-    return config.cantidad >= p.rango_precio_min && config.cantidad <= p.rango_precio_max;
+    return config.cantidad >= p.cantidad_desde && config.cantidad <= p.cantidad_hasta;
   });
 
   return precioEnRango?.precio || null;
