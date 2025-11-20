@@ -3,6 +3,7 @@ import { Plus, Trash2, Package } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Switch } from '../ui/Switch';
+import { Badge } from '../ui/Badge';
 import { Table } from '../ui/Table';
 import { EmptyState } from '../ui/EmptyState';
 import { UniversalAddItemWizard } from '../wizard/UniversalAddItemWizard';
@@ -86,69 +87,107 @@ export function OrdenItemsTab({
     setItems(itemsCopy);
   };
 
-  const formatearConfiguracion = (config: any): string => {
-    if (!config) return '';
+  const renderConfiguracion = (config: any) => {
+    if (!config) return null;
 
-    const parts: string[] = [];
+    const formatCaraImpresa = (cara: string) => {
+      if (cara === '1/0') return 'Frente';
+      if (cara === '1/1') return 'Frente y Dorso';
+      if (cara === 'frente_y_dorso') return 'Frente y Dorso';
+      return cara;
+    };
 
-    if (config.categoria) {
-      parts.push(config.categoria);
-    }
+    const formatEspesor = (espesor: number, unidad?: string) => {
+      if (!espesor) return '';
+      return unidad ? `${espesor}${unidad}` : `${espesor}mm`;
+    };
 
-    if (config.medida_ancho && config.medida_alto) {
-      parts.push(`${config.medida_ancho}x${config.medida_alto} cm`);
-    } else if (config.medida_ancho) {
-      parts.push(`${config.medida_ancho} cm`);
-    }
+    return (
+      <div className="space-y-2">
+        {/* Línea 1: Info básica */}
+        <div className="flex flex-wrap gap-1.5 text-sm text-gray-600">
+          {config.categoria && <span>{config.categoria}</span>}
+          {(config.medida_ancho || config.medida_alto) && (
+            <>
+              <span className="text-gray-400">|</span>
+              <span>
+                {config.medida_ancho && config.medida_alto
+                  ? `${config.medida_ancho}x${config.medida_alto} cm`
+                  : `${config.medida_ancho || config.medida_alto} cm`
+                }
+              </span>
+            </>
+          )}
+          {config.material_nombre && (
+            <>
+              <span className="text-gray-400">|</span>
+              <span>
+                {config.material_nombre}
+                {config.variante_nombre && ` - ${config.variante_nombre}`}
+              </span>
+            </>
+          )}
+          {config.espesor && (
+            <>
+              <span className="text-gray-400">|</span>
+              <span>{formatEspesor(config.espesor, config.unidad_espesor)}</span>
+            </>
+          )}
+          {config.gramaje && (
+            <>
+              <span className="text-gray-400">|</span>
+              <span>{config.gramaje}g</span>
+            </>
+          )}
+          {config.tecnologia_nombre && (
+            <>
+              <span className="text-gray-400">|</span>
+              <span>{config.tecnologia_nombre}</span>
+            </>
+          )}
+          {config.tinta_nombre && (
+            <>
+              <span className="text-gray-400">|</span>
+              <span>{config.tinta_nombre}</span>
+            </>
+          )}
+          {config.cara_impresa && (
+            <>
+              <span className="text-gray-400">|</span>
+              <span>{formatCaraImpresa(config.cara_impresa)}</span>
+            </>
+          )}
+          {config.color && (
+            <>
+              <span className="text-gray-400">|</span>
+              <span>{config.color}</span>
+            </>
+          )}
+          {config.marca && (
+            <>
+              <span className="text-gray-400">|</span>
+              <span>{config.marca}</span>
+            </>
+          )}
+        </div>
 
-    if (config.material_nombre) {
-      if (config.variante_nombre) {
-        parts.push(`${config.material_nombre} - ${config.variante_nombre}`);
-      } else {
-        parts.push(config.material_nombre);
-      }
-
-      if (config.espesor) {
-        parts.push(`${config.espesor}mm`);
-      }
-    }
-
-    if (config.tecnologia_nombre) {
-      parts.push(config.tecnologia_nombre);
-    }
-
-    if (config.tinta_nombre) {
-      parts.push(config.tinta_nombre);
-    }
-
-    if (config.cara_impresa) {
-      const caraTexto = config.cara_impresa === '1/0' ? 'Frente' : config.cara_impresa === '1/1' ? 'Frente/Dorso' : config.cara_impresa;
-      parts.push(caraTexto);
-    }
-
-    if (config.color) {
-      parts.push(config.color);
-    }
-
-    if (config.marca) {
-      parts.push(config.marca);
-    }
-
-    if (config.servicios && config.servicios.length > 0) {
-      const servicios = config.servicios
-        .map((s: any) => s.nivel_nombre ? `${s.servicio_nombre} (${s.nivel_nombre})` : s.servicio_nombre)
-        .join(', ');
-      parts.push(`Servicios: ${servicios}`);
-    }
-
-    if (config.acabados && config.acabados.length > 0) {
-      const acabados = config.acabados
-        .map((a: any) => a.nivel_nombre ? `${a.acabado_nombre} (${a.nivel_nombre})` : a.acabado_nombre)
-        .join(', ');
-      parts.push(`Acabados: ${acabados}`);
-    }
-
-    return parts.join(' | ');
+        {/* Línea 2: Servicios y Acabados con badges */}
+        {((config.servicios && config.servicios.length > 0) || (config.acabados && config.acabados.length > 0)) && (
+          <div className="flex flex-wrap gap-1.5">
+            {config.servicios?.map((s: any, idx: number) => (
+              <Badge key={`servicio-${idx}`} variant="blue" size="sm">
+                {s.nivel_nombre ? `${s.servicio_nombre} (${s.nivel_nombre})` : s.servicio_nombre}
+              </Badge>
+            ))}
+            {config.acabados?.map((a: any, idx: number) => (
+              <Badge key={`acabado-${idx}`} variant="purple" size="sm">
+                {a.nivel_nombre ? `${a.acabado_nombre} (${a.nivel_nombre})` : a.acabado_nombre}
+              </Badge>
+            ))}
+          </div>
+        )}
+      </div>
+    );
   };
 
   const columns = [
@@ -170,10 +209,8 @@ export function OrdenItemsTab({
       header: 'Item y Configuración',
       render: (item: OrdenItem) => (
         <div>
-          <div className="font-medium text-gray-900">{item.producto_nombre}</div>
-          <div className="text-sm text-gray-500 mt-1">
-            {formatearConfiguracion(item.configuracion)}
-          </div>
+          <div className="font-medium text-gray-900 mb-1">{item.producto_nombre}</div>
+          {renderConfiguracion(item.configuracion)}
         </div>
       ),
     },
@@ -190,14 +227,23 @@ export function OrdenItemsTab({
       key: 'descuento_individual',
       header: 'Desc. %',
       render: (item: OrdenItem, index: number) => (
-        <Input
-          type="number"
-          min="0"
-          max="100"
-          value={item.descuento_individual || 0}
-          onChange={(e) => handleDescuentoIndividualChange(index, parseFloat(e.target.value) || 0)}
-          className="w-20"
-        />
+        <div className="flex items-center gap-1">
+          <Input
+            type="text"
+            inputMode="decimal"
+            value={item.descuento_individual || 0}
+            onChange={(e) => {
+              const value = e.target.value.replace(/[^0-9.]/g, '');
+              const numValue = parseFloat(value) || 0;
+              if (numValue >= 0 && numValue <= 100) {
+                handleDescuentoIndividualChange(index, numValue);
+              }
+            }}
+            className="w-16 text-center"
+            placeholder="0"
+          />
+          <span className="text-sm text-gray-500">%</span>
+        </div>
       ),
     },
     {

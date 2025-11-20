@@ -26,6 +26,8 @@ export interface SelectedConfiguration {
   variante_id: string | null;
   variante_nombre: string | null;
   espesor: number | null;
+  unidad_espesor?: string | null;
+  gramaje?: number | null;
 
   // Tecnología y tintas
   tecnologia_id: string | null;
@@ -279,7 +281,9 @@ export function ConfigurationStep({ config, selectedConfig, onConfigChange }: Co
                         material_nombre: material.material_nombre,
                         variante_id: material.variante_id,
                         variante_nombre: material.variante_nombre,
-                        espesor: material.espesor || null
+                        espesor: material.espesor || null,
+                        unidad_espesor: material.unidad_espesor || null,
+                        gramaje: (material as any).gramaje || null
                       });
                     }}
                   >
