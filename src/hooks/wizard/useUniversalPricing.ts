@@ -63,8 +63,9 @@ export function useUniversalPricing() {
       }
 
       // Para productos con cantidades fijas, el precio base es para toda la cantidad
-      // Necesitamos calcular el precio unitario para aplicar servicios y acabados correctamente
+      // Para productos con cantidades variables, el precio base ya es unitario
       const esCantidadFija = cantidadesFijas && cantidadesFijas.length > 0;
+      const precioBaseTotal = esCantidadFija ? precioBase : precioBase * config.cantidad;
       const precioBaseUnitario = esCantidadFija ? precioBase / config.cantidad : precioBase;
 
       // Calcular metros cuadrados y lineales si es necesario
@@ -74,13 +75,15 @@ export function useUniversalPricing() {
       const metrosLineales = config.medida_alto ? config.medida_alto / 100 : 0;
 
       // Calcular impacto de servicios según su tipo de impacto
-      let precioServiciosUnitario = 0;
+      // Los impactos se calculan sobre el PRECIO BASE TOTAL y luego se dividen por cantidad
+      let precioServiciosTotal = 0;
       for (const servicio of servicios) {
         console.log('🔍 Calculando servicio:', {
           nombre: servicio.servicio_nombre,
           tipo_impacto: servicio.tipo_impacto,
           valor_monto: servicio.valor_monto,
           valor_porcentaje: servicio.valor_porcentaje,
+          precioBaseTotal,
           precioBaseUnitario,
           mt2,
           metrosLineales,
@@ -91,43 +94,45 @@ export function useUniversalPricing() {
           servicio.tipo_impacto,
           servicio.valor_monto,
           servicio.valor_porcentaje,
-          precioBaseUnitario,
+          precioBaseTotal,
           mt2,
           metrosLineales,
           config.cantidad
         );
 
-        console.log('💰 Impacto calculado:', impacto);
-        precioServiciosUnitario += impacto;
+        console.log('💰 Impacto total calculado:', impacto, '| Unitario:', impacto / config.cantidad);
+        precioServiciosTotal += impacto;
       }
 
       // Calcular impacto de acabados según su tipo de impacto
-      let precioAcabadosUnitario = 0;
+      let precioAcabadosTotal = 0;
       for (const acabado of acabados) {
         const impacto = calcularImpacto(
           acabado.tipo_impacto,
           acabado.valor_monto,
           acabado.valor_porcentaje,
-          precioBaseUnitario,
+          precioBaseTotal,
           mt2,
           metrosLineales,
           config.cantidad
         );
-        precioAcabadosUnitario += impacto;
+        precioAcabadosTotal += impacto;
       }
 
-      // Precio total es el precio unitario (con servicios y acabados)
+      // Convertir a precios unitarios
+      const precioServiciosUnitario = precioServiciosTotal / config.cantidad;
+      const precioAcabadosUnitario = precioAcabadosTotal / config.cantidad;
       const precioTotalUnitario = precioBaseUnitario + precioServiciosUnitario + precioAcabadosUnitario;
 
       console.log('📊 Resultado final:', {
-        precio_base: precioBaseUnitario,
-        precio_servicios: precioServiciosUnitario,
-        precio_acabados: precioAcabadosUnitario,
-        precio_total: precioTotalUnitario
+        precio_base_unitario: precioBaseUnitario,
+        precio_servicios_unitario: precioServiciosUnitario,
+        precio_acabados_unitario: precioAcabadosUnitario,
+        precio_total_unitario: precioTotalUnitario,
+        precio_total_completo: precioTotalUnitario * config.cantidad
       });
 
-      // Para cantidades fijas, devolvemos los precios unitarios
-      // Para cantidades variables, el precio base ya era unitario
+      // Devolvemos los precios unitarios
       return {
         precio_base: precioBaseUnitario,
         precio_servicios: precioServiciosUnitario,
@@ -363,62 +368,62 @@ async function getPrecioSellos(
 // ===============================================
 
 /**
- * Calcula el impacto de un servicio o acabado según su tipo de impacto
+ * Calcula el impacto TOTAL de un servicio o acabado según su tipo de impacto
  * @param tipoImpacto - Tipo de impacto del servicio/acabado
  * @param valorMonto - Valor en monto fijo (si aplica)
  * @param valorPorcentaje - Valor en porcentaje (si aplica)
- * @param precioBase - Precio base unitario del producto
+ * @param precioBaseTotal - Precio base TOTAL del producto (para toda la cantidad)
  * @param mt2 - Metros cuadrados del producto
  * @param metrosLineales - Metros lineales del producto
  * @param cantidad - Cantidad del producto
- * @returns El precio unitario a sumar por este servicio/acabado
+ * @returns El precio TOTAL a sumar por este servicio/acabado (se dividirá por cantidad después)
  */
 function calcularImpacto(
   tipoImpacto: string,
   valorMonto: number | null,
   valorPorcentaje: number | null,
-  precioBase: number,
+  precioBaseTotal: number,
   mt2: number,
   metrosLineales: number,
   cantidad: number
 ): number {
   switch (tipoImpacto) {
     case 'precio_fijo':
-      // Precio fijo se divide entre la cantidad para obtener el impacto unitario
-      return valorMonto ? valorMonto / cantidad : 0;
-
-    case 'por_unidad':
-      // Precio por unidad se aplica directamente como unitario
+      // Precio fijo se suma directamente al total
       return valorMonto || 0;
 
+    case 'por_unidad':
+      // Precio por unidad se multiplica por la cantidad
+      return valorMonto ? valorMonto * cantidad : 0;
+
     case 'porcentual':
-      // Porcentaje sobre el precio base unitario
-      return valorPorcentaje ? (precioBase * valorPorcentaje) / 100 : 0;
+      // Porcentaje sobre el precio base TOTAL
+      return valorPorcentaje ? (precioBaseTotal * valorPorcentaje) / 100 : 0;
 
     case 'por_mt2':
-      // Precio por metro cuadrado multiplicado por los mt2 del producto
-      return valorMonto && mt2 ? valorMonto * mt2 : 0;
+      // Precio por metro cuadrado multiplicado por los mt2 y por la cantidad
+      return valorMonto && mt2 ? valorMonto * mt2 * cantidad : 0;
 
     case 'por_metro_lineal':
-      // Precio por metro lineal multiplicado por los metros lineales del producto
-      return valorMonto && metrosLineales ? valorMonto * metrosLineales : 0;
+      // Precio por metro lineal multiplicado por los metros lineales y por la cantidad
+      return valorMonto && metrosLineales ? valorMonto * metrosLineales * cantidad : 0;
 
     case 'fijo_porcentual':
-      // Precio fijo (dividido por cantidad) + porcentaje del precio base
-      const fijo = valorMonto ? valorMonto / cantidad : 0;
-      const porcentual = valorPorcentaje ? (precioBase * valorPorcentaje) / 100 : 0;
+      // Precio fijo + porcentaje del precio base total
+      const fijo = valorMonto || 0;
+      const porcentual = valorPorcentaje ? (precioBaseTotal * valorPorcentaje) / 100 : 0;
       return fijo + porcentual;
 
     case 'fijo_metro_cuadrado':
-      // Precio fijo (dividido por cantidad) + precio por mt2
-      const fijoMt2 = valorMonto ? valorMonto / cantidad : 0;
-      const porMt2 = valorPorcentaje && mt2 ? valorPorcentaje * mt2 : 0;
+      // Precio fijo + precio por mt2 multiplicado por cantidad
+      const fijoMt2 = valorMonto || 0;
+      const porMt2 = valorPorcentaje && mt2 ? valorPorcentaje * mt2 * cantidad : 0;
       return fijoMt2 + porMt2;
 
     case 'fijo_metro_lineal':
-      // Precio fijo (dividido por cantidad) + precio por metro lineal
-      const fijoMl = valorMonto ? valorMonto / cantidad : 0;
-      const porMl = valorPorcentaje && metrosLineales ? valorPorcentaje * metrosLineales : 0;
+      // Precio fijo + precio por metro lineal multiplicado por cantidad
+      const fijoMl = valorMonto || 0;
+      const porMl = valorPorcentaje && metrosLineales ? valorPorcentaje * metrosLineales * cantidad : 0;
       return fijoMl + porMl;
 
     case 'por_minuto':

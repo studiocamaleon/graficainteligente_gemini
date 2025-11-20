@@ -493,15 +493,45 @@ async function loadServiciosForProduct(
           .order('orden');
 
         niveles = nivelesData?.map(n => {
-          const isPorcentaje = n.tipo_impacto === 'porcentaje' || n.tipo_impacto === 'porcentaje_mas_monto';
-          const isMonto = n.tipo_impacto === 'monto_fijo' || n.tipo_impacto === 'porcentaje_mas_monto';
+          // Mapear valores según el tipo de impacto
+          let valor_monto = null;
+          let valor_porcentaje = null;
+
+          switch (n.tipo_impacto) {
+            case 'precio_fijo':
+            case 'por_unidad':
+            case 'por_mt2':
+            case 'por_metro_lineal':
+              valor_monto = n.valor_impacto;
+              break;
+
+            case 'porcentual':
+              valor_porcentaje = n.valor_impacto;
+              break;
+
+            case 'fijo_porcentual':
+              valor_monto = n.valor_impacto;
+              valor_porcentaje = n.valor_impacto_secundario;
+              break;
+
+            case 'fijo_metro_cuadrado':
+            case 'fijo_metro_lineal':
+            case 'fijo_por_minuto':
+              valor_monto = n.valor_impacto;
+              valor_porcentaje = n.valor_impacto_secundario;
+              break;
+
+            case 'por_minuto':
+              valor_monto = n.valor_impacto;
+              break;
+          }
 
           return {
             id: n.id,
             nombre: n.nombre,
             tipo_impacto: n.tipo_impacto,
-            valor_porcentaje: isPorcentaje ? n.valor_impacto : null,
-            valor_monto: isMonto ? (n.tipo_impacto === 'porcentaje_mas_monto' ? n.valor_impacto_secundario : n.valor_impacto) : null
+            valor_porcentaje,
+            valor_monto
           };
         }) || [];
       }
@@ -548,15 +578,45 @@ async function loadAcabadosForProduct(
           .order('orden');
 
         niveles = nivelesData?.map(n => {
-          const isPorcentaje = n.tipo_impacto === 'porcentaje' || n.tipo_impacto === 'porcentaje_mas_monto';
-          const isMonto = n.tipo_impacto === 'monto_fijo' || n.tipo_impacto === 'porcentaje_mas_monto';
+          // Mapear valores según el tipo de impacto
+          let valor_monto = null;
+          let valor_porcentaje = null;
+
+          switch (n.tipo_impacto) {
+            case 'precio_fijo':
+            case 'por_unidad':
+            case 'por_mt2':
+            case 'por_metro_lineal':
+              valor_monto = n.valor_impacto;
+              break;
+
+            case 'porcentual':
+              valor_porcentaje = n.valor_impacto;
+              break;
+
+            case 'fijo_porcentual':
+              valor_monto = n.valor_impacto;
+              valor_porcentaje = n.valor_impacto_secundario;
+              break;
+
+            case 'fijo_metro_cuadrado':
+            case 'fijo_metro_lineal':
+            case 'fijo_por_minuto':
+              valor_monto = n.valor_impacto;
+              valor_porcentaje = n.valor_impacto_secundario;
+              break;
+
+            case 'por_minuto':
+              valor_monto = n.valor_impacto;
+              break;
+          }
 
           return {
             id: n.id,
             nombre: n.nombre,
             tipo_impacto: n.tipo_impacto,
-            valor_porcentaje: isPorcentaje ? n.valor_impacto : null,
-            valor_monto: isMonto ? (n.tipo_impacto === 'porcentaje_mas_monto' ? n.valor_impacto_secundario : n.valor_impacto) : null
+            valor_porcentaje,
+            valor_monto
           };
         }) || [];
       }
