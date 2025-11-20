@@ -205,15 +205,24 @@ async function loadImpresionLaserConfig(productId: string): Promise<ProductConfi
     caras_impresas: producto.caras_impresas || [],
     materiales: materiales?.map(m => {
       const material = m.materiales as any;
-      let gramaje = null;
 
-      // Buscar el gramaje en el array de variantes del JSONB
-      if (material.variantes && Array.isArray(material.variantes) && m.variante_nombre) {
-        const variante = material.variantes.find(
-          (v: any) => v.nombre === m.variante_nombre
-        );
-        if (variante && variante.gramaje) {
-          gramaje = variante.gramaje;
+      // IMPORTANTE: En productos_impresion_laser_materiales, el campo "espesor"
+      // puede contener gramaje o espesor según el tipo de material:
+      // - Si material.unidad_espesor = 'gr', entonces m.espesor es el gramaje
+      // - Si material.unidad_espesor = 'mm', entonces m.espesor es el espesor
+
+      let gramaje = null;
+      let espesor = null;
+
+      if (m.espesor) {
+        if (material.unidad_espesor === 'gr') {
+          // El campo espesor contiene el gramaje
+          gramaje = parseFloat(m.espesor);
+          espesor = null;
+        } else {
+          // El campo espesor contiene el espesor real
+          espesor = parseFloat(m.espesor);
+          gramaje = null;
         }
       }
 
@@ -221,9 +230,9 @@ async function loadImpresionLaserConfig(productId: string): Promise<ProductConfi
         id: m.id,
         material_id: m.material_id,
         material_nombre: material.nombre,
-        variante_id: m.material_id, // Usar material_id como variante_id ya que no existe variante_id
+        variante_id: m.material_id,
         variante_nombre: m.variante_nombre,
-        espesor: m.espesor,
+        espesor: espesor,
         unidad_espesor: material.unidad_espesor,
         gramaje: gramaje
       };
