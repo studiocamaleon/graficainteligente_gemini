@@ -1,7 +1,6 @@
 import { Route, AlertCircle, Loader2, Package, CheckCircle, Info } from 'lucide-react';
 import { EmptyState } from '../ui/EmptyState';
 import { Badge } from '../ui/Badge';
-import { Tooltip } from '../ui/Tooltip';
 import { useGenerateProductionRoute, type GeneratedStep } from '../../hooks/useGenerateProductionRoute';
 
 interface OrdenRutasTabProps {
@@ -156,23 +155,17 @@ function ItemRoutePreview({ item, index }: ItemRoutePreviewProps) {
                             <p className="text-sm font-medium text-gray-900">
                               {paso.paso_nombre}
                             </p>
-                            {paso.es_obligatorio ? (
-                              <Tooltip content="Este paso es obligatorio y siempre se incluye">
-                                <Badge variant="primary" className="text-xs">
-                                  Obligatorio
-                                </Badge>
-                              </Tooltip>
-                            ) : (
-                              <Tooltip content={paso.razon_inclusion}>
-                                <Badge variant="secondary" className="text-xs">
-                                  Condicional
-                                </Badge>
-                              </Tooltip>
+                            {paso.es_obligatorio && (
+                              <Badge variant="primary" className="text-xs">
+                                Obligatorio
+                              </Badge>
                             )}
                           </div>
-                          <p className="text-xs text-gray-500 mt-0.5">
-                            {paso.razon_inclusion}
-                          </p>
+                          {!paso.es_obligatorio && paso.razon_inclusion && (
+                            <p className="text-xs text-gray-600 mt-1">
+                              {paso.razon_inclusion}
+                            </p>
+                          )}
                         </div>
                       </div>
                     ))}

@@ -9,6 +9,9 @@ export interface GeneratedStep {
   orden: number;
   es_obligatorio: boolean;
   razon_inclusion: string;
+  nivel_aplicado?: string;
+  servicio_nombre?: string;
+  acabado_nombre?: string;
 }
 
 interface UseGenerateProductionRouteProps {
@@ -124,8 +127,18 @@ export function useGenerateProductionRoute({
           return;
         }
 
-        // 3. Evaluar cada paso según condiciones
-        const generatedSteps: GeneratedStep[] = [];
+        // 3. Evaluar cada paso según condiciones y extraer paso_id específico
+        const generatedSteps: Array<{
+          id: string;
+          etapa: string;
+          paso_id_especifico: string | null;
+          orden: number;
+          es_obligatorio: boolean;
+          razon_inclusion: string;
+          nivel_aplicado?: string;
+          servicio_nombre?: string;
+          acabado_nombre?: string;
+        }> = [];
 
         // Extraer servicios y acabados con compatibilidad
         const servicios = configuracion?.servicios_seleccionados || configuracion?.servicios || [];
@@ -134,6 +147,10 @@ export function useGenerateProductionRoute({
         for (const paso of pasos) {
           let incluir = false;
           let razon = '';
+          let pasoIdEspecifico: string | null = paso.paso_id;
+          let nivelAplicado: string | undefined;
+          let servicioNombre: string | undefined;
+          let acabadoNombre: string | undefined;
 
           // Si es obligatorio, siempre incluir
           if (paso.es_obligatorio) {
@@ -148,63 +165,104 @@ export function useGenerateProductionRoute({
                 break;
 
               case 'servicio_sin_nivel': {
-                const tieneServicio = servicios.some(
+                const servicio = servicios.find(
                   (s: any) => s.servicio_id === paso.configuracion_condicion?.servicio_id
                 );
-                incluir = tieneServicio;
-                razon = tieneServicio ? 'Servicio aplicado' : 'Servicio no aplicado';
+                if (servicio) {
+                  incluir = true;
+                  servicioNombre = servicio.servicio_nombre || servicio.nombre;
+                  razon = `Servicio: ${servicioNombre}`;
+                }
                 break;
               }
 
               case 'servicio_con_nivel': {
-                const tieneServicioConNivel = servicios.some((s: any) => {
+                const servicio = servicios.find((s: any) => {
                   if (s.servicio_id !== paso.configuracion_condicion?.servicio_id) {
                     return false;
                   }
-                  // Verificar si el nivel coincide con el mapeo
                   const mapeoNiveles = paso.configuracion_condicion?.mapeo_niveles || {};
                   if (Object.keys(mapeoNiveles).length === 0) {
-                    return true; // Sin mapeo específico, cualquier nivel vale
+                    return true;
                   }
                   const nivelItem = s.nivel || s.nivel_nombre;
                   return Object.keys(mapeoNiveles).includes(nivelItem);
                 });
-                incluir = tieneServicioConNivel;
-                razon = tieneServicioConNivel ? 'Servicio con nivel aplicado' : 'Servicio con nivel no aplicado';
+
+                if (servicio) {
+                  incluir = true;
+                  servicioNombre = servicio.servicio_nombre || servicio.nombre;
+                  nivelAplicado = servicio.nivel || servicio.nivel_nombre;
+
+                  // Extraer paso_id específico del mapeo
+                  const mapeoNiveles = paso.configuracion_condicion?.mapeo_niveles || {};
+                  if (nivelAplicado && mapeoNiveles[nivelAplicado]) {
+                    pasoIdEspecifico = mapeoNiveles[nivelAplicado];
+                  }
+
+                  razon = `${servicioNombre} - ${nivelAplicado}`;
+                }
                 break;
               }
 
               case 'acabado_sin_nivel': {
-                const tieneAcabado = acabados.some(
+                const acabado = acabados.find(
                   (a: any) => a.acabado_id === paso.configuracion_condicion?.acabado_id
                 );
-                incluir = tieneAcabado;
-                razon = tieneAcabado ? 'Acabado aplicado' : 'Acabado no aplicado';
+                if (acabado) {
+                  incluir = true;
+                  acabadoNombre = acabado.acabado_nombre || acabado.nombre;
+                  razon = `Acabado: ${acabadoNombre}`;
+                }
                 break;
               }
 
               case 'acabado_con_nivel': {
-                const tieneAcabadoConNivel = acabados.some((a: any) => {
+                const acabado = acabados.find((a: any) => {
                   if (a.acabado_id !== paso.configuracion_condicion?.acabado_id) {
                     return false;
                   }
-                  // Verificar si el nivel coincide con el mapeo
                   const mapeoNiveles = paso.configuracion_condicion?.mapeo_niveles || {};
                   if (Object.keys(mapeoNiveles).length === 0) {
-                    return true; // Sin mapeo específico, cualquier nivel vale
+                    return true;
                   }
                   const nivelItem = a.nivel || a.nivel_nombre;
                   return Object.keys(mapeoNiveles).includes(nivelItem);
                 });
-                incluir = tieneAcabadoConNivel;
-                razon = tieneAcabadoConNivel ? 'Acabado con nivel aplicado' : 'Acabado con nivel no aplicado';
+
+                if (acabado) {
+                  incluir = true;
+                  acabadoNombre = acabado.acabado_nombre || acabado.nombre;
+                  nivelAplicado = acabado.nivel || acabado.nivel_nombre;
+
+                  // Extraer paso_id específico del mapeo
+                  const mapeoNiveles = paso.configuracion_condicion?.mapeo_niveles || {};
+                  if (nivelAplicado && mapeoNiveles[nivelAplicado]) {
+                    pasoIdEspecifico = mapeoNiveles[nivelAplicado];
+                  }
+
+                  razon = `${acabadoNombre} - ${nivelAplicado}`;
+                }
                 break;
               }
 
-              case 'tecnologia_tinta':
-                incluir = paso.configuracion_condicion?.tecnologia_id !== null;
-                razon = 'Tecnología configurada';
+              case 'tecnologia_tinta': {
+                const tecnologiaId = configuracion?.tecnologia_id;
+                const tintaNombre = configuracion?.tinta_nombre || configuracion?.tinta;
+
+                if (tecnologiaId) {
+                  incluir = true;
+
+                  // Buscar paso específico en mapeo de tintas si existe
+                  const mapeoTintas = paso.configuracion_condicion?.mapeo_tintas || {};
+                  if (tintaNombre && mapeoTintas[tintaNombre]) {
+                    pasoIdEspecifico = mapeoTintas[tintaNombre];
+                  }
+
+                  razon = tintaNombre ? `Impresión ${tintaNombre}` : 'Tecnología configurada';
+                }
                 break;
+              }
 
               default:
                 incluir = false;
@@ -217,16 +275,56 @@ export function useGenerateProductionRoute({
             generatedSteps.push({
               id: `temp-${paso.id}`,
               etapa: paso.etapa,
-              paso_id: paso.paso_id,
-              paso_nombre: (paso.pasos as any)?.nombre || 'Paso sin nombre',
+              paso_id_especifico: pasoIdEspecifico,
               orden: paso.orden,
               es_obligatorio: paso.es_obligatorio,
               razon_inclusion: razon,
+              nivel_aplicado: nivelAplicado,
+              servicio_nombre: servicioNombre,
+              acabado_nombre: acabadoNombre,
             });
           }
         }
 
-        setSteps(generatedSteps);
+        // 4. Consultar nombres reales de todos los pasos específicos
+        const pasosIdsUnicos = [...new Set(
+          generatedSteps
+            .map(s => s.paso_id_especifico)
+            .filter((id): id is string => id !== null)
+        )];
+
+        let nombresRealesPasos: Record<string, string> = {};
+        if (pasosIdsUnicos.length > 0) {
+          const { data: pasosReales } = await supabase
+            .from('pasos')
+            .select('id, nombre')
+            .in('id', pasosIdsUnicos);
+
+          if (pasosReales) {
+            nombresRealesPasos = pasosReales.reduce((acc, paso) => {
+              acc[paso.id] = paso.nombre;
+              return acc;
+            }, {} as Record<string, string>);
+          }
+        }
+
+        // 5. Construir pasos finales con nombres reales
+        const pasosFinales: GeneratedStep[] = generatedSteps.map(step => ({
+          id: step.id,
+          etapa: step.etapa,
+          paso_id: step.paso_id_especifico,
+          paso_nombre: step.paso_id_especifico
+            ? (nombresRealesPasos[step.paso_id_especifico] || 'Paso sin nombre')
+            : 'Paso sin nombre',
+          orden: step.orden,
+          es_obligatorio: step.es_obligatorio,
+          razon_inclusion: step.razon_inclusion,
+          nivel_aplicado: step.nivel_aplicado,
+          servicio_nombre: step.servicio_nombre,
+          acabado_nombre: step.acabado_nombre,
+        }));
+
+        setSteps(pasosFinales);
       } catch (err) {
         console.error('Error generando ruta:', err);
         setError(err instanceof Error ? err.message : 'Error desconocido');
