@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Card } from '../../ui/Card';
 import { Button } from '../../ui/Button';
 import { Badge } from '../../ui/Badge';
-import { Table } from '../../ui/Table';
 import { Plus, Edit2, Trash2, Layers } from 'lucide-react';
 import { AddLineModal } from './AddLineModal';
 import { useMeasurementLinesPricing } from '../../../hooks/wizard/useMeasurementLinesPricing';
@@ -139,31 +138,31 @@ export function MeasurementLinesTable({
       ) : (
         <>
           <div className="overflow-x-auto">
-            <Table>
-              <thead>
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
                 <tr>
-                  <th>Medidas</th>
-                  {config.tipo_venta_real === 'mt2' && <th>MT2</th>}
-                  <th>Cantidad</th>
-                  {selectedServicios.length > 0 && <th>Servicios</th>}
-                  {selectedAcabados.length > 0 && <th>Acabados</th>}
-                  {lines.some(l => l.precio_unitario_final) && <th>Precio Unit.</th>}
-                  {lines.some(l => l.precio_total_linea) && <th>Subtotal</th>}
-                  <th className="text-center">Acciones</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Medidas</th>
+                  {config.tipo_venta_real === 'mt2' && <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">MT2</th>}
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cantidad</th>
+                  {selectedServicios.length > 0 && <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Servicios</th>}
+                  {selectedAcabados.length > 0 && <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acabados</th>}
+                  {lines.some(l => l.precio_unitario_final) && <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Precio Unit.</th>}
+                  {lines.some(l => l.precio_total_linea) && <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subtotal</th>}
+                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="bg-white divide-y divide-gray-200">
                 {lines.map((line) => (
-                  <tr key={line.id}>
-                    <td className="font-medium">{formatMedidas(line)}</td>
+                  <tr key={line.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 whitespace-nowrap font-medium text-gray-900">{formatMedidas(line)}</td>
                     {config.tipo_venta_real === 'mt2' && (
-                      <td>
+                      <td className="px-4 py-3 whitespace-nowrap">
                         <Badge variant="info">{line.mt2_calculado?.toFixed(2)} MT2</Badge>
                       </td>
                     )}
-                    <td>{line.cantidad}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">{line.cantidad}</td>
                     {selectedServicios.length > 0 && (
-                      <td>
+                      <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-1">
                           {line.servicios_ids.length === 0 ? (
                             <span className="text-gray-400 text-sm">Ninguno</span>
@@ -178,7 +177,7 @@ export function MeasurementLinesTable({
                       </td>
                     )}
                     {selectedAcabados.length > 0 && (
-                      <td>
+                      <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-1">
                           {line.acabados_ids.length === 0 ? (
                             <span className="text-gray-400 text-sm">Ninguno</span>
@@ -193,7 +192,7 @@ export function MeasurementLinesTable({
                       </td>
                     )}
                     {lines.some(l => l.precio_unitario_final) && (
-                      <td>
+                      <td className="px-4 py-3 whitespace-nowrap font-medium text-gray-900">
                         {line.precio_unitario_final ? (
                           `$${line.precio_unitario_final.toFixed(2)}`
                         ) : (
@@ -202,7 +201,7 @@ export function MeasurementLinesTable({
                       </td>
                     )}
                     {lines.some(l => l.precio_total_linea) && (
-                      <td className="font-semibold">
+                      <td className="px-4 py-3 whitespace-nowrap font-semibold text-blue-600">
                         {line.precio_total_linea ? (
                           `$${line.precio_total_linea.toFixed(2)}`
                         ) : (
@@ -210,7 +209,7 @@ export function MeasurementLinesTable({
                         )}
                       </td>
                     )}
-                    <td>
+                    <td className="px-4 py-3 whitespace-nowrap text-center">
                       <div className="flex items-center justify-center gap-2">
                         <Button
                           variant="secondary"
@@ -234,7 +233,7 @@ export function MeasurementLinesTable({
                   </tr>
                 ))}
               </tbody>
-            </Table>
+            </table>
           </div>
 
           {/* Totales */}
