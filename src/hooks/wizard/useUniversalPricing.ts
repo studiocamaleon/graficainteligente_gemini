@@ -76,6 +76,17 @@ export function useUniversalPricing() {
       // Calcular impacto de servicios según su tipo de impacto
       let precioServiciosUnitario = 0;
       for (const servicio of servicios) {
+        console.log('🔍 Calculando servicio:', {
+          nombre: servicio.servicio_nombre,
+          tipo_impacto: servicio.tipo_impacto,
+          valor_monto: servicio.valor_monto,
+          valor_porcentaje: servicio.valor_porcentaje,
+          precioBaseUnitario,
+          mt2,
+          metrosLineales,
+          cantidad: config.cantidad
+        });
+
         const impacto = calcularImpacto(
           servicio.tipo_impacto,
           servicio.valor_monto,
@@ -85,6 +96,8 @@ export function useUniversalPricing() {
           metrosLineales,
           config.cantidad
         );
+
+        console.log('💰 Impacto calculado:', impacto);
         precioServiciosUnitario += impacto;
       }
 
@@ -105,6 +118,13 @@ export function useUniversalPricing() {
 
       // Precio total es el precio unitario (con servicios y acabados)
       const precioTotalUnitario = precioBaseUnitario + precioServiciosUnitario + precioAcabadosUnitario;
+
+      console.log('📊 Resultado final:', {
+        precio_base: precioBaseUnitario,
+        precio_servicios: precioServiciosUnitario,
+        precio_acabados: precioAcabadosUnitario,
+        precio_total: precioTotalUnitario
+      });
 
       // Para cantidades fijas, devolvemos los precios unitarios
       // Para cantidades variables, el precio base ya era unitario
