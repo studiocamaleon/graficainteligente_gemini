@@ -128,13 +128,6 @@ export function useGenerateProductionRoute({
         }
 
         // 3. Evaluar cada paso según condiciones y extraer paso_id específico
-        console.log('🔍 [RUTA] Generando ruta de producción:', {
-          productoId,
-          categoria,
-          totalPasosPlantilla: pasos.length,
-          rutaId,
-        });
-
         const generatedSteps: Array<{
           id: string;
           etapa: string;
@@ -151,22 +144,7 @@ export function useGenerateProductionRoute({
         const servicios = configuracion?.servicios_seleccionados || configuracion?.servicios || [];
         const acabados = configuracion?.acabados_seleccionados || configuracion?.acabados || [];
 
-        console.log('📋 [CONFIG] Configuración del item:', {
-          servicios: servicios.length,
-          acabados: acabados.length,
-          tecnologia_id: configuracion?.tecnologia_id,
-          tinta_nombre: configuracion?.tinta_nombre || configuracion?.tinta,
-        });
-
         for (const paso of pasos) {
-          console.log('\n📝 [PASO] Evaluando:', {
-            etapa: paso.etapa,
-            paso_id_plantilla: paso.paso_id,
-            paso_nombre_plantilla: (paso.pasos as any)?.nombre,
-            tipo_condicion: paso.tipo_condicion,
-            es_obligatorio: paso.es_obligatorio,
-          });
-
           let incluir = false;
           let razon = '';
           let pasoIdEspecifico: string | null = paso.paso_id;
@@ -178,7 +156,6 @@ export function useGenerateProductionRoute({
           if (paso.es_obligatorio) {
             incluir = true;
             razon = 'Paso obligatorio';
-            console.log('  ✅ INCLUIDO (obligatorio)');
           } else {
             // Evaluar condición
             switch (paso.tipo_condicion) {
@@ -217,20 +194,27 @@ export function useGenerateProductionRoute({
                   servicioNombre = servicio.servicio_nombre || servicio.nombre;
                   nivelAplicado = servicio.nivel || servicio.nivel_nombre;
 
-                  // Extraer paso_id específico del mapeo
+                  // SOLUCION: Consultar directamente en servicios_niveles_precio
                   const mapeoNiveles = paso.configuracion_condicion?.mapeo_niveles || {};
-                  console.log('  🔄 Mapeo niveles disponible:', mapeoNiveles);
-                  console.log('  🎯 Nivel aplicado:', nivelAplicado);
 
+                  // Primero intentar con mapeo manual
                   if (nivelAplicado && mapeoNiveles[nivelAplicado]) {
                     pasoIdEspecifico = mapeoNiveles[nivelAplicado];
-                    console.log('  ✨ Paso específico extraído:', pasoIdEspecifico);
                   } else {
-                    console.log('  ⚠️ No hay mapeo para nivel:', nivelAplicado);
+                    // Consulta dinámica a la BD
+                    const { data: nivelData } = await supabase
+                      .from('servicios_niveles_precio')
+                      .select('paso_id')
+                      .eq('servicio_id', servicio.servicio_id)
+                      .eq('nombre', nivelAplicado)
+                      .maybeSingle();
+
+                    if (nivelData?.paso_id) {
+                      pasoIdEspecifico = nivelData.paso_id;
+                    }
                   }
 
                   razon = `${servicioNombre} - ${nivelAplicado}`;
-                  console.log('  ✅ INCLUIDO (servicio con nivel)');
                 }
                 break;
               }
@@ -265,20 +249,27 @@ export function useGenerateProductionRoute({
                   acabadoNombre = acabado.acabado_nombre || acabado.nombre;
                   nivelAplicado = acabado.nivel || acabado.nivel_nombre;
 
-                  // Extraer paso_id específico del mapeo
+                  // SOLUCION: Consultar directamente en acabados_niveles_precio
                   const mapeoNiveles = paso.configuracion_condicion?.mapeo_niveles || {};
-                  console.log('  🔄 Mapeo niveles disponible:', mapeoNiveles);
-                  console.log('  🎯 Nivel aplicado:', nivelAplicado);
 
+                  // Primero intentar con mapeo manual
                   if (nivelAplicado && mapeoNiveles[nivelAplicado]) {
                     pasoIdEspecifico = mapeoNiveles[nivelAplicado];
-                    console.log('  ✨ Paso específico extraído:', pasoIdEspecifico);
                   } else {
-                    console.log('  ⚠️ No hay mapeo para nivel:', nivelAplicado);
+                    // Consulta dinámica a la BD
+                    const { data: nivelData } = await supabase
+                      .from('acabados_niveles_precio')
+                      .select('paso_id')
+                      .eq('acabado_id', acabado.acabado_id)
+                      .eq('nombre', nivelAplicado)
+                      .maybeSingle();
+
+                    if (nivelData?.paso_id) {
+                      pasoIdEspecifico = nivelData.paso_id;
+                    }
                   }
 
                   razon = `${acabadoNombre} - ${nivelAplicado}`;
-                  console.log('  ✅ INCLUIDO (acabado con nivel)');
                 }
                 break;
               }
@@ -287,25 +278,32 @@ export function useGenerateProductionRoute({
                 const tecnologiaId = configuracion?.tecnologia_id;
                 const tintaNombre = configuracion?.tinta_nombre || configuracion?.tinta;
 
-                console.log('  🎨 Evaluando tecnología/tinta:', { tecnologiaId, tintaNombre });
-
                 if (tecnologiaId) {
                   incluir = true;
 
-                  // Buscar paso específico en mapeo de tintas si existe
+                  // SOLUCION: Consultar directamente en tecnologias_tintas_pasos
                   const mapeoTintas = paso.configuracion_condicion?.mapeo_tintas || {};
-                  console.log('  🔄 Mapeo tintas disponible:', mapeoTintas);
-                  console.log('  🎯 Tinta aplicada:', tintaNombre);
 
+                  // Primero intentar con mapeo manual
                   if (tintaNombre && mapeoTintas[tintaNombre]) {
                     pasoIdEspecifico = mapeoTintas[tintaNombre];
-                    console.log('  ✨ Paso específico extraído:', pasoIdEspecifico);
                   } else {
-                    console.log('  ⚠️ No hay mapeo para tinta:', tintaNombre);
+                    // Consulta dinámica a la BD
+                    if (tintaNombre) {
+                      const { data: tintaData } = await supabase
+                        .from('tecnologias_tintas_pasos')
+                        .select('paso_id')
+                        .eq('tecnologia_id', tecnologiaId)
+                        .eq('tinta', tintaNombre)
+                        .maybeSingle();
+
+                      if (tintaData?.paso_id) {
+                        pasoIdEspecifico = tintaData.paso_id;
+                      }
+                    }
                   }
 
                   razon = tintaNombre ? `Impresión ${tintaNombre}` : 'Tecnología configurada';
-                  console.log('  ✅ INCLUIDO (tecnología/tinta)');
                 }
                 break;
               }
@@ -318,10 +316,6 @@ export function useGenerateProductionRoute({
 
           // Solo incluir si cumple condiciones
           if (incluir) {
-            console.log('  💾 Agregando paso a lista:', {
-              paso_id_especifico: pasoIdEspecifico,
-              razon,
-            });
             generatedSteps.push({
               id: `temp-${paso.id}`,
               etapa: paso.etapa,
@@ -333,8 +327,6 @@ export function useGenerateProductionRoute({
               servicio_nombre: servicioNombre,
               acabado_nombre: acabadoNombre,
             });
-          } else {
-            console.log('  ❌ EXCLUIDO (no cumple condición)');
           }
         }
 
@@ -345,52 +337,28 @@ export function useGenerateProductionRoute({
             .filter((id): id is string => id !== null)
         )];
 
-        console.log('\n🔎 [CONSULTA] IDs únicos a buscar en tabla pasos:', pasosIdsUnicos);
-
         let nombresRealesPasos: Record<string, string> = {};
         if (pasosIdsUnicos.length > 0) {
-          const { data: pasosReales, error: errorPasos } = await supabase
+          const { data: pasosReales } = await supabase
             .from('pasos')
             .select('id, nombre')
             .in('id', pasosIdsUnicos);
 
-          if (errorPasos) {
-            console.error('❌ [ERROR] Error al consultar pasos:', errorPasos);
-          }
-
-          console.log('📚 [RESULTADO] Pasos encontrados en BD:', pasosReales?.length || 0);
           if (pasosReales) {
-            pasosReales.forEach(p => {
-              console.log(`  ✅ ${p.id} → "${p.nombre}"`);
-            });
-
             nombresRealesPasos = pasosReales.reduce((acc, paso) => {
               acc[paso.id] = paso.nombre;
               return acc;
             }, {} as Record<string, string>);
           }
-
-          // Detectar IDs que no se encontraron
-          const idsEncontrados = new Set(pasosReales?.map(p => p.id) || []);
-          const idsNoEncontrados = pasosIdsUnicos.filter(id => !idsEncontrados.has(id));
-          if (idsNoEncontrados.length > 0) {
-            console.warn('⚠️ [ADVERTENCIA] Pasos NO encontrados en BD:', idsNoEncontrados);
-          }
         }
 
         // 5. Construir pasos finales con nombres reales
-        console.log('\n🏗️ [CONSTRUCCIÓN] Construyendo pasos finales...');
-
         const pasosFinales: GeneratedStep[] = generatedSteps.map(step => {
           const nombreReal = step.paso_id_especifico
             ? nombresRealesPasos[step.paso_id_especifico]
             : undefined;
 
           const nombreFinal = nombreReal || 'Paso sin nombre';
-
-          if (!nombreReal && step.paso_id_especifico) {
-            console.warn(`⚠️ ID ${step.paso_id_especifico} no tiene nombre → usando "Paso sin nombre"`);
-          }
 
           return {
             id: step.id,
@@ -404,12 +372,6 @@ export function useGenerateProductionRoute({
             servicio_nombre: step.servicio_nombre,
             acabado_nombre: step.acabado_nombre,
           };
-        });
-
-        console.log('\n✨ [RESULTADO FINAL] Total pasos generados:', pasosFinales.length);
-        pasosFinales.forEach((paso, idx) => {
-          console.log(`  ${idx + 1}. [${paso.etapa}] ${paso.paso_nombre}`);
-          console.log(`     → ${paso.razon_inclusion}`);
         });
 
         setSteps(pasosFinales);
