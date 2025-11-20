@@ -27,6 +27,7 @@ export interface ProductConfiguration {
     variante_nombre: string;
     espesor?: number;
     unidad_espesor?: string;
+    gramaje?: number;
   }>;
 
   // Tecnologías y tintas (para productos con impresión)
@@ -150,15 +151,17 @@ async function loadImpresionLaserConfig(productId: string): Promise<ProductConfi
 
   if (prodError) throw prodError;
 
-  // Cargar materiales
+  // Cargar materiales con variantes
   const { data: materiales } = await supabase
     .from('productos_impresion_laser_materiales')
     .select(`
       id,
       material_id,
+      variante_id,
       variante_nombre,
       espesor,
-      materiales!inner(id, nombre, unidad_espesor)
+      materiales!inner(id, nombre, unidad_espesor),
+      variantes:material_variantes(id, gramaje)
     `)
     .eq('producto_laser_id', productId);
 
@@ -206,10 +209,11 @@ async function loadImpresionLaserConfig(productId: string): Promise<ProductConfi
       id: m.id,
       material_id: m.material_id,
       material_nombre: (m.materiales as any).nombre,
-      variante_id: m.material_id,
+      variante_id: m.variante_id,
       variante_nombre: m.variante_nombre,
       espesor: m.espesor,
-      unidad_espesor: (m.materiales as any).unidad_espesor
+      unidad_espesor: (m.materiales as any).unidad_espesor,
+      gramaje: (m.variantes as any)?.gramaje || null
     })) || [],
     tecnologias: tecnologias?.map(t => ({
       id: t.id,
