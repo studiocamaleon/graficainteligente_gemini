@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card } from '../../ui/Card';
 import { Input } from '../../ui/Input';
 import { Button } from '../../ui/Button';
-import { Ruler, Package, Layers, Palette, FileText, Check } from 'lucide-react';
+import { Ruler, Package, Layers, Palette, FileText, Check, RotateCcw, CheckCircle } from 'lucide-react';
 import type { ProductConfiguration } from '../../../hooks/wizard/useProductConfiguration';
 import { MeasurementLinesTable } from './MeasurementLinesTable';
 import type { SelectedService, SelectedFinishing } from './ServicesAndFinishingsStep';
@@ -80,6 +80,35 @@ export interface SelectedConfiguration {
   marca: string | null;
 }
 
+// ===============================================
+// FUNCIONES AUXILIARES PARA MATERIALES RÍGIDOS
+// ===============================================
+
+/**
+ * Extrae una lista única de variantes disponibles para Materiales Rígidos
+ */
+function getVariantesUnicas(
+  materiales: Array<{ variante_nombre: string }>
+): string[] {
+  const variantes = new Set<string>();
+  materiales.forEach(m => variantes.add(m.variante_nombre));
+  return Array.from(variantes).sort();
+}
+
+/**
+ * Extrae los espesores disponibles para una variante específica
+ */
+function getEspesoresPorVariante(
+  materiales: Array<{ variante_nombre: string; espesor: number | null }>,
+  varianteNombre: string
+): number[] {
+  return materiales
+    .filter(m => m.variante_nombre === varianteNombre && m.espesor !== null)
+    .map(m => m.espesor as number)
+    .filter((value, index, self) => self.indexOf(value) === index) // únicos
+    .sort((a, b) => a - b);
+}
+
 export function ConfigurationStep({
   config,
   selectedConfig,
@@ -88,6 +117,10 @@ export function ConfigurationStep({
   onConfigChange
 }: ConfigurationStepProps) {
   const [localConfig, setLocalConfig] = useState(selectedConfig);
+
+  // Estado específico para Materiales Rígidos (selección progresiva)
+  const [variantesDisponibles, setVariantesDisponibles] = useState<string[]>([]);
+  const [espesoresDisponibles, setEspesoresDisponibles] = useState<number[]>([]);
 
   // Auto-seleccionar opciones únicas al cargar
   useEffect(() => {
@@ -123,10 +156,76 @@ export function ConfigurationStep({
     }
   }, [config]);
 
+  // Efecto para inicializar variantes disponibles en Materiales Rígidos
+  useEffect(() => {
+    if (config.categoria === 'Materiales Rigidos' && config.materiales && config.materiales.length > 0) {
+      const variantes = getVariantesUnicas(config.materiales);
+      setVariantesDisponibles(variantes);
+
+      // Si ya hay una variante seleccionada (edición o vuelta atrás), calcular espesores
+      if (localConfig.variante_nombre) {
+        const espesores = getEspesoresPorVariante(config.materiales, localConfig.variante_nombre);
+        setEspesoresDisponibles(espesores);
+      }
+    }
+  }, [config, localConfig.variante_nombre]);
+
+  // Efecto para calcular espesores cuando cambia la variante seleccionada
+  useEffect(() => {
+    if (config.categoria === 'Materiales Rigidos' && localConfig.variante_nombre && config.materiales) {
+      const espesores = getEspesoresPorVariante(config.materiales, localConfig.variante_nombre);
+      setEspesoresDisponibles(espesores);
+    }
+  }, [localConfig.variante_nombre, config]);
+
   const handleChange = (changes: Partial<SelectedConfiguration>) => {
     const newConfig = { ...localConfig, ...changes };
     setLocalConfig(newConfig);
     onConfigChange(changes);
+  };
+
+  // Handlers específicos para Materiales Rígidos
+  const handleVarianteSelection = (varianteNombre: string) => {
+    // Resetear espesor cuando cambia la variante
+    handleChange({
+      variante_nombre: varianteNombre,
+      espesor: null,
+      material_id: null,
+      material_nombre: null,
+      variante_id: null,
+      unidad_espesor: null
+    });
+  };
+
+  const handleEspesorSelection = (espesor: number) => {
+    // Buscar el registro completo en config.materiales
+    const materialCompleto = config.materiales?.find(m =>
+      m.variante_nombre === localConfig.variante_nombre &&
+      m.espesor === espesor
+    );
+
+    if (materialCompleto) {
+      handleChange({
+        material_id: materialCompleto.material_id,
+        material_nombre: materialCompleto.material_nombre,
+        variante_id: materialCompleto.material_id, // Usar material_id como variante_id
+        variante_nombre: materialCompleto.variante_nombre,
+        espesor: materialCompleto.espesor,
+        unidad_espesor: materialCompleto.unidad_espesor
+      });
+    }
+  };
+
+  const handleResetSeleccionMR = () => {
+    setEspesoresDisponibles([]);
+    handleChange({
+      material_id: null,
+      material_nombre: null,
+      variante_id: null,
+      variante_nombre: null,
+      espesor: null,
+      unidad_espesor: null
+    });
   };
 
   const isImpresionLaser = config.categoria === 'Impresion Laser';
@@ -299,57 +398,37 @@ export function ConfigurationStep({
         </Card>
       )}
 
-      {/* Material - Selector solo si hay múltiples materiales O no permite múltiples líneas */}
-      {(() => {
-        // Determinar si debe mostrar selector de material
-        const shouldShowMaterialSelector =
-          !isImpresionLaser &&
-          config.materiales &&
-          config.materiales.length > 1 && // Solo si hay MÁS de 1 material
-          (!config.permite_multiples_lineas || config.categoria === 'Materiales Rigidos'); // Para productos tradicionales O Materiales Rígidos
-
-        return shouldShowMaterialSelector && (
+      {/* Material - Selector Progresivo para Materiales Rígidos */}
+      {config.categoria === 'Materiales Rigidos' && config.materiales && config.materiales.length > 0 && (
+        <>
+          {/* PASO 1: Seleccionar Variante */}
           <Card className="p-6">
             <div className="flex items-center gap-2 mb-4">
               <Layers className="w-5 h-5 text-blue-600" />
-              <h3 className="text-lg font-semibold text-gray-900">Material</h3>
+              <h3 className="text-lg font-semibold text-gray-900">
+                Variante de {config.materiales[0]?.material_nombre || 'Material'}
+              </h3>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">
-                Selecciona el material
+                Selecciona la variante
               </label>
               <div className="grid grid-cols-2 gap-3">
-                {config.materiales.map((material) => {
-                  const isSelected = localConfig.material_id === material.material_id;
+                {variantesDisponibles.map((variante) => {
+                  const isSelected = localConfig.variante_nombre === variante;
                   return (
                     <Card
-                      key={material.id}
+                      key={variante}
                       className={`p-4 cursor-pointer transition-all ${
                         isSelected
                           ? 'ring-2 ring-blue-600 bg-blue-50 border-blue-600'
                           : 'hover:border-blue-300 hover:shadow-md'
                       }`}
-                      onClick={() => {
-                        handleChange({
-                          material_id: material.material_id,
-                          material_nombre: material.material_nombre,
-                          variante_id: material.variante_id,
-                          variante_nombre: material.variante_nombre,
-                          espesor: material.espesor || null,
-                          unidad_espesor: material.unidad_espesor || null,
-                          gramaje: material.gramaje || null
-                        });
-                      }}
+                      onClick={() => handleVarianteSelection(variante)}
                     >
                       <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <div className="font-semibold text-gray-900">{material.material_nombre}</div>
-                          <div className="text-sm text-gray-600">{material.variante_nombre}</div>
-                          {material.espesor && (
-                            <div className="text-sm text-gray-500">{material.espesor} {material.unidad_espesor}</div>
-                          )}
-                        </div>
+                        <div className="font-semibold text-gray-900">{variante}</div>
                         {isSelected && (
                           <Check className="w-5 h-5 text-blue-600 flex-shrink-0 ml-2" />
                         )}
@@ -360,8 +439,132 @@ export function ConfigurationStep({
               </div>
             </div>
           </Card>
-        );
-      })()}
+
+          {/* PASO 2: Seleccionar Espesor (solo si hay variante seleccionada) */}
+          {localConfig.variante_nombre && espesoresDisponibles.length > 0 && (
+            <Card className="p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <Ruler className="w-5 h-5 text-blue-600" />
+                <h3 className="text-lg font-semibold text-gray-900">Espesor</h3>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Selecciona el espesor para {localConfig.variante_nombre}
+                </label>
+                <div className="grid grid-cols-3 gap-3">
+                  {espesoresDisponibles.map((espesor) => {
+                    const isSelected = localConfig.espesor === espesor;
+                    const unidad = config.materiales[0]?.unidad_espesor || 'mm';
+
+                    return (
+                      <Card
+                        key={espesor}
+                        className={`p-4 cursor-pointer transition-all ${
+                          isSelected
+                            ? 'ring-2 ring-blue-600 bg-blue-50 border-blue-600'
+                            : 'hover:border-blue-300 hover:shadow-md'
+                        }`}
+                        onClick={() => handleEspesorSelection(espesor)}
+                      >
+                        <div className="flex flex-col items-center justify-center">
+                          <div className="text-2xl font-bold text-gray-900">{espesor}</div>
+                          <div className="text-sm text-gray-500">{unidad}</div>
+                          {isSelected && (
+                            <Check className="w-5 h-5 text-blue-600 mt-2" />
+                          )}
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
+
+                {/* Botón para cambiar de variante */}
+                {localConfig.variante_nombre && (
+                  <Button
+                    variant="outline"
+                    onClick={handleResetSeleccionMR}
+                    className="mt-4 w-full"
+                  >
+                    <RotateCcw className="w-4 h-4 mr-2" />
+                    Cambiar variante
+                  </Button>
+                )}
+              </div>
+            </Card>
+          )}
+
+          {/* Indicador de selección completa */}
+          {localConfig.variante_nombre && localConfig.espesor && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-5 h-5 text-green-600" />
+                <div>
+                  <div className="font-semibold text-green-900">Selección completa</div>
+                  <div className="text-sm text-green-700">
+                    {config.materiales[0]?.material_nombre} {localConfig.variante_nombre} - {localConfig.espesor}{config.materiales[0]?.unidad_espesor}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Material - Selector tradicional para otras categorías */}
+      {config.categoria !== 'Materiales Rigidos' && !isImpresionLaser && config.materiales && config.materiales.length > 1 && !config.permite_multiples_lineas && (
+        <Card className="p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Layers className="w-5 h-5 text-blue-600" />
+            <h3 className="text-lg font-semibold text-gray-900">Material</h3>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-3">
+              Selecciona el material
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              {config.materiales.map((material) => {
+                const isSelected = localConfig.material_id === material.material_id;
+                return (
+                  <Card
+                    key={material.id}
+                    className={`p-4 cursor-pointer transition-all ${
+                      isSelected
+                        ? 'ring-2 ring-blue-600 bg-blue-50 border-blue-600'
+                        : 'hover:border-blue-300 hover:shadow-md'
+                    }`}
+                    onClick={() => {
+                      handleChange({
+                        material_id: material.material_id,
+                        material_nombre: material.material_nombre,
+                        variante_id: material.variante_id,
+                        variante_nombre: material.variante_nombre,
+                        espesor: material.espesor || null,
+                        unidad_espesor: material.unidad_espesor || null,
+                        gramaje: material.gramaje || null
+                      });
+                    }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="font-semibold text-gray-900">{material.material_nombre}</div>
+                        <div className="text-sm text-gray-600">{material.variante_nombre}</div>
+                        {material.espesor && (
+                          <div className="text-sm text-gray-500">{material.espesor} {material.unidad_espesor}</div>
+                        )}
+                      </div>
+                      {isSelected && (
+                        <Check className="w-5 h-5 text-blue-600 flex-shrink-0 ml-2" />
+                      )}
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        </Card>
+      )}
 
       {/* Tecnología y Tintas - NO mostrar tecnología para Impresión Láser */}
       {config.tecnologias && config.tecnologias.length > 0 && (
