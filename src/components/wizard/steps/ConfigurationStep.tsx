@@ -152,51 +152,53 @@ export function ConfigurationStep({
         </p>
       </div>
 
-      {/* Cantidad */}
-      <Card className="p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Package className="w-5 h-5 text-blue-600" />
-          <h3 className="text-lg font-semibold text-gray-900">Cantidad</h3>
-        </div>
+      {/* Cantidad - Solo para productos sin múltiples líneas */}
+      {!config.permite_multiples_lineas && (
+        <Card className="p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Package className="w-5 h-5 text-blue-600" />
+            <h3 className="text-lg font-semibold text-gray-900">Cantidad</h3>
+          </div>
 
-        {config.tipo_venta === 'cantidades_fijas' && config.cantidades_fijas && config.cantidades_fijas.length > 0 ? (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">
-              Selecciona la cantidad
-            </label>
-            <div className="grid grid-cols-4 gap-3">
-              {config.cantidades_fijas.map((cant) => (
-                <Button
-                  key={cant}
-                  variant={localConfig.cantidad === cant ? 'primary' : 'secondary'}
-                  onClick={() => handleChange({ cantidad: cant })}
-                  className="w-full"
-                >
-                  {cant}
-                </Button>
-              ))}
+          {config.tipo_venta === 'cantidades_fijas' && config.cantidades_fijas && config.cantidades_fijas.length > 0 ? (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Selecciona la cantidad
+              </label>
+              <div className="grid grid-cols-4 gap-3">
+                {config.cantidades_fijas.map((cant) => (
+                  <Button
+                    key={cant}
+                    variant={localConfig.cantidad === cant ? 'primary' : 'secondary'}
+                    onClick={() => handleChange({ cantidad: cant })}
+                    className="w-full"
+                  >
+                    {cant}
+                  </Button>
+                ))}
+              </div>
             </div>
-          </div>
-        ) : (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Cantidad {config.cantidad_minima && `(mínimo: ${config.cantidad_minima})`}
-            </label>
-            <Input
-              type="number"
-              min={config.cantidad_minima || 1}
-              value={localConfig.cantidad}
-              onChange={(e) => {
-                const value = parseInt(e.target.value);
-                if (!isNaN(value)) {
-                  handleChange({ cantidad: value });
-                }
-              }}
-              placeholder="Ingresa la cantidad"
-            />
-          </div>
-        )}
-      </Card>
+          ) : (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Cantidad {config.cantidad_minima && `(mínimo: ${config.cantidad_minima})`}
+              </label>
+              <Input
+                type="number"
+                min={config.cantidad_minima || 1}
+                value={localConfig.cantidad}
+                onChange={(e) => {
+                  const value = parseInt(e.target.value);
+                  if (!isNaN(value)) {
+                    handleChange({ cantidad: value });
+                  }
+                }}
+                placeholder="Ingresa la cantidad"
+              />
+            </div>
+          )}
+        </Card>
+      )}
 
       {/* Medidas - Cards en lugar de Select */}
       {config.medidas && config.medidas.length > 0 && (
@@ -248,8 +250,8 @@ export function ConfigurationStep({
         </Card>
       )}
 
-      {/* Anchos disponibles (Gran Formato / Plotter) */}
-      {config.anchos_disponibles && config.anchos_disponibles.length > 0 && (
+      {/* Anchos disponibles (Gran Formato / Plotter) - Solo para productos sin múltiples líneas */}
+      {!config.permite_multiples_lineas && config.anchos_disponibles && config.anchos_disponibles.length > 0 && (
         <Card className="p-6">
           <div className="flex items-center gap-2 mb-4">
             <Ruler className="w-5 h-5 text-blue-600" />
@@ -297,60 +299,69 @@ export function ConfigurationStep({
         </Card>
       )}
 
-      {/* Material - NO mostrar para Impresión Láser */}
-      {!isImpresionLaser && config.materiales && config.materiales.length > 0 && (
-        <Card className="p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Layers className="w-5 h-5 text-blue-600" />
-            <h3 className="text-lg font-semibold text-gray-900">Material</h3>
-          </div>
+      {/* Material - Selector solo si hay múltiples materiales O no permite múltiples líneas */}
+      {(() => {
+        // Determinar si debe mostrar selector de material
+        const shouldShowMaterialSelector =
+          !isImpresionLaser &&
+          config.materiales &&
+          config.materiales.length > 1 && // Solo si hay MÁS de 1 material
+          (!config.permite_multiples_lineas || config.categoria === 'Materiales Rigidos'); // Para productos tradicionales O Materiales Rígidos
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">
-              Selecciona el material
-            </label>
-            <div className="grid grid-cols-2 gap-3">
-              {config.materiales.map((material) => {
-                const isSelected = localConfig.material_id === material.material_id;
-                return (
-                  <Card
-                    key={material.id}
-                    className={`p-4 cursor-pointer transition-all ${
-                      isSelected
-                        ? 'ring-2 ring-blue-600 bg-blue-50 border-blue-600'
-                        : 'hover:border-blue-300 hover:shadow-md'
-                    }`}
-                    onClick={() => {
-                      handleChange({
-                        material_id: material.material_id,
-                        material_nombre: material.material_nombre,
-                        variante_id: material.variante_id,
-                        variante_nombre: material.variante_nombre,
-                        espesor: material.espesor || null,
-                        unidad_espesor: material.unidad_espesor || null,
-                        gramaje: material.gramaje || null
-                      });
-                    }}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="font-semibold text-gray-900">{material.material_nombre}</div>
-                        <div className="text-sm text-gray-600">{material.variante_nombre}</div>
-                        {material.espesor && (
-                          <div className="text-sm text-gray-500">{material.espesor} {material.unidad_espesor}</div>
+        return shouldShowMaterialSelector && (
+          <Card className="p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Layers className="w-5 h-5 text-blue-600" />
+              <h3 className="text-lg font-semibold text-gray-900">Material</h3>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Selecciona el material
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                {config.materiales.map((material) => {
+                  const isSelected = localConfig.material_id === material.material_id;
+                  return (
+                    <Card
+                      key={material.id}
+                      className={`p-4 cursor-pointer transition-all ${
+                        isSelected
+                          ? 'ring-2 ring-blue-600 bg-blue-50 border-blue-600'
+                          : 'hover:border-blue-300 hover:shadow-md'
+                      }`}
+                      onClick={() => {
+                        handleChange({
+                          material_id: material.material_id,
+                          material_nombre: material.material_nombre,
+                          variante_id: material.variante_id,
+                          variante_nombre: material.variante_nombre,
+                          espesor: material.espesor || null,
+                          unidad_espesor: material.unidad_espesor || null,
+                          gramaje: material.gramaje || null
+                        });
+                      }}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <div className="font-semibold text-gray-900">{material.material_nombre}</div>
+                          <div className="text-sm text-gray-600">{material.variante_nombre}</div>
+                          {material.espesor && (
+                            <div className="text-sm text-gray-500">{material.espesor} {material.unidad_espesor}</div>
+                          )}
+                        </div>
+                        {isSelected && (
+                          <Check className="w-5 h-5 text-blue-600 flex-shrink-0 ml-2" />
                         )}
                       </div>
-                      {isSelected && (
-                        <Check className="w-5 h-5 text-blue-600 flex-shrink-0 ml-2" />
-                      )}
-                    </div>
-                  </Card>
-                );
-              })}
+                    </Card>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        </Card>
-      )}
+          </Card>
+        );
+      })()}
 
       {/* Tecnología y Tintas - NO mostrar tecnología para Impresión Láser */}
       {config.tecnologias && config.tecnologias.length > 0 && (
@@ -446,6 +457,34 @@ export function ConfigurationStep({
                 </div>
               );
             })()}
+          </div>
+        </Card>
+      )}
+
+      {/* Material auto-seleccionado (solo info) - Para productos con múltiples líneas y 1 solo material */}
+      {config.permite_multiples_lineas &&
+       localConfig.material_nombre &&
+       config.materiales &&
+       config.materiales.length === 1 && (
+        <Card className="p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Layers className="w-5 h-5 text-blue-600" />
+            <h3 className="text-lg font-semibold text-gray-900">Material</h3>
+          </div>
+
+          <div className="bg-blue-50 p-4 rounded-lg">
+            <p className="text-sm text-gray-700">
+              <span className="font-semibold">{localConfig.material_nombre}</span>
+              {localConfig.variante_nombre && ` - ${localConfig.variante_nombre}`}
+              {localConfig.espesor && localConfig.unidad_espesor && (
+                <span className="text-gray-600 ml-2">
+                  ({localConfig.espesor}{localConfig.unidad_espesor})
+                </span>
+              )}
+            </p>
+            <p className="text-xs text-gray-500 mt-1">
+              Material asignado a este producto
+            </p>
           </div>
         </Card>
       )}
