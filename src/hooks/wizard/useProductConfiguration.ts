@@ -151,7 +151,7 @@ async function loadImpresionLaserConfig(productId: string): Promise<ProductConfi
 
   if (prodError) throw prodError;
 
-  // Cargar materiales con variantes
+  // Cargar materiales con el campo variantes (JSONB) de la tabla materiales
   const { data: materiales } = await supabase
     .from('productos_impresion_laser_materiales')
     .select(`
@@ -160,8 +160,7 @@ async function loadImpresionLaserConfig(productId: string): Promise<ProductConfi
       variante_id,
       variante_nombre,
       espesor,
-      materiales!inner(id, nombre, unidad_espesor),
-      variantes:material_variantes(id, gramaje)
+      materiales!inner(id, nombre, unidad_espesor, variantes)
     `)
     .eq('producto_laser_id', productId);
 
@@ -205,16 +204,31 @@ async function loadImpresionLaserConfig(productId: string): Promise<ProductConfi
     tipo_venta: producto.tipo_venta as 'unidad' | 'cantidades_fijas',
     cantidades_fijas: producto.cantidades_fijas || [],
     caras_impresas: producto.caras_impresas || [],
-    materiales: materiales?.map(m => ({
-      id: m.id,
-      material_id: m.material_id,
-      material_nombre: (m.materiales as any).nombre,
-      variante_id: m.variante_id,
-      variante_nombre: m.variante_nombre,
-      espesor: m.espesor,
-      unidad_espesor: (m.materiales as any).unidad_espesor,
-      gramaje: (m.variantes as any)?.gramaje || null
-    })) || [],
+    materiales: materiales?.map(m => {
+      const material = m.materiales as any;
+      let gramaje = null;
+
+      // Buscar el gramaje en el array de variantes del JSONB
+      if (material.variantes && Array.isArray(material.variantes) && m.variante_nombre) {
+        const variante = material.variantes.find(
+          (v: any) => v.nombre === m.variante_nombre
+        );
+        if (variante && variante.gramaje) {
+          gramaje = variante.gramaje;
+        }
+      }
+
+      return {
+        id: m.id,
+        material_id: m.material_id,
+        material_nombre: material.nombre,
+        variante_id: m.variante_id,
+        variante_nombre: m.variante_nombre,
+        espesor: m.espesor,
+        unidad_espesor: material.unidad_espesor,
+        gramaje: gramaje
+      };
+    }) || [],
     tecnologias: tecnologias?.map(t => ({
       id: t.id,
       tecnologia_id: t.tecnologia_id,
