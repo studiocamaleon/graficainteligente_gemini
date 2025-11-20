@@ -88,7 +88,11 @@ export function UniversalSummaryStep({
               <span className="font-medium">
                 {selectedConfig.material_nombre}
                 {selectedConfig.variante_nombre && ` - ${selectedConfig.variante_nombre}`}
-                {selectedConfig.espesor && ` (${selectedConfig.espesor}mm)`}
+                {selectedConfig.espesor && selectedConfig.unidad_espesor && (
+                  selectedConfig.unidad_espesor === 'gr' || selectedConfig.unidad_espesor === 'g'
+                    ? ` (${selectedConfig.espesor} ${selectedConfig.unidad_espesor})`
+                    : ` (${selectedConfig.espesor}${selectedConfig.unidad_espesor})`
+                )}
               </span>
             </div>
           )}
