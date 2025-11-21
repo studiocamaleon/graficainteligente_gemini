@@ -9,7 +9,7 @@ import { MaterialCascadeSelector } from '../impresion-laser/MaterialCascadeSelec
 import { TipoVentaSelector } from '../impresion-laser/TipoVentaSelector';
 import { ServiciosSelector } from '../shared/ServiciosSelector';
 import { CATEGORIA_TALONARIOS_ID } from '../../../constants/categorias';
-import { AcabadosSelector } from '../impresion-laser/AcabadosSelector';
+import { AcabadosSelector } from '../shared/AcabadosSelector';
 import { ImpuestoSelector } from '../impresion-laser/ImpuestoSelector';
 import { RutaSelector } from '../../rutas/RutaSelector';
 import type { CreateProductoTalonarioData, ProductoTalonarioConRelaciones } from '../../../hooks/useProductosTalonarios';
@@ -302,6 +302,7 @@ export function ProductoTalonarioForm({
       <Card>
         <div className="p-6">
           <AcabadosSelector
+            categoriaId={CATEGORIA_TALONARIOS_ID}
             acabadosSeleccionados={acabados}
             onChange={(a) => {
               setAcabados(a);

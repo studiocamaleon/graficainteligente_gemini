@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../hooks/useAuth';
 import { Sparkles } from 'lucide-react';
-import { CATEGORIA_IMPRESION_LASER_ID } from '../../../constants/categorias';
 
 interface Acabado {
   id: string;
@@ -10,12 +9,14 @@ interface Acabado {
 }
 
 interface AcabadosSelectorProps {
+  categoriaId: string;
   acabadosSeleccionados: string[];
   onChange: (acabados: string[]) => void;
   error?: string;
 }
 
 export function AcabadosSelector({
+  categoriaId,
   acabadosSeleccionados,
   onChange,
   error,
@@ -25,14 +26,14 @@ export function AcabadosSelector({
   const { user, profile } = useAuth();
 
   useEffect(() => {
-    if (profile?.company_id) {
+    if (profile?.company_id && categoriaId) {
       cargarAcabados();
     } else if (user && !profile) {
       setIsLoading(true);
     } else {
       setIsLoading(false);
     }
-  }, [profile?.company_id, user]);
+  }, [profile?.company_id, user, categoriaId]);
 
   const cargarAcabados = async () => {
     try {
@@ -41,7 +42,7 @@ export function AcabadosSelector({
       const { data: relaciones, error: relError } = await supabase
         .from('acabados_categorias')
         .select('acabado_id')
-        .eq('categoria_id', CATEGORIA_IMPRESION_LASER_ID);
+        .eq('categoria_id', categoriaId);
 
       if (relError) {
         console.error('[AcabadosSelector] Error:', relError);
@@ -106,7 +107,7 @@ export function AcabadosSelector({
         <div className="text-center py-6 bg-gray-50 rounded-lg border border-gray-200">
           <Sparkles className="w-8 h-8 text-gray-400 mx-auto mb-2" />
           <p className="text-sm text-gray-500">
-            No hay acabados disponibles para Impresión Láser
+            No hay acabados disponibles para esta categoría
           </p>
         </div>
       </div>

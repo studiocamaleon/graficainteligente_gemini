@@ -9,7 +9,7 @@ import { MaterialCascadeSelector } from './MaterialCascadeSelector';
 import { TipoVentaSelector } from './TipoVentaSelector';
 import { ServiciosSelector } from '../shared/ServiciosSelector';
 import { CATEGORIA_IMPRESION_LASER_ID } from '../../../constants/categorias';
-import { AcabadosSelector } from './AcabadosSelector';
+import { AcabadosSelector } from '../shared/AcabadosSelector';
 import { ImpuestoSelector } from './ImpuestoSelector';
 import { RutaSelector } from '../../rutas/RutaSelector';
 import type { CreateProductoLaserData, ProductoLaserConRelaciones } from '../../../hooks/useProductosImpresionLaser';
@@ -302,6 +302,7 @@ export function ProductoLaserForm({
       <Card>
         <div className="p-6">
           <AcabadosSelector
+            categoriaId={CATEGORIA_IMPRESION_LASER_ID}
             acabadosSeleccionados={acabados}
             onChange={(a) => {
               setAcabados(a);
