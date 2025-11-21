@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
-import type { EstadoPaso } from '../types/database';
+import { ordenarRutasPorEtapaYOrden } from '../utils/productionUtils';
+import type { EstadoPaso, TipoEtapaRuta } from '../types/database';
 
 export interface StationStep {
   ruta_id: string;
@@ -16,6 +17,19 @@ export interface StationStep {
   fecha_inicio: string | null;
   fecha_creacion_orden: string;
   orden_id: string;
+}
+
+interface RutaConOrden {
+  id: string;
+  paso_id: string | null;
+  paso_nombre: string;
+  estado_paso: EstadoPaso;
+  orden: number;
+  tipo_etapa: TipoEtapaRuta;
+  orden_item_id: string;
+  fecha_inicio: string | null;
+  orden_item: any;
+  paso: any;
 }
 
 export interface StationWithJobs {
@@ -56,6 +70,8 @@ export function useProductionStations(params: UseProductionStationsParams = {}) 
           paso_id,
           paso_nombre,
           estado_paso,
+          orden,
+          tipo_etapa,
           orden_item_id,
           fecha_inicio,
           orden_item:ordenes_trabajo_items!inner(
@@ -85,7 +101,6 @@ export function useProductionStations(params: UseProductionStationsParams = {}) 
           )
         `)
         .eq('company_id', profile.company_id)
-        .in('estado_paso', ['pendiente', 'en_proceso'])
         .neq('orden_item.orden.estado', 'cancelada')
         .neq('orden_item.orden.estado', 'entregada')
         .eq('paso.estacion.is_active', true);
@@ -104,41 +119,75 @@ export function useProductionStations(params: UseProductionStationsParams = {}) 
         return;
       }
 
+      const rutasPorItem = new Map<string, RutaConOrden[]>();
+      rutasData.forEach((ruta: any) => {
+        if (!ruta.paso?.estacion) return;
+        if (!rutasPorItem.has(ruta.orden_item_id)) {
+          rutasPorItem.set(ruta.orden_item_id, []);
+        }
+        rutasPorItem.get(ruta.orden_item_id)!.push(ruta as RutaConOrden);
+      });
+
+      const isPasoListo = (ruta: RutaConOrden, rutasOrdenadas: RutaConOrden[]): boolean => {
+        if (ruta.estado_paso === 'en_proceso') return true;
+
+        const indicePasoActual = rutasOrdenadas.findIndex((r) => r.id === ruta.id);
+        if (indicePasoActual === 0) return true;
+
+        for (let i = 0; i < indicePasoActual; i++) {
+          const pasoAnterior = rutasOrdenadas[i];
+          if (pasoAnterior.estado_paso !== 'completado' && pasoAnterior.estado_paso !== 'omitido') {
+            return false;
+          }
+        }
+        return true;
+      };
+
       const stepsMap = new Map<string, StationStep[]>();
       const stationsInfoMap = new Map<string, { nombre: string; descripcion: string | null }>();
 
-      rutasData.forEach((ruta: any) => {
-        if (!ruta.paso?.estacion) return;
+      rutasPorItem.forEach((rutasDelItem, ordenItemId) => {
+        const rutasOrdenadas = ordenarRutasPorEtapaYOrden(rutasDelItem);
 
-        const estacion = ruta.paso.estacion;
-        const estacionId = estacion.id;
+        rutasOrdenadas.forEach((ruta) => {
+          if (!ruta.paso?.estacion) return;
 
-        if (!stationsInfoMap.has(estacionId)) {
-          stationsInfoMap.set(estacionId, {
-            nombre: estacion.nombre,
-            descripcion: estacion.descripcion,
-          });
-        }
+          const estadoEsActivo = ruta.estado_paso === 'pendiente' || ruta.estado_paso === 'en_proceso';
+          if (!estadoEsActivo) return;
 
-        const step: StationStep = {
-          ruta_id: ruta.id,
-          paso_id: ruta.paso_id,
-          paso_nombre: ruta.paso_nombre,
-          estado_paso: ruta.estado_paso,
-          orden_item_id: ruta.orden_item.id,
-          numero_orden: ruta.orden_item.orden.numero_orden,
-          cliente_nombre: ruta.orden_item.orden.cliente.nombre_fantasia,
-          producto_nombre: ruta.orden_item.producto_nombre,
-          cantidad: ruta.orden_item.cantidad,
-          fecha_inicio: ruta.fecha_inicio,
-          fecha_creacion_orden: ruta.orden_item.orden.fecha_creacion,
-          orden_id: ruta.orden_item.orden.id,
-        };
+          const estaListo = isPasoListo(ruta, rutasOrdenadas);
+          if (!estaListo) return;
 
-        if (!stepsMap.has(estacionId)) {
-          stepsMap.set(estacionId, []);
-        }
-        stepsMap.get(estacionId)!.push(step);
+          const estacion = ruta.paso.estacion;
+          const estacionId = estacion.id;
+
+          if (!stationsInfoMap.has(estacionId)) {
+            stationsInfoMap.set(estacionId, {
+              nombre: estacion.nombre,
+              descripcion: estacion.descripcion,
+            });
+          }
+
+          const step: StationStep = {
+            ruta_id: ruta.id,
+            paso_id: ruta.paso_id,
+            paso_nombre: ruta.paso_nombre,
+            estado_paso: ruta.estado_paso,
+            orden_item_id: ruta.orden_item.id,
+            numero_orden: ruta.orden_item.orden.numero_orden,
+            cliente_nombre: ruta.orden_item.orden.cliente.nombre_fantasia,
+            producto_nombre: ruta.orden_item.producto_nombre,
+            cantidad: ruta.orden_item.cantidad,
+            fecha_inicio: ruta.fecha_inicio,
+            fecha_creacion_orden: ruta.orden_item.orden.fecha_creacion,
+            orden_id: ruta.orden_item.orden.id,
+          };
+
+          if (!stepsMap.has(estacionId)) {
+            stepsMap.set(estacionId, []);
+          }
+          stepsMap.get(estacionId)!.push(step);
+        });
       });
 
       const stationsWithJobs: StationWithJobs[] = Array.from(stationsInfoMap.entries()).map(
