@@ -28,6 +28,7 @@ interface GenerateRoutesParams {
  * - 'Produccion', 'Impresion', cualquier otro → 'principal'
  *
  * IMPORTANTE: El orden de las verificaciones es crítico para evitar falsos positivos
+ * 'post_prensa' contiene 'pre', por lo que debemos verificar 'post' ANTES de 'pre'
  */
 function normalizarEtapa(etapa: string): TipoEtapaRuta {
   const etapaLower = etapa.toLowerCase().replace(/[-\s]/g, '_');
@@ -44,8 +45,8 @@ function normalizarEtapa(etapa: string): TipoEtapaRuta {
     return 'post_prensa';
   }
 
-  // 3. Pre-prensa (usar condiciones más específicas)
-  if (etapaLower.startsWith('pre') || etapaLower.includes('_pre_')) {
+  // 3. Pre-prensa (condición más estricta: startsWith 'pre' pero NO incluye 'post')
+  if (etapaLower.startsWith('pre') && !etapaLower.includes('post')) {
     return 'pre_prensa';
   }
 

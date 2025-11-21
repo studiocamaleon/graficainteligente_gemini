@@ -59,13 +59,36 @@ interface ItemRoutePreviewProps {
 }
 
 // Mapeo de etapas para compatibilidad entre diferentes formatos
+// IMPORTANTE: El orden de verificaciones es crítico para evitar capturas incorrectas
+// 'post_prensa' contiene 'pre', por lo que debemos verificar 'post' ANTES de 'pre'
 function normalizeEtapa(etapa: string): string {
   const etapaLower = etapa.toLowerCase().replace(/[-\s]/g, '_');
 
-  if (etapaLower === 'pre_prensa' || etapaLower.includes('pre')) return 'Pre-prensa';
-  if (etapaLower === 'post_prensa' || etapaLower.includes('terminacion') || etapaLower.includes('acabado')) return 'Terminacion';
-  if (etapaLower === 'principal' || etapaLower.includes('produccion') || etapaLower.includes('impresion')) return 'Produccion';
+  // 1. Verificar valores exactos normalizados primero
+  if (etapaLower === 'pre_prensa') return 'Pre-prensa';
+  if (etapaLower === 'post_prensa') return 'Terminacion';
+  if (etapaLower === 'principal') return 'Produccion';
 
+  // 2. Verificar POST antes de PRE (crítico para evitar capturar 'post_prensa' como 'pre')
+  if (etapaLower.includes('post') ||
+      etapaLower.includes('terminacion') ||
+      etapaLower.includes('acabado')) {
+    return 'Terminacion';
+  }
+
+  // 3. Verificar PRE con condiciones estrictas (no captura 'post_prensa')
+  if (etapaLower.startsWith('pre') && !etapaLower.includes('post')) {
+    return 'Pre-prensa';
+  }
+
+  // 4. Principal/Producción
+  if (etapaLower.includes('produccion') ||
+      etapaLower.includes('principal') ||
+      etapaLower.includes('impresion')) {
+    return 'Produccion';
+  }
+
+  // 5. Fallback sin cambios
   return etapa;
 }
 
