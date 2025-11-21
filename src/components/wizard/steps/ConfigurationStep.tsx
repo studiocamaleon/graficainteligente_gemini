@@ -91,6 +91,9 @@ export interface SelectedConfiguration {
   // Caras (para laser)
   cara_impresa: 'solo_frente' | 'frente_y_dorso' | null;
 
+  // Tipo de copia (para talonarios)
+  tipo_copia: 'duplicado' | 'triplicado' | 'cuadruplicado' | null;
+
   // Color y marca
   color: string | null;
   marca: string | null;
@@ -785,6 +788,75 @@ export function ConfigurationStep({
                   </div>
                   {localConfig.cara_impresa === 'frente_y_dorso' && (
                     <Check className="w-5 h-5 text-blue-600" />
+                  )}
+                </div>
+              </Card>
+            )}
+          </div>
+        </Card>
+      )}
+
+      {/* Tipo de copia (solo para talonarios) */}
+      {config.tipo_copia && config.tipo_copia.length > 0 && (
+        <Card className="p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <FileText className="w-5 h-5 text-blue-600" />
+            <h3 className="text-lg font-semibold text-gray-900">Tipo de Copia</h3>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            {config.tipo_copia.includes('duplicado') && (
+              <Card
+                className={`p-4 cursor-pointer transition-all ${
+                  localConfig.tipo_copia === 'duplicado'
+                    ? 'border-2 border-blue-600 bg-blue-50'
+                    : 'border border-gray-200 hover:border-blue-300'
+                }`}
+                onClick={() => handleLocalChange({ tipo_copia: 'duplicado' })}
+              >
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-gray-900 mb-1">Duplicado</div>
+                  <div className="text-sm text-gray-600">2 copias</div>
+                  {localConfig.tipo_copia === 'duplicado' && (
+                    <Check className="w-5 h-5 text-blue-600 mx-auto mt-2" />
+                  )}
+                </div>
+              </Card>
+            )}
+
+            {config.tipo_copia.includes('triplicado') && (
+              <Card
+                className={`p-4 cursor-pointer transition-all ${
+                  localConfig.tipo_copia === 'triplicado'
+                    ? 'border-2 border-blue-600 bg-blue-50'
+                    : 'border border-gray-200 hover:border-blue-300'
+                }`}
+                onClick={() => handleLocalChange({ tipo_copia: 'triplicado' })}
+              >
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-gray-900 mb-1">Triplicado</div>
+                  <div className="text-sm text-gray-600">3 copias</div>
+                  {localConfig.tipo_copia === 'triplicado' && (
+                    <Check className="w-5 h-5 text-blue-600 mx-auto mt-2" />
+                  )}
+                </div>
+              </Card>
+            )}
+
+            {config.tipo_copia.includes('cuadruplicado') && (
+              <Card
+                className={`p-4 cursor-pointer transition-all ${
+                  localConfig.tipo_copia === 'cuadruplicado'
+                    ? 'border-2 border-blue-600 bg-blue-50'
+                    : 'border border-gray-200 hover:border-blue-300'
+                }`}
+                onClick={() => handleLocalChange({ tipo_copia: 'cuadruplicado' })}
+              >
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-gray-900 mb-1">Cuadruplicado</div>
+                  <div className="text-sm text-gray-600">4 copias</div>
+                  {localConfig.tipo_copia === 'cuadruplicado' && (
+                    <Check className="w-5 h-5 text-blue-600 mx-auto mt-2" />
                   )}
                 </div>
               </Card>

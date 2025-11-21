@@ -45,6 +45,9 @@ export interface ProductConfiguration {
   // Caras de impresión (para laser)
   caras_impresas?: string[];
 
+  // Tipo de copia (para talonarios)
+  tipo_copia?: string[];
+
   // Espesores (para materiales rígidos)
   espesores_disponibles?: number[];
 
@@ -122,6 +125,9 @@ export function useProductConfiguration(productId: string | null, categoria: Pro
             break;
           case 'Sellos':
             configuration = await loadSellosConfig(productId);
+            break;
+          case 'Talonarios':
+            configuration = await loadTalonariosConfig(productId);
             break;
         }
 
@@ -495,6 +501,87 @@ async function loadSellosConfig(productId: string): Promise<ProductConfiguration
     marca: producto.marca,
     servicios: [],
     acabados: [],
+    impuesto_iva: producto.impuesto_iva || 0
+  };
+}
+
+async function loadTalonariosConfig(productId: string): Promise<ProductConfiguration> {
+  const { data: producto, error: prodError } = await supabase
+    .from('productos_talonarios')
+    .select('id, nombre, tipo_venta, cantidades_fijas, tipo_copia, medidas_disponibles, impuesto_iva')
+    .eq('id', productId)
+    .single();
+
+  if (prodError) throw prodError;
+
+  const { data: materiales } = await supabase
+    .from('productos_talonarios_materiales')
+    .select(`
+      id,
+      material_id,
+      variante_nombre,
+      espesor,
+      materiales!inner(id, nombre, unidad_espesor)
+    `)
+    .eq('producto_talonario_id', productId);
+
+  const { data: tecnologias } = await supabase
+    .from('productos_talonarios_tecnologias')
+    .select(`
+      id,
+      tecnologia_id,
+      tintas,
+      tecnologias!inner(id, nombre)
+    `)
+    .eq('producto_talonario_id', productId);
+
+  const servicios = await loadServiciosForProduct(
+    'productos_talonarios_servicios',
+    'producto_talonario_id',
+    productId
+  );
+
+  const acabados = await loadAcabadosForProduct(
+    'productos_talonarios_acabados',
+    'producto_talonario_id',
+    productId
+  );
+
+  const medidasArray = producto.medidas_disponibles as any[];
+  const medidas = medidasArray?.map((m: any) => ({
+    ancho: m.ancho,
+    alto: m.alto
+  })) || [];
+
+  return {
+    id: producto.id,
+    nombre: producto.nombre,
+    categoria: 'Talonarios',
+    medidas,
+    tipo_venta: producto.tipo_venta as 'unidad' | 'cantidades_fijas',
+    cantidades_fijas: producto.cantidades_fijas || [],
+    tipo_copia: producto.tipo_copia || [],
+    materiales: materiales?.map(m => {
+      const material = m.materiales as any;
+      return {
+        id: m.id,
+        material_id: m.material_id,
+        material_nombre: material.nombre,
+        variante_id: m.material_id,
+        variante_nombre: m.variante_nombre,
+        espesor: m.espesor ? parseFloat(m.espesor) : null,
+        unidad_espesor: material.unidad_espesor,
+        gramaje: null
+      };
+    }) || [],
+    tecnologias: tecnologias?.map(t => ({
+      id: t.id,
+      tecnologia_id: t.tecnologia_id,
+      tecnologia_nombre: (t.tecnologias as any).nombre,
+      tintas: t.tintas || []
+    })) || [],
+    servicios,
+    acabados,
     impuesto_iva: producto.impuesto_iva || 0
   };
 }

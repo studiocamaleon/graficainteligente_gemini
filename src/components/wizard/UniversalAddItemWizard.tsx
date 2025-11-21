@@ -48,6 +48,7 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
     tinta: null,
     tinta_nombre: null,
     cara_impresa: null,
+    tipo_copia: null,
     color: null,
     marca: null
   });
@@ -214,6 +215,11 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
       if (!selectedConfig.cara_impresa) return false;
     }
 
+    // Validar tipo_copia si es necesario (para talonarios)
+    if (config.tipo_copia && config.tipo_copia.length > 0) {
+      if (!selectedConfig.tipo_copia) return false;
+    }
+
     return true;
   };
 
@@ -256,6 +262,7 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
       tinta: null,
       tinta_nombre: null,
       cara_impresa: null,
+      tipo_copia: null,
       color: null,
       marca: null
     });

@@ -50,6 +50,9 @@ export function useUniversalPricing() {
         case 'Sellos':
           precioBase = await getPrecioSellos(productId, config);
           break;
+        case 'Talonarios':
+          precioBase = await getPrecioTalonarios(productId, config);
+          break;
       }
 
       if (precioBase === null) {
@@ -349,6 +352,33 @@ async function getPrecioSellos(
   return data.precio_unitario;
 }
 
+async function getPrecioTalonarios(
+  productId: string,
+  config: SelectedConfiguration
+): Promise<number | null> {
+  if (!config.medida_ancho || !config.medida_alto || !config.tinta || !config.tipo_copia) {
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from('productos_talonarios_precios')
+    .select('precio')
+    .eq('producto_talonario_id', productId)
+    .eq('medida_ancho', config.medida_ancho)
+    .eq('medida_alto', config.medida_alto)
+    .eq('tinta', config.tinta)
+    .eq('cantidad', config.cantidad)
+    .eq('tipo_copia', config.tipo_copia)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error buscando precio talonarios:', error);
+    return null;
+  }
+
+  return data?.precio || null;
+}
+
 // ===============================================
 // FUNCIÓN PARA CALCULAR IMPACTO SEGÚN TIPO
 // ===============================================
@@ -618,6 +648,9 @@ export async function calculateLinePrice(
             break;
           case 'Sellos':
             precioBaseUnitario = await getPrecioSellos(productId, lineConfig);
+            break;
+          case 'Talonarios':
+            precioBaseUnitario = await getPrecioTalonarios(productId, lineConfig);
             break;
         }
     }
