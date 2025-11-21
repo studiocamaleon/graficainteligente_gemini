@@ -10,7 +10,7 @@ export interface ProductoTalonarioParaPrecios {
   id: string;
   nombre: string;
   medidas_disponibles: Array<{ ancho: number; alto: number }>;
-  caras_impresas: string[];
+  tipo_copia: string[];
   tipo_venta: 'unidades' | 'cantidades_fijas';
   cantidades_fijas: number[];
   tecnologias: Array<{
@@ -31,7 +31,7 @@ export interface CombinacionPrecio {
   medida: { ancho: number; alto: number };
   tinta: TintaInfo;
   cantidades: number[];
-  caras: string[];
+  tipo_copia: string[];
 }
 
 interface PreciosModificadosPorProducto {
@@ -155,7 +155,7 @@ export function useAllProductosTalonariosPrecios() {
           id: producto.id,
           nombre: producto.nombre,
           medidas_disponibles: producto.medidas_disponibles || [],
-          caras_impresas: producto.caras_impresas || [],
+          tipo_copia: producto.tipo_copia || [],
           tipo_venta: producto.tipo_venta,
           cantidades_fijas: producto.cantidades_fijas || [],
           tecnologias,

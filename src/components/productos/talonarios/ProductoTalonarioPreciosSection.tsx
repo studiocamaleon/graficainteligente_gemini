@@ -151,7 +151,7 @@ export function ProductoTalonarioPreciosSection({
     );
   }
 
-  if (producto.medidas_disponibles.length === 0 || producto.caras_impresas.length === 0) {
+  if (producto.medidas_disponibles.length === 0 || producto.tipo_copia.length === 0) {
     return (
       <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
         <div className="flex items-center gap-3">
@@ -203,7 +203,7 @@ export function ProductoTalonarioPreciosSection({
             {producto.tecnologias[0]?.tintas.length || 0}
           </div>
           <div>
-            <span className="font-medium">Caras:</span> {producto.caras_impresas.length}
+            <span className="font-medium">Caras:</span> {producto.tipo_copia.length}
           </div>
         </div>
       </div>
@@ -223,7 +223,7 @@ export function ProductoTalonarioPreciosSection({
             tintaId={combinacion.tintaId}
             tintaNombre={combinacion.tintaNombre}
             cantidades={cantidades}
-            carasImpresas={producto.caras_impresas}
+            carasImpresas={producto.tipo_copia}
             materialInfo={materialInfo}
             preciosExistentes={combinacion.precios}
             onPreciosChange={(precios) =>

@@ -181,7 +181,7 @@ export function ProductoTalonarioPreciosCard({ producto, onPreciosChange }: Prop
                           medida={group.medida}
                           tinta={tinta}
                           cantidades={cantidades}
-                          caras={producto.caras_impresas}
+                          caras={producto.tipo_copia}
                           materialInfo={materialInfo}
                           preciosExistentes={producto.precios_existentes}
                           onChange={(precios) =>
@@ -209,7 +209,7 @@ export function ProductoTalonarioPreciosCard({ producto, onPreciosChange }: Prop
                           medida={group.medida}
                           tinta={tinta}
                           cantidades={cantidades}
-                          caras={producto.caras_impresas}
+                          caras={producto.tipo_copia}
                           materialInfo={materialInfo}
                           preciosExistentes={producto.precios_existentes}
                           onChange={(precios) =>
