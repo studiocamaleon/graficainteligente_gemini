@@ -151,8 +151,8 @@ export function ConfigurationStep({
       autoSelections.medida_alto = config.medidas[0].alto;
     }
 
-    // Auto-seleccionar material único (solo para Impresión Láser que siempre tiene 1)
-    if (config.categoria === 'Impresion Laser' && config.materiales && config.materiales.length === 1) {
+    // Auto-seleccionar material único (para cualquier categoría con 1 solo material)
+    if (config.materiales && config.materiales.length === 1 && config.categoria !== 'Materiales Rigidos') {
       const material = config.materiales[0];
       autoSelections.material_id = material.material_id;
       autoSelections.material_nombre = material.material_nombre;
