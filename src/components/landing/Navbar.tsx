@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Zap, Menu, X } from 'lucide-react';
 import { BRAND } from '../../constants/branding';
+import { ComingSoonModal } from '../ui/ComingSoonModal';
+import { FEATURES } from '../../config/features';
 
 interface NavLink {
   title: string;
@@ -11,6 +13,7 @@ interface NavLink {
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showComingSoonModal, setShowComingSoonModal] = useState(false);
 
   const navigation: NavLink[] = [
     { title: 'Características', sectionId: 'features' },
@@ -35,7 +38,20 @@ export function Navbar() {
     setMenuOpen(false);
   };
 
+  const handleRegisterClick = (e: React.MouseEvent<HTMLAnchorElement | HTMLButtonElement>) => {
+    if (!FEATURES.REGISTRATIONS_ENABLED) {
+      e.preventDefault();
+      setShowComingSoonModal(true);
+      setMenuOpen(false);
+    }
+  };
+
   return (
+    <>
+      <ComingSoonModal
+        isOpen={showComingSoonModal}
+        onClose={() => setShowComingSoonModal(false)}
+      />
     <nav
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         isScrolled || menuOpen
@@ -85,6 +101,7 @@ export function Navbar() {
             <li>
               <Link
                 to="/register"
+                onClick={handleRegisterClick}
                 className="px-6 py-2 font-semibold text-white bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 rounded-lg shadow-lg shadow-blue-500/30 hover:shadow-blue-500/40 transition-all"
               >
                 Comenzar Gratis
@@ -133,6 +150,7 @@ export function Navbar() {
               <li>
                 <Link
                   to="/register"
+                  onClick={handleRegisterClick}
                   className="block py-3 px-4 font-semibold text-center text-white bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 rounded-lg shadow-lg shadow-blue-500/30 hover:shadow-blue-500/40 transition-all"
                 >
                   Comenzar Gratis
@@ -143,5 +161,6 @@ export function Navbar() {
         )}
       </div>
     </nav>
+    </>
   );
 }

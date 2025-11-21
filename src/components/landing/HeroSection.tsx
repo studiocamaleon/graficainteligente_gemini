@@ -1,10 +1,27 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { ArrowRight, CheckCircle2, Zap, BarChart3, Users, Clock } from 'lucide-react';
 import { BRAND } from '../../constants/branding';
+import { ComingSoonModal } from '../ui/ComingSoonModal';
+import { FEATURES } from '../../config/features';
 
 export function HeroSection() {
+  const [showComingSoonModal, setShowComingSoonModal] = useState(false);
+
+  const handleRegisterClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (!FEATURES.REGISTRATIONS_ENABLED) {
+      e.preventDefault();
+      setShowComingSoonModal(true);
+    }
+  };
+
   return (
+    <>
+      <ComingSoonModal
+        isOpen={showComingSoonModal}
+        onClose={() => setShowComingSoonModal(false)}
+      />
     <section className="relative min-h-screen flex items-center overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-cyan-50"></div>
 
@@ -62,7 +79,7 @@ export function HeroSection() {
               transition={{ delay: 0.5 }}
               className="flex flex-col sm:flex-row gap-4"
             >
-              <Link to="/register" className="inline-block">
+              <Link to="/register" onClick={handleRegisterClick} className="inline-block">
                 <motion.button
                   whileHover={{ scale: 1.02, y: -2 }}
                   whileTap={{ scale: 0.98 }}
@@ -230,5 +247,6 @@ export function HeroSection() {
         </div>
       </div>
     </section>
+    </>
   );
 }

@@ -1,17 +1,21 @@
-import { useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, CheckCircle, Zap } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
+import { ComingSoonModal } from '../../components/ui/ComingSoonModal';
 import { fadeInUp } from '../../animations/variants';
 import { BRAND } from '../../constants/branding';
+import { FEATURES } from '../../config/features';
 
 export function Register() {
   const [searchParams] = useSearchParams();
   const selectedPlan = searchParams.get('plan') || 'free';
   const { signUp } = useAuth();
+  const navigate = useNavigate();
+  const [showComingSoonModal, setShowComingSoonModal] = useState(false);
 
   const [formData, setFormData] = useState({
     fullName: '',
@@ -24,6 +28,17 @@ export function Register() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    if (!FEATURES.REGISTRATIONS_ENABLED) {
+      setShowComingSoonModal(true);
+    }
+  }, []);
+
+  const handleCloseComingSoonModal = () => {
+    setShowComingSoonModal(false);
+    navigate('/');
+  };
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -80,6 +95,32 @@ export function Register() {
       setSuccess(true);
     }
   };
+
+  if (!FEATURES.REGISTRATIONS_ENABLED) {
+    return (
+      <>
+        <ComingSoonModal
+          isOpen={showComingSoonModal}
+          onClose={handleCloseComingSoonModal}
+        />
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-cyan-50 px-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="max-w-md w-full text-center"
+          >
+            <Link
+              to="/"
+              className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              Volver al inicio
+            </Link>
+          </motion.div>
+        </div>
+      </>
+    );
+  }
 
   if (success) {
     return (
