@@ -45,20 +45,21 @@ const columnsConfig: ColumnConfig[] = [
 
 export function JobsKanbanBoard({ jobsByEstado, onJobClick }: JobsKanbanBoardProps) {
   return (
-    <div className="flex gap-4 overflow-x-auto pb-4">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 auto-rows-fr">
       {columnsConfig.map((config) => (
-        <div key={config.estado} className="flex-shrink-0 w-96">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 h-[calc(100vh-280px)] min-h-[500px] flex flex-col">
-            <JobsKanbanColumn
-              estado={config.estado}
-              titulo={config.titulo}
-              jobs={jobsByEstado[config.estado]}
-              color={config.color}
-              bgColor={config.bgColor}
-              borderColor={config.borderColor}
-              onJobClick={onJobClick}
-            />
-          </div>
+        <div
+          key={config.estado}
+          className="bg-white rounded-lg shadow-sm border border-gray-200 min-h-[500px] max-h-[calc(100vh-280px)] flex flex-col"
+        >
+          <JobsKanbanColumn
+            estado={config.estado}
+            titulo={config.titulo}
+            jobs={jobsByEstado[config.estado]}
+            color={config.color}
+            bgColor={config.bgColor}
+            borderColor={config.borderColor}
+            onJobClick={onJobClick}
+          />
         </div>
       ))}
     </div>

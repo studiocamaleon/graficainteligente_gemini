@@ -150,6 +150,35 @@ export function useConfirmDialog() {
     [openDialog]
   );
 
+  const showConfirm = useCallback(
+    (options: {
+      title: string;
+      message: string;
+      confirmText?: string;
+      cancelText?: string;
+      variant?: ConfirmDialogVariant;
+    }): Promise<boolean> => {
+      return new Promise((resolve) => {
+        openDialog({
+          ...options,
+          onConfirm: () => {
+            resolve(true);
+          },
+        });
+
+        const originalClose = closeDialog;
+        setState((prev) => ({
+          ...prev,
+          onCancel: () => {
+            originalClose();
+            resolve(false);
+          },
+        }));
+      });
+    },
+    [openDialog, closeDialog]
+  );
+
   return {
     dialogState: state,
     isLoading,
@@ -159,6 +188,7 @@ export function useConfirmDialog() {
     confirmDeactivate,
     confirmActivate,
     confirmAction,
-    openConfirm: confirmAction, // Alias para compatibilidad
+    openConfirm: confirmAction,
+    showConfirm,
   };
 }

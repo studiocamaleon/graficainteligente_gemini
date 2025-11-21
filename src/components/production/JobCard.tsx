@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { ItemStatusBadge } from '../orders/ItemStatusBadge';
 import { JobProgressBar } from './JobProgressBar';
 import type { JobItem } from '../../hooks/useProductionJobs';
@@ -8,7 +9,7 @@ interface JobCardProps {
   onClick?: (job: JobItem) => void;
 }
 
-export function JobCard({ job, onClick }: JobCardProps) {
+export const JobCard = memo(function JobCard({ job, onClick }: JobCardProps) {
   return (
     <div
       onClick={() => onClick?.(job)}
@@ -64,4 +65,4 @@ export function JobCard({ job, onClick }: JobCardProps) {
       )}
     </div>
   );
-}
+});

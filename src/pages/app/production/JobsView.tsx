@@ -1,28 +1,23 @@
 import { useState } from 'react';
 import { JobsKanbanBoard } from '../../../components/production/JobsKanbanBoard';
-import { RouteDetailModal } from '../../../components/orders/RouteDetailModal';
+import { JobExecutionModal } from '../../../components/production/JobExecutionModal';
 import { useProductionJobs } from '../../../hooks/useProductionJobs';
-import { useOrdenItemRutas } from '../../../hooks/useOrdenItemRutas';
 import type { JobItem } from '../../../hooks/useProductionJobs';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, Radio } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 
 export function JobsView() {
-  const { jobsByEstado, loading, error, refreshJobs } = useProductionJobs();
+  const { jobsByEstado, loading, error, refreshJobs, isUpdating } = useProductionJobs();
   const [selectedJob, setSelectedJob] = useState<JobItem | null>(null);
-  const [showDetailModal, setShowDetailModal] = useState(false);
-
-  const { rutas } = useOrdenItemRutas({
-    ordenItemId: selectedJob?.id,
-  });
+  const [showExecutionModal, setShowExecutionModal] = useState(false);
 
   const handleJobClick = (job: JobItem) => {
     setSelectedJob(job);
-    setShowDetailModal(true);
+    setShowExecutionModal(true);
   };
 
   const handleCloseModal = () => {
-    setShowDetailModal(false);
+    setShowExecutionModal(false);
     setSelectedJob(null);
   };
 
@@ -53,11 +48,19 @@ export function JobsView() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <div className="text-sm text-gray-600">
-          <span className="font-semibold">
-            {jobsByEstado.pendiente.length + jobsByEstado.en_proceso.length + jobsByEstado.finalizado.length}
-          </span>{' '}
-          jobs en producción
+        <div className="flex items-center gap-3">
+          <div className="text-sm text-gray-600">
+            <span className="font-semibold">
+              {jobsByEstado.pendiente.length + jobsByEstado.en_proceso.length + jobsByEstado.finalizado.length}
+            </span>{' '}
+            jobs en producción
+          </div>
+          {isUpdating && (
+            <div className="flex items-center gap-1.5 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
+              <Radio className="w-3 h-3 animate-pulse" />
+              <span>Sincronizando...</span>
+            </div>
+          )}
         </div>
         <Button onClick={refreshJobs} variant="outline" size="sm">
           <RefreshCw className="w-4 h-4 mr-2" />
@@ -68,11 +71,10 @@ export function JobsView() {
       <JobsKanbanBoard jobsByEstado={jobsByEstado} onJobClick={handleJobClick} />
 
       {selectedJob && (
-        <RouteDetailModal
-          isOpen={showDetailModal}
+        <JobExecutionModal
+          isOpen={showExecutionModal}
           onClose={handleCloseModal}
-          rutas={rutas}
-          productoNombre={selectedJob.producto_nombre}
+          job={selectedJob}
         />
       )}
     </div>

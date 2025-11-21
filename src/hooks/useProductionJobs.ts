@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
+import { useRealtimeJobs } from './useRealtimeJobs';
 import type { EstadoOrdenItem, OrdenItemRuta } from '../types/database';
 
 export interface JobItem {
@@ -37,6 +38,8 @@ export function useProductionJobs() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchJobs = useCallback(async () => {
     if (!profile?.company_id) return;
@@ -156,6 +159,143 @@ export function useProductionJobs() {
     fetchJobs();
   }, [fetchJobs]);
 
+  const updateJobGranular = useCallback(async (itemId: string) => {
+    if (!profile?.company_id) return;
+
+    setIsUpdating(true);
+
+    if (updateTimeoutRef.current) {
+      clearTimeout(updateTimeoutRef.current);
+    }
+
+    updateTimeoutRef.current = setTimeout(async () => {
+      try {
+        const { data: itemData, error: itemError } = await supabase
+          .from('ordenes_trabajo_items')
+          .select(`
+            id,
+            orden_id,
+            producto_nombre,
+            producto_categoria,
+            cantidad,
+            estado,
+            created_at,
+            orden:ordenes_trabajo!inner(
+              id,
+              numero_orden,
+              fecha_creacion,
+              estado,
+              cliente:clients!inner(
+                id,
+                nombre_fantasia
+              )
+            )
+          `)
+          .eq('id', itemId)
+          .single();
+
+        if (itemError) throw itemError;
+
+        const { data: rutasData, error: rutasError } = await supabase
+          .from('ordenes_trabajo_items_rutas')
+          .select('orden_item_id, estado_paso')
+          .eq('orden_item_id', itemId);
+
+        if (rutasError) throw rutasError;
+
+        const itemRutas = rutasData || [];
+        const totalPasos = itemRutas.length;
+        const pasosCompletados = itemRutas.filter(
+          (r) => r.estado_paso === 'completado' || r.estado_paso === 'omitido'
+        ).length;
+        const pasosEnProceso = itemRutas.filter((r) => r.estado_paso === 'en_proceso').length;
+        const pasosPendientes = itemRutas.filter((r) => r.estado_paso === 'pendiente').length;
+        const progresoPortcentaje =
+          totalPasos > 0 ? Math.round((pasosCompletados / totalPasos) * 100) : 0;
+
+        const updatedJob: JobItem = {
+          id: itemData.id,
+          estado: itemData.estado,
+          producto_nombre: itemData.producto_nombre || 'Sin nombre',
+          producto_categoria: itemData.producto_categoria,
+          cantidad: itemData.cantidad,
+          orden_id: (itemData.orden as any).id,
+          numero_orden: (itemData.orden as any).numero_orden,
+          fecha_creacion: (itemData.orden as any).fecha_creacion,
+          cliente_nombre: (itemData.orden as any).cliente?.nombre_fantasia || 'Sin cliente',
+          total_pasos: totalPasos,
+          pasos_completados: pasosCompletados,
+          pasos_en_proceso: pasosEnProceso,
+          pasos_pendientes: pasosPendientes,
+          progreso_porcentaje: progresoPortcentaje,
+        };
+
+        setJobs((prevJobs) => {
+          const jobIndex = prevJobs.findIndex((j) => j.id === itemId);
+          if (jobIndex === -1) {
+            return [...prevJobs, updatedJob];
+          }
+          const newJobs = [...prevJobs];
+          newJobs[jobIndex] = updatedJob;
+          return newJobs;
+        });
+
+        setJobsByEstado((prevGrouped) => {
+          const newPendiente = prevGrouped.pendiente.filter((j) => j.id !== itemId);
+          const newEnProceso = prevGrouped.en_proceso.filter((j) => j.id !== itemId);
+          const newFinalizado = prevGrouped.finalizado.filter((j) => j.id !== itemId);
+
+          if (updatedJob.estado === 'pendiente') {
+            newPendiente.push(updatedJob);
+          } else if (updatedJob.estado === 'en_proceso') {
+            newEnProceso.push(updatedJob);
+          } else if (updatedJob.estado === 'finalizado') {
+            newFinalizado.push(updatedJob);
+          }
+
+          return {
+            pendiente: newPendiente,
+            en_proceso: newEnProceso,
+            finalizado: newFinalizado,
+          };
+        });
+      } catch (err) {
+        console.error('Error updating job granularly:', err);
+      } finally {
+        setIsUpdating(false);
+      }
+    }, 300);
+  }, [profile?.company_id]);
+
+  const handleJobItemUpdate = useCallback(
+    (itemId: string) => {
+      console.log('🔄 Realtime: Job item updated:', itemId);
+      updateJobGranular(itemId);
+    },
+    [updateJobGranular]
+  );
+
+  const handleRutaUpdate = useCallback(
+    (rutaId: string, ordenItemId: string) => {
+      console.log('🔄 Realtime: Ruta updated:', rutaId, 'for item:', ordenItemId);
+      updateJobGranular(ordenItemId);
+    },
+    [updateJobGranular]
+  );
+
+  useRealtimeJobs({
+    onJobItemUpdated: handleJobItemUpdate,
+    onRutaUpdated: handleRutaUpdate,
+  });
+
+  useEffect(() => {
+    return () => {
+      if (updateTimeoutRef.current) {
+        clearTimeout(updateTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const refreshJobs = useCallback(() => {
     fetchJobs();
   }, [fetchJobs]);
@@ -167,5 +307,6 @@ export function useProductionJobs() {
     error,
     refreshJobs,
     totalJobs: jobs.length,
+    isUpdating,
   };
 }

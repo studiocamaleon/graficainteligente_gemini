@@ -1,3 +1,5 @@
+import { memo, useMemo } from 'react';
+
 interface JobProgressBarProps {
   totalPasos: number;
   pasosCompletados: number;
@@ -7,7 +9,7 @@ interface JobProgressBarProps {
   size?: 'sm' | 'md';
 }
 
-export function JobProgressBar({
+export const JobProgressBar = memo(function JobProgressBar({
   totalPasos,
   pasosCompletados,
   pasosEnProceso,
@@ -15,10 +17,13 @@ export function JobProgressBar({
   showPercentage = true,
   size = 'md',
 }: JobProgressBarProps) {
-  const porcentaje = totalPasos > 0 ? Math.round((pasosCompletados / totalPasos) * 100) : 0;
+  const { porcentaje, porcentajeCompletado, porcentajeEnProceso } = useMemo(() => {
+    const porcentaje = totalPasos > 0 ? Math.round((pasosCompletados / totalPasos) * 100) : 0;
+    const porcentajeCompletado = totalPasos > 0 ? (pasosCompletados / totalPasos) * 100 : 0;
+    const porcentajeEnProceso = totalPasos > 0 ? (pasosEnProceso / totalPasos) * 100 : 0;
 
-  const porcentajeCompletado = totalPasos > 0 ? (pasosCompletados / totalPasos) * 100 : 0;
-  const porcentajeEnProceso = totalPasos > 0 ? (pasosEnProceso / totalPasos) * 100 : 0;
+    return { porcentaje, porcentajeCompletado, porcentajeEnProceso };
+  }, [totalPasos, pasosCompletados, pasosEnProceso]);
 
   const heightClass = size === 'sm' ? 'h-2' : 'h-3';
   const textSizeClass = size === 'sm' ? 'text-xs' : 'text-sm';
@@ -54,4 +59,4 @@ export function JobProgressBar({
       </div>
     </div>
   );
-}
+});
