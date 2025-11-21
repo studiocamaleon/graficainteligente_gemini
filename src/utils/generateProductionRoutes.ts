@@ -2,12 +2,14 @@ import { supabase } from '../lib/supabase';
 import type { TipoEtapaRuta } from '../types/database';
 
 export interface GeneratedRouteStep {
+  id: string;
   etapa: TipoEtapaRuta;
   paso_id: string | null;
   paso_nombre: string;
   orden: number;
   es_obligatorio: boolean;
   origen_plantilla_id: string;
+  comentario_vendedor?: string | null;
 }
 
 interface GenerateRoutesParams {
@@ -340,7 +342,7 @@ export async function generateProductionRoutes({
     }
 
     // 5. Construir pasos finales con nombres reales y etapas normalizadas
-    const pasosFinales: GeneratedRouteStep[] = generatedSteps.map(step => {
+    const pasosFinales: GeneratedRouteStep[] = generatedSteps.map((step, index) => {
       const nombreReal = step.paso_id_especifico
         ? nombresRealesPasos[step.paso_id_especifico]
         : undefined;
@@ -351,12 +353,14 @@ export async function generateProductionRoutes({
       console.log('🔄 Normalizando etapa:', { original: step.etapa, normalizada: etapaNormalizada, paso: nombreFinal });
 
       return {
+        id: `temp-${step.origen_plantilla_id}-${index}`,
         etapa: etapaNormalizada,
         paso_id: step.paso_id_especifico,
         paso_nombre: nombreFinal,
         orden: step.orden,
         es_obligatorio: step.es_obligatorio,
         origen_plantilla_id: step.origen_plantilla_id,
+        comentario_vendedor: null,
       };
     });
 

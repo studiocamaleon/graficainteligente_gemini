@@ -58,27 +58,43 @@ interface ItemRoutePreviewProps {
   readOnly?: boolean;
 }
 
+// Mapeo de etapas para compatibilidad entre diferentes formatos
+function normalizeEtapa(etapa: string): string {
+  const etapaLower = etapa.toLowerCase().replace(/[-\s]/g, '_');
+
+  if (etapaLower === 'pre_prensa' || etapaLower.includes('pre')) return 'Pre-prensa';
+  if (etapaLower === 'post_prensa' || etapaLower.includes('terminacion') || etapaLower.includes('acabado')) return 'Terminacion';
+  if (etapaLower === 'principal' || etapaLower.includes('produccion') || etapaLower.includes('impresion')) return 'Produccion';
+
+  return etapa;
+}
+
 function ItemRoutePreview({ item, index, onUpdateStepComment, readOnly = false }: ItemRoutePreviewProps) {
+  // Solo generar rutas si no existen previamente
+  const shouldGenerate = !item.rutas_generadas || item.rutas_generadas.length === 0;
+
   const { steps, loading, error } = useGenerateProductionRoute({
-    productoId: item.producto_id,
-    categoria: item.configuracion?.categoria || item.categoria || 'Impresion Laser',
-    configuracion: item.configuracion || {},
+    productoId: shouldGenerate ? item.producto_id : '',
+    categoria: shouldGenerate ? (item.configuracion?.categoria || item.categoria || 'Impresion Laser') : '',
+    configuracion: shouldGenerate ? (item.configuracion || {}) : {},
   });
 
+  // Usar rutas guardadas si existen, sino usar las generadas
   const stepsWithComments = item.rutas_generadas || steps;
   const commentCount = stepsWithComments.filter((s: any) => s.comentario_vendedor && s.comentario_vendedor.trim().length > 0).length;
 
-  // Agrupar pasos por etapa
-  const pasosPorEtapa = steps.reduce((acc, paso) => {
-    if (!acc[paso.etapa]) {
-      acc[paso.etapa] = [];
+  // Agrupar pasos por etapa normalizada
+  const pasosPorEtapa = stepsWithComments.reduce((acc: Record<string, any[]>, paso: any) => {
+    const etapaNormalizada = normalizeEtapa(paso.etapa);
+    if (!acc[etapaNormalizada]) {
+      acc[etapaNormalizada] = [];
     }
-    acc[paso.etapa].push(paso);
+    acc[etapaNormalizada].push(paso);
     return acc;
-  }, {} as Record<string, GeneratedStep[]>);
+  }, {} as Record<string, any[]>);
 
   const etapas = ['Pre-prensa', 'Produccion', 'Terminacion'];
-  const totalPasos = steps.length;
+  const totalPasos = stepsWithComments.length;
 
   return (
     <div className="border-2 border-gray-200 rounded-lg overflow-hidden bg-white">

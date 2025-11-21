@@ -33,6 +33,13 @@ export function useGenerateProductionRoute({
 
   useEffect(() => {
     async function generateRoute() {
+      // Si no hay productoId o categoria, no hacer nada (optimización)
+      if (!productoId || !categoria) {
+        setSteps([]);
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
         setError(null);
