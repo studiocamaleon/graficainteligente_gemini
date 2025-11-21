@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useProductionStations } from '../../../hooks/useProductionStations';
+import { useProductionStations, type StationStep } from '../../../hooks/useProductionStations';
 import { StationCard } from '../../../components/production/StationCard';
 import { StationStepCard } from '../../../components/production/StationStepCard';
 import { StationSelector } from '../../../components/production/StationSelector';
@@ -8,7 +8,7 @@ import { EmptyState } from '../../../components/ui/EmptyState';
 import { Button } from '../../../components/ui/Button';
 import { RefreshCw, Radio, Boxes, CheckCircle2, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import type { JobItem } from '../../../hooks/useProductionJobs';
+import type { EstadoOrdenItem } from '../../../types/database';
 
 export function StationsView() {
   const [selectedStationId, setSelectedStationId] = useState<string | null>(null);
@@ -16,7 +16,7 @@ export function StationsView() {
     estacionId: selectedStationId,
   });
 
-  const [selectedJobItemId, setSelectedJobItemId] = useState<string | null>(null);
+  const [selectedStep, setSelectedStep] = useState<StationStep | null>(null);
   const [showExecutionModal, setShowExecutionModal] = useState(false);
 
   const navigate = useNavigate();
@@ -29,14 +29,14 @@ export function StationsView() {
     setSelectedStationId(null);
   };
 
-  const handleViewStepDetails = (ordenItemId: string) => {
-    setSelectedJobItemId(ordenItemId);
+  const handleViewStepDetails = (step: StationStep) => {
+    setSelectedStep(step);
     setShowExecutionModal(true);
   };
 
   const handleCloseModal = () => {
     setShowExecutionModal(false);
-    setSelectedJobItemId(null);
+    setSelectedStep(null);
   };
 
   if (loading) {
@@ -191,7 +191,7 @@ export function StationsView() {
                           <StationStepCard
                             key={paso.ruta_id}
                             {...paso}
-                            onViewDetails={() => handleViewStepDetails(paso.orden_item_id)}
+                            onViewDetails={() => handleViewStepDetails(paso)}
                           />
                         ))}
                       {selectedStation.pasos_en_proceso === 0 && (
@@ -220,7 +220,7 @@ export function StationsView() {
                           <StationStepCard
                             key={paso.ruta_id}
                             {...paso}
-                            onViewDetails={() => handleViewStepDetails(paso.orden_item_id)}
+                            onViewDetails={() => handleViewStepDetails(paso)}
                           />
                         ))}
                       {selectedStation.pasos_pendientes === 0 && (
@@ -245,11 +245,27 @@ export function StationsView() {
         </>
       )}
 
-      {selectedJobItemId && (
+      {selectedStep && (
         <JobExecutionModal
           isOpen={showExecutionModal}
           onClose={handleCloseModal}
-          job={{ id: selectedJobItemId } as JobItem}
+          job={{
+            id: selectedStep.orden_item_id,
+            orden_id: selectedStep.orden_id,
+            numero_orden: selectedStep.numero_orden,
+            cliente_nombre: selectedStep.cliente_nombre,
+            producto_nombre: selectedStep.producto_nombre,
+            cantidad: selectedStep.cantidad,
+            fecha_creacion: selectedStep.fecha_creacion_orden,
+            estado: 'en_proceso' as EstadoOrdenItem,
+            producto_categoria: null,
+            total_pasos: 0,
+            pasos_completados: 0,
+            pasos_en_proceso: 0,
+            pasos_pendientes: 0,
+            progreso_porcentaje: 0,
+            paso_relevante: null,
+          }}
           onJobUpdated={refreshStations}
         />
       )}
