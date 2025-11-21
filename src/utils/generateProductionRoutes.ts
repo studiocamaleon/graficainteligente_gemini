@@ -24,23 +24,30 @@ interface GenerateRoutesParams {
  * - 'Pre-prensa', 'pre-prensa', 'Pre prensa' → 'pre_prensa'
  * - 'Terminacion', 'Post-prensa', 'post-prensa' → 'post_prensa'
  * - 'Produccion', 'Impresion', cualquier otro → 'principal'
+ *
+ * IMPORTANTE: El orden de las verificaciones es crítico para evitar falsos positivos
  */
 function normalizarEtapa(etapa: string): TipoEtapaRuta {
   const etapaLower = etapa.toLowerCase().replace(/[-\s]/g, '_');
 
-  // Pre-prensa: detecta variaciones con "pre"
-  if (etapaLower.includes('pre')) {
-    return 'pre_prensa';
+  // 1. Si ya está normalizado, devolver sin cambios
+  if (etapaLower === 'pre_prensa' || etapaLower === 'principal' || etapaLower === 'post_prensa') {
+    return etapaLower as TipoEtapaRuta;
   }
 
-  // Post-prensa: detecta "post", "terminacion", "acabado"
+  // 2. Post-prensa (verificar ANTES que pre para evitar que "post_prensa" sea capturado por "pre")
   if (etapaLower.includes('post') ||
       etapaLower.includes('terminacion') ||
       etapaLower.includes('acabado')) {
     return 'post_prensa';
   }
 
-  // Principal: producción, impresión, o cualquier otro caso
+  // 3. Pre-prensa (usar condiciones más específicas)
+  if (etapaLower.startsWith('pre') || etapaLower.includes('_pre_')) {
+    return 'pre_prensa';
+  }
+
+  // 4. Principal por defecto (producción, impresión, etc.)
   return 'principal';
 }
 

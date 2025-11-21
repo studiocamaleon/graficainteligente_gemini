@@ -6,23 +6,30 @@ import type { OrdenItemRuta, TipoEtapaRuta } from '../types/database';
 /**
  * Normaliza el valor de tipo_etapa a uno de los valores válidos del enum
  * Esta función asegura que los datos existentes en BD se lean correctamente
+ *
+ * IMPORTANTE: El orden de las verificaciones es crítico para evitar falsos positivos
  */
 function normalizarTipoEtapa(etapa: string): TipoEtapaRuta {
   const etapaLower = etapa.toLowerCase().replace(/[-\s]/g, '_');
 
-  // Pre-prensa
-  if (etapaLower.includes('pre')) {
-    return 'pre_prensa';
+  // 1. Si ya está normalizado, devolver sin cambios
+  if (etapaLower === 'pre_prensa' || etapaLower === 'principal' || etapaLower === 'post_prensa') {
+    return etapaLower as TipoEtapaRuta;
   }
 
-  // Post-prensa (incluye "terminacion", "acabado")
+  // 2. Post-prensa (verificar ANTES que pre para evitar que "post_prensa" sea capturado por "pre")
   if (etapaLower.includes('post') ||
       etapaLower.includes('terminacion') ||
       etapaLower.includes('acabado')) {
     return 'post_prensa';
   }
 
-  // Principal (producción, impresión, o cualquier otro)
+  // 3. Pre-prensa (usar condiciones más específicas)
+  if (etapaLower.startsWith('pre') || etapaLower.includes('_pre_')) {
+    return 'pre_prensa';
+  }
+
+  // 4. Principal por defecto (producción, impresión, etc.)
   return 'principal';
 }
 
