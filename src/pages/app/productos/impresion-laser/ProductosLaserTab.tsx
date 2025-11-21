@@ -24,7 +24,7 @@ export function ProductosLaserTab({ triggerCreate = 0 }: ProductosLaserTabProps)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDetalleModalOpen, setIsDetalleModalOpen] = useState(false);
-  const [selectedProducto, setSelectedProducto] = useState<ProductoLaserConRelaciones | null>(null);
+  const [selectedProductoId, setSelectedProductoId] = useState<string | null>(null);
   const lastTriggerRef = useRef<number>(triggerCreate);
 
   const filters = {
@@ -33,7 +33,7 @@ export function ProductosLaserTab({ triggerCreate = 0 }: ProductosLaserTabProps)
   };
 
   const { productos, isLoading, refetch } = useProductosImpresionLaser(filters);
-  const { toggleStatus, deleteProducto, producto: productoCompleto, refetch: refetchProducto } = useProductoImpresionLaser(selectedProducto?.id);
+  const { toggleStatus, deleteProducto, producto: productoCompleto } = useProductoImpresionLaser(selectedProductoId);
 
   useEffect(() => {
     if (triggerCreate && triggerCreate > 0 && triggerCreate !== lastTriggerRef.current) {
@@ -50,15 +50,13 @@ export function ProductosLaserTab({ triggerCreate = 0 }: ProductosLaserTabProps)
     confirmAction,
   } = useConfirmDialog();
 
-  const handleVerDetalle = async (producto: ProductoImpresionLaser) => {
-    setSelectedProducto(producto as ProductoLaserConRelaciones);
-    await refetchProducto();
+  const handleVerDetalle = (producto: ProductoImpresionLaser) => {
+    setSelectedProductoId(producto.id);
     setIsDetalleModalOpen(true);
   };
 
-  const handleEditar = async (producto: ProductoImpresionLaser) => {
-    setSelectedProducto(producto as ProductoLaserConRelaciones);
-    await refetchProducto();
+  const handleEditar = (producto: ProductoImpresionLaser) => {
+    setSelectedProductoId(producto.id);
     setIsEditModalOpen(true);
   };
 
@@ -95,12 +93,12 @@ export function ProductosLaserTab({ triggerCreate = 0 }: ProductosLaserTabProps)
     refetch();
     setIsCreateModalOpen(false);
     setIsEditModalOpen(false);
-    setSelectedProducto(null);
+    setSelectedProductoId(null);
   };
 
   const handleCloseDetalle = () => {
     setIsDetalleModalOpen(false);
-    setSelectedProducto(null);
+    setSelectedProductoId(null);
   };
 
   const handleEditFromDetalle = () => {
@@ -286,7 +284,7 @@ export function ProductosLaserTab({ triggerCreate = 0 }: ProductosLaserTabProps)
             isOpen={isEditModalOpen}
             onClose={() => {
               setIsEditModalOpen(false);
-              setSelectedProducto(null);
+              setSelectedProductoId(null);
             }}
             producto={productoCompleto}
             onSuccess={handleSuccess}
