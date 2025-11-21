@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../hooks/useAuth';
 import { Wrench, ChevronDown, ChevronUp } from 'lucide-react';
-import { CATEGORIA_IMPRESION_LASER_ID } from '../../../constants/categorias';
 
 interface NivelPrecio {
   id: string;
@@ -20,12 +19,14 @@ interface Servicio {
 }
 
 interface ServiciosSelectorProps {
+  categoriaId: string;
   serviciosSeleccionados: string[];
   onChange: (servicios: string[]) => void;
   error?: string;
 }
 
 export function ServiciosSelector({
+  categoriaId,
   serviciosSeleccionados,
   onChange,
   error,
@@ -36,14 +37,14 @@ export function ServiciosSelector({
   const { user, profile } = useAuth();
 
   useEffect(() => {
-    if (profile?.company_id) {
+    if (profile?.company_id && categoriaId) {
       cargarServicios();
     } else if (user && !profile) {
       setIsLoading(true);
     } else {
       setIsLoading(false);
     }
-  }, [profile?.company_id, user]);
+  }, [profile?.company_id, user, categoriaId]);
 
   const cargarServicios = async () => {
     try {
@@ -52,7 +53,7 @@ export function ServiciosSelector({
       const { data: relaciones, error: relError } = await supabase
         .from('servicios_categorias')
         .select('servicio_id')
-        .eq('categoria_id', CATEGORIA_IMPRESION_LASER_ID);
+        .eq('categoria_id', categoriaId);
 
       if (relError) {
         console.error('[ServiciosSelector] Error:', relError);
@@ -147,7 +148,7 @@ export function ServiciosSelector({
         <div className="text-center py-6 bg-gray-50 rounded-lg border border-gray-200">
           <Wrench className="w-8 h-8 text-gray-400 mx-auto mb-2" />
           <p className="text-sm text-gray-500">
-            No hay servicios disponibles para Impresión Láser
+            No hay servicios disponibles para esta categoría
           </p>
         </div>
       </div>

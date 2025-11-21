@@ -7,7 +7,8 @@ import { TecnologiaTintasSelector } from './TecnologiaTintasSelector';
 import { CarasImpresasSelector } from './CarasImpresasSelector';
 import { MaterialCascadeSelector } from './MaterialCascadeSelector';
 import { TipoVentaSelector } from './TipoVentaSelector';
-import { ServiciosSelector } from './ServiciosSelector';
+import { ServiciosSelector } from '../shared/ServiciosSelector';
+import { CATEGORIA_IMPRESION_LASER_ID } from '../../../constants/categorias';
 import { AcabadosSelector } from './AcabadosSelector';
 import { ImpuestoSelector } from './ImpuestoSelector';
 import { RutaSelector } from '../../rutas/RutaSelector';
@@ -288,6 +289,7 @@ export function ProductoLaserForm({
       <Card>
         <div className="p-6">
           <ServiciosSelector
+            categoriaId={CATEGORIA_IMPRESION_LASER_ID}
             serviciosSeleccionados={servicios}
             onChange={(s) => {
               setServicios(s);
