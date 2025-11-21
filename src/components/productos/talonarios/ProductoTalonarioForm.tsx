@@ -25,7 +25,7 @@ interface FormErrors {
   nombre?: string;
   medidas?: string;
   tintas?: string;
-  caras?: string;
+  tiposCopia?: string;
   materialId?: string;
   varianteNombre?: string;
   espesor?: string;
@@ -45,7 +45,7 @@ export function ProductoTalonarioForm({
   const [medidas, setMedidas] = useState<Medida[]>([]);
   const [tecnologiaId, setTecnologiaId] = useState('');
   const [tintas, setTintas] = useState<string[]>([]);
-  const [tiposCopia, setCarasImpresas] = useState<string[]>([]);
+  const [tiposCopia, setTiposCopia] = useState<string[]>([]);
   const [materialId, setMaterialId] = useState('');
   const [varianteNombre, setVarianteNombre] = useState('');
   const [espesor, setEspesor] = useState<number | undefined>(undefined);
@@ -61,7 +61,7 @@ export function ProductoTalonarioForm({
     if (producto) {
       setNombre(producto.nombre);
       setMedidas(producto.medidas_disponibles);
-      setCarasImpresas(producto.tipo_copia);
+      setTiposCopia(producto.tipo_copia);
       setTipoVenta(producto.tipo_venta);
       setCantidadesFijas(producto.cantidades_fijas);
       setImpuesto(producto.impuesto_iva);
@@ -108,7 +108,7 @@ export function ProductoTalonarioForm({
     }
 
     if (tiposCopia.length === 0) {
-      newErrors.caras = 'Debe seleccionar al menos una opción de caras impresas';
+      newErrors.tiposCopia = 'Debe seleccionar al menos un tipo de copia';
     }
 
     if (!materialId) {
@@ -227,12 +227,12 @@ export function ProductoTalonarioForm({
       <Card>
         <div className="p-6">
           <TipoCopiaSelector
-            carasSeleccionadas={tiposCopia}
+            tiposSeleccionados={tiposCopia}
             onChange={(c) => {
-              setCarasImpresas(c);
+              setTiposCopia(c);
               onFormChange?.();
             }}
-            error={errors.caras}
+            error={errors.tiposCopia}
           />
         </div>
       </Card>
