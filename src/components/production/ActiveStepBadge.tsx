@@ -69,7 +69,7 @@ export function ActiveStepBadge({
 
     return (
       <span
-        className={`inline-flex items-center font-semibold rounded-full border ${colors.bg} ${colors.text} ${colors.border} ${sizeClasses[size]} max-w-[160px] truncate`}
+        className={`inline-flex items-center font-semibold rounded-full border ${colors.bg} ${colors.text} ${colors.border} ${sizeClasses[size]} max-w-[180px] sm:max-w-[220px] truncate`}
         title={pasoRelevante.nombre}
       >
         <span className="mr-1">{icon}</span>

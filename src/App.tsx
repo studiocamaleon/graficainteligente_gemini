@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './hooks/useAuth';
+import { ToastProvider } from './contexts/ToastContext';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { ProtectedModuleRoute } from './components/auth/ProtectedModuleRoute';
 import { MainLayout } from './layouts/MainLayout';
@@ -132,7 +133,9 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <AppRoutes />
+        <ToastProvider>
+          <AppRoutes />
+        </ToastProvider>
       </AuthProvider>
     </BrowserRouter>
   );

@@ -10,6 +10,7 @@ import { useAuth } from '../../../hooks/useAuth';
 import { useOrdenTrabajo } from '../../../hooks/useOrdenTrabajo';
 import { usePrompt } from '../../../hooks/usePrompt';
 import { useItemRoutesComments } from '../../../hooks/useItemRoutesComments';
+import { useToast } from '../../../contexts/ToastContext';
 import { OrdenGeneralSection } from '../../../components/orders/OrdenGeneralSection';
 import { OrdenItemsTab } from '../../../components/orders/OrdenItemsTab';
 import { OrdenPagosTab } from '../../../components/orders/OrdenPagosTab';
@@ -22,6 +23,7 @@ export function CreateOrderPage() {
   const navigate = useNavigate();
   const { profile } = useAuth();
   const { createOrdenConItems, loading, error } = useOrdenTrabajo();
+  const { showSuccess, showError } = useToast();
 
   usePageHeader('Crear nueva orden de trabajo');
 
@@ -154,12 +156,15 @@ export function CreateOrderPage() {
       // Marcar orden como creada ANTES de navegar para evitar el prompt de confirmación
       setOrdenCreada(true);
 
-      // Dar tiempo a React para procesar el cambio de estado antes de navegar
+      // Mostrar mensaje de éxito
+      showSuccess('Orden creada exitosamente');
+
+      // Dar tiempo a React para procesar el cambio de estado y mostrar el toast antes de navegar
       setTimeout(() => {
-        navigate(`/app/orders/ordenes/${result.id}`);
-      }, 0);
+        navigate('/app/orders/ordenes');
+      }, 500);
     } else {
-      alert('Error al crear la orden: ' + error);
+      showError(`Error al crear la orden: ${error || 'Error desconocido'}`);
     }
   };
 

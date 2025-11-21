@@ -55,16 +55,42 @@ export function StepCard({ ruta, isActive, canStart, children }: StepCardProps) 
 
     const inicio = new Date(ruta.fecha_inicio);
     const fin = new Date(ruta.fecha_fin);
+
+    // Validar que las fechas sean válidas
+    if (isNaN(inicio.getTime()) || isNaN(fin.getTime())) {
+      console.warn('Fechas inválidas en ruta:', { fecha_inicio: ruta.fecha_inicio, fecha_fin: ruta.fecha_fin });
+      return null;
+    }
+
     const diffMs = fin.getTime() - inicio.getTime();
+
+    // Si la diferencia es negativa, hay un error
+    if (diffMs < 0) {
+      console.warn('Fecha fin anterior a fecha inicio:', { inicio, fin });
+      return null;
+    }
+
     const diffMins = Math.floor(diffMs / 60000);
 
+    // Menos de 1 minuto
+    if (diffMins < 1) {
+      return '< 1 min';
+    }
+
+    // Menos de 1 hora
     if (diffMins < 60) {
       return `${diffMins} min`;
-    } else {
-      const hours = Math.floor(diffMins / 60);
-      const mins = diffMins % 60;
-      return `${hours}h ${mins}m`;
     }
+
+    // Más de 1 hora
+    const hours = Math.floor(diffMins / 60);
+    const mins = diffMins % 60;
+
+    if (mins === 0) {
+      return `${hours}h`;
+    }
+
+    return `${hours}h ${mins}m`;
   };
 
   const duracion = calcularDuracion();
