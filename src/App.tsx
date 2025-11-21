@@ -12,7 +12,7 @@ import { Providers } from './pages/app/Providers';
 import { OrdersListPage } from './pages/app/orders/OrdersListPage';
 import { CreateOrderPage } from './pages/app/orders/CreateOrderPage';
 import { OrderDetailPage } from './pages/app/orders/OrderDetailPage';
-import { Production } from './pages/app/Production';
+import { ProductionPage } from './pages/app/production/ProductionPage';
 import { Finance } from './pages/app/Finance';
 import { Team } from './pages/app/Team';
 import { Integrations } from './pages/app/Integrations';
@@ -103,7 +103,7 @@ function AppRoutes() {
                 <Route path="orders/ordenes" element={<OrdersListPage />} />
                 <Route path="orders/crear-ot" element={<CreateOrderPage />} />
                 <Route path="orders/:id" element={<OrderDetailPage />} />
-                <Route path="production" element={<Production />} />
+                <Route path="production" element={<ProductionPage />} />
                 <Route path="finanzas" element={<Finance />} />
                 <Route
                   path="team"
