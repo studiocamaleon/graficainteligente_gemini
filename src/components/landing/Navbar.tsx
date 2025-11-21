@@ -40,8 +40,8 @@ export function Navbar() {
     <nav
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         isScrolled || menuOpen
-          ? 'bg-white/90 backdrop-blur-md border-b border-gray-200 shadow-sm'
-          : 'bg-white border-b border-gray-200 md:bg-transparent md:border-b-0'
+          ? 'bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-sm'
+          : 'bg-transparent'
       }`}
     >
       <div className="max-w-7xl mx-auto px-4 md:px-8">
