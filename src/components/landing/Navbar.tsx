@@ -45,12 +45,20 @@ export function Navbar() {
       }`}
     >
       <div className="max-w-7xl mx-auto px-4 md:px-8">
-        <div className="flex items-center justify-between py-3 md:py-5">
+        <div className={`flex items-center justify-between transition-all duration-300 ${
+          isScrolled && !menuOpen ? 'py-2 md:py-3' : 'py-3 md:py-5'
+        }`}>
           <Link to="/" className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-cyan-600 rounded-xl flex items-center justify-center shadow-lg">
-              <Zap className="w-6 h-6 text-white" />
+            <div className={`bg-gradient-to-br from-blue-600 to-cyan-600 rounded-xl flex items-center justify-center shadow-lg transition-all duration-300 ${
+              isScrolled && !menuOpen ? 'w-8 h-8' : 'w-10 h-10'
+            }`}>
+              <Zap className={`text-white transition-all duration-300 ${
+                isScrolled && !menuOpen ? 'w-5 h-5' : 'w-6 h-6'
+              }`} />
             </div>
-            <span className="text-xl font-bold text-gray-900">{BRAND.name}</span>
+            <span className={`font-bold text-gray-900 transition-all duration-300 ${
+              isScrolled && !menuOpen ? 'text-lg' : 'text-xl'
+            }`}>{BRAND.name}</span>
           </Link>
 
           <div className="md:hidden">
