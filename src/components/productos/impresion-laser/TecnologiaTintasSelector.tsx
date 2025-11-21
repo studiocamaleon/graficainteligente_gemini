@@ -3,12 +3,6 @@ import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../hooks/useAuth';
 import { TECNOLOGIA_IMPRESION_LASER_ID } from '../../../constants/tecnologias';
 
-interface Tinta {
-  id: string;
-  codigo: string;
-  nombre: string;
-}
-
 interface TecnologiaTintasSelectorProps {
   tintasSeleccionadas: string[];
   onTintasChange: (tintas: string[]) => void;
@@ -22,7 +16,7 @@ export function TecnologiaTintasSelector({
   onTecnologiaChange,
   error,
 }: TecnologiaTintasSelectorProps) {
-  const [tintas, setTintas] = useState<Tinta[]>([]);
+  const [tintas, setTintas] = useState<string[]>([]);
   const [tecnologiaId, setTecnologiaId] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const { user, profile } = useAuth();
@@ -41,7 +35,7 @@ export function TecnologiaTintasSelector({
     try {
       setIsLoading(true);
 
-      // Obtener la tecnología con sus tintas (ahora son IDs)
+      // Obtener la tecnología con sus tintas (son valores directos: 'K', 'CMYK', etc.)
       const { data: tecnologiaData, error } = await supabase
         .from('tecnologias')
         .select('id, tintas')
@@ -64,20 +58,8 @@ export function TecnologiaTintasSelector({
       setTecnologiaId(tecnologiaData.id);
       onTecnologiaChange(tecnologiaData.id);
 
-      // Obtener la información completa de las tintas desde la tabla tintas
-      const { data: tintasData, error: tintasError } = await supabase
-        .from('tintas')
-        .select('id, codigo, nombre')
-        .in('id', tecnologiaData.tintas)
-        .eq('activo', true);
-
-      if (tintasError) {
-        console.error('[TecnologiaTintasSelector] Error cargando tintas:', tintasError);
-        setTintas([]);
-        return;
-      }
-
-      setTintas(tintasData || []);
+      // Las tintas son valores directos de tipo string, no IDs
+      setTintas(tecnologiaData.tintas);
     } catch (err) {
       console.error('❌ [TecnologiaTintasSelector] Error cargando tecnología y tintas:', err);
       setTintas([]);
@@ -86,11 +68,11 @@ export function TecnologiaTintasSelector({
     }
   };
 
-  const toggleTinta = (tintaId: string) => {
-    if (tintasSeleccionadas.includes(tintaId)) {
-      onTintasChange(tintasSeleccionadas.filter((t) => t !== tintaId));
+  const toggleTinta = (tinta: string) => {
+    if (tintasSeleccionadas.includes(tinta)) {
+      onTintasChange(tintasSeleccionadas.filter((t) => t !== tinta));
     } else {
-      onTintasChange([...tintasSeleccionadas, tintaId]);
+      onTintasChange([...tintasSeleccionadas, tinta]);
     }
   };
 
@@ -134,12 +116,12 @@ export function TecnologiaTintasSelector({
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
         {tintas.map((tinta) => {
-          const isSelected = tintasSeleccionadas.includes(tinta.id);
+          const isSelected = tintasSeleccionadas.includes(tinta);
           return (
             <button
-              key={tinta.id}
+              key={tinta}
               type="button"
-              onClick={() => toggleTinta(tinta.id)}
+              onClick={() => toggleTinta(tinta)}
               className={`relative p-3 rounded-lg border-2 transition-all ${
                 isSelected
                   ? 'border-blue-500 bg-blue-50 shadow-sm'
@@ -147,8 +129,7 @@ export function TecnologiaTintasSelector({
               }`}
             >
               <div className="flex flex-col items-center justify-center">
-                <p className="text-sm font-medium text-gray-900">{tinta.nombre}</p>
-                <p className="text-xs text-gray-500 mt-1">{tinta.codigo}</p>
+                <p className="text-sm font-medium text-gray-900">{tinta}</p>
               </div>
               {isSelected && (
                 <div className="absolute top-2 right-2 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
