@@ -575,17 +575,25 @@ export function useOrdenTrabajo() {
           // Si el item tiene rutas pregeneradas, insertarlas
           if (itemOriginal.rutas_generadas && itemOriginal.rutas_generadas.length > 0) {
             try {
-              const rutasToInsert = itemOriginal.rutas_generadas.map((ruta: any) => ({
-                company_id: profile.company_id,
-                orden_item_id: item.id,
-                tipo_etapa: ruta.etapa,
-                paso_id: ruta.paso_id,
-                paso_nombre: ruta.paso_nombre,
-                orden: ruta.orden,
-                es_modificado: false,
-                origen_plantilla_id: ruta.origen_plantilla_id || null,
-                comentario_vendedor: null,
-              }));
+              const rutasToInsert = itemOriginal.rutas_generadas.map((ruta: any) => {
+                console.log('🔍 Ruta a insertar:', {
+                  tipo_etapa: ruta.etapa,
+                  paso_nombre: ruta.paso_nombre,
+                  orden: ruta.orden
+                });
+
+                return {
+                  company_id: profile.company_id,
+                  orden_item_id: item.id,
+                  tipo_etapa: ruta.etapa,
+                  paso_id: ruta.paso_id,
+                  paso_nombre: ruta.paso_nombre,
+                  orden: ruta.orden,
+                  es_modificado: false,
+                  origen_plantilla_id: ruta.origen_plantilla_id || null,
+                  comentario_vendedor: null,
+                };
+              });
 
               const { error: rutasError } = await supabase
                 .from('ordenes_trabajo_items_rutas')

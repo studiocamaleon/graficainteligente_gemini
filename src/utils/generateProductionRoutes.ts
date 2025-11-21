@@ -1,7 +1,8 @@
 import { supabase } from '../lib/supabase';
+import type { TipoEtapaRuta } from '../types/database';
 
 export interface GeneratedRouteStep {
-  etapa: string;
+  etapa: TipoEtapaRuta;
   paso_id: string | null;
   paso_nombre: string;
   orden: number;
@@ -13,6 +14,22 @@ interface GenerateRoutesParams {
   productoId: string;
   categoria: string;
   configuracion: any;
+}
+
+/**
+ * Normaliza el valor de etapa a uno de los valores válidos del enum TipoEtapaRuta
+ * Maneja diferentes variaciones de nombres (con espacios, guiones, mayúsculas, etc.)
+ */
+function normalizarEtapa(etapa: string): TipoEtapaRuta {
+  const etapaLower = etapa.toLowerCase().replace(/[-\s]/g, '_');
+
+  if (etapaLower.includes('pre') || etapaLower === 'pre_prensa') {
+    return 'pre_prensa';
+  }
+  if (etapaLower.includes('post') || etapaLower === 'post_prensa') {
+    return 'post_prensa';
+  }
+  return 'principal';
 }
 
 /**
@@ -303,16 +320,19 @@ export async function generateProductionRoutes({
       }
     }
 
-    // 5. Construir pasos finales con nombres reales
+    // 5. Construir pasos finales con nombres reales y etapas normalizadas
     const pasosFinales: GeneratedRouteStep[] = generatedSteps.map(step => {
       const nombreReal = step.paso_id_especifico
         ? nombresRealesPasos[step.paso_id_especifico]
         : undefined;
 
       const nombreFinal = nombreReal || 'Paso sin nombre';
+      const etapaNormalizada = normalizarEtapa(step.etapa);
+
+      console.log('🔄 Normalizando etapa:', { original: step.etapa, normalizada: etapaNormalizada, paso: nombreFinal });
 
       return {
-        etapa: step.etapa,
+        etapa: etapaNormalizada,
         paso_id: step.paso_id_especifico,
         paso_nombre: nombreFinal,
         orden: step.orden,
