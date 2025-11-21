@@ -118,6 +118,10 @@ export function JobExecutionModal({ isOpen, onClose, job }: JobExecutionModalPro
     return acc;
   }, {} as Record<string, typeof rutas>);
 
+  Object.keys(rutasPorEtapa).forEach((etapa) => {
+    rutasPorEtapa[etapa].sort((a, b) => a.orden - b.orden);
+  });
+
   const ordenEtapas = ['pre_prensa', 'principal', 'post_prensa'];
 
   return (

@@ -1,13 +1,32 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
-import type { OrdenItemRuta, EstadoPaso } from '../types/database';
+import type { OrdenItemRuta, EstadoPaso, TipoEtapaRuta } from '../types/database';
 
 interface StepExecutionResult {
   success: boolean;
   error?: string;
   updatedRuta?: OrdenItemRuta;
 }
+
+const ORDEN_ETAPAS: Record<TipoEtapaRuta, number> = {
+  pre_prensa: 1,
+  principal: 2,
+  post_prensa: 3,
+};
+
+const ordenarRutas = (rutas: OrdenItemRuta[]): OrdenItemRuta[] => {
+  return [...rutas].sort((a, b) => {
+    const ordenEtapaA = ORDEN_ETAPAS[a.tipo_etapa];
+    const ordenEtapaB = ORDEN_ETAPAS[b.tipo_etapa];
+
+    if (ordenEtapaA !== ordenEtapaB) {
+      return ordenEtapaA - ordenEtapaB;
+    }
+
+    return a.orden - b.orden;
+  });
+};
 
 export function useStepExecution() {
   const { profile } = useAuth();
@@ -196,33 +215,43 @@ export function useStepExecution() {
   };
 
   const getActiveStep = (rutas: OrdenItemRuta[]): OrdenItemRuta | null => {
-    // Buscar el primer paso en proceso
-    const pasoEnProceso = rutas.find((r) => r.estado_paso === 'en_proceso');
+    if (rutas.length === 0) return null;
+
+    const rutasOrdenadas = ordenarRutas(rutas);
+
+    const pasoEnProceso = rutasOrdenadas.find((r) => r.estado_paso === 'en_proceso');
     if (pasoEnProceso) return pasoEnProceso;
 
-    // Si no hay ninguno en proceso, buscar el primer paso pendiente
-    const pasoPendiente = rutas.find((r) => r.estado_paso === 'pendiente');
+    const pasoPendiente = rutasOrdenadas.find((r) => r.estado_paso === 'pendiente');
     return pasoPendiente || null;
   };
 
   const canStartStep = (ruta: OrdenItemRuta, rutas: OrdenItemRuta[]): boolean => {
-    // El paso debe estar pendiente
     if (ruta.estado_paso !== 'pendiente') return false;
 
-    // No debe haber otro paso en proceso
     const hayPasoEnProceso = rutas.some((r) => r.estado_paso === 'en_proceso');
     if (hayPasoEnProceso) return false;
 
-    // Debe ser el primer paso pendiente en orden
-    const primerosRutasMismaEtapa = rutas.filter(
-      (r) => r.tipo_etapa === ruta.tipo_etapa && r.orden <= ruta.orden
-    );
+    const rutasOrdenadas = ordenarRutas(rutas);
+    const ordenEtapaActual = ORDEN_ETAPAS[ruta.tipo_etapa];
 
-    const todosAnterioresCompletados = primerosRutasMismaEtapa
-      .filter((r) => r.orden < ruta.orden)
-      .every((r) => r.estado_paso === 'completado' || r.estado_paso === 'omitido');
+    for (const r of rutasOrdenadas) {
+      const ordenEtapaRuta = ORDEN_ETAPAS[r.tipo_etapa];
 
-    return todosAnterioresCompletados;
+      if (ordenEtapaRuta < ordenEtapaActual) {
+        if (r.estado_paso !== 'completado' && r.estado_paso !== 'omitido') {
+          return false;
+        }
+      } else if (ordenEtapaRuta === ordenEtapaActual && r.orden < ruta.orden) {
+        if (r.estado_paso !== 'completado' && r.estado_paso !== 'omitido') {
+          return false;
+        }
+      } else if (ordenEtapaRuta === ordenEtapaActual && r.orden === ruta.orden && r.id === ruta.id) {
+        break;
+      }
+    }
+
+    return true;
   };
 
   return {
