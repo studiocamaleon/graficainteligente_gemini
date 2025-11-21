@@ -50,28 +50,6 @@ export function StepProgressIndicator({ rutas, currentStepId }: StepProgressIndi
           {pasosCompletados + pasosOmitidos}/{totalPasos} pasos
         </span>
       </div>
-
-      <div className="flex gap-1">
-        {rutas.map((ruta) => (
-          <div
-            key={ruta.id}
-            className={`
-              flex-1 h-2 rounded-full transition-all duration-300
-              ${ruta.id === currentStepId ? 'ring-2 ring-blue-500 ring-offset-1' : ''}
-              ${
-                ruta.estado_paso === 'completado'
-                  ? 'bg-green-500'
-                  : ruta.estado_paso === 'en_proceso'
-                  ? 'bg-blue-500 animate-pulse'
-                  : ruta.estado_paso === 'omitido'
-                  ? 'bg-orange-500'
-                  : 'bg-gray-300'
-              }
-            `}
-            title={ruta.paso_nombre}
-          />
-        ))}
-      </div>
     </div>
   );
 }

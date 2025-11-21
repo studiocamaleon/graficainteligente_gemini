@@ -1386,6 +1386,7 @@ export interface OrdenItemRuta {
   fecha_inicio: string | null;
   fecha_fin: string | null;
   responsable_id: string | null;
+  responsable_nombre?: string;
   notas: string | null;
   created_at: string;
   updated_at: string;

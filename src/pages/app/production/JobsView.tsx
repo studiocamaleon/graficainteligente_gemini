@@ -75,6 +75,7 @@ export function JobsView() {
           isOpen={showExecutionModal}
           onClose={handleCloseModal}
           job={selectedJob}
+          onJobUpdated={refreshJobs}
         />
       )}
     </div>

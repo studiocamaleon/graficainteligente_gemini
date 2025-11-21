@@ -125,7 +125,7 @@ export function StepCard({ ruta, isActive, canStart, children }: StepCardProps) 
           {ruta.responsable_id && (
             <div className="flex items-center gap-1 mt-2 text-xs text-gray-500">
               <User className="w-3.5 h-3.5" />
-              <span>Responsable: {ruta.responsable_id.substring(0, 8)}...</span>
+              <span>Responsable: {ruta.responsable_nombre || 'Usuario desconocido'}</span>
             </div>
           )}
 

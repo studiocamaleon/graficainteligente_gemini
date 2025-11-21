@@ -78,7 +78,12 @@ export function useOrdenItemRutas(options: UseOrdenItemRutasOptions = {}) {
 
       const { data, error: fetchError } = await supabase
         .from('ordenes_trabajo_items_rutas')
-        .select('*')
+        .select(`
+          *,
+          responsable:profiles!ordenes_trabajo_items_rutas_responsable_id_fkey(
+            full_name
+          )
+        `)
         .eq('orden_item_id', options.ordenItemId)
         .order('tipo_etapa', { ascending: true })
         .order('orden', { ascending: true });
@@ -100,14 +105,22 @@ export function useOrdenItemRutas(options: UseOrdenItemRutasOptions = {}) {
       }
 
       // Normalizar tipo_etapa al leer para manejar datos legacy
-      const rutasNormalizadas = (data || []).map(ruta => {
+      const rutasNormalizadas = (data || []).map((ruta: any) => {
         const etapaNormalizada = normalizarTipoEtapa(ruta.tipo_etapa);
         if (ruta.tipo_etapa !== etapaNormalizada) {
           console.log(`🔄 Normalizando etapa: "${ruta.tipo_etapa}" → "${etapaNormalizada}"`);
         }
+
+        // Extraer nombre del responsable si existe
+        const responsableNombre = ruta.responsable?.full_name || null;
+
+        // Remover el objeto anidado responsable y agregar solo el nombre
+        const { responsable, ...rutaLimpia } = ruta;
+
         return {
-          ...ruta,
-          tipo_etapa: etapaNormalizada
+          ...rutaLimpia,
+          tipo_etapa: etapaNormalizada,
+          responsable_nombre: responsableNombre
         };
       });
 

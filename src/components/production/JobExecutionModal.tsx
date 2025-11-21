@@ -16,6 +16,7 @@ interface JobExecutionModalProps {
   isOpen: boolean;
   onClose: () => void;
   job: JobItem;
+  onJobUpdated?: () => void;
 }
 
 const etapaLabels: Record<string, string> = {
@@ -30,7 +31,7 @@ const etapaColors: Record<string, string> = {
   post_prensa: 'bg-green-100 text-green-800 border-green-300',
 };
 
-export function JobExecutionModal({ isOpen, onClose, job }: JobExecutionModalProps) {
+export function JobExecutionModal({ isOpen, onClose, job, onJobUpdated }: JobExecutionModalProps) {
   const { rutas, refetch } = useOrdenItemRutas({ ordenItemId: job.id });
   const { startStep, completeStep, skipStep, getActiveStep, canStartStep, loading } = useStepExecution();
   const {
@@ -67,6 +68,7 @@ export function JobExecutionModal({ isOpen, onClose, job }: JobExecutionModalPro
 
     if (result.success) {
       await refetch();
+      onJobUpdated?.();
     } else {
       alert(result.error || 'Error al iniciar el paso');
     }
@@ -86,6 +88,7 @@ export function JobExecutionModal({ isOpen, onClose, job }: JobExecutionModalPro
 
     if (result.success) {
       await refetch();
+      onJobUpdated?.();
     } else {
       alert(result.error || 'Error al completar el paso');
     }
@@ -112,6 +115,7 @@ export function JobExecutionModal({ isOpen, onClose, job }: JobExecutionModalPro
       setRutaToSkip(null);
       setSkipJustification('');
       await refetch();
+      onJobUpdated?.();
     } else {
       alert(result.error || 'Error al omitir el paso');
     }
