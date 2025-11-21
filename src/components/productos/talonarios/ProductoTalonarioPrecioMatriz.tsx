@@ -17,7 +17,7 @@ interface Props {
   productoId: string;
   productoNombre: string;
   medida: { ancho: number; alto: number };
-  tinta: string; // TintaInfo es ahora un string simple
+  tinta_id: string;
   cantidades: number[];
   caras: string[];
   materialInfo?: MaterialInfo;
@@ -33,7 +33,7 @@ export function ProductoTalonarioPrecioMatriz({
   productoId,
   productoNombre,
   medida,
-  tinta,
+  tinta_id,
   cantidades,
   caras,
   materialInfo,
@@ -51,7 +51,7 @@ export function ProductoTalonarioPrecioMatriz({
       (p) =>
         p.medida_ancho === medida.ancho &&
         p.medida_alto === medida.alto &&
-        p.tinta === tinta
+        p.tinta_id === tinta_id
     );
 
     // Build initial state
@@ -66,7 +66,7 @@ export function ProductoTalonarioPrecioMatriz({
     });
 
     setPreciosState(initialState);
-  }, [productoId, medida, tinta, cantidades, caras, preciosExistentes]);
+  }, [productoId, medida, tinta_id, cantidades, caras, preciosExistentes]);
 
   const handlePrecioChange = (cantidad: number, cara: string, value: string) => {
     const key = `${cantidad}-${cara}`;
@@ -91,9 +91,9 @@ export function ProductoTalonarioPrecioMatriz({
           preciosArray.push({
             medida_ancho: medida.ancho,
             medida_alto: medida.alto,
-            tinta: tinta,
+            tinta_id: tinta_id,
             cantidad: cant,
-            tipo_copia: c as 'solo_frente' | 'frente_y_dorso',
+            tipo_copia: c as 'duplicado' | 'triplicado' | 'cuadruplicado',
             precio: p,
           });
         }
@@ -104,8 +104,9 @@ export function ProductoTalonarioPrecioMatriz({
   };
 
   const formatCara = (cara: string): string => {
-    if (cara === 'solo_frente') return 'Solo Frente';
-    if (cara === 'frente_y_dorso') return 'Frente y Dorso';
+    if (cara === 'duplicado') return 'Duplicado';
+    if (cara === 'triplicado') return 'Triplicado';
+    if (cara === 'cuadruplicado') return 'Cuadruplicado';
     return cara;
   };
 
@@ -115,7 +116,7 @@ export function ProductoTalonarioPrecioMatriz({
         <div className="flex items-center gap-3">
           <MeasureBadge ancho={medida.ancho} alto={medida.alto} />
           <div className="w-px h-8 bg-gray-300"></div>
-          <InkBadge tinta={tinta} />
+          <InkBadge tinta={tinta_id} />
         </div>
         {materialInfo && (
           <MaterialBadge

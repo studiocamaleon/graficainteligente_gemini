@@ -172,9 +172,9 @@ export function useAllProductosTalonariosPrecios() {
         const preciosExistentes = producto.precios_existentes.map((precio) => ({
           medida_ancho: precio.medida_ancho,
           medida_alto: precio.medida_alto,
-          tinta: precio.tinta,
+          tinta_id: precio.tinta_id,
           cantidad: precio.cantidad,
-          cara_impresa: precio.cara_impresa,
+          tipo_copia: precio.tipo_copia,
           precio: precio.precio,
         }));
         initialSnapshot[producto.id] = preciosExistentes;
@@ -190,7 +190,7 @@ export function useAllProductosTalonariosPrecios() {
 
   // Helper function to create a unique key for a precio
   const createPrecioKey = (precio: PrecioInput): string => {
-    return `${precio.medida_ancho}-${precio.medida_alto}-${precio.tinta}-${precio.cantidad}-${precio.cara_impresa}`;
+    return `${precio.medida_ancho}-${precio.medida_alto}-${precio.tinta_id}-${precio.cantidad}-${precio.tipo_copia}`;
   };
 
   // Helper function to compare two precio arrays and find actual changes
@@ -271,9 +271,9 @@ export function useAllProductosTalonariosPrecios() {
           producto_talonario_id: productoId,
           medida_ancho: precio.medida_ancho,
           medida_alto: precio.medida_alto,
-          tinta: precio.tinta,
+          tinta_id: precio.tinta_id,
           cantidad: precio.cantidad,
-          cara_impresa: precio.cara_impresa,
+          tipo_copia: precio.tipo_copia,
           precio: precio.precio,
         }));
 
@@ -285,7 +285,7 @@ export function useAllProductosTalonariosPrecios() {
           const { error: upsertError } = await supabase
             .from('productos_talonarios_precios')
             .upsert(preciosParaUpsert, {
-              onConflict: 'producto_talonario_id,medida_ancho,medida_alto,tinta,cantidad,cara_impresa',
+              onConflict: 'producto_talonario_id,medida_ancho,medida_alto,tinta_id,cantidad,tipo_copia',
               ignoreDuplicates: false,
             });
 
@@ -301,9 +301,9 @@ export function useAllProductosTalonariosPrecios() {
             .eq('company_id', profile.company_id)
             .eq('medida_ancho', precio.medida_ancho)
             .eq('medida_alto', precio.medida_alto)
-            .eq('tinta', precio.tinta)
+            .eq('tinta_id', precio.tinta_id)
             .eq('cantidad', precio.cantidad)
-            .eq('cara_impresa', precio.cara_impresa);
+            .eq('tipo_copia', precio.tipo_copia);
 
           if (deleteError) throw deleteError;
         }

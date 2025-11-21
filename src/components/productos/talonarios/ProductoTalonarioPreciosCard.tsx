@@ -81,7 +81,7 @@ export function ProductoTalonarioPreciosCard({ producto, onPreciosChange }: Prop
 
       // Group existing prices by combination key
       producto.precios_existentes.forEach((precio) => {
-        const key = `${precio.medida_ancho}-${precio.medida_alto}-${precio.tinta}`;
+        const key = `${precio.medida_ancho}-${precio.medida_alto}-${precio.tinta_id}`;
 
         if (!initialPreciosPorCombinacion[key]) {
           initialPreciosPorCombinacion[key] = [];
@@ -90,9 +90,9 @@ export function ProductoTalonarioPreciosCard({ producto, onPreciosChange }: Prop
         initialPreciosPorCombinacion[key].push({
           medida_ancho: precio.medida_ancho,
           medida_alto: precio.medida_alto,
-          tinta: precio.tinta,
+          tinta_id: precio.tinta_id,
           cantidad: precio.cantidad,
-          cara_impresa: precio.cara_impresa,
+          tipo_copia: precio.tipo_copia,
           precio: precio.precio,
         });
       });
@@ -179,7 +179,7 @@ export function ProductoTalonarioPreciosCard({ producto, onPreciosChange }: Prop
                           productoId={producto.id}
                           productoNombre={producto.nombre}
                           medida={group.medida}
-                          tinta={tinta}
+                          tinta_id={tinta}
                           cantidades={cantidades}
                           caras={producto.tipo_copia}
                           materialInfo={materialInfo}
@@ -207,7 +207,7 @@ export function ProductoTalonarioPreciosCard({ producto, onPreciosChange }: Prop
                           productoId={producto.id}
                           productoNombre={producto.nombre}
                           medida={group.medida}
-                          tinta={tinta}
+                          tinta_id={tinta}
                           cantidades={cantidades}
                           caras={producto.tipo_copia}
                           materialInfo={materialInfo}

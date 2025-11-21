@@ -8,9 +8,9 @@ export interface ProductoTalonarioPrecio {
   producto_talonario_id: string;
   medida_ancho: number;
   medida_alto: number;
-  tinta: string;
+  tinta_id: string;
   cantidad: number;
-  tipo_copia: 'solo_frente' | 'frente_y_dorso';
+  tipo_copia: 'duplicado' | 'triplicado' | 'cuadruplicado';
   precio: number;
   created_at: string;
   updated_at: string;
@@ -19,15 +19,15 @@ export interface ProductoTalonarioPrecio {
 export interface PrecioInput {
   medida_ancho: number;
   medida_alto: number;
-  tinta: string;
+  tinta_id: string;
   cantidad: number;
-  tipo_copia: 'solo_frente' | 'frente_y_dorso';
+  tipo_copia: 'duplicado' | 'triplicado' | 'cuadruplicado';
   precio: number;
 }
 
 export interface PreciosPorCombinacion {
   medida: { ancho: number; alto: number };
-  tinta: string;
+  tinta_id: string;
   tinta_nombre?: string;
   precios: ProductoTalonarioPrecio[];
 }
@@ -109,7 +109,7 @@ export function useProductosTalonariosPrecios(productoTalonarioId?: string) {
         producto_talonario_id: productoTalonarioId,
         medida_ancho: precio.medida_ancho,
         medida_alto: precio.medida_alto,
-        tinta: precio.tinta,
+        tinta_id: precio.tinta_id,
         cantidad: precio.cantidad,
         tipo_copia: precio.tipo_copia,
         precio: precio.precio,
@@ -165,12 +165,12 @@ export function useProductosTalonariosPrecios(productoTalonarioId?: string) {
     const grupos: Map<string, PreciosPorCombinacion> = new Map();
 
     precios.forEach((precio) => {
-      const key = `${precio.medida_ancho}x${precio.medida_alto}-${precio.tinta}`;
+      const key = `${precio.medida_ancho}x${precio.medida_alto}-${precio.tinta_id}`;
 
       if (!grupos.has(key)) {
         grupos.set(key, {
           medida: { ancho: precio.medida_ancho, alto: precio.medida_alto },
-          tinta: precio.tinta,
+          tinta_id: precio.tinta_id,
           precios: [],
         });
       }

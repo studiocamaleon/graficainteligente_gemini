@@ -17,7 +17,7 @@ interface CombinacionPrecios {
   tintaNombre: string;
   precios: Array<{
     cantidad: number;
-    cara_impresa: string;
+    tipo_copia: string;
     precio: number;
   }>;
 }
@@ -62,7 +62,7 @@ export function ProductoTalonarioPreciosSection({
           tintaNombre: tinta.nombre,
           precios: preciosParaCombinacion.map((p) => ({
             cantidad: p.cantidad,
-            cara_impresa: p.cara_impresa,
+            tipo_copia: p.tipo_copia,
             precio: p.precio,
           })),
         });
@@ -83,7 +83,7 @@ export function ProductoTalonarioPreciosSection({
   const handleCombinacionPreciosChange = (
     medida: { ancho: number; alto: number },
     tintaId: string,
-    precios: Array<{ cantidad: number; cara_impresa: string; precio: number }>
+    precios: Array<{ cantidad: number; tipo_copia: string; precio: number }>
   ) => {
     const key = `${medida.ancho}x${medida.alto}-${tintaId}`;
     const combinacionActualizada = preciosLocales.get(key);
@@ -103,7 +103,7 @@ export function ProductoTalonarioPreciosSection({
             medida_alto: comb.medida.alto,
             tinta_id: comb.tintaId,
             cantidad: p.cantidad,
-            cara_impresa: p.cara_impresa as 'solo_frente' | 'frente_y_dorso',
+            tipo_copia: p.tipo_copia as 'duplicado' | 'triplicado' | 'cuadruplicado',
             precio: p.precio,
           });
         });

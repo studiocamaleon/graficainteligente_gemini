@@ -122,9 +122,9 @@ export const TalonariosPDFTemplate = forwardRef<HTMLDivElement, TalonariosPDFTem
                                       (p) =>
                                         p.medida_ancho === group.medida.ancho &&
                                         p.medida_alto === group.medida.alto &&
-                                        p.tinta === tinta &&
+                                        p.tinta_id === tinta &&
                                         p.cantidad === cantidad &&
-                                        p.cara_impresa === cara
+                                        p.tipo_copia === cara
                                     );
                                     row[cara] = precio ? formatCurrency(precio.precio) : '-';
                                   });
@@ -164,9 +164,9 @@ export const TalonariosPDFTemplate = forwardRef<HTMLDivElement, TalonariosPDFTem
                                       (p) =>
                                         p.medida_ancho === group.medida.ancho &&
                                         p.medida_alto === group.medida.alto &&
-                                        p.tinta === tinta &&
+                                        p.tinta_id === tinta &&
                                         p.cantidad === cantidad &&
-                                        p.cara_impresa === cara
+                                        p.tipo_copia === cara
                                     );
                                     row[cara] = precio ? formatCurrency(precio.precio) : '-';
                                   });
