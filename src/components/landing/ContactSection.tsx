@@ -35,7 +35,7 @@ export function ContactSection() {
         >
           <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">
             ¿Listo para{' '}
-            <span className="bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
               transformar
             </span>
             {' '}tu negocio?
@@ -52,7 +52,7 @@ export function ContactSection() {
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
           >
-            <div className="bg-gradient-to-br from-purple-600 via-blue-600 to-purple-600 rounded-2xl p-8 text-white h-full shadow-2xl">
+            <div className="bg-gradient-to-br from-blue-600 to-cyan-600 rounded-2xl p-8 text-white h-full shadow-2xl">
               <h3 className="text-3xl font-bold mb-6">Hablemos de tu proyecto</h3>
               <p className="text-lg opacity-90 mb-8">
                 Nuestro equipo está listo para ayudarte a optimizar tu negocio gráfico con la mejor tecnología.
@@ -108,7 +108,7 @@ export function ContactSection() {
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
           >
-            <form onSubmit={handleSubmit} className="bg-gradient-to-br from-purple-50/50 to-blue-50/50 rounded-2xl p-8 border border-gray-200 shadow-lg">
+            <form onSubmit={handleSubmit} className="bg-gradient-to-br from-blue-50/50 to-cyan-50/50 rounded-2xl p-8 border border-gray-200 shadow-lg">
               <div className="space-y-5">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -119,7 +119,7 @@ export function ContactSection() {
                     required
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     placeholder="Juan Pérez"
                   />
                 </div>
@@ -132,7 +132,7 @@ export function ContactSection() {
                     type="text"
                     value={formData.company}
                     onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     placeholder="Mi Imprenta SRL"
                   />
                 </div>
@@ -147,7 +147,7 @@ export function ContactSection() {
                       required
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                       placeholder="juan@ejemplo.com"
                     />
                   </div>
@@ -160,7 +160,7 @@ export function ContactSection() {
                       type="tel"
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                       placeholder="+54 11 1234-5678"
                     />
                   </div>
@@ -183,7 +183,7 @@ export function ContactSection() {
                 <button
                   type="submit"
                   disabled={submitted}
-                  className="w-full py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold rounded-xl hover:from-purple-700 hover:to-blue-700 transition-all shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full py-4 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-bold rounded-xl hover:from-blue-700 hover:to-cyan-700 transition-all shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {submitted ? (
                     <>Mensaje enviado!</>

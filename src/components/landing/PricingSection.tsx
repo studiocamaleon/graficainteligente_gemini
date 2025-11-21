@@ -37,15 +37,15 @@ export function PricingSection() {
         };
       case 'pro':
         return {
-          border: 'border-purple-500 shadow-xl shadow-purple-500/20',
-          badge: 'bg-gradient-to-r from-purple-600 to-blue-600 text-white',
-          button: 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-lg shadow-purple-500/40',
+          border: 'border-blue-500 shadow-xl shadow-blue-500/20',
+          badge: 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white',
+          button: 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 shadow-lg shadow-blue-500/40',
         };
       case 'enterprise':
         return {
-          border: 'border-lime-500 shadow-xl shadow-lime-500/20',
-          badge: 'bg-gradient-to-r from-lime-500 to-green-500 text-white',
-          button: 'bg-gradient-to-r from-lime-600 to-green-600 hover:from-lime-700 hover:to-green-700 shadow-lg shadow-lime-500/40',
+          border: 'border-cyan-500 shadow-xl shadow-cyan-500/20',
+          badge: 'bg-gradient-to-r from-cyan-600 to-blue-700 text-white',
+          button: 'bg-gradient-to-r from-cyan-600 to-blue-700 hover:from-cyan-700 hover:to-blue-800 shadow-lg shadow-cyan-500/40',
         };
       default:
         return {
@@ -58,7 +58,7 @@ export function PricingSection() {
 
   if (loading) {
     return (
-      <section id="pricing" className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-purple-50/30 via-white to-blue-50/30">
+      <section id="pricing" className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
         <div className="max-w-7xl mx-auto text-center">
           <p className="text-gray-600">Cargando planes...</p>
         </div>
@@ -67,7 +67,7 @@ export function PricingSection() {
   }
 
   return (
-    <section id="pricing" className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-purple-50/30 via-white to-blue-50/30">
+    <section id="pricing" className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
       <div className="max-w-7xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -78,7 +78,7 @@ export function PricingSection() {
         >
           <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">
             Planes{' '}
-            <span className="bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
               Flexibles
             </span>
             {' '}para Crecer
@@ -108,7 +108,7 @@ export function PricingSection() {
               >
                 {isRecommended && (
                   <div className="absolute -top-5 left-0 right-0 flex justify-center">
-                    <span className="inline-flex items-center gap-1 px-4 py-1 bg-gradient-to-r from-purple-600 to-blue-600 text-white text-sm font-bold rounded-full shadow-lg">
+                    <span className="inline-flex items-center gap-1 px-4 py-1 bg-gradient-to-r from-blue-600 to-cyan-600 text-white text-sm font-bold rounded-full shadow-lg">
                       <Zap className="w-4 h-4" />
                       Más Popular
                     </span>

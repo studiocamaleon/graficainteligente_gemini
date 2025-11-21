@@ -44,13 +44,13 @@ export const COLORS = {
 } as const;
 
 export const GRADIENTS = {
-  primary: 'bg-gradient-to-r from-purple-600 via-blue-600 to-purple-600',
-  primaryHover: 'hover:from-purple-700 hover:via-blue-700 hover:to-purple-700',
-  secondary: 'bg-gradient-to-r from-blue-600 to-purple-600',
-  accent: 'bg-gradient-to-r from-lime-500 to-green-500',
-  hero: 'bg-gradient-to-br from-purple-50 via-blue-50 to-lime-50',
-  card: 'bg-gradient-to-br from-white to-purple-50/30',
-  chameleon: 'bg-gradient-to-r from-purple-600 via-blue-600 to-lime-500',
+  primary: 'bg-gradient-to-r from-blue-600 to-cyan-600',
+  primaryHover: 'hover:from-blue-700 hover:to-cyan-700',
+  secondary: 'bg-gradient-to-r from-cyan-600 to-blue-600',
+  accent: 'bg-gradient-to-r from-blue-500 to-cyan-500',
+  hero: 'bg-gradient-to-br from-blue-50 via-white to-cyan-50',
+  card: 'bg-gradient-to-br from-white to-blue-50/30',
+  chameleon: 'bg-gradient-to-r from-blue-600 to-cyan-600',
 } as const;
 
 export const FEATURES = [

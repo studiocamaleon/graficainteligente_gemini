@@ -22,7 +22,7 @@ export function UseCasesSection() {
         >
           <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">
             Soluciones para{' '}
-            <span className="bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
               cada tipo
             </span>
             {' '}de negocio
@@ -43,10 +43,10 @@ export function UseCasesSection() {
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
                 whileHover={{ scale: 1.05, transition: { duration: 0.2 } }}
-                className="bg-gradient-to-br from-white via-purple-50/20 to-blue-50/30 rounded-2xl p-8 border-2 border-gray-200 hover:border-purple-300 shadow-lg hover:shadow-2xl transition-all duration-300"
+                className="bg-gradient-to-br from-white via-blue-50/20 to-cyan-50/30 rounded-2xl p-8 border-2 border-gray-200 hover:border-blue-300 shadow-lg hover:shadow-2xl transition-all duration-300"
               >
                 <div className="flex items-start gap-4 mb-4">
-                  <div className="w-16 h-16 bg-gradient-to-br from-purple-600 to-blue-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
+                  <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-cyan-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
                     <Icon className="w-8 h-8 text-white" />
                   </div>
                   <div>
@@ -60,7 +60,7 @@ export function UseCasesSection() {
                     {useCase.benefits.map((benefit, bIndex) => (
                       <span
                         key={bIndex}
-                        className="px-3 py-1 bg-white border border-purple-200 text-purple-700 rounded-full text-sm font-medium"
+                        className="px-3 py-1 bg-white border border-blue-200 text-blue-700 rounded-full text-sm font-medium"
                       >
                         {benefit}
                       </span>
@@ -79,12 +79,12 @@ export function UseCasesSection() {
           transition={{ duration: 0.6, delay: 0.4 }}
           className="mt-16 text-center"
         >
-          <div className="bg-gradient-to-r from-purple-600 via-blue-600 to-lime-500 rounded-2xl p-8 text-white shadow-2xl">
+          <div className="bg-gradient-to-r from-blue-600 to-cyan-600 rounded-2xl p-8 text-white shadow-2xl">
             <h3 className="text-2xl font-bold mb-3">¿Tu negocio es diferente?</h3>
             <p className="text-lg opacity-90 mb-6">
               Nuestro sistema es altamente configurable y se adapta a tus necesidades específicas
             </p>
-            <button className="px-8 py-3 bg-white text-purple-700 font-bold rounded-xl hover:bg-gray-100 transition-colors shadow-lg">
+            <button className="px-8 py-3 bg-white text-blue-700 font-bold rounded-xl hover:bg-gray-100 transition-colors shadow-lg">
               Contáctanos para una demo personalizada
             </button>
           </div>

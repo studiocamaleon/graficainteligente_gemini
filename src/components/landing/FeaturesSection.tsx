@@ -24,7 +24,7 @@ export function FeaturesSection() {
         >
           <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">
             Todo lo que necesitas en{' '}
-            <span className="bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
               un solo lugar
             </span>
           </h2>
@@ -44,9 +44,9 @@ export function FeaturesSection() {
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
                 whileHover={{ y: -8, transition: { duration: 0.2 } }}
-                className="bg-gradient-to-br from-white to-purple-50/30 rounded-2xl p-8 border border-gray-200 hover:border-purple-300 hover:shadow-2xl transition-all duration-300"
+                className="bg-gradient-to-br from-white to-blue-50/30 rounded-2xl p-8 border border-gray-200 hover:border-blue-300 hover:shadow-2xl transition-all duration-300"
               >
-                <div className="w-14 h-14 bg-gradient-to-br from-purple-600 to-blue-600 rounded-xl flex items-center justify-center mb-5 shadow-lg">
+                <div className="w-14 h-14 bg-gradient-to-br from-blue-600 to-cyan-600 rounded-xl flex items-center justify-center mb-5 shadow-lg">
                   <Icon className="w-7 h-7 text-white" />
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-3">{feature.title}</h3>
@@ -63,8 +63,8 @@ export function FeaturesSection() {
           transition={{ duration: 0.6, delay: 0.3 }}
           className="mt-16 text-center"
         >
-          <div className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-50 to-blue-50 rounded-full border border-purple-200">
-            <span className="text-purple-700 font-semibold">
+          <div className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-full border border-blue-200">
+            <span className="text-blue-700 font-semibold">
               + Muchas más funcionalidades diseñadas para tu éxito
             </span>
           </div>
