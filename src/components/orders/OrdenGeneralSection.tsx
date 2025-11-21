@@ -1,7 +1,5 @@
-import { MessageSquare, Globe, Store, User, Calendar } from 'lucide-react';
-import { Input } from '../ui/Input';
-import { Select } from '../ui/Select';
-import { Switch } from '../ui/Switch';
+import { MessageSquare, Globe, Store, User } from 'lucide-react';
+import { SearchableSelect } from '../ui/SearchableSelect';
 import { Tooltip } from '../ui/Tooltip';
 import { useClients } from '../../hooks/useClients';
 import { useRef } from 'react';
@@ -45,19 +43,12 @@ export function OrdenGeneralSection({
     { value: 'Mostrador', label: 'Mostrador', icon: Store },
   ];
 
-  const clientesOptions = [
-    { value: '', label: 'Seleccione un cliente' },
-    ...clients.map(c => ({
-      value: c.id,
-      label: `${c.nombre_fantasia} (${c.numero_documento})`,
-    }))
-  ];
+  const clientesOptions = clients.map(c => ({
+    value: c.id,
+    label: `${c.nombre_fantasia} (${c.numero_documento})`,
+  }));
 
   const minFecha = new Date().toISOString().split('T')[0];
-
-  const handleDateContainerClick = () => {
-    dateInputRef.current?.showPicker();
-  };
 
   return (
     <div className="p-6 space-y-6">
@@ -67,19 +58,18 @@ export function OrdenGeneralSection({
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Cliente <span className="text-red-500">*</span>
-          </label>
-          <Select
+          <SearchableSelect
+            label="Cliente"
             value={clienteId}
             onChange={(value) => setClienteId(value)}
             options={clientesOptions}
+            placeholder="Buscar cliente por nombre..."
+            loading={loading}
             disabled={loading}
-            className={errors.cliente ? 'border-red-500' : ''}
+            required
+            error={errors.cliente}
+            emptyMessage="No se encontraron clientes"
           />
-          {errors.cliente && (
-            <p className="mt-1 text-sm text-red-600">{errors.cliente}</p>
-          )}
         </div>
 
         <div>
@@ -123,26 +113,29 @@ export function OrdenGeneralSection({
           </div>
         </div>
 
-        <div>
+        <div className="max-w-xs">
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Fecha Estimada de Entrega
           </label>
-          <div
-            onClick={handleDateContainerClick}
-            className={`
-              relative flex items-center cursor-pointer rounded-lg border transition-colors
-              ${errors.fechaEntrega ? 'border-red-500' : 'border-gray-300 hover:border-gray-400'}
-            `}
-          >
+          <div className="relative">
             <input
               ref={dateInputRef}
               type="date"
               value={fechaEntrega}
               onChange={(e) => setFechaEntrega(e.target.value)}
               min={minFecha}
-              className="w-full px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+              className={`
+                w-full px-4 py-2.5 rounded-lg border-2 transition-colors
+                focus:outline-none focus:ring-4 focus:ring-blue-200
+                ${errors.fechaEntrega
+                  ? 'border-red-500 focus:border-red-600'
+                  : 'border-slate-300 focus:border-blue-500 hover:border-slate-400'
+                }
+              `}
+              style={{
+                colorScheme: 'light'
+              }}
             />
-            <Calendar className="absolute right-3 w-5 h-5 text-gray-400 pointer-events-none" />
           </div>
           {errors.fechaEntrega && (
             <p className="mt-1 text-sm text-red-600">{errors.fechaEntrega}</p>
