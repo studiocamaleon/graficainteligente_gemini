@@ -40,7 +40,7 @@ export function ModulesSection() {
   ];
 
   return (
-    <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-blue-50/30 via-white to-cyan-50/30">
+    <section id="modules" className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-blue-50/30 via-white to-cyan-50/30">
       <div className="max-w-7xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
