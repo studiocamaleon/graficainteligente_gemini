@@ -43,6 +43,12 @@ export const CATEGORIAS_SISTEMA = {
     descripcion: 'Productos de portabanners y expositores',
     color: '#06B6D4',
   },
+  TALONARIOS: {
+    id: '00000000-0000-0000-0000-000000000007',
+    nombre: 'Talonarios',
+    descripcion: 'Productos de talonarios y formularios',
+    color: '#14B8A6',
+  },
 } as const;
 
 // Exportaciones de compatibilidad
@@ -52,6 +58,7 @@ export const CATEGORIA_MATERIALES_RIGIDOS_ID = CATEGORIAS_SISTEMA.MATERIALES_RIG
 export const CATEGORIA_PLOTTER_CORTE_ID = CATEGORIAS_SISTEMA.PLOTTER_CORTE.id;
 export const CATEGORIA_SELLOS_ID = CATEGORIAS_SISTEMA.SELLOS.id;
 export const CATEGORIA_PORTABANNERS_ID = CATEGORIAS_SISTEMA.PORTABANNERS.id;
+export const CATEGORIA_TALONARIOS_ID = CATEGORIAS_SISTEMA.TALONARIOS.id;
 
 // Lista de IDs de todas las categorías (útil para validaciones)
 export const CATEGORIA_IDS = Object.values(CATEGORIAS_SISTEMA).map(cat => cat.id);

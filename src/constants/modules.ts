@@ -160,6 +160,13 @@ export const MODULES: Module[] = [
         icon: Printer,
       },
       {
+        id: 'productos-talonarios',
+        name: 'Talonarios',
+        description: 'Productos de talonarios y formularios',
+        path: '/app/productos/talonarios',
+        icon: FileText,
+      },
+      {
         id: 'productos-gran-formato',
         name: 'Gran Formato',
         description: 'Productos de impresión gran formato',
