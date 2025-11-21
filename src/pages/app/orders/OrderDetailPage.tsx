@@ -74,8 +74,8 @@ export function OrderDetailPage() {
   };
 
   const canDelete = useMemo(() => {
-    return isAdmin && orden?.estado === 'borrador';
-  }, [isAdmin, orden?.estado]);
+    return false;
+  }, []);
 
   const canCancel = useMemo(() => {
     if (!orden) return false;
@@ -129,7 +129,6 @@ export function OrderDetailPage() {
     if (!id || orden?.estado === nuevoEstado) return;
 
     const estadoLabels: Record<EstadoOrdenTrabajo, string> = {
-      borrador: 'Borrador',
       pendiente: 'Pendiente',
       en_proceso: 'En Proceso',
       finalizada: 'Finalizada',
@@ -155,10 +154,6 @@ export function OrderDetailPage() {
     if (!orden) return [];
 
     const currentState = orden.estado;
-
-    if (currentState === 'borrador') {
-      return ['pendiente'];
-    }
 
     if (currentState === 'pendiente') {
       return ['en_proceso'];

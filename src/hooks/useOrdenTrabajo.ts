@@ -518,7 +518,7 @@ export function useOrdenTrabajo() {
       setError(null);
 
       // 1. Crear la orden
-      const estadoFinal = data.estadoInicial || 'borrador';
+      const estadoFinal = data.estadoInicial || 'pendiente';
       const { data: newOrden, error: ordenError } = await supabase
         .from('ordenes_trabajo')
         .insert([

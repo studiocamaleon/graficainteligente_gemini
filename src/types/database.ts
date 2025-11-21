@@ -1170,7 +1170,9 @@ export interface PedidoRutaResuelta {
 
 export type CanalVenta = 'Web' | 'WhatsApp' | 'Mostrador';
 
-export type EstadoOrdenTrabajo = 'borrador' | 'pendiente' | 'en_proceso' | 'finalizada' | 'entregada' | 'cancelada';
+export type EstadoOrdenTrabajo = 'pendiente' | 'en_proceso' | 'finalizada' | 'entregada' | 'cancelada';
+
+export type EstadoOrdenItem = 'pendiente' | 'en_proceso' | 'finalizado';
 
 export type MetodoPago = 'Efectivo' | 'Transferencia' | 'Tarjeta Credito' | 'Tarjeta Debito' | 'Cheque' | 'Otro';
 
@@ -1321,6 +1323,7 @@ export interface OrdenTrabajoItem {
   precio_acabados: number;
   precio_unitario_final: number;
   precio_total: number;
+  estado: EstadoOrdenItem;
   created_at: string;
   updated_at: string;
 }
@@ -1379,6 +1382,11 @@ export interface OrdenItemRuta {
   es_modificado: boolean;
   origen_plantilla_id: string | null;
   comentario_vendedor: string | null;
+  estado_paso: EstadoPaso;
+  fecha_inicio: string | null;
+  fecha_fin: string | null;
+  responsable_id: string | null;
+  notas: string | null;
   created_at: string;
   updated_at: string;
 }

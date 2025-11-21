@@ -83,7 +83,7 @@ export function useOrdenesTrabajo(params: UseOrdenesTrabajoParams = {}) {
       if (data) {
         const totalOrdenes = data.length;
         const totalFacturado = data
-          .filter((o) => o.estado !== 'borrador' && o.estado !== 'cancelada')
+          .filter((o) => o.estado !== 'cancelada')
           .reduce((sum, o) => sum + Number(o.total), 0);
         const ordenesPendientes = data.filter(
           (o) => o.estado === 'pendiente'

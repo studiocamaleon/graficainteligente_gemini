@@ -29,13 +29,6 @@ interface ColumnConfig {
 
 const columnsConfig: ColumnConfig[] = [
   {
-    estado: 'borrador',
-    titulo: 'Borrador',
-    color: 'text-gray-700',
-    bgColor: 'bg-gray-100',
-    borderColor: 'border-gray-300',
-  },
-  {
     estado: 'pendiente',
     titulo: 'Pendiente',
     color: 'text-yellow-700',
@@ -68,7 +61,6 @@ const columnsConfig: ColumnConfig[] = [
 export function KanbanBoard({ ordenes }: KanbanBoardProps) {
   const ordenesPorEstado = useMemo(() => {
     const grupos: Record<EstadoOrdenTrabajo, OrdenData[]> = {
-      borrador: [],
       pendiente: [],
       en_proceso: [],
       finalizada: [],

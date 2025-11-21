@@ -25,7 +25,6 @@ interface KanbanColumnProps {
 }
 
 const estadoEmptyMessages: Record<EstadoOrdenTrabajo, string> = {
-  borrador: 'No hay borradores',
   pendiente: 'No hay órdenes pendientes',
   en_proceso: 'No hay órdenes en proceso',
   finalizada: 'No hay órdenes finalizadas',

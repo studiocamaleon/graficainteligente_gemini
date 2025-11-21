@@ -1,12 +1,12 @@
-import type { EstadoOrdenTrabajo } from '../../types/database';
+import type { EstadoOrdenItem } from '../../types/database';
 
-interface OrderStatusBadgeProps {
-  estado: EstadoOrdenTrabajo;
+interface ItemStatusBadgeProps {
+  estado: EstadoOrdenItem;
   size?: 'sm' | 'md' | 'lg';
 }
 
 const estadoConfig: Record<
-  EstadoOrdenTrabajo,
+  EstadoOrdenItem,
   { label: string; className: string }
 > = {
   pendiente: {
@@ -17,17 +17,9 @@ const estadoConfig: Record<
     label: 'En Proceso',
     className: 'bg-blue-100 text-blue-700 border-blue-300',
   },
-  finalizada: {
-    label: 'Finalizada',
+  finalizado: {
+    label: 'Finalizado',
     className: 'bg-green-100 text-green-700 border-green-300',
-  },
-  entregada: {
-    label: 'Entregada',
-    className: 'bg-teal-100 text-teal-700 border-teal-300',
-  },
-  cancelada: {
-    label: 'Cancelada',
-    className: 'bg-red-100 text-red-700 border-red-300',
   },
 };
 
@@ -37,7 +29,7 @@ const sizeClasses = {
   lg: 'px-4 py-1.5 text-base',
 };
 
-export function OrderStatusBadge({ estado, size = 'md' }: OrderStatusBadgeProps) {
+export function ItemStatusBadge({ estado, size = 'md' }: ItemStatusBadgeProps) {
   const config = estadoConfig[estado];
 
   return (
