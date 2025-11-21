@@ -1,0 +1,257 @@
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { supabase } from '../lib/supabase';
+import { useAuth } from './useAuth';
+import type { EstadoPaso } from '../types/database';
+
+export interface StationStep {
+  ruta_id: string;
+  paso_id: string | null;
+  paso_nombre: string;
+  estado_paso: EstadoPaso;
+  orden_item_id: string;
+  numero_orden: string;
+  cliente_nombre: string;
+  producto_nombre: string;
+  cantidad: number;
+  fecha_inicio: string | null;
+  fecha_creacion_orden: string;
+  orden_id: string;
+}
+
+export interface StationWithJobs {
+  estacion_id: string;
+  estacion_nombre: string;
+  estacion_descripcion: string | null;
+  pasos_pendientes: number;
+  pasos_en_proceso: number;
+  total_pasos_activos: number;
+  pasos: StationStep[];
+}
+
+interface UseProductionStationsParams {
+  estacionId?: string | null;
+}
+
+export function useProductionStations(params: UseProductionStationsParams = {}) {
+  const { profile } = useAuth();
+  const { estacionId = null } = params;
+
+  const [stations, setStations] = useState<StationWithJobs[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const fetchStations = useCallback(async () => {
+    if (!profile?.company_id) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      let rutasQuery = supabase
+        .from('ordenes_trabajo_items_rutas')
+        .select(`
+          id,
+          paso_id,
+          paso_nombre,
+          estado_paso,
+          orden_item_id,
+          fecha_inicio,
+          orden_item:ordenes_trabajo_items!inner(
+            id,
+            producto_nombre,
+            cantidad,
+            orden:ordenes_trabajo!inner(
+              id,
+              numero_orden,
+              fecha_creacion,
+              estado,
+              cliente:clients!inner(
+                id,
+                nombre_fantasia
+              )
+            )
+          ),
+          paso:pasos(
+            id,
+            estacion_id,
+            estacion:estaciones_trabajo!inner(
+              id,
+              nombre,
+              descripcion,
+              is_active
+            )
+          )
+        `)
+        .eq('company_id', profile.company_id)
+        .in('estado_paso', ['pendiente', 'en_proceso'])
+        .neq('orden_item.orden.estado', 'cancelada')
+        .neq('orden_item.orden.estado', 'entregada')
+        .eq('paso.estacion.is_active', true);
+
+      if (estacionId) {
+        rutasQuery = rutasQuery.eq('paso.estacion_id', estacionId);
+      }
+
+      const { data: rutasData, error: rutasError } = await rutasQuery;
+
+      if (rutasError) throw rutasError;
+
+      if (!rutasData || rutasData.length === 0) {
+        setStations([]);
+        setLoading(false);
+        return;
+      }
+
+      const stepsMap = new Map<string, StationStep[]>();
+      const stationsInfoMap = new Map<string, { nombre: string; descripcion: string | null }>();
+
+      rutasData.forEach((ruta: any) => {
+        if (!ruta.paso?.estacion) return;
+
+        const estacion = ruta.paso.estacion;
+        const estacionId = estacion.id;
+
+        if (!stationsInfoMap.has(estacionId)) {
+          stationsInfoMap.set(estacionId, {
+            nombre: estacion.nombre,
+            descripcion: estacion.descripcion,
+          });
+        }
+
+        const step: StationStep = {
+          ruta_id: ruta.id,
+          paso_id: ruta.paso_id,
+          paso_nombre: ruta.paso_nombre,
+          estado_paso: ruta.estado_paso,
+          orden_item_id: ruta.orden_item.id,
+          numero_orden: ruta.orden_item.orden.numero_orden,
+          cliente_nombre: ruta.orden_item.orden.cliente.nombre_fantasia,
+          producto_nombre: ruta.orden_item.producto_nombre,
+          cantidad: ruta.orden_item.cantidad,
+          fecha_inicio: ruta.fecha_inicio,
+          fecha_creacion_orden: ruta.orden_item.orden.fecha_creacion,
+          orden_id: ruta.orden_item.orden.id,
+        };
+
+        if (!stepsMap.has(estacionId)) {
+          stepsMap.set(estacionId, []);
+        }
+        stepsMap.get(estacionId)!.push(step);
+      });
+
+      const stationsWithJobs: StationWithJobs[] = Array.from(stationsInfoMap.entries()).map(
+        ([estacionId, info]) => {
+          const pasos = stepsMap.get(estacionId) || [];
+
+          pasos.sort((a, b) => {
+            if (a.estado_paso === 'en_proceso' && b.estado_paso === 'pendiente') return -1;
+            if (a.estado_paso === 'pendiente' && b.estado_paso === 'en_proceso') return 1;
+
+            const fechaA = new Date(a.fecha_creacion_orden).getTime();
+            const fechaB = new Date(b.fecha_creacion_orden).getTime();
+            return fechaA - fechaB;
+          });
+
+          const pasosEnProceso = pasos.filter((p) => p.estado_paso === 'en_proceso').length;
+          const pasosPendientes = pasos.filter((p) => p.estado_paso === 'pendiente').length;
+
+          return {
+            estacion_id: estacionId,
+            estacion_nombre: info.nombre,
+            estacion_descripcion: info.descripcion,
+            pasos_en_proceso: pasosEnProceso,
+            pasos_pendientes: pasosPendientes,
+            total_pasos_activos: pasos.length,
+            pasos,
+          };
+        }
+      );
+
+      stationsWithJobs.sort((a, b) => a.estacion_nombre.localeCompare(b.estacion_nombre));
+
+      setStations(stationsWithJobs);
+    } catch (err) {
+      console.error('Error fetching production stations:', err);
+      setError(err instanceof Error ? err.message : 'Error desconocido');
+    } finally {
+      setLoading(false);
+    }
+  }, [profile?.company_id, estacionId]);
+
+  useEffect(() => {
+    fetchStations();
+  }, [fetchStations]);
+
+  const refreshStations = useCallback(() => {
+    fetchStations();
+  }, [fetchStations]);
+
+  const updateStationGranular = useCallback(
+    async (rutaId: string) => {
+      if (!profile?.company_id) return;
+
+      setIsUpdating(true);
+
+      if (updateTimeoutRef.current) {
+        clearTimeout(updateTimeoutRef.current);
+      }
+
+      updateTimeoutRef.current = setTimeout(async () => {
+        try {
+          await fetchStations();
+        } catch (err) {
+          console.error('Error updating station granularly:', err);
+        } finally {
+          setIsUpdating(false);
+        }
+      }, 300);
+    },
+    [profile?.company_id, fetchStations]
+  );
+
+  useEffect(() => {
+    if (!profile?.company_id) return;
+
+    const channel = supabase
+      .channel('station-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'ordenes_trabajo_items_rutas',
+          filter: `company_id=eq.${profile.company_id}`,
+        },
+        (payload) => {
+          console.log('🔄 Realtime: Ruta updated:', payload.new.id);
+          updateStationGranular(payload.new.id);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [profile?.company_id, updateStationGranular]);
+
+  useEffect(() => {
+    return () => {
+      if (updateTimeoutRef.current) {
+        clearTimeout(updateTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const totalActivePasos = stations.reduce((sum, station) => sum + station.total_pasos_activos, 0);
+
+  return {
+    stations,
+    loading,
+    error,
+    refreshStations,
+    totalActivePasos,
+    isUpdating,
+  };
+}
