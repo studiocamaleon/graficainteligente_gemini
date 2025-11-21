@@ -5,6 +5,7 @@ import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
 import { Input } from '../../../components/ui/Input';
 import { SearchableSelect } from '../../../components/ui/SearchableSelect';
+import { DatePicker } from '../../../components/ui/DatePicker';
 import { CentroCopiadoItemForm, ItemCopiadoConfig } from '../../../components/centro-copiado/CentroCopiadoItemForm';
 import { CentroCopiadoResumenOrden } from '../../../components/centro-copiado/CentroCopiadoResumenOrden';
 import { usePageHeader } from '../../../hooks/usePageHeader';
@@ -297,27 +298,12 @@ export function CrearOrdenCopiado() {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Fecha Entrega Estimada
-                      </label>
-                      <input
-                        type="date"
+                      <DatePicker
+                        label="Fecha Entrega Estimada"
                         value={fechaEntrega}
-                        onChange={(e) => setFechaEntrega(e.target.value)}
-                        min={new Date().toISOString().split('T')[0]}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer"
-                        style={{
-                          colorScheme: 'light',
-                          WebkitAppearance: 'none',
-                          MozAppearance: 'none'
-                        }}
-                        onFocus={(e) => {
-                          try {
-                            e.target.showPicker?.();
-                          } catch (err) {
-                            // Fallback para navegadores que no soportan showPicker
-                          }
-                        }}
+                        onChange={(date) => setFechaEntrega(date || '')}
+                        minDate={new Date()}
+                        placeholder="Seleccionar fecha"
                       />
                     </div>
 

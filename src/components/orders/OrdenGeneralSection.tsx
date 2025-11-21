@@ -1,8 +1,8 @@
 import { MessageSquare, Globe, Store, User } from 'lucide-react';
 import { SearchableSelect } from '../ui/SearchableSelect';
+import { DatePicker } from '../ui/DatePicker';
 import { Tooltip } from '../ui/Tooltip';
 import { useClients } from '../../hooks/useClients';
-import { useRef } from 'react';
 import type { CanalVenta } from '../../types/database';
 
 interface OrdenGeneralSectionProps {
@@ -35,7 +35,6 @@ export function OrdenGeneralSection({
   errors = {},
 }: OrdenGeneralSectionProps) {
   const { clients, loading } = useClients();
-  const dateInputRef = useRef<HTMLInputElement>(null);
 
   const canalesVenta: { value: CanalVenta; label: string; icon: any }[] = [
     { value: 'WhatsApp', label: 'WhatsApp', icon: MessageSquare },
@@ -47,8 +46,6 @@ export function OrdenGeneralSection({
     value: c.id,
     label: `${c.nombre_fantasia} (${c.numero_documento})`,
   }));
-
-  const minFecha = new Date().toISOString().split('T')[0];
 
   return (
     <div className="p-6 space-y-6">
@@ -113,34 +110,14 @@ export function OrdenGeneralSection({
           </div>
         </div>
 
-        <div className="max-w-xs">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Fecha Estimada de Entrega
-          </label>
-          <div className="relative">
-            <input
-              ref={dateInputRef}
-              type="date"
-              value={fechaEntrega}
-              onChange={(e) => setFechaEntrega(e.target.value)}
-              min={minFecha}
-              className={`
-                w-full px-4 py-2.5 rounded-lg border-2 transition-colors
-                focus:outline-none focus:ring-4 focus:ring-blue-200
-                ${errors.fechaEntrega
-                  ? 'border-red-500 focus:border-red-600'
-                  : 'border-slate-300 focus:border-blue-500 hover:border-slate-400'
-                }
-              `}
-              style={{
-                colorScheme: 'light'
-              }}
-            />
-          </div>
-          {errors.fechaEntrega && (
-            <p className="mt-1 text-sm text-red-600">{errors.fechaEntrega}</p>
-          )}
-        </div>
+        <DatePicker
+          label="Fecha Estimada de Entrega"
+          value={fechaEntrega}
+          onChange={(date) => setFechaEntrega(date || '')}
+          minDate={new Date()}
+          error={errors.fechaEntrega}
+          placeholder="Seleccionar fecha de entrega"
+        />
       </div>
 
       <div>
