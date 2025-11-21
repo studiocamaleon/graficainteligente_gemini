@@ -14,6 +14,7 @@ interface UniversalProductSearchStepProps {
 const getCategoryColor = (categoria: string): 'blue' | 'green' | 'purple' | 'orange' | 'gray' => {
   const colorMap: Record<string, 'blue' | 'green' | 'purple' | 'orange' | 'gray'> = {
     'Impresion Laser': 'blue',
+    'Talonarios': 'blue',
     'Impresion Gran Formato': 'green',
     'Materiales Rigidos': 'purple',
     'Plotter de Corte': 'orange',

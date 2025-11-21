@@ -5,6 +5,7 @@ import { useAuth } from '../useAuth';
 
 export type ProductCategory =
   | 'Impresion Laser'
+  | 'Talonarios'
   | 'Impresion Gran Formato'
   | 'Materiales Rigidos'
   | 'Plotter de Corte'
@@ -86,6 +87,7 @@ export function useUniversalProductSearch(searchTerm: string) {
         // Buscar en paralelo en todas las categorías
         const [
           laserProducts,
+          talonariosProducts,
           granFormatoProducts,
           materialesRigidosProducts,
           plotterCorteProducts,
@@ -93,6 +95,7 @@ export function useUniversalProductSearch(searchTerm: string) {
           sellosProducts
         ] = await Promise.all([
           searchImpresionLaser(profile.company_id, debouncedSearch),
+          searchTalonarios(profile.company_id, debouncedSearch),
           searchGranFormato(profile.company_id, debouncedSearch),
           searchMaterialesRigidos(profile.company_id, debouncedSearch),
           searchPlotterCorte(profile.company_id, debouncedSearch),
@@ -102,6 +105,7 @@ export function useUniversalProductSearch(searchTerm: string) {
 
         results.push(
           ...laserProducts,
+          ...talonariosProducts,
           ...granFormatoProducts,
           ...materialesRigidosProducts,
           ...plotterCorteProducts,
@@ -160,6 +164,51 @@ async function searchImpresionLaser(
     id: p.id,
     nombre: p.nombre,
     categoria: 'Impresion Laser',
+    categoria_id: catData?.id || '',
+    descripcion: null,
+    precio_desde: null,
+    tiene_precios: false,
+    config_disponible: {
+      tiene_medidas: true,
+      tiene_cantidad: true,
+      tiene_material: true,
+      tiene_tecnologia: true,
+      tiene_tintas: true,
+      tiene_caras_impresion: true,
+      tiene_espesor: false,
+      tiene_color: false,
+      tiene_marca: false,
+    }
+  }));
+}
+
+async function searchTalonarios(
+  companyId: string,
+  searchTerm: string
+): Promise<UniversalProductSearchResult[]> {
+  const { data, error } = await supabase
+    .from('productos_talonarios')
+    .select('id, nombre')
+    .eq('company_id', companyId)
+    .eq('is_active', true)
+    .ilike('nombre', `%${searchTerm}%`)
+    .order('nombre')
+    .limit(10);
+
+  if (error) throw error;
+  if (!data) return [];
+
+  const { data: catData } = await supabase
+    .from('categorias')
+    .select('id')
+    .eq('nombre', 'Talonarios')
+    .eq('is_system_category', true)
+    .single();
+
+  return data.map(p => ({
+    id: p.id,
+    nombre: p.nombre,
+    categoria: 'Talonarios',
     categoria_id: catData?.id || '',
     descripcion: null,
     precio_desde: null,

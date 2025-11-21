@@ -28,6 +28,7 @@ import { Servicios } from './pages/app/abm-core/Servicios';
 import { Acabados } from './pages/app/abm-core/Acabados';
 import { RangosPrecio } from './pages/app/abm-core/RangosPrecio';
 import { ImpresionLaser } from './pages/app/productos/ImpresionLaser';
+import { Talonarios } from './pages/app/productos/Talonarios';
 import { GranFormato } from './pages/app/productos/GranFormato';
 import { MaterialesRigidos } from './pages/app/productos/MaterialesRigidos';
 import { PlotterCorte } from './pages/app/productos/PlotterCorte';
@@ -88,6 +89,7 @@ function AppRoutes() {
                 <Route path="abm-core/acabados" element={<Acabados />} />
                 <Route path="abm-core/rangos-precio" element={<RangosPrecio />} />
                 <Route path="productos/impresion-laser" element={<ImpresionLaser />} />
+                <Route path="productos/talonarios" element={<Talonarios />} />
                 <Route path="productos/gran-formato" element={<GranFormato />} />
                 <Route path="productos/materiales-rigidos" element={<MaterialesRigidos />} />
                 <Route path="productos/plotter-corte" element={<PlotterCorte />} />
