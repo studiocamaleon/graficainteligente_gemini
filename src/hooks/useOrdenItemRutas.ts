@@ -3,6 +3,29 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
 import type { OrdenItemRuta, TipoEtapaRuta } from '../types/database';
 
+/**
+ * Normaliza el valor de tipo_etapa a uno de los valores válidos del enum
+ * Esta función asegura que los datos existentes en BD se lean correctamente
+ */
+function normalizarTipoEtapa(etapa: string): TipoEtapaRuta {
+  const etapaLower = etapa.toLowerCase().replace(/[-\s]/g, '_');
+
+  // Pre-prensa
+  if (etapaLower.includes('pre')) {
+    return 'pre_prensa';
+  }
+
+  // Post-prensa (incluye "terminacion", "acabado")
+  if (etapaLower.includes('post') ||
+      etapaLower.includes('terminacion') ||
+      etapaLower.includes('acabado')) {
+    return 'post_prensa';
+  }
+
+  // Principal (producción, impresión, o cualquier otro)
+  return 'principal';
+}
+
 interface UseOrdenItemRutasOptions {
   ordenItemId?: string;
 }
@@ -60,7 +83,7 @@ export function useOrdenItemRutas(options: UseOrdenItemRutasOptions = {}) {
 
       console.log(`✅ fetchRutas: ${data?.length || 0} rutas encontradas para item ${options.ordenItemId}`);
       if (data && data.length > 0) {
-        console.log('📋 Detalle de rutas encontradas:');
+        console.log('📋 Detalle de rutas encontradas (valores originales):');
         console.table(data.map(r => ({
           id: r.id.substring(0, 8),
           tipo_etapa: r.tipo_etapa,
@@ -69,7 +92,19 @@ export function useOrdenItemRutas(options: UseOrdenItemRutasOptions = {}) {
         })));
       }
 
-      setRutas(data || []);
+      // Normalizar tipo_etapa al leer para manejar datos legacy
+      const rutasNormalizadas = (data || []).map(ruta => {
+        const etapaNormalizada = normalizarTipoEtapa(ruta.tipo_etapa);
+        if (ruta.tipo_etapa !== etapaNormalizada) {
+          console.log(`🔄 Normalizando etapa: "${ruta.tipo_etapa}" → "${etapaNormalizada}"`);
+        }
+        return {
+          ...ruta,
+          tipo_etapa: etapaNormalizada
+        };
+      });
+
+      setRutas(rutasNormalizadas);
     } catch (err) {
       console.error('❌ Error fetching rutas:', err);
       setError(err instanceof Error ? err.message : 'Error desconocido');

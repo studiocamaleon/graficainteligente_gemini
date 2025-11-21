@@ -19,16 +19,28 @@ interface GenerateRoutesParams {
 /**
  * Normaliza el valor de etapa a uno de los valores válidos del enum TipoEtapaRuta
  * Maneja diferentes variaciones de nombres (con espacios, guiones, mayúsculas, etc.)
+ *
+ * Casos manejados:
+ * - 'Pre-prensa', 'pre-prensa', 'Pre prensa' → 'pre_prensa'
+ * - 'Terminacion', 'Post-prensa', 'post-prensa' → 'post_prensa'
+ * - 'Produccion', 'Impresion', cualquier otro → 'principal'
  */
 function normalizarEtapa(etapa: string): TipoEtapaRuta {
   const etapaLower = etapa.toLowerCase().replace(/[-\s]/g, '_');
 
-  if (etapaLower.includes('pre') || etapaLower === 'pre_prensa') {
+  // Pre-prensa: detecta variaciones con "pre"
+  if (etapaLower.includes('pre')) {
     return 'pre_prensa';
   }
-  if (etapaLower.includes('post') || etapaLower === 'post_prensa') {
+
+  // Post-prensa: detecta "post", "terminacion", "acabado"
+  if (etapaLower.includes('post') ||
+      etapaLower.includes('terminacion') ||
+      etapaLower.includes('acabado')) {
     return 'post_prensa';
   }
+
+  // Principal: producción, impresión, o cualquier otro caso
   return 'principal';
 }
 
