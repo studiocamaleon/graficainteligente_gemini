@@ -68,8 +68,7 @@ export function useProductionJobs() {
         `)
         .eq('orden.company_id', profile.company_id)
         .neq('orden.estado', 'cancelada')
-        .neq('orden.estado', 'entregada')
-        .order('orden.fecha_creacion', { ascending: true });
+        .neq('orden.estado', 'entregada');
 
       if (itemsError) throw itemsError;
 
@@ -80,7 +79,13 @@ export function useProductionJobs() {
         return;
       }
 
-      const itemIds = itemsData.map((item) => item.id);
+      const sortedItemsData = itemsData.sort((a: any, b: any) => {
+        const fechaA = new Date(a.orden.fecha_creacion).getTime();
+        const fechaB = new Date(b.orden.fecha_creacion).getTime();
+        return fechaA - fechaB;
+      });
+
+      const itemIds = sortedItemsData.map((item) => item.id);
 
       const { data: rutasData, error: rutasError } = await supabase
         .from('ordenes_trabajo_items_rutas')
@@ -97,7 +102,7 @@ export function useProductionJobs() {
         return acc;
       }, {} as Record<string, any[]>);
 
-      const jobsWithProgress: JobItem[] = itemsData.map((item: any) => {
+      const jobsWithProgress: JobItem[] = sortedItemsData.map((item: any) => {
         const itemRutas = rutasByItem[item.id] || [];
         const totalPasos = itemRutas.length;
         const pasosCompletados = itemRutas.filter(
