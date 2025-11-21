@@ -812,7 +812,7 @@ export function ConfigurationStep({
                     ? 'border-2 border-blue-600 bg-blue-50'
                     : 'border border-gray-200 hover:border-blue-300'
                 }`}
-                onClick={() => handleLocalChange({ tipo_copia: 'duplicado' })}
+                onClick={() => handleChange({ tipo_copia: 'duplicado' })}
               >
                 <div className="text-center">
                   <div className="text-2xl font-bold text-gray-900 mb-1">Duplicado</div>
@@ -831,7 +831,7 @@ export function ConfigurationStep({
                     ? 'border-2 border-blue-600 bg-blue-50'
                     : 'border border-gray-200 hover:border-blue-300'
                 }`}
-                onClick={() => handleLocalChange({ tipo_copia: 'triplicado' })}
+                onClick={() => handleChange({ tipo_copia: 'triplicado' })}
               >
                 <div className="text-center">
                   <div className="text-2xl font-bold text-gray-900 mb-1">Triplicado</div>
@@ -850,7 +850,7 @@ export function ConfigurationStep({
                     ? 'border-2 border-blue-600 bg-blue-50'
                     : 'border border-gray-200 hover:border-blue-300'
                 }`}
-                onClick={() => handleLocalChange({ tipo_copia: 'cuadruplicado' })}
+                onClick={() => handleChange({ tipo_copia: 'cuadruplicado' })}
               >
                 <div className="text-center">
                   <div className="text-2xl font-bold text-gray-900 mb-1">Cuadruplicado</div>
