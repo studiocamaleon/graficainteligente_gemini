@@ -61,6 +61,38 @@ export function Navbar() {
             }`}>{BRAND.name}</span>
           </Link>
 
+          <ul className="hidden md:flex items-center space-x-6">
+            {navigation.map((item, idx) => (
+              <li key={idx}>
+                <button
+                  onClick={() => scrollToSection(item.sectionId)}
+                  className="text-gray-700 hover:text-blue-600 font-medium transition-colors"
+                >
+                  {item.title}
+                </button>
+              </li>
+            ))}
+
+            <span className="w-px h-6 bg-gray-300"></span>
+
+            <li>
+              <Link
+                to="/login"
+                className="text-gray-700 hover:text-blue-600 font-medium transition-colors"
+              >
+                Iniciar Sesión
+              </Link>
+            </li>
+            <li>
+              <Link
+                to="/register"
+                className="px-6 py-2 font-semibold text-white bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 rounded-lg shadow-lg shadow-blue-500/30 hover:shadow-blue-500/40 transition-all"
+              >
+                Comenzar Gratis
+              </Link>
+            </li>
+          </ul>
+
           <div className="md:hidden">
             <button
               className="text-gray-700 hover:text-gray-900"
@@ -77,30 +109,24 @@ export function Navbar() {
           </div>
         </div>
 
-        <div
-          className={`flex-1 pb-3 md:block md:pb-0 ${
-            menuOpen ? 'block' : 'hidden'
-          }`}
-        >
-          <ul className="justify-end items-center space-y-6 md:flex md:space-x-6 md:space-y-0">
-            {navigation.map((item, idx) => (
-              <li key={idx}>
-                <button
-                  onClick={() => scrollToSection(item.sectionId)}
-                  className="block w-full text-left text-gray-700 hover:text-blue-600 font-medium transition-colors"
-                >
-                  {item.title}
-                </button>
-              </li>
-            ))}
+        {menuOpen && (
+          <div className="md:hidden pb-3">
+            <ul className="space-y-3">
+              {navigation.map((item, idx) => (
+                <li key={idx}>
+                  <button
+                    onClick={() => scrollToSection(item.sectionId)}
+                    className="block w-full text-left text-gray-700 hover:text-blue-600 font-medium transition-colors py-2"
+                  >
+                    {item.title}
+                  </button>
+                </li>
+              ))}
 
-            <span className="hidden w-px h-6 bg-gray-300 md:block"></span>
-
-            <div className="space-y-3 items-center gap-x-6 md:flex md:space-y-0">
-              <li>
+              <li className="pt-3 border-t border-gray-200">
                 <Link
                   to="/login"
-                  className="block py-3 text-center text-gray-700 hover:text-blue-600 font-medium border rounded-lg md:border-none transition-colors"
+                  className="block py-3 text-center text-gray-700 hover:text-blue-600 font-medium border border-gray-300 rounded-lg transition-colors"
                 >
                   Iniciar Sesión
                 </Link>
@@ -108,14 +134,14 @@ export function Navbar() {
               <li>
                 <Link
                   to="/register"
-                  className="block py-3 px-4 font-semibold text-center text-white bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 rounded-lg shadow-lg shadow-blue-500/30 hover:shadow-blue-500/40 transition-all md:inline"
+                  className="block py-3 px-4 font-semibold text-center text-white bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 rounded-lg shadow-lg shadow-blue-500/30 hover:shadow-blue-500/40 transition-all"
                 >
                   Comenzar Gratis
                 </Link>
               </li>
-            </div>
-          </ul>
-        </div>
+            </ul>
+          </div>
+        )}
       </div>
     </nav>
   );
