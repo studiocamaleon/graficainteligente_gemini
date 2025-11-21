@@ -33,7 +33,7 @@ export function ProductosTalonariosTab({ triggerCreate = 0 }: ProductosTalonario
   };
 
   const { productos, isLoading, refetch } = useProductosTalonarios(filters);
-  const { toggleStatus, deleteProducto, producto: productoCompleto } = useProductoTalonarios(selectedProductoId);
+  const { toggleStatus, deleteProducto, producto: productoCompleto } = useProductoTalonario(selectedProductoId);
 
   useEffect(() => {
     if (triggerCreate && triggerCreate > 0 && triggerCreate !== lastTriggerRef.current) {
