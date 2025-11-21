@@ -10,10 +10,10 @@ import { WhatsAppButton } from '../components/ui/WhatsAppButton';
 
 export function Landing() {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen">
       <Navbar />
 
-      <main className="pt-16">
+      <main>
         <HeroSection />
         <FeaturesSection />
         <ModulesSection />
