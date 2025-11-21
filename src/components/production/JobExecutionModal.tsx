@@ -8,6 +8,7 @@ import { useOrdenItemRutas } from '../../hooks/useOrdenItemRutas';
 import type { JobItem } from '../../hooks/useProductionJobs';
 import { AlertCircle, Package, User, Hash } from 'lucide-react';
 import { useConfirmDialog } from '../../hooks/useConfirmDialog';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 
@@ -32,7 +33,13 @@ const etapaColors: Record<string, string> = {
 export function JobExecutionModal({ isOpen, onClose, job }: JobExecutionModalProps) {
   const { rutas, refetch } = useOrdenItemRutas({ ordenItemId: job.id });
   const { startStep, completeStep, skipStep, getActiveStep, canStartStep, loading } = useStepExecution();
-  const { showConfirm } = useConfirmDialog();
+  const {
+    showConfirm,
+    dialogState,
+    closeDialog,
+    handleConfirm,
+    isLoading: isConfirmLoading
+  } = useConfirmDialog();
 
   const [skipJustification, setSkipJustification] = useState('');
   const [showSkipModal, setShowSkipModal] = useState(false);
@@ -249,6 +256,18 @@ export function JobExecutionModal({ isOpen, onClose, job }: JobExecutionModalPro
           </div>
         </div>
       </Modal>
+
+      <ConfirmDialog
+        isOpen={dialogState.isOpen}
+        onClose={closeDialog}
+        onConfirm={handleConfirm}
+        title={dialogState.title}
+        message={dialogState.message}
+        confirmText={dialogState.confirmText}
+        cancelText={dialogState.cancelText}
+        variant={dialogState.variant}
+        isLoading={isConfirmLoading}
+      />
     </>
   );
 }
