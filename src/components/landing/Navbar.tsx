@@ -15,7 +15,6 @@ export function Navbar() {
   const navigation: NavLink[] = [
     { title: 'Características', sectionId: 'features' },
     { title: 'Módulos', sectionId: 'modules' },
-    { title: 'Casos de Uso', sectionId: 'use-cases' },
     { title: 'Precios', sectionId: 'pricing' },
   ];
 

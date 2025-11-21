@@ -1,7 +1,6 @@
 import { HeroSection } from '../components/landing/HeroSection';
 import { FeaturesSection } from '../components/landing/FeaturesSection';
 import { ModulesSection } from '../components/landing/ModulesSection';
-import { UseCasesSection } from '../components/landing/UseCasesSection';
 import { PricingSection } from '../components/landing/PricingSection';
 import { ContactSection } from '../components/landing/ContactSection';
 import { Footer } from '../components/landing/Footer';
@@ -17,7 +16,6 @@ export function Landing() {
         <HeroSection />
         <FeaturesSection />
         <ModulesSection />
-        <UseCasesSection />
         <PricingSection />
         <ContactSection />
         <Footer />
