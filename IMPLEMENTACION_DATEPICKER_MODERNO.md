@@ -43,16 +43,21 @@ Se agregaron 4 shortcuts para selección rápida:
 ```json
 {
   "dependencies": {
-    "react-tailwindcss-datepicker": "^2.0.0",
+    "react-tailwindcss-datepicker": "^1.7.2",
     "dayjs": "^1.11.19"
   }
 }
 ```
 
 ### **Tamaños:**
-- `react-tailwindcss-datepicker`: ~50KB (minificado)
+- `react-tailwindcss-datepicker@1.7.2`: ~50KB (minificado)
 - `dayjs`: ~7KB (minificado)
 - **Total agregado al bundle**: ~57KB
+
+### **Versión y Compatibilidad:**
+- ⚠️ **Importante:** Se usa la versión `1.7.2` por compatibilidad con React 18
+- ❌ La versión 2.0.0 solo funciona con React 19 (causaba error "Cannot read properties of undefined")
+- ✅ Versión 1.7.2 es estable y completamente compatible con React 18.3.1
 
 ### **Justificación:**
 - `react-tailwindcss-datepicker`: Calendario moderno con estilos Tailwind integrados
@@ -895,6 +900,48 @@ const COPIADO_SHORTCUTS = [
 ---
 
 ## Troubleshooting
+
+### **⚠️ ERROR CRÍTICO: Cannot read properties of undefined (reading 'A')**
+
+**Síntomas:**
+```
+Uncaught TypeError: Cannot read properties of undefined (reading 'A')
+    at getOwner (react-tailwindcss-datepicker.js:285:45)
+    at Datepicker (react-tailwindcss-datepicker.js:2721:213)
+```
+
+**Causa:**
+- Versión 2.0.0 de `react-tailwindcss-datepicker` solo es compatible con React 19
+- Tu proyecto usa React 18.3.1
+- Incompatibilidad de versiones
+
+**Solución (OBLIGATORIA):**
+```bash
+# 1. Desinstalar versión problemática
+npm uninstall react-tailwindcss-datepicker
+
+# 2. Limpiar cache
+rm -rf node_modules package-lock.json
+npm cache clean --force
+
+# 3. Instalar versión compatible (1.7.2)
+npm install react-tailwindcss-datepicker@1.7.2
+
+# 4. Reinstalar dependencias
+npm install --include=dev
+
+# 5. Verificar
+npm run build
+```
+
+**Verificación:**
+```bash
+# Confirmar versión instalada
+npm list react-tailwindcss-datepicker
+# Debe mostrar: react-tailwindcss-datepicker@1.7.2
+```
+
+---
 
 ### **Problema: Calendario no abre**
 **Solución:**
