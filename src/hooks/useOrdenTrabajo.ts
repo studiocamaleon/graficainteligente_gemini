@@ -600,9 +600,26 @@ export function useOrdenTrabajo() {
                 .insert(rutasToInsert);
 
               if (rutasError) {
-                console.error(`Error insertando rutas para item ${item.id}:`, rutasError);
+                console.error(`❌ Error insertando rutas para item ${item.id}:`, rutasError);
               } else {
-                console.log(`✓ ${rutasToInsert.length} rutas insertadas para item ${item.id}`);
+                console.log(`✅ ${rutasToInsert.length} rutas insertadas para item ${item.id}`);
+
+                // Verificación inmediata: consultar las rutas recién insertadas
+                const { data: verificacion, error: verError } = await supabase
+                  .from('ordenes_trabajo_items_rutas')
+                  .select('id, tipo_etapa, paso_nombre, orden')
+                  .eq('orden_item_id', item.id);
+
+                if (verError) {
+                  console.error('❌ Error verificando rutas insertadas:', verError);
+                } else {
+                  console.log(`🔍 Verificación inmediata: ${verificacion?.length || 0} rutas encontradas para item ${item.id}`);
+                  if (verificacion && verificacion.length > 0) {
+                    console.table(verificacion);
+                  } else {
+                    console.warn('⚠️ PROBLEMA: No se encontraron rutas inmediatamente después de insertar!');
+                  }
+                }
               }
             } catch (rutaError) {
               console.error(`Error insertando rutas para item ${item.id}:`, rutaError);

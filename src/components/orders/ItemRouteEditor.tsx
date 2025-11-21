@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, Trash2, ArrowUp, ArrowDown, RotateCcw, AlertCircle } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { SearchableSelect } from '../ui/SearchableSelect';
@@ -47,6 +47,22 @@ export function ItemRouteEditor({
   const [addingToEtapa, setAddingToEtapa] = useState<TipoEtapaRuta | null>(null);
 
   const rutasPorEtapa = getRutasPorEtapa();
+
+  // Debug logging
+  useEffect(() => {
+    console.log('📍 ItemRouteEditor montado/actualizado:', {
+      ordenItemId,
+      productoId,
+      productoNombre,
+      totalRutas: rutas.length,
+      loading
+    });
+    console.log('📊 Rutas por etapa:', {
+      pre_prensa: rutasPorEtapa.pre_prensa.length,
+      principal: rutasPorEtapa.principal.length,
+      post_prensa: rutasPorEtapa.post_prensa.length
+    });
+  }, [ordenItemId, productoId, productoNombre, rutas.length, loading, rutasPorEtapa]);
 
   const handleAgregarPaso = async (etapa: TipoEtapaRuta, pasoId: string) => {
     if (!pasoId) return;

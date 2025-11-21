@@ -35,9 +35,12 @@ export function useOrdenItemRutas(options: UseOrdenItemRutasOptions = {}) {
 
   const fetchRutas = useCallback(async () => {
     if (!options.ordenItemId) {
+      console.log('⚠️ fetchRutas: No ordenItemId provided');
       setRutas([]);
       return;
     }
+
+    console.log('📥 fetchRutas: Consultando rutas para ordenItemId:', options.ordenItemId);
 
     try {
       setLoading(true);
@@ -50,11 +53,25 @@ export function useOrdenItemRutas(options: UseOrdenItemRutasOptions = {}) {
         .order('tipo_etapa', { ascending: true })
         .order('orden', { ascending: true });
 
-      if (fetchError) throw fetchError;
+      if (fetchError) {
+        console.error('❌ fetchRutas error:', fetchError);
+        throw fetchError;
+      }
+
+      console.log(`✅ fetchRutas: ${data?.length || 0} rutas encontradas para item ${options.ordenItemId}`);
+      if (data && data.length > 0) {
+        console.log('📋 Detalle de rutas encontradas:');
+        console.table(data.map(r => ({
+          id: r.id.substring(0, 8),
+          tipo_etapa: r.tipo_etapa,
+          paso_nombre: r.paso_nombre,
+          orden: r.orden
+        })));
+      }
 
       setRutas(data || []);
     } catch (err) {
-      console.error('Error fetching rutas:', err);
+      console.error('❌ Error fetching rutas:', err);
       setError(err instanceof Error ? err.message : 'Error desconocido');
     } finally {
       setLoading(false);

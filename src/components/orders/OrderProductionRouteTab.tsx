@@ -128,6 +128,17 @@ function ItemRouteCard({
   const { rutas, loading } = useOrdenItemRutas({ ordenItemId: item.id });
 
   useEffect(() => {
+    console.log('🎯 ItemRouteCard renderizado:', {
+      itemId: item.id,
+      producto: item.producto_nombre,
+      cantidad: item.cantidad,
+      rutasCount: rutas.length,
+      loading,
+      isExpanded
+    });
+  }, [item.id, item.producto_nombre, rutas.length, loading, isExpanded]);
+
+  useEffect(() => {
     if (!loading) {
       onRouteCountChange(item.id, rutas.length);
     }
