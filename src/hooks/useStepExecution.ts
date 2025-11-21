@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
+import { ordenarRutasPorEtapaYOrden, ORDEN_ETAPAS } from '../utils/productionUtils';
 import type { OrdenItemRuta, EstadoPaso, TipoEtapaRuta } from '../types/database';
 
 interface StepExecutionResult {
@@ -8,25 +9,6 @@ interface StepExecutionResult {
   error?: string;
   updatedRuta?: OrdenItemRuta;
 }
-
-const ORDEN_ETAPAS: Record<TipoEtapaRuta, number> = {
-  pre_prensa: 1,
-  principal: 2,
-  post_prensa: 3,
-};
-
-const ordenarRutas = (rutas: OrdenItemRuta[]): OrdenItemRuta[] => {
-  return [...rutas].sort((a, b) => {
-    const ordenEtapaA = ORDEN_ETAPAS[a.tipo_etapa];
-    const ordenEtapaB = ORDEN_ETAPAS[b.tipo_etapa];
-
-    if (ordenEtapaA !== ordenEtapaB) {
-      return ordenEtapaA - ordenEtapaB;
-    }
-
-    return a.orden - b.orden;
-  });
-};
 
 export function useStepExecution() {
   const { profile } = useAuth();
@@ -217,7 +199,7 @@ export function useStepExecution() {
   const getActiveStep = (rutas: OrdenItemRuta[]): OrdenItemRuta | null => {
     if (rutas.length === 0) return null;
 
-    const rutasOrdenadas = ordenarRutas(rutas);
+    const rutasOrdenadas = ordenarRutasPorEtapaYOrden(rutas);
 
     const pasoEnProceso = rutasOrdenadas.find((r) => r.estado_paso === 'en_proceso');
     if (pasoEnProceso) return pasoEnProceso;
@@ -232,7 +214,7 @@ export function useStepExecution() {
     const hayPasoEnProceso = rutas.some((r) => r.estado_paso === 'en_proceso');
     if (hayPasoEnProceso) return false;
 
-    const rutasOrdenadas = ordenarRutas(rutas);
+    const rutasOrdenadas = ordenarRutasPorEtapaYOrden(rutas);
     const ordenEtapaActual = ORDEN_ETAPAS[ruta.tipo_etapa];
 
     for (const r of rutasOrdenadas) {

@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { ItemStatusBadge } from '../orders/ItemStatusBadge';
+import { ActiveStepBadge } from './ActiveStepBadge';
 import { JobProgressBar } from './JobProgressBar';
 import type { JobItem } from '../../hooks/useProductionJobs';
 import { Package } from 'lucide-react';
@@ -20,7 +20,12 @@ export const JobCard = memo(function JobCard({ job, onClick }: JobCardProps) {
       `}
     >
       <div className="flex items-start justify-between gap-3">
-        <ItemStatusBadge estado={job.estado} size="sm" />
+        <ActiveStepBadge
+          pasoRelevante={job.paso_relevante}
+          estadoJob={job.estado}
+          totalPasos={job.total_pasos}
+          size="sm"
+        />
         <span className="text-xs font-mono font-semibold text-gray-500">
           #{job.numero_orden}
         </span>

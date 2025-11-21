@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
 import { useRealtimeJobs } from './useRealtimeJobs';
-import type { EstadoOrdenItem, OrdenItemRuta } from '../types/database';
+import { ordenarRutasPorEtapaYOrden } from '../utils/productionUtils';
+import type { EstadoOrdenItem, OrdenItemRuta, TipoEtapaRuta } from '../types/database';
 
 export interface JobItem {
   id: string;
@@ -19,6 +20,11 @@ export interface JobItem {
   pasos_en_proceso: number;
   pasos_pendientes: number;
   progreso_porcentaje: number;
+  paso_relevante?: {
+    nombre: string;
+    estado: 'pendiente' | 'en_proceso';
+    etapa: TipoEtapaRuta;
+  } | null;
   rutas?: OrdenItemRuta[];
 }
 
@@ -27,6 +33,32 @@ interface JobsByEstado {
   en_proceso: JobItem[];
   finalizado: JobItem[];
 }
+
+const encontrarPasoRelevante = (itemRutas: any[]) => {
+  if (itemRutas.length === 0) return null;
+
+  const rutasOrdenadas = ordenarRutasPorEtapaYOrden(itemRutas);
+
+  const pasoEnProceso = rutasOrdenadas.find((r) => r.estado_paso === 'en_proceso');
+  if (pasoEnProceso) {
+    return {
+      nombre: pasoEnProceso.paso_nombre,
+      estado: 'en_proceso' as const,
+      etapa: pasoEnProceso.tipo_etapa,
+    };
+  }
+
+  const pasoPendiente = rutasOrdenadas.find((r) => r.estado_paso === 'pendiente');
+  if (pasoPendiente) {
+    return {
+      nombre: pasoPendiente.paso_nombre,
+      estado: 'pendiente' as const,
+      etapa: pasoPendiente.tipo_etapa,
+    };
+  }
+
+  return null;
+};
 
 export function useProductionJobs() {
   const { profile } = useAuth();
@@ -92,7 +124,7 @@ export function useProductionJobs() {
 
       const { data: rutasData, error: rutasError } = await supabase
         .from('ordenes_trabajo_items_rutas')
-        .select('orden_item_id, estado_paso')
+        .select('orden_item_id, estado_paso, paso_nombre, tipo_etapa, orden')
         .in('orden_item_id', itemIds);
 
       if (rutasError) throw rutasError;
@@ -121,6 +153,8 @@ export function useProductionJobs() {
         const progresoPortcentaje =
           totalPasos > 0 ? Math.round((pasosCompletados / totalPasos) * 100) : 0;
 
+        const pasoRelevante = encontrarPasoRelevante(itemRutas);
+
         return {
           id: item.id,
           estado: item.estado,
@@ -136,6 +170,7 @@ export function useProductionJobs() {
           pasos_en_proceso: pasosEnProceso,
           pasos_pendientes: pasosPendientes,
           progreso_porcentaje: progresoPortcentaje,
+          paso_relevante: pasoRelevante,
         };
       });
 
@@ -198,7 +233,7 @@ export function useProductionJobs() {
 
         const { data: rutasData, error: rutasError } = await supabase
           .from('ordenes_trabajo_items_rutas')
-          .select('orden_item_id, estado_paso')
+          .select('orden_item_id, estado_paso, paso_nombre, tipo_etapa, orden')
           .eq('orden_item_id', itemId);
 
         if (rutasError) throw rutasError;
@@ -212,6 +247,8 @@ export function useProductionJobs() {
         const pasosPendientes = itemRutas.filter((r) => r.estado_paso === 'pendiente').length;
         const progresoPortcentaje =
           totalPasos > 0 ? Math.round((pasosCompletados / totalPasos) * 100) : 0;
+
+        const pasoRelevante = encontrarPasoRelevante(itemRutas);
 
         const updatedJob: JobItem = {
           id: itemData.id,
@@ -228,6 +265,7 @@ export function useProductionJobs() {
           pasos_en_proceso: pasosEnProceso,
           pasos_pendientes: pasosPendientes,
           progreso_porcentaje: progresoPortcentaje,
+          paso_relevante: pasoRelevante,
         };
 
         setJobs((prevJobs) => {
