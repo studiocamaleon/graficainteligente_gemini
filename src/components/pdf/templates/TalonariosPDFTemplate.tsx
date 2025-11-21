@@ -122,7 +122,7 @@ export const TalonariosPDFTemplate = forwardRef<HTMLDivElement, TalonariosPDFTem
                                       (p) =>
                                         p.medida_ancho === group.medida.ancho &&
                                         p.medida_alto === group.medida.alto &&
-                                        p.tinta_id === tinta &&
+                                        p.tinta === tinta &&
                                         p.cantidad === cantidad &&
                                         p.tipo_copia === cara
                                     );
@@ -164,7 +164,7 @@ export const TalonariosPDFTemplate = forwardRef<HTMLDivElement, TalonariosPDFTem
                                       (p) =>
                                         p.medida_ancho === group.medida.ancho &&
                                         p.medida_alto === group.medida.alto &&
-                                        p.tinta_id === tinta &&
+                                        p.tinta === tinta &&
                                         p.cantidad === cantidad &&
                                         p.tipo_copia === cara
                                     );

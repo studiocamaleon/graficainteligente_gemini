@@ -101,7 +101,7 @@ export function ProductoTalonarioPreciosSection({
           todosLosPrecios.push({
             medida_ancho: comb.medida.ancho,
             medida_alto: comb.medida.alto,
-            tinta_id: comb.tintaId,
+            tinta: comb.tintaId,
             cantidad: p.cantidad,
             tipo_copia: p.tipo_copia as 'duplicado' | 'triplicado' | 'cuadruplicado',
             precio: p.precio,

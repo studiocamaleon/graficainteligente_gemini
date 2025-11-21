@@ -17,7 +17,7 @@ interface Props {
   productoId: string;
   productoNombre: string;
   medida: { ancho: number; alto: number };
-  tinta_id: string;
+  tinta: string;
   cantidades: number[];
   caras: string[];
   materialInfo?: MaterialInfo;
@@ -33,7 +33,7 @@ export function ProductoTalonarioPrecioMatriz({
   productoId,
   productoNombre,
   medida,
-  tinta_id,
+  tinta,
   cantidades,
   caras,
   materialInfo,
@@ -51,7 +51,7 @@ export function ProductoTalonarioPrecioMatriz({
       (p) =>
         p.medida_ancho === medida.ancho &&
         p.medida_alto === medida.alto &&
-        p.tinta_id === tinta_id
+        p.tinta === tinta
     );
 
     // Build initial state
@@ -66,7 +66,7 @@ export function ProductoTalonarioPrecioMatriz({
     });
 
     setPreciosState(initialState);
-  }, [productoId, medida, tinta_id, cantidades, caras, preciosExistentes]);
+  }, [productoId, medida, tinta, cantidades, caras, preciosExistentes]);
 
   const handlePrecioChange = (cantidad: number, cara: string, value: string) => {
     const key = `${cantidad}-${cara}`;
@@ -91,7 +91,7 @@ export function ProductoTalonarioPrecioMatriz({
           preciosArray.push({
             medida_ancho: medida.ancho,
             medida_alto: medida.alto,
-            tinta_id: tinta_id,
+            tinta: tinta,
             cantidad: cant,
             tipo_copia: c as 'duplicado' | 'triplicado' | 'cuadruplicado',
             precio: p,
@@ -116,7 +116,7 @@ export function ProductoTalonarioPrecioMatriz({
         <div className="flex items-center gap-3">
           <MeasureBadge ancho={medida.ancho} alto={medida.alto} />
           <div className="w-px h-8 bg-gray-300"></div>
-          <InkBadge tinta={tinta_id} />
+          <InkBadge tinta={tinta} />
         </div>
         {materialInfo && (
           <MaterialBadge
