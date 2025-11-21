@@ -591,7 +591,7 @@ export function useOrdenTrabajo() {
                   orden: ruta.orden,
                   es_modificado: false,
                   origen_plantilla_id: ruta.origen_plantilla_id || null,
-                  comentario_vendedor: null,
+                  comentario_vendedor: ruta.comentario_vendedor || null,
                 };
               });
 

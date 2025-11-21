@@ -9,6 +9,7 @@ import { usePageHeader } from '../../../hooks/usePageHeader';
 import { useAuth } from '../../../hooks/useAuth';
 import { useOrdenTrabajo } from '../../../hooks/useOrdenTrabajo';
 import { usePrompt } from '../../../hooks/usePrompt';
+import { useItemRoutesComments } from '../../../hooks/useItemRoutesComments';
 import { OrdenGeneralSection } from '../../../components/orders/OrdenGeneralSection';
 import { OrdenItemsTab } from '../../../components/orders/OrdenItemsTab';
 import { OrdenPagosTab } from '../../../components/orders/OrdenPagosTab';
@@ -35,6 +36,11 @@ export function CreateOrderPage() {
   const [descuentoTotal, setDescuentoTotal] = useState(0);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [ordenCreada, setOrdenCreada] = useState(false);
+
+  const { updateStepComment, countAllComments } = useItemRoutesComments({
+    items,
+    setItems,
+  });
 
   const resetFormulario = () => {
     setActiveTab('items');
@@ -157,6 +163,8 @@ export function CreateOrderPage() {
     }
   };
 
+  const totalComentarios = countAllComments();
+
   const tabs = [
     {
       id: 'items',
@@ -167,7 +175,7 @@ export function CreateOrderPage() {
       id: 'rutas',
       label: 'Rutas de Producción',
       disabled: items.length === 0,
-      count: items.length > 0 ? items.length : undefined,
+      badge: totalComentarios > 0 ? totalComentarios : undefined,
     },
     {
       id: 'pagos',
@@ -253,7 +261,11 @@ export function CreateOrderPage() {
           )}
 
           {activeTab === 'rutas' && (
-            <OrdenRutasTab items={items} />
+            <OrdenRutasTab
+              items={items}
+              onUpdateStepComment={updateStepComment}
+              readOnly={false}
+            />
           )}
 
           {activeTab === 'historial' && (

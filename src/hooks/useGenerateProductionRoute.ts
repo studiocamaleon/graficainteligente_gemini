@@ -12,6 +12,8 @@ export interface GeneratedStep {
   nivel_aplicado?: string;
   servicio_nombre?: string;
   acabado_nombre?: string;
+  comentario_vendedor?: string | null;
+  origen_plantilla_id?: string | null;
 }
 
 interface UseGenerateProductionRouteProps {
@@ -373,6 +375,8 @@ export function useGenerateProductionRoute({
             nivel_aplicado: step.nivel_aplicado,
             servicio_nombre: step.servicio_nombre,
             acabado_nombre: step.acabado_nombre,
+            comentario_vendedor: null,
+            origen_plantilla_id: rutaId,
           };
         });
 

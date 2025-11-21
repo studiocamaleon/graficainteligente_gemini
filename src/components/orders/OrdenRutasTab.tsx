@@ -1,13 +1,17 @@
-import { Route, AlertCircle, Loader2, Package, CheckCircle, Info } from 'lucide-react';
+import { Route, AlertCircle, Loader2, Package, CheckCircle, Info, MessageSquare } from 'lucide-react';
 import { EmptyState } from '../ui/EmptyState';
 import { Badge } from '../ui/Badge';
 import { useGenerateProductionRoute, type GeneratedStep } from '../../hooks/useGenerateProductionRoute';
+import { StepCommentEditor } from './StepCommentEditor';
+import { StepCommentIndicator } from './StepCommentIndicator';
 
 interface OrdenRutasTabProps {
   items: any[];
+  onUpdateStepComment?: (itemIndex: number, stepId: string, comment: string | null) => void;
+  readOnly?: boolean;
 }
 
-export function OrdenRutasTab({ items }: OrdenRutasTabProps) {
+export function OrdenRutasTab({ items, onUpdateStepComment, readOnly = false }: OrdenRutasTabProps) {
   if (items.length === 0) {
     return (
       <EmptyState
@@ -27,6 +31,7 @@ export function OrdenRutasTab({ items }: OrdenRutasTabProps) {
           <p className="text-blue-700">
             Estas rutas se generarán automáticamente en la base de datos al crear la orden.
             Los pasos se evalúan según los servicios y acabados seleccionados en cada producto.
+            {!readOnly && ' Puedes agregar comentarios opcionales en cada paso para el operador de producción.'}
           </p>
         </div>
       </div>
@@ -37,6 +42,8 @@ export function OrdenRutasTab({ items }: OrdenRutasTabProps) {
             key={item.id || index}
             item={item}
             index={index}
+            onUpdateStepComment={onUpdateStepComment}
+            readOnly={readOnly}
           />
         ))}
       </div>
@@ -47,14 +54,19 @@ export function OrdenRutasTab({ items }: OrdenRutasTabProps) {
 interface ItemRoutePreviewProps {
   item: any;
   index: number;
+  onUpdateStepComment?: (itemIndex: number, stepId: string, comment: string | null) => void;
+  readOnly?: boolean;
 }
 
-function ItemRoutePreview({ item, index }: ItemRoutePreviewProps) {
+function ItemRoutePreview({ item, index, onUpdateStepComment, readOnly = false }: ItemRoutePreviewProps) {
   const { steps, loading, error } = useGenerateProductionRoute({
     productoId: item.producto_id,
     categoria: item.configuracion?.categoria || item.categoria || 'Impresion Laser',
     configuracion: item.configuracion || {},
   });
+
+  const stepsWithComments = item.rutas_generadas || steps;
+  const commentCount = stepsWithComments.filter((s: any) => s.comentario_vendedor && s.comentario_vendedor.trim().length > 0).length;
 
   // Agrupar pasos por etapa
   const pasosPorEtapa = steps.reduce((acc, paso) => {
@@ -95,6 +107,12 @@ function ItemRoutePreview({ item, index }: ItemRoutePreviewProps) {
                   <span className="flex items-center gap-1 text-green-600">
                     <CheckCircle className="w-3 h-3" />
                     {totalPasos} {totalPasos === 1 ? 'paso' : 'pasos'}
+                  </span>
+                )}
+                {!loading && !error && commentCount > 0 && (
+                  <span className="flex items-center gap-1 text-blue-600">
+                    <MessageSquare className="w-3 h-3" />
+                    {commentCount} {commentCount === 1 ? 'comentario' : 'comentarios'}
                   </span>
                 )}
               </div>
@@ -142,33 +160,56 @@ function ItemRoutePreview({ item, index }: ItemRoutePreviewProps) {
                   </div>
 
                   <div className="space-y-2 ml-4">
-                    {pasosEtapa.map((paso, pasoIndex) => (
-                      <div
-                        key={paso.id}
-                        className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200"
-                      >
-                        <div className="flex items-center justify-center w-6 h-6 rounded-full bg-white border-2 border-gray-300 text-gray-600 text-xs font-medium flex-shrink-0 mt-0.5">
-                          {pasoIndex + 1}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm font-medium text-gray-900">
-                              {paso.paso_nombre}
-                            </p>
-                            {paso.es_obligatorio && (
-                              <Badge variant="primary" className="text-xs">
-                                Obligatorio
-                              </Badge>
-                            )}
+                    {pasosEtapa.map((paso, pasoIndex) => {
+                      const pasoConComentario = stepsWithComments.find((s: any) => s.id === paso.id) || paso;
+                      const tieneComentario = pasoConComentario.comentario_vendedor && pasoConComentario.comentario_vendedor.trim().length > 0;
+
+                      return (
+                        <div key={paso.id} className="space-y-2">
+                          <div
+                            className={`flex items-start gap-3 p-3 rounded-lg border ${
+                              tieneComentario
+                                ? 'bg-blue-50 border-blue-200'
+                                : 'bg-gray-50 border-gray-200'
+                            }`}
+                          >
+                            <div className="flex items-center justify-center w-6 h-6 rounded-full bg-white border-2 border-gray-300 text-gray-600 text-xs font-medium flex-shrink-0 mt-0.5">
+                              {pasoIndex + 1}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <p className="text-sm font-medium text-gray-900">
+                                  {paso.paso_nombre}
+                                </p>
+                                {paso.es_obligatorio && (
+                                  <Badge variant="primary" className="text-xs">
+                                    Obligatorio
+                                  </Badge>
+                                )}
+                                <StepCommentIndicator hasComment={tieneComentario} />
+                              </div>
+                              {!paso.es_obligatorio && paso.razon_inclusion && (
+                                <p className="text-xs text-gray-600 mt-1">
+                                  {paso.razon_inclusion}
+                                </p>
+                              )}
+                            </div>
                           </div>
-                          {!paso.es_obligatorio && paso.razon_inclusion && (
-                            <p className="text-xs text-gray-600 mt-1">
-                              {paso.razon_inclusion}
-                            </p>
+
+                          {!readOnly && onUpdateStepComment && (
+                            <div className="ml-9 mr-3">
+                              <StepCommentEditor
+                                comentario={pasoConComentario.comentario_vendedor || null}
+                                onSave={async (comentario) => {
+                                  onUpdateStepComment(index, paso.id, comentario);
+                                }}
+                                disabled={false}
+                              />
+                            </div>
                           )}
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               );
