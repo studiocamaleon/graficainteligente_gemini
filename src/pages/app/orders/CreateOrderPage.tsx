@@ -16,9 +16,6 @@ import { OrdenItemsTab } from '../../../components/orders/OrdenItemsTab';
 import { OrdenPagosTab } from '../../../components/orders/OrdenPagosTab';
 import { OrdenRutasTab } from '../../../components/orders/OrdenRutasTab';
 import { OrdenHistorialTab } from '../../../components/orders/OrdenHistorialTab';
-import { OrdenArchivosTab } from '../../../components/orders/OrdenArchivosTab';
-import { OrdenLinksTab } from '../../../components/orders/OrdenLinksTab';
-import { OrdenArchivosProduccionTab } from '../../../components/orders/OrdenArchivosProduccionTab';
 import { OrdenFooterTotales } from '../../../components/orders/OrdenFooterTotales';
 import type { CanalVenta } from '../../../types/database';
 
@@ -186,18 +183,8 @@ export function CreateOrderPage() {
       badge: totalComentarios > 0 ? totalComentarios : undefined,
     },
     {
-      id: 'archivos',
-      label: 'Archivos',
-      disabled: true,
-    },
-    {
-      id: 'links',
-      label: 'Links',
-      disabled: true,
-    },
-    {
-      id: 'archivos_produccion',
-      label: 'Archivos de Producción',
+      id: 'adjuntos',
+      label: 'Adjuntos',
       disabled: true,
     },
     {
@@ -291,38 +278,14 @@ export function CreateOrderPage() {
             />
           )}
 
-          {activeTab === 'archivos' && (
+          {activeTab === 'adjuntos' && (
             <div className="text-center py-12">
               <AlertTriangle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Archivos disponibles después de crear la orden
+                Adjuntos disponibles después de crear la orden
               </h3>
               <p className="text-gray-600">
-                Podrás subir archivos del cliente una vez que la orden sea creada
-              </p>
-            </div>
-          )}
-
-          {activeTab === 'links' && (
-            <div className="text-center py-12">
-              <AlertTriangle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Links disponibles después de crear la orden
-              </h3>
-              <p className="text-gray-600">
-                Podrás agregar links de WeTransfer, Google Drive, etc. una vez que la orden sea creada
-              </p>
-            </div>
-          )}
-
-          {activeTab === 'archivos_produccion' && (
-            <div className="text-center py-12">
-              <AlertTriangle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Archivos de Producción disponibles después de crear la orden
-              </h3>
-              <p className="text-gray-600">
-                El personal autorizado podrá subir archivos de producción una vez que la orden sea creada
+                Podrás gestionar archivos de cliente, archivos de producción y links una vez que la orden sea creada
               </p>
             </div>
           )}
