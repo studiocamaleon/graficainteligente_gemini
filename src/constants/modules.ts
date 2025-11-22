@@ -313,7 +313,7 @@ export const MODULES: Module[] = [
   },
   {
     id: 'settings',
-    name: 'Configuración del Sistema',
+    name: 'Configuración',
     description: 'Ajustes generales',
     icon: Wrench,
     path: '/app/settings',
