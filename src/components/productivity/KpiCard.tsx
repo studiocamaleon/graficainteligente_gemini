@@ -8,7 +8,7 @@ interface KpiCardProps {
   icon: LucideIcon;
   trend?: 'up' | 'down' | 'neutral';
   trendValue?: string;
-  color?: 'blue' | 'green' | 'orange' | 'red' | 'purple';
+  color?: 'blue' | 'green' | 'orange' | 'red' | 'teal';
   loading?: boolean;
 }
 
@@ -33,10 +33,10 @@ const colorClasses = {
     icon: 'text-red-600',
     gradient: 'from-red-500 to-red-600',
   },
-  purple: {
-    bg: 'bg-purple-50',
-    icon: 'text-purple-600',
-    gradient: 'from-purple-500 to-purple-600',
+  teal: {
+    bg: 'bg-teal-50',
+    icon: 'text-teal-600',
+    gradient: 'from-teal-500 to-teal-600',
   },
 };
 

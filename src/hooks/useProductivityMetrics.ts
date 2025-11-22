@@ -130,6 +130,8 @@ export function useProductivityMetrics(dateRange?: DateRange) {
       const fechaDesde = dateRange?.desde?.toISOString() || null;
       const fechaHasta = dateRange?.hasta?.toISOString() || null;
 
+      console.log('[Productivity] Loading metrics with date range:', { fechaDesde, fechaHasta, companyId: user?.companyId });
+
       await Promise.all([
         loadKpisGenerales(fechaDesde, fechaHasta),
         loadMetricasPorPaso(fechaDesde, fechaHasta),
@@ -140,22 +142,30 @@ export function useProductivityMetrics(dateRange?: DateRange) {
         loadCuellosBottella(fechaDesde, fechaHasta),
         loadTendencias(fechaDesde, fechaHasta),
       ]);
+
+      console.log('[Productivity] Metrics loaded successfully');
     } catch (err) {
-      console.error('Error loading productivity metrics:', err);
-      setError('Error al cargar las métricas de productividad');
+      console.error('[Productivity] Error loading metrics:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
+      setError(`Error al cargar las métricas: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
   };
 
   const loadKpisGenerales = async (fechaDesde: string | null, fechaHasta: string | null) => {
+    console.log('[Productivity] Loading KPIs generales...');
     const { data, error } = await supabase.rpc('fn_kpis_generales', {
       p_company_id: user?.companyId,
       p_fecha_desde: fechaDesde,
       p_fecha_hasta: fechaHasta,
     });
 
-    if (error) throw error;
+    if (error) {
+      console.error('[Productivity] Error loading KPIs generales:', error);
+      throw error;
+    }
+    console.log('[Productivity] KPIs generales loaded:', data);
     if (data && data.length > 0) {
       setKpisGenerales(data[0]);
     }

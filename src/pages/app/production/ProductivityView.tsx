@@ -118,7 +118,7 @@ export function ProductivityView() {
           value={`${kpisGenerales?.horas_promedio_por_orden?.toFixed(1) || 0} h`}
           subtitle={`${kpisGenerales?.minutos_promedio_por_item?.toFixed(1) || 0} min/item`}
           icon={Clock}
-          color="purple"
+          color="teal"
           loading={loading}
         />
 
@@ -156,7 +156,7 @@ export function ProductivityView() {
       )}
 
       {/* Footer informativo */}
-      <div className="mt-8 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
+      <div className="mt-8 p-6 bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-lg">
         <h3 className="text-lg font-semibold text-gray-900 mb-2">
           Sobre las Métricas de Productividad
         </h3>
