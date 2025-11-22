@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Card } from '../ui/Card';
-import { Table } from '../ui/Table';
+import { SimpleTable } from '../ui/SimpleTable';
 import { MetricaCategoria } from '../../hooks/useProductivityMetrics';
 import { ChevronUp, ChevronDown } from 'lucide-react';
 
@@ -81,11 +81,11 @@ export function CategoryPerformanceTable({ data, loading }: CategoryPerformanceT
     <Card>
       <h3 className="text-lg font-semibold mb-6">Rendimiento por Categoría</h3>
 
-      <Table>
-        <thead>
+      <SimpleTable>
+        <thead className="bg-gray-50 border-b-2 border-gray-200">
           <tr>
             <th
-              className="cursor-pointer hover:bg-gray-50"
+              className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
               onClick={() => handleSort('categoria_nombre')}
             >
               <div className="flex items-center gap-2">
@@ -94,7 +94,7 @@ export function CategoryPerformanceTable({ data, loading }: CategoryPerformanceT
               </div>
             </th>
             <th
-              className="cursor-pointer hover:bg-gray-50 text-right"
+              className="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
               onClick={() => handleSort('total_ordenes')}
             >
               <div className="flex items-center justify-end gap-2">
@@ -102,9 +102,9 @@ export function CategoryPerformanceTable({ data, loading }: CategoryPerformanceT
                 <SortIcon field="total_ordenes" />
               </div>
             </th>
-            <th className="text-right">Items</th>
+            <th className="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Items</th>
             <th
-              className="cursor-pointer hover:bg-gray-50 text-right"
+              className="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
               onClick={() => handleSort('minutos_promedio_por_item')}
             >
               <div className="flex items-center justify-end gap-2">
@@ -112,11 +112,11 @@ export function CategoryPerformanceTable({ data, loading }: CategoryPerformanceT
                 <SortIcon field="minutos_promedio_por_item" />
               </div>
             </th>
-            <th className="text-right">Rango (Min - Max)</th>
-            <th className="text-right">Variabilidad</th>
+            <th className="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Rango (Min - Max)</th>
+            <th className="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Variabilidad</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody className="bg-white divide-y divide-gray-200">
           {sortedData.map((categoria) => {
             const variabilidad =
               categoria.desviacion_estandar / categoria.minutos_promedio_por_item;
@@ -128,17 +128,17 @@ export function CategoryPerformanceTable({ data, loading }: CategoryPerformanceT
                 : 'text-red-600 bg-red-50';
 
             return (
-              <tr key={categoria.categoria_id}>
-                <td className="font-medium">{categoria.categoria_nombre}</td>
-                <td className="text-right">{categoria.total_ordenes}</td>
-                <td className="text-right">{categoria.total_items}</td>
-                <td className="text-right font-semibold">
+              <tr key={categoria.categoria_id} className="hover:bg-gray-50">
+                <td className="px-6 py-4 font-medium">{categoria.categoria_nombre}</td>
+                <td className="px-6 py-4 text-right">{categoria.total_ordenes}</td>
+                <td className="px-6 py-4 text-right">{categoria.total_items}</td>
+                <td className="px-6 py-4 text-right font-semibold">
                   {categoria.minutos_promedio_por_item.toFixed(1)} min
                 </td>
-                <td className="text-right text-sm text-gray-600">
+                <td className="px-6 py-4 text-right text-sm text-gray-600">
                   {categoria.minutos_minimo.toFixed(1)} - {categoria.minutos_maximo.toFixed(1)} min
                 </td>
-                <td className="text-right">
+                <td className="px-6 py-4 text-right">
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${variabilidadColor}`}>
                     {variabilidad < 0.2
                       ? 'Consistente'
@@ -151,7 +151,7 @@ export function CategoryPerformanceTable({ data, loading }: CategoryPerformanceT
             );
           })}
         </tbody>
-      </Table>
+      </SimpleTable>
     </Card>
   );
 }

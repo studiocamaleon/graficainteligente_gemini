@@ -1,5 +1,5 @@
 import { Card } from '../ui/Card';
-import { Table } from '../ui/Table';
+import { SimpleTable } from '../ui/SimpleTable';
 import { MetricaOperario } from '../../hooks/useProductivityMetrics';
 import { Award, User } from 'lucide-react';
 
@@ -47,18 +47,18 @@ export function OperatorRanking({ data, loading }: OperatorRankingProps) {
         <h3 className="text-lg font-semibold">Ranking de Operarios</h3>
       </div>
 
-      <Table>
-        <thead>
+      <SimpleTable>
+        <thead className="bg-gray-50 border-b-2 border-gray-200">
           <tr>
-            <th className="text-left">Posición</th>
-            <th className="text-left">Operario</th>
-            <th className="text-right">Pasos Completados</th>
-            <th className="text-right">Tiempo Prom./Paso</th>
-            <th className="text-right">Total Horas</th>
-            <th className="text-right">Consistencia</th>
+            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Posición</th>
+            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Operario</th>
+            <th className="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Pasos Completados</th>
+            <th className="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Tiempo Prom./Paso</th>
+            <th className="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Total Horas</th>
+            <th className="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Consistencia</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody className="bg-white divide-y divide-gray-200">
           {data.map((operario, index) => {
             const isTop3 = index < 3;
             const positionColor =
@@ -85,8 +85,8 @@ export function OperatorRanking({ data, loading }: OperatorRankingProps) {
                 : 'text-yellow-600 bg-yellow-50';
 
             return (
-              <tr key={operario.operario_id} className={isTop3 ? 'bg-gray-50' : ''}>
-                <td>
+              <tr key={operario.operario_id} className={`hover:bg-gray-50 ${isTop3 ? 'bg-gray-50' : ''}`}>
+                <td className="px-6 py-4">
                   <div
                     className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${
                       isTop3 ? positionColor : 'bg-white border border-gray-200'
@@ -95,7 +95,7 @@ export function OperatorRanking({ data, loading }: OperatorRankingProps) {
                     {index + 1}
                   </div>
                 </td>
-                <td>
+                <td className="px-6 py-4">
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-sm font-semibold">
                       {operario.operario_nombre.charAt(0).toUpperCase()}
@@ -108,12 +108,12 @@ export function OperatorRanking({ data, loading }: OperatorRankingProps) {
                     </div>
                   </div>
                 </td>
-                <td className="text-right font-semibold">{operario.total_pasos_completados}</td>
-                <td className="text-right">
+                <td className="px-6 py-4 text-right font-semibold">{operario.total_pasos_completados}</td>
+                <td className="px-6 py-4 text-right">
                   {operario.minutos_promedio_por_paso.toFixed(1)} min
                 </td>
-                <td className="text-right">{operario.total_horas.toFixed(1)} h</td>
-                <td className="text-right">
+                <td className="px-6 py-4 text-right">{operario.total_horas.toFixed(1)} h</td>
+                <td className="px-6 py-4 text-right">
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${consistenciaColor}`}>
                     {consistenciaLabel}
                   </span>
@@ -122,7 +122,7 @@ export function OperatorRanking({ data, loading }: OperatorRankingProps) {
             );
           })}
         </tbody>
-      </Table>
+      </SimpleTable>
 
       {data.length > 0 && (
         <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
