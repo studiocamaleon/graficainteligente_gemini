@@ -5,11 +5,11 @@ import { JobsView } from './JobsView';
 import { StationsView } from './StationsView';
 import { useProductionJobs } from '../../../hooks/useProductionJobs';
 import { useProductionStations } from '../../../hooks/useProductionStations';
-import { Layers, Calendar, Boxes, BarChart3 } from 'lucide-react';
+import { Layers, Boxes, BarChart3 } from 'lucide-react';
 import { Card } from '../../../components/ui/Card';
 import { EmptyState } from '../../../components/ui/EmptyState';
 
-type TabId = 'jobs' | 'planificacion' | 'estaciones' | 'reportes';
+type TabId = 'jobs' | 'estaciones' | 'reportes';
 
 export function ProductionPage() {
   usePageHeader('Control de Producción y Seguimiento');
@@ -23,12 +23,6 @@ export function ProductionPage() {
       label: 'Jobs',
       icon: Layers,
       count: totalJobs,
-    },
-    {
-      id: 'planificacion' as TabId,
-      label: 'Planificación',
-      icon: Calendar,
-      disabled: true,
     },
     {
       id: 'estaciones' as TabId,
@@ -55,14 +49,6 @@ export function ProductionPage() {
 
         <div className="p-6">
           {activeTab === 'jobs' && <JobsView />}
-
-          {activeTab === 'planificacion' && (
-            <EmptyState
-              icon={Calendar}
-              title="Planificación"
-              description="Vista de planificación en desarrollo"
-            />
-          )}
 
           {activeTab === 'estaciones' && <StationsView />}
 
