@@ -103,17 +103,37 @@ Se ha implementado exitosamente un sistema completo de gestión de archivos y li
 
 ## Integración en UI
 
-Los nuevos tabs se agregaron a la página de detalle de orden (`OrderDetailPage.tsx`):
+Los nuevos tabs se agregaron a **dos páginas principales**:
+
+### 1. Página de Creación de Orden (`CreateOrderPage.tsx`)
 
 ```
 Items | Rutas de Producción | Archivos | Links | Archivos de Producción | Pagos | Historial
 ```
+
+**Comportamiento:**
+- Los tabs de Archivos, Links y Archivos de Producción aparecen **deshabilitados** (disabled)
+- Al hacer clic, muestran un mensaje informativo: "Disponibles después de crear la orden"
+- Los tabs se habilitan automáticamente después de crear la orden y navegar a la página de detalle
+
+### 2. Página de Detalle de Orden (`OrderDetailPage.tsx`)
+
+```
+Items | Ruta de Producción | Archivos | Links | Archivos de Producción | Pagos | Historial
+```
+
+**Comportamiento:**
+- Todos los tabs están habilitados y funcionales
+- Cada tab tiene su componente completo con todas las funcionalidades
+
+### Características Visuales
 
 Cada tab tiene:
 - Código de colores diferente para distinguirlos visualmente
 - Iconos específicos (FileText, Link, Settings)
 - Advertencias de política de eliminación
 - Indicadores de espacio usado
+- Contadores de items (cuando corresponde)
 
 ## Pasos Siguientes Manuales
 
