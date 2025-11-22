@@ -6,7 +6,9 @@ import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { Select } from '../ui/Select';
 import { SearchableSelect } from '../ui/SearchableSelect';
+import { ImageUpload } from '../ui/ImageUpload';
 import { useCompany } from '../../hooks/useCompany';
+import { useCompanyLogo } from '../../hooks/useCompanyLogo';
 import type { CompanyFormData, DocumentType, TaxCondition } from '../../types/database';
 
 interface CompanyProfileModalProps {
@@ -51,6 +53,14 @@ export function CompanyProfileModal({ isOpen, onClose }: CompanyProfileModalProp
     getInitialFormData,
     handleUpdate,
   } = useCompany();
+
+  const {
+    uploadLogo,
+    deleteLogo,
+    getLogoUrl,
+    isUploading,
+    isDeleting,
+  } = useCompanyLogo();
 
   const [activeTab, setActiveTab] = useState<TabType>('general');
   const [formData, setFormData] = useState<CompanyFormData>(getInitialFormData());
@@ -264,6 +274,33 @@ export function CompanyProfileModal({ isOpen, onClose }: CompanyProfileModalProp
                     required
                   />
                 </div>
+
+                <ImageUpload
+                  currentImageUrl={getLogoUrl()}
+                  onUpload={async (file) => {
+                    const result = await uploadLogo(file);
+                    if (result.success) {
+                      setSuccess('Logo actualizado correctamente');
+                      window.location.reload();
+                    } else {
+                      setError(result.error || 'Error al subir el logo');
+                    }
+                  }}
+                  onDelete={async () => {
+                    const result = await deleteLogo();
+                    if (result.success) {
+                      setSuccess('Logo eliminado correctamente');
+                      window.location.reload();
+                    } else {
+                      setError(result.error || 'Error al eliminar el logo');
+                    }
+                  }}
+                  isUploading={isUploading}
+                  isDeleting={isDeleting}
+                  disabled={isSaving}
+                  label="Logo de la Empresa"
+                  helperText="Sube el logo de tu empresa. Se mostrará en el sidebar y como favicon. Máximo 2MB."
+                />
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">

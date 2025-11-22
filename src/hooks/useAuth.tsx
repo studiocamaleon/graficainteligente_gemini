@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { getPublicIP } from '../lib/ipUtils';
+import { updateFavicon, updateDocumentTitle } from '../utils/favicon';
 import type { Profile, Company, SubscriptionPlan } from '../types/database';
 
 interface AuthContextType {
@@ -50,6 +51,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (companyError) throw companyError;
         setCompany(companyData as Company | null);
 
+        if (companyData) {
+          updateFavicon(companyData.logo_url);
+          updateDocumentTitle(companyData.name);
+        }
+
         const { data: subscriptionData, error: subscriptionError } = await supabase
           .from('company_subscriptions')
           .select('*, subscription_plans(*)')
@@ -86,6 +92,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (companyError) throw companyError;
       setCompany(companyData as Company | null);
+
+      if (companyData) {
+        updateFavicon(companyData.logo_url);
+        updateDocumentTitle(companyData.name);
+      }
     }
   };
 

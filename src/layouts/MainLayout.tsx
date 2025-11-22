@@ -262,7 +262,15 @@ function MainLayoutContent({ children }: MainLayoutProps) {
                 }}
               >
                 <div className="absolute inset-0 bg-gradient-to-tr from-white/20 to-transparent" />
-                <span className="text-white font-bold text-xl relative z-10">P</span>
+                {company?.logo_url ? (
+                  <img
+                    src={company.logo_url}
+                    alt={company.name}
+                    className="w-full h-full object-cover rounded-xl relative z-10"
+                  />
+                ) : (
+                  <span className="text-white font-bold text-xl relative z-10">P</span>
+                )}
               </motion.div>
               <div className="flex-1 min-w-0 overflow-hidden">
                 <div className="font-bold text-white text-sm truncate drop-shadow-lg">
@@ -421,7 +429,15 @@ function MainLayoutContent({ children }: MainLayoutProps) {
                     }}
                   >
                     <div className="absolute inset-0 bg-gradient-to-tr from-white/20 to-transparent" />
-                    <span className="text-white font-bold text-xl relative z-10">P</span>
+                    {company?.logo_url ? (
+                      <img
+                        src={company.logo_url}
+                        alt={company.name}
+                        className="w-full h-full object-cover rounded-xl relative z-10"
+                      />
+                    ) : (
+                      <span className="text-white font-bold text-xl relative z-10">P</span>
+                    )}
                   </motion.div>
                   <span className="font-bold text-white drop-shadow-lg flex-1 truncate">{company?.name || 'PrintFlow'}</span>
                   {canEditCompany && (
