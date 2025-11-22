@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
 
@@ -114,15 +114,21 @@ export function useProductivityMetrics(dateRange?: DateRange) {
   const [cuellosBottella, setCuellosBottella] = useState<CuelloBottella[]>([]);
   const [tendencias, setTendencias] = useState<TendenciaTemporal[]>([]);
 
-  useEffect(() => {
-    if (user?.companyId) {
-      loadAllMetrics();
-    }
-  }, [user?.companyId, dateRange]);
+  // Logs de depuración
+  console.log('[Productivity Hook] State:', {
+    hasUser: !!user,
+    companyId: user?.companyId,
+    dateRange: dateRange ? {
+      desde: dateRange.desde?.toISOString(),
+      hasta: dateRange.hasta?.toISOString()
+    } : null,
+    loading
+  });
 
-  const loadAllMetrics = async () => {
+  const loadAllMetrics = useCallback(async () => {
     if (!user?.companyId) {
       console.log('[Productivity] No company ID, skipping metrics load');
+      setLoading(false);
       return;
     }
 
@@ -164,7 +170,7 @@ export function useProductivityMetrics(dateRange?: DateRange) {
       console.log('[Productivity] Setting loading to false');
       setLoading(false);
     }
-  };
+  }, [user?.companyId, dateRange?.desde, dateRange?.hasta]);
 
   const loadKpisGenerales = async (fechaDesde: string | null, fechaHasta: string | null) => {
     try {
@@ -334,7 +340,19 @@ export function useProductivityMetrics(dateRange?: DateRange) {
     }
   };
 
+  useEffect(() => {
+    console.log('[Productivity] useEffect triggered');
+    if (user?.companyId) {
+      console.log('[Productivity] Calling loadAllMetrics from useEffect');
+      loadAllMetrics();
+    } else {
+      console.log('[Productivity] No companyId, setting loading to false');
+      setLoading(false);
+    }
+  }, [user?.companyId, loadAllMetrics]);
+
   const refresh = () => {
+    console.log('[Productivity] Manual refresh triggered');
     loadAllMetrics();
   };
 
