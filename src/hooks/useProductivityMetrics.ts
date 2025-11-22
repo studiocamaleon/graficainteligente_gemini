@@ -96,7 +96,7 @@ interface DateRange {
 }
 
 export function useProductivityMetrics(dateRange?: DateRange) {
-  const { user } = useAuth();
+  const { profile, company } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -114,10 +114,16 @@ export function useProductivityMetrics(dateRange?: DateRange) {
   const [cuellosBottella, setCuellosBottella] = useState<CuelloBottella[]>([]);
   const [tendencias, setTendencias] = useState<TendenciaTemporal[]>([]);
 
+  // Obtener companyId desde profile o company
+  const companyId = profile?.company_id || company?.id;
+
   // Logs de depuración
   console.log('[Productivity Hook] State:', {
-    hasUser: !!user,
-    companyId: user?.companyId,
+    hasProfile: !!profile,
+    hasCompany: !!company,
+    companyId,
+    profileCompanyId: profile?.company_id,
+    companyObjectId: company?.id,
     dateRange: dateRange ? {
       desde: dateRange.desde?.toISOString(),
       hasta: dateRange.hasta?.toISOString()
@@ -126,7 +132,7 @@ export function useProductivityMetrics(dateRange?: DateRange) {
   });
 
   const loadAllMetrics = useCallback(async () => {
-    if (!user?.companyId) {
+    if (!companyId) {
       console.log('[Productivity] No company ID, skipping metrics load');
       setLoading(false);
       return;
@@ -140,7 +146,7 @@ export function useProductivityMetrics(dateRange?: DateRange) {
       const fechaDesde = dateRange?.desde?.toISOString() || null;
       const fechaHasta = dateRange?.hasta?.toISOString() || null;
 
-      console.log('[Productivity] Loading metrics with date range:', { fechaDesde, fechaHasta, companyId: user?.companyId });
+      console.log('[Productivity] Loading metrics with date range:', { fechaDesde, fechaHasta, companyId });
 
       // Cargar cada métrica individualmente y manejar errores por separado
       const results = await Promise.allSettled([
@@ -170,13 +176,13 @@ export function useProductivityMetrics(dateRange?: DateRange) {
       console.log('[Productivity] Setting loading to false');
       setLoading(false);
     }
-  }, [user?.companyId, dateRange?.desde, dateRange?.hasta]);
+  }, [companyId, dateRange?.desde, dateRange?.hasta]);
 
   const loadKpisGenerales = async (fechaDesde: string | null, fechaHasta: string | null) => {
     try {
       console.log('[Productivity] Loading KPIs generales...');
       const { data, error } = await supabase.rpc('fn_kpis_generales', {
-        p_company_id: user?.companyId,
+        p_company_id: companyId,
         p_fecha_desde: fechaDesde,
         p_fecha_hasta: fechaHasta,
       });
@@ -198,7 +204,7 @@ export function useProductivityMetrics(dateRange?: DateRange) {
     try {
       console.log('[Productivity] Loading metricas por paso...');
       const { data, error } = await supabase.rpc('fn_metricas_por_paso', {
-        p_company_id: user?.companyId,
+        p_company_id: companyId,
         p_fecha_desde: fechaDesde,
         p_fecha_hasta: fechaHasta,
       });
@@ -218,7 +224,7 @@ export function useProductivityMetrics(dateRange?: DateRange) {
     try {
       console.log('[Productivity] Loading metricas por categoria...');
       const { data, error } = await supabase.rpc('fn_metricas_por_categoria', {
-        p_company_id: user?.companyId,
+        p_company_id: companyId,
         p_fecha_desde: fechaDesde,
         p_fecha_hasta: fechaHasta,
       });
@@ -238,7 +244,7 @@ export function useProductivityMetrics(dateRange?: DateRange) {
     try {
       console.log('[Productivity] Loading metricas por etapa...');
       const { data, error } = await supabase.rpc('fn_metricas_por_etapa', {
-        p_company_id: user?.companyId,
+        p_company_id: companyId,
         p_fecha_desde: fechaDesde,
         p_fecha_hasta: fechaHasta,
       });
@@ -258,7 +264,7 @@ export function useProductivityMetrics(dateRange?: DateRange) {
     try {
       console.log('[Productivity] Loading metricas por operario...');
       const { data, error } = await supabase.rpc('fn_metricas_por_operario', {
-        p_company_id: user?.companyId,
+        p_company_id: companyId,
         p_fecha_desde: fechaDesde,
         p_fecha_hasta: fechaHasta,
       });
@@ -278,7 +284,7 @@ export function useProductivityMetrics(dateRange?: DateRange) {
     try {
       console.log('[Productivity] Loading ordenes completadas...');
       const { data, error } = await supabase.rpc('fn_ordenes_completadas_detalle', {
-        p_company_id: user?.companyId,
+        p_company_id: companyId,
         p_fecha_desde: fechaDesde,
         p_fecha_hasta: fechaHasta,
         p_limit: 50,
@@ -299,7 +305,7 @@ export function useProductivityMetrics(dateRange?: DateRange) {
     try {
       console.log('[Productivity] Loading cuellos de botella...');
       const { data, error } = await supabase.rpc('fn_cuellos_botella', {
-        p_company_id: user?.companyId,
+        p_company_id: companyId,
         p_fecha_desde: fechaDesde,
         p_fecha_hasta: fechaHasta,
       });
@@ -323,7 +329,7 @@ export function useProductivityMetrics(dateRange?: DateRange) {
       const hasta = fechaHasta || new Date().toISOString();
 
       const { data, error } = await supabase.rpc('fn_tendencias_temporales', {
-        p_company_id: user?.companyId,
+        p_company_id: companyId,
         p_fecha_desde: desde,
         p_fecha_hasta: hasta,
         p_intervalo: 'day',
@@ -342,14 +348,14 @@ export function useProductivityMetrics(dateRange?: DateRange) {
 
   useEffect(() => {
     console.log('[Productivity] useEffect triggered');
-    if (user?.companyId) {
+    if (companyId) {
       console.log('[Productivity] Calling loadAllMetrics from useEffect');
       loadAllMetrics();
     } else {
       console.log('[Productivity] No companyId, setting loading to false');
       setLoading(false);
     }
-  }, [user?.companyId, loadAllMetrics]);
+  }, [companyId, loadAllMetrics]);
 
   const refresh = () => {
     console.log('[Productivity] Manual refresh triggered');
