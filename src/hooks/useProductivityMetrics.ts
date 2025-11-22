@@ -121,8 +121,12 @@ export function useProductivityMetrics(dateRange?: DateRange) {
   }, [user?.companyId, dateRange]);
 
   const loadAllMetrics = async () => {
-    if (!user?.companyId) return;
+    if (!user?.companyId) {
+      console.log('[Productivity] No company ID, skipping metrics load');
+      return;
+    }
 
+    console.log('[Productivity] Starting metrics load...');
     setLoading(true);
     setError(null);
 
@@ -132,7 +136,8 @@ export function useProductivityMetrics(dateRange?: DateRange) {
 
       console.log('[Productivity] Loading metrics with date range:', { fechaDesde, fechaHasta, companyId: user?.companyId });
 
-      await Promise.all([
+      // Cargar cada métrica individualmente y manejar errores por separado
+      const results = await Promise.allSettled([
         loadKpisGenerales(fechaDesde, fechaHasta),
         loadMetricasPorPaso(fechaDesde, fechaHasta),
         loadMetricasPorCategoria(fechaDesde, fechaHasta),
@@ -143,115 +148,190 @@ export function useProductivityMetrics(dateRange?: DateRange) {
         loadTendencias(fechaDesde, fechaHasta),
       ]);
 
-      console.log('[Productivity] Metrics loaded successfully');
+      // Verificar si hubo errores
+      const errors = results.filter(r => r.status === 'rejected');
+      if (errors.length > 0) {
+        console.warn('[Productivity] Some metrics failed to load:', errors);
+        // No lanzamos error, solo mostramos advertencia
+      }
+
+      console.log('[Productivity] Metrics load completed');
     } catch (err) {
-      console.error('[Productivity] Error loading metrics:', err);
+      console.error('[Productivity] Unexpected error loading metrics:', err);
       const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
       setError(`Error al cargar las métricas: ${errorMessage}`);
     } finally {
+      console.log('[Productivity] Setting loading to false');
       setLoading(false);
     }
   };
 
   const loadKpisGenerales = async (fechaDesde: string | null, fechaHasta: string | null) => {
-    console.log('[Productivity] Loading KPIs generales...');
-    const { data, error } = await supabase.rpc('fn_kpis_generales', {
-      p_company_id: user?.companyId,
-      p_fecha_desde: fechaDesde,
-      p_fecha_hasta: fechaHasta,
-    });
+    try {
+      console.log('[Productivity] Loading KPIs generales...');
+      const { data, error } = await supabase.rpc('fn_kpis_generales', {
+        p_company_id: user?.companyId,
+        p_fecha_desde: fechaDesde,
+        p_fecha_hasta: fechaHasta,
+      });
 
-    if (error) {
-      console.error('[Productivity] Error loading KPIs generales:', error);
-      throw error;
-    }
-    console.log('[Productivity] KPIs generales loaded:', data);
-    if (data && data.length > 0) {
-      setKpisGenerales(data[0]);
+      if (error) {
+        console.error('[Productivity] Error loading KPIs generales:', error);
+        return; // No lanzar error, solo registrar
+      }
+      console.log('[Productivity] KPIs generales loaded:', data);
+      if (data && data.length > 0) {
+        setKpisGenerales(data[0]);
+      }
+    } catch (err) {
+      console.error('[Productivity] Unexpected error in loadKpisGenerales:', err);
     }
   };
 
   const loadMetricasPorPaso = async (fechaDesde: string | null, fechaHasta: string | null) => {
-    const { data, error } = await supabase.rpc('fn_metricas_por_paso', {
-      p_company_id: user?.companyId,
-      p_fecha_desde: fechaDesde,
-      p_fecha_hasta: fechaHasta,
-    });
+    try {
+      console.log('[Productivity] Loading metricas por paso...');
+      const { data, error } = await supabase.rpc('fn_metricas_por_paso', {
+        p_company_id: user?.companyId,
+        p_fecha_desde: fechaDesde,
+        p_fecha_hasta: fechaHasta,
+      });
 
-    if (error) throw error;
-    setMetricasPorPaso(data || []);
+      if (error) {
+        console.error('[Productivity] Error loading metricas por paso:', error);
+        return;
+      }
+      console.log('[Productivity] Metricas por paso loaded:', data?.length || 0, 'items');
+      setMetricasPorPaso(data || []);
+    } catch (err) {
+      console.error('[Productivity] Unexpected error in loadMetricasPorPaso:', err);
+    }
   };
 
   const loadMetricasPorCategoria = async (fechaDesde: string | null, fechaHasta: string | null) => {
-    const { data, error } = await supabase.rpc('fn_metricas_por_categoria', {
-      p_company_id: user?.companyId,
-      p_fecha_desde: fechaDesde,
-      p_fecha_hasta: fechaHasta,
-    });
+    try {
+      console.log('[Productivity] Loading metricas por categoria...');
+      const { data, error } = await supabase.rpc('fn_metricas_por_categoria', {
+        p_company_id: user?.companyId,
+        p_fecha_desde: fechaDesde,
+        p_fecha_hasta: fechaHasta,
+      });
 
-    if (error) throw error;
-    setMetricasPorCategoria(data || []);
+      if (error) {
+        console.error('[Productivity] Error loading metricas por categoria:', error);
+        return;
+      }
+      console.log('[Productivity] Metricas por categoria loaded:', data?.length || 0, 'items');
+      setMetricasPorCategoria(data || []);
+    } catch (err) {
+      console.error('[Productivity] Unexpected error in loadMetricasPorCategoria:', err);
+    }
   };
 
   const loadMetricasPorEtapa = async (fechaDesde: string | null, fechaHasta: string | null) => {
-    const { data, error } = await supabase.rpc('fn_metricas_por_etapa', {
-      p_company_id: user?.companyId,
-      p_fecha_desde: fechaDesde,
-      p_fecha_hasta: fechaHasta,
-    });
+    try {
+      console.log('[Productivity] Loading metricas por etapa...');
+      const { data, error } = await supabase.rpc('fn_metricas_por_etapa', {
+        p_company_id: user?.companyId,
+        p_fecha_desde: fechaDesde,
+        p_fecha_hasta: fechaHasta,
+      });
 
-    if (error) throw error;
-    setMetricasPorEtapa(data || []);
+      if (error) {
+        console.error('[Productivity] Error loading metricas por etapa:', error);
+        return;
+      }
+      console.log('[Productivity] Metricas por etapa loaded:', data?.length || 0, 'items');
+      setMetricasPorEtapa(data || []);
+    } catch (err) {
+      console.error('[Productivity] Unexpected error in loadMetricasPorEtapa:', err);
+    }
   };
 
   const loadMetricasPorOperario = async (fechaDesde: string | null, fechaHasta: string | null) => {
-    const { data, error } = await supabase.rpc('fn_metricas_por_operario', {
-      p_company_id: user?.companyId,
-      p_fecha_desde: fechaDesde,
-      p_fecha_hasta: fechaHasta,
-    });
+    try {
+      console.log('[Productivity] Loading metricas por operario...');
+      const { data, error } = await supabase.rpc('fn_metricas_por_operario', {
+        p_company_id: user?.companyId,
+        p_fecha_desde: fechaDesde,
+        p_fecha_hasta: fechaHasta,
+      });
 
-    if (error) throw error;
-    setMetricasPorOperario(data || []);
+      if (error) {
+        console.error('[Productivity] Error loading metricas por operario:', error);
+        return;
+      }
+      console.log('[Productivity] Metricas por operario loaded:', data?.length || 0, 'items');
+      setMetricasPorOperario(data || []);
+    } catch (err) {
+      console.error('[Productivity] Unexpected error in loadMetricasPorOperario:', err);
+    }
   };
 
   const loadOrdenesCompletadas = async (fechaDesde: string | null, fechaHasta: string | null) => {
-    const { data, error } = await supabase.rpc('fn_ordenes_completadas_detalle', {
-      p_company_id: user?.companyId,
-      p_fecha_desde: fechaDesde,
-      p_fecha_hasta: fechaHasta,
-      p_limit: 50,
-    });
+    try {
+      console.log('[Productivity] Loading ordenes completadas...');
+      const { data, error } = await supabase.rpc('fn_ordenes_completadas_detalle', {
+        p_company_id: user?.companyId,
+        p_fecha_desde: fechaDesde,
+        p_fecha_hasta: fechaHasta,
+        p_limit: 50,
+      });
 
-    if (error) throw error;
-    setOrdenesCompletadas(data || []);
+      if (error) {
+        console.error('[Productivity] Error loading ordenes completadas:', error);
+        return;
+      }
+      console.log('[Productivity] Ordenes completadas loaded:', data?.length || 0, 'items');
+      setOrdenesCompletadas(data || []);
+    } catch (err) {
+      console.error('[Productivity] Unexpected error in loadOrdenesCompletadas:', err);
+    }
   };
 
   const loadCuellosBottella = async (fechaDesde: string | null, fechaHasta: string | null) => {
-    const { data, error } = await supabase.rpc('fn_cuellos_botella', {
-      p_company_id: user?.companyId,
-      p_fecha_desde: fechaDesde,
-      p_fecha_hasta: fechaHasta,
-    });
+    try {
+      console.log('[Productivity] Loading cuellos de botella...');
+      const { data, error } = await supabase.rpc('fn_cuellos_botella', {
+        p_company_id: user?.companyId,
+        p_fecha_desde: fechaDesde,
+        p_fecha_hasta: fechaHasta,
+      });
 
-    if (error) throw error;
-    setCuellosBottella(data || []);
+      if (error) {
+        console.error('[Productivity] Error loading cuellos de botella:', error);
+        return;
+      }
+      console.log('[Productivity] Cuellos de botella loaded:', data?.length || 0, 'items');
+      setCuellosBottella(data || []);
+    } catch (err) {
+      console.error('[Productivity] Unexpected error in loadCuellosBottella:', err);
+    }
   };
 
   const loadTendencias = async (fechaDesde: string | null, fechaHasta: string | null) => {
-    // Si no hay rango de fechas, usar últimos 30 días
-    const desde = fechaDesde || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-    const hasta = fechaHasta || new Date().toISOString();
+    try {
+      console.log('[Productivity] Loading tendencias temporales...');
+      // Si no hay rango de fechas, usar últimos 30 días
+      const desde = fechaDesde || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      const hasta = fechaHasta || new Date().toISOString();
 
-    const { data, error } = await supabase.rpc('fn_tendencias_temporales', {
-      p_company_id: user?.companyId,
-      p_fecha_desde: desde,
-      p_fecha_hasta: hasta,
-      p_intervalo: 'day',
-    });
+      const { data, error } = await supabase.rpc('fn_tendencias_temporales', {
+        p_company_id: user?.companyId,
+        p_fecha_desde: desde,
+        p_fecha_hasta: hasta,
+        p_intervalo: 'day',
+      });
 
-    if (error) throw error;
-    setTendencias(data || []);
+      if (error) {
+        console.error('[Productivity] Error loading tendencias temporales:', error);
+        return;
+      }
+      console.log('[Productivity] Tendencias temporales loaded:', data?.length || 0, 'items');
+      setTendencias(data || []);
+    } catch (err) {
+      console.error('[Productivity] Unexpected error in loadTendencias:', err);
+    }
   };
 
   const refresh = () => {

@@ -41,6 +41,16 @@ export function ProductivityView() {
     refresh,
   } = useProductivityMetrics(dateRange);
 
+  console.log('[ProductivityView] Render state:', {
+    loading,
+    error,
+    hasKpisGenerales: !!kpisGenerales,
+    kpisGenerales,
+    metricasPorPasoCount: metricasPorPaso.length,
+    metricasPorCategoriaCount: metricasPorCategoria.length,
+    metricasPorEtapaCount: metricasPorEtapa.length,
+  });
+
   const handleDateRangeChange = (desde: Date | null, hasta: Date | null) => {
     setDateRange({ desde, hasta });
   };
