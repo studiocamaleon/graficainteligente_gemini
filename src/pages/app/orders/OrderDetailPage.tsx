@@ -13,7 +13,10 @@ import {
   Route,
   CreditCard,
   History,
-  Clock
+  Clock,
+  FileText,
+  Link as LinkIcon,
+  Settings
 } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
@@ -28,9 +31,12 @@ import { useConfirmDialog } from '../../../hooks/useConfirmDialog';
 import { OrderStatusBadge } from '../../../components/orders/OrderStatusBadge';
 import { ChannelBadge } from '../../../components/orders/ChannelBadge';
 import { OrderProductionRouteTab } from '../../../components/orders/OrderProductionRouteTab';
+import { OrdenArchivosTab } from '../../../components/orders/OrdenArchivosTab';
+import { OrdenLinksTab } from '../../../components/orders/OrdenLinksTab';
+import { OrdenArchivosProduccionTab } from '../../../components/orders/OrdenArchivosProduccionTab';
 import type { EstadoOrdenTrabajo } from '../../../types/database';
 
-type TabKey = 'items' | 'ruta' | 'pagos' | 'historial';
+type TabKey = 'items' | 'ruta' | 'archivos' | 'links' | 'archivos_produccion' | 'pagos' | 'historial';
 
 export function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -323,10 +329,13 @@ export function OrderDetailPage() {
       </Card>
 
       <div className="border-b border-gray-200">
-        <nav className="flex gap-8 px-6">
+        <nav className="flex gap-8 px-6 overflow-x-auto">
           {[
             { key: 'items' as const, label: 'Items', icon: Package, count: orden.items?.length || 0 },
             { key: 'ruta' as const, label: 'Ruta de Producción', icon: Route },
+            { key: 'archivos' as const, label: 'Archivos', icon: FileText },
+            { key: 'links' as const, label: 'Links', icon: LinkIcon },
+            { key: 'archivos_produccion' as const, label: 'Archivos de Producción', icon: Settings },
             { key: 'pagos' as const, label: 'Pagos', icon: CreditCard, count: orden.pagos?.length || 0 },
             { key: 'historial' as const, label: 'Historial', icon: History },
           ].map((tab) => {
@@ -437,6 +446,39 @@ export function OrderDetailPage() {
             ) : (
               <OrderProductionRouteTab ordenId={orden.id} items={orden.items} />
             )}
+          </div>
+        )}
+
+        {activeTab === 'archivos' && (
+          <div className="p-6">
+            <OrdenArchivosTab
+              ordenId={orden.id}
+              fechaEntrega={orden.fecha_estimada_entrega}
+              estado={orden.estado}
+              fechaCompletado={orden.fecha_completado}
+            />
+          </div>
+        )}
+
+        {activeTab === 'links' && (
+          <div className="p-6">
+            <OrdenLinksTab
+              ordenId={orden.id}
+              fechaEntrega={orden.fecha_estimada_entrega}
+              estado={orden.estado}
+              fechaCompletado={orden.fecha_completado}
+            />
+          </div>
+        )}
+
+        {activeTab === 'archivos_produccion' && (
+          <div className="p-6">
+            <OrdenArchivosProduccionTab
+              ordenId={orden.id}
+              fechaEntrega={orden.fecha_estimada_entrega}
+              estado={orden.estado}
+              fechaCompletado={orden.fecha_completado}
+            />
           </div>
         )}
 
