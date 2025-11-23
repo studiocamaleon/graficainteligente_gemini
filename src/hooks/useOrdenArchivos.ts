@@ -259,8 +259,14 @@ export function useOrdenArchivos(params: string | UseOrdenArchivosParams) {
   // Descargar archivo
   const downloadArchivo = async (archivoId: string) => {
     try {
-      const archivo = archivos.find(a => a.id === archivoId);
-      if (!archivo) {
+      // Buscar archivo directamente en BD (puede ser temporal o permanente)
+      const { data: archivo, error: fetchError } = await supabase
+        .from('ordenes_trabajo_archivos')
+        .select('id, nombre_archivo, storage_path')
+        .eq('id', archivoId)
+        .single();
+
+      if (fetchError || !archivo) {
         throw new Error('Archivo no encontrado');
       }
 

@@ -257,6 +257,11 @@ export function CreateOrderPage() {
 
   const totalComentarios = countAllComments();
 
+  // Calcular total de rutas/pasos de producción
+  const totalRutas = items.reduce((total, item) => {
+    return total + (item.rutas_generadas?.length || 0);
+  }, 0);
+
   const tabs = [
     {
       id: 'items',
@@ -266,6 +271,7 @@ export function CreateOrderPage() {
     {
       id: 'rutas',
       label: 'Rutas de Producción',
+      count: totalRutas,
       disabled: items.length === 0,
       badge: totalComentarios > 0 ? totalComentarios : undefined,
     },

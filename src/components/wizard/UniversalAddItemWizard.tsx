@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
-import { X, ChevronRight, ChevronLeft } from 'lucide-react';
+import { X, ChevronRight, ChevronLeft, Loader } from 'lucide-react';
 import { UniversalProductSearchStep } from './steps/UniversalProductSearchStep';
 import { ConfigurationStep, type SelectedConfiguration } from './steps/ConfigurationStep';
 import { ServicesAndFinishingsStep, type SelectedService, type SelectedFinishing } from './steps/ServicesAndFinishingsStep';
@@ -563,13 +563,16 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
             />
           )}
 
-          {currentStep === 'configuration' && config && (
+          {currentStep === 'configuration' && (
             loadingConfig ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                <span className="ml-3 text-gray-600">Cargando configuración...</span>
+              <div className="flex flex-col items-center justify-center py-16 space-y-4">
+                <Loader className="w-12 h-12 animate-spin text-blue-600" />
+                <div className="text-center">
+                  <p className="text-lg font-medium text-gray-900">Cargando configuración del producto</p>
+                  <p className="text-sm text-gray-500 mt-1">Preparando opciones disponibles...</p>
+                </div>
               </div>
-            ) : (
+            ) : config ? (
               <ConfigurationStep
                 config={config}
                 selectedConfig={selectedConfig}
@@ -577,7 +580,7 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
                 selectedAcabados={selectedAcabados}
                 onConfigChange={handleConfigChange}
               />
-            )
+            ) : null
           )}
 
           {currentStep === 'services' && config && (

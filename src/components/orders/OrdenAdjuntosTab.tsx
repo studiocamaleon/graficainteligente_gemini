@@ -13,6 +13,7 @@ import { EmptyState } from '../ui/EmptyState';
 import { Modal } from '../ui/Modal';
 import { Input } from '../ui/Input';
 import { MultiSelect } from '../ui/MultiSelect';
+import { Tooltip } from '../ui/Tooltip';
 import { useToast } from '../../contexts/ToastContext';
 import { useConfirmDialog } from '../../hooks/useConfirmDialog';
 import dayjs from 'dayjs';
@@ -319,12 +320,29 @@ export function OrdenAdjuntosTab({
       return;
     }
     try {
-      await links.updateLink(editingLink.id, {
-        titulo: linkForm.titulo,
-        url: linkForm.url,
-        descripcion: linkForm.descripcion || undefined
-      });
-      showSuccess('Link actualizado correctamente');
+      // Solo enviar campos que realmente cambiaron
+      const updates: any = {};
+
+      if (linkForm.titulo.trim() !== editingLink.titulo) {
+        updates.titulo = linkForm.titulo;
+      }
+
+      if (linkForm.url.trim() !== editingLink.url) {
+        updates.url = linkForm.url;
+      }
+
+      if ((linkForm.descripcion || '') !== (editingLink.descripcion || '')) {
+        updates.descripcion = linkForm.descripcion || undefined;
+      }
+
+      // Solo hacer update si hay cambios
+      if (Object.keys(updates).length > 0) {
+        await links.updateLink(editingLink.id, updates);
+        showSuccess('Link actualizado correctamente');
+      } else {
+        showInfo('No hay cambios que guardar');
+      }
+
       setShowEditLink(false);
       setEditingLink(null);
       setLinkForm({ titulo: '', url: '', descripcion: '' });
@@ -558,7 +576,7 @@ export function OrdenAdjuntosTab({
         </div>
 
         <div className="flex gap-3 ml-auto items-center">
-          <div className="flex flex-col items-end">
+          <Tooltip content="Archivos del cliente" position="bottom">
             <Button
               onClick={() => fileInputRef.current?.click()}
               disabled={archivos.availableSpace <= 0 || archivos.uploading}
@@ -575,11 +593,10 @@ export function OrdenAdjuntosTab({
                 </>
               )}
             </Button>
-            <span className="text-xs text-gray-500 mt-1">Archivos del cliente</span>
-          </div>
+          </Tooltip>
 
           {archivosProduccion.canUpload && !modoCreacion && (
-            <div className="flex flex-col items-end">
+            <Tooltip content="Archivos listos para producir" position="bottom">
               <Button
                 onClick={() => fileProduccionInputRef.current?.click()}
                 variant="outline"
@@ -597,8 +614,7 @@ export function OrdenAdjuntosTab({
                   </>
                 )}
               </Button>
-              <span className="text-xs text-gray-500 mt-1">Listos para producir</span>
-            </div>
+            </Tooltip>
           )}
 
           <Button onClick={() => setShowAddLink(true)} variant="outline">
@@ -1057,7 +1073,12 @@ export function OrdenAdjuntosTab({
         }}
         title="Agregar Link"
       >
-        <div className="space-y-4">
+        <div className="space-y-4" onKeyDown={(e) => {
+          if (e.key === 'Enter' && !e.shiftKey && linkForm.titulo.trim() && linkForm.url.trim()) {
+            e.preventDefault();
+            handleCreateLink();
+          }
+        }}>
           <Input
             label="Título"
             value={linkForm.titulo}
@@ -1100,7 +1121,12 @@ export function OrdenAdjuntosTab({
         }}
         title="Editar Link"
       >
-        <div className="space-y-4">
+        <div className="space-y-4" onKeyDown={(e) => {
+          if (e.key === 'Enter' && !e.shiftKey && linkForm.titulo.trim() && linkForm.url.trim()) {
+            e.preventDefault();
+            handleUpdateLink();
+          }
+        }}>
           <Input
             label="Título"
             value={linkForm.titulo}
