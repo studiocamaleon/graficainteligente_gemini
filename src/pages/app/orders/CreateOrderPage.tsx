@@ -31,8 +31,17 @@ export function CreateOrderPage() {
   usePageHeader('Crear nueva orden de trabajo');
 
   const [ordenTemporalId] = useState(() => {
-    // SIEMPRE generar nuevo UUID para evitar reutilizar archivos de sesiones anteriores
+    // Intentar recuperar UUID existente para mantener adjuntos al cambiar de tab
+    const existingId = sessionStorage.getItem('ordenTemporalCreacion');
+
+    if (existingId) {
+      console.log('[CreateOrderPage] Recuperando sesión temporal:', existingId);
+      return existingId;
+    }
+
+    // Si no existe, generar nuevo UUID
     const newId = crypto.randomUUID();
+    console.log('[CreateOrderPage] Nueva sesión temporal:', newId);
     sessionStorage.setItem('ordenTemporalCreacion', newId);
     return newId;
   });
@@ -257,10 +266,11 @@ export function CreateOrderPage() {
 
   const totalComentarios = countAllComments();
 
-  // Calcular total de rutas/pasos de producción
-  const totalRutas = items.reduce((total, item) => {
-    return total + (item.rutas_generadas?.length || 0);
-  }, 0);
+  // Calcular total de rutas de producción
+  // Una ruta = un item (cada item tiene una ruta que incluye múltiples etapas/pasos)
+  const totalRutas = items.filter(item =>
+    Array.isArray(item.rutas_generadas) && item.rutas_generadas.length > 0
+  ).length;
 
   const tabs = [
     {
