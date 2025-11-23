@@ -33,6 +33,7 @@ import {
   FileText,
   Settings2,
   Briefcase,
+  CreditCard,
 } from 'lucide-react';
 
 export interface SubModule {
@@ -325,6 +326,13 @@ export const MODULES: Module[] = [
         description: 'Gestión de países, provincias y ciudades',
         path: '/app/settings/locations',
         icon: MapPin,
+      },
+      {
+        id: 'settings-medios-cobro',
+        name: 'Medios de Cobro',
+        description: 'Gestión de pasarelas, medios bancarios y efectivo',
+        path: '/app/settings/medios-cobro',
+        icon: CreditCard,
       },
     ],
   },
