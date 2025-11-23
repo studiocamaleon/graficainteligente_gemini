@@ -31,8 +31,7 @@ export function CreateOrderPage() {
   usePageHeader('Crear nueva orden de trabajo');
 
   const [ordenTemporalId] = useState(() => {
-    const stored = sessionStorage.getItem('ordenTemporalCreacion');
-    if (stored) return stored;
+    // SIEMPRE generar nuevo UUID para evitar reutilizar archivos de sesiones anteriores
     const newId = crypto.randomUUID();
     sessionStorage.setItem('ordenTemporalCreacion', newId);
     return newId;
@@ -75,6 +74,52 @@ export function CreateOrderPage() {
   useEffect(() => {
     resetFormulario();
   }, []);
+
+  // Cleanup al cerrar pestaña o refrescar página
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      // Si hay cambios sin guardar y orden no creada
+      if (!ordenCreada && formularioTieneDatos()) {
+        // Mostrar prompt nativo del navegador
+        e.preventDefault();
+        e.returnValue = '';
+
+        // Intentar cleanup asíncrono en background
+        Promise.all([
+          archivosTemp.limpiarTemporales(),
+          linksTemp.limpiarTemporales()
+        ]).then(() => {
+          sessionStorage.removeItem('ordenTemporalCreacion');
+        }).catch(err => {
+          console.error('[Cleanup] Error limpiando al cerrar:', err);
+        });
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [ordenCreada, archivosTemp, linksTemp]);
+
+  // Cleanup al desmontar componente (navegación)
+  useEffect(() => {
+    return () => {
+      // Solo limpiar si orden no fue creada exitosamente
+      if (!ordenCreada) {
+        Promise.all([
+          archivosTemp.limpiarTemporales(),
+          linksTemp.limpiarTemporales()
+        ]).then(() => {
+          sessionStorage.removeItem('ordenTemporalCreacion');
+          console.log('[Cleanup] Archivos temporales limpiados al desmontar');
+        }).catch(err => {
+          console.error('[Cleanup] Error limpiando al desmontar:', err);
+        });
+      }
+    };
+  }, [ordenCreada, archivosTemp, linksTemp]);
 
   const formularioTieneDatos = () => {
     return clienteId !== '' || items.length > 0 || notasInternas !== '' || fechaEntrega !== '';

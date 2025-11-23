@@ -1,6 +1,8 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { ToastProvider } from './contexts/ToastContext';
+import { iniciarLimpiezaAutomatica } from './utils/cleanupTemporalFiles';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { ProtectedModuleRoute } from './components/auth/ProtectedModuleRoute';
 import { MainLayout } from './layouts/MainLayout';
@@ -132,6 +134,18 @@ function AppRoutes() {
 }
 
 function App() {
+  useEffect(() => {
+    // Iniciar sistema de limpieza automática de archivos temporales
+    const detenerLimpieza = iniciarLimpiezaAutomatica();
+
+    // Cleanup al desmontar la app
+    return () => {
+      if (detenerLimpieza) {
+        detenerLimpieza();
+      }
+    };
+  }, []);
+
   return (
     <BrowserRouter>
       <AuthProvider>

@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   Upload, Download, Trash2, FileText, Link as LinkIcon, Settings,
   AlertTriangle, Clock, Plus, ExternalLink, Copy, Edit2, CheckCircle2,
@@ -66,6 +66,7 @@ export function OrdenAdjuntosTab({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [recentlyUploadedId, setRecentlyUploadedId] = useState<string | null>(null);
+  const [mostrarAdvertenciaViejos, setMostrarAdvertenciaViejos] = useState(false);
   const [archivoForm, setArchivoForm] = useState({ descripcion: '' });
   const [produccionForm, setProduccionForm] = useState({
     etiquetas: [] as string[],
@@ -90,6 +91,24 @@ export function OrdenAdjuntosTab({
 
   const fechaEliminacion = getFechaEliminacion();
   const diasRestantes = fechaEliminacion ? fechaEliminacion.diff(dayjs(), 'days') : null;
+
+  // Detectar archivos temporales antiguos en modo creación
+  useEffect(() => {
+    if (modoCreacion && (archivos.archivos.length > 0 || links.links.length > 0)) {
+      // Verificar si hay archivos más viejos de 1 hora
+      const tieneArchivosAntiguos = archivos.archivos.some(archivo => {
+        const horasDesdeCreacion = dayjs().diff(dayjs(archivo.created_at), 'hours');
+        return horasDesdeCreacion > 1;
+      }) || links.links.some(link => {
+        const horasDesdeCreacion = dayjs().diff(dayjs(link.created_at), 'hours');
+        return horasDesdeCreacion > 1;
+      });
+
+      if (tieneArchivosAntiguos) {
+        setMostrarAdvertenciaViejos(true);
+      }
+    }
+  }, [modoCreacion, archivos.archivos, links.links]);
 
   // Consolidar todos los adjuntos en una lista única
   const todosAdjuntos = [
@@ -418,6 +437,50 @@ export function OrdenAdjuntosTab({
                 <p className="mt-1 text-xs text-gray-600">
                   Si cancelas sin guardar, los adjuntos se eliminarán automáticamente.
                 </p>
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Advertencia de archivos temporales antiguos */}
+      {mostrarAdvertenciaViejos && modoCreacion && (
+        <Card className="border-2 border-amber-300 bg-amber-50">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0" />
+            <div className="flex-1">
+              <h3 className="font-semibold text-gray-900 mb-2">
+                Archivos de sesión anterior detectados
+              </h3>
+              <p className="text-sm text-gray-700 mb-3">
+                Hay archivos de una sesión de creación anterior. Estos se eliminarán automáticamente en 24 horas.
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={async () => {
+                    try {
+                      await Promise.all([
+                        archivos.limpiarTemporales(),
+                        links.limpiarTemporales()
+                      ]);
+                      showSuccess('Archivos antiguos eliminados correctamente');
+                      setMostrarAdvertenciaViejos(false);
+                    } catch (err: any) {
+                      showError(err.message || 'Error al eliminar archivos antiguos');
+                    }
+                  }}
+                >
+                  Eliminar Ahora
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setMostrarAdvertenciaViejos(false)}
+                >
+                  Mantener
+                </Button>
               </div>
             </div>
           </div>
