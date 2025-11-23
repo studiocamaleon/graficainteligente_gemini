@@ -41,7 +41,7 @@ export function MedioCobroSelector({
 
   return (
     <div>
-      <Select value={value} onChange={(e) => onChange(e.target.value)} required={required} disabled={disabled}>
+      <Select value={value} onChange={onChange} required={required} disabled={disabled}>
         <option value="">Seleccionar medio de cobro...</option>
         {Object.entries(mediosPorTipo).map(([tipo, mediosDelTipo]) => (
           <optgroup key={tipo} label={getTipoLabel(tipo as TipoMedioCobro)}>
