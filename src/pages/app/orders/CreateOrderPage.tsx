@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, Loader2, AlertTriangle } from 'lucide-react';
+import { supabase } from '../../../lib/supabase';
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
 import { Tabs } from '../../../components/ui/Tabs';
@@ -18,9 +19,19 @@ import { OrdenRutasTab } from '../../../components/orders/OrdenRutasTab';
 import { OrdenHistorialTab } from '../../../components/orders/OrdenHistorialTab';
 import { OrdenAdjuntosTab } from '../../../components/orders/OrdenAdjuntosTab';
 import { OrdenFooterTotales } from '../../../components/orders/OrdenFooterTotales';
+import { PagoFormModal } from '../../../components/orders/PagoFormModal';
 import { useOrdenArchivos } from '../../../hooks/useOrdenArchivos';
 import { useOrdenLinks } from '../../../hooks/useOrdenLinks';
 import type { CanalVenta } from '../../../types/database';
+
+interface PagoTemporal {
+  id: string;
+  fecha_pago: string;
+  monto: number;
+  medio_cobro_id: string;
+  referencia_pago?: string;
+  notas?: string;
+}
 
 export function CreateOrderPage() {
   const navigate = useNavigate();
@@ -56,6 +67,11 @@ export function CreateOrderPage() {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [ordenCreada, setOrdenCreada] = useState(false);
 
+  // Estado para pagos
+  const [pagos, setPagos] = useState<PagoTemporal[]>([]);
+  const [showPagoForm, setShowPagoForm] = useState(false);
+  const [editingPago, setEditingPago] = useState<PagoTemporal | undefined>();
+
   const { updateStepComment, countAllComments } = useItemRoutesComments({
     items,
     setItems,
@@ -76,6 +92,9 @@ export function CreateOrderPage() {
     setDescuentoTotal(0);
     setFormErrors({});
     setOrdenCreada(false);
+    setPagos([]);
+    setShowPagoForm(false);
+    setEditingPago(undefined);
   };
 
   useEffect(() => {
@@ -175,6 +194,50 @@ export function CreateOrderPage() {
       iva,
       total,
     };
+  };
+
+  const calcularSaldoPendiente = () => {
+    const totales = calcularTotales();
+    const totalPagado = pagos.reduce((sum, p) => sum + p.monto, 0);
+    return totales.total - totalPagado;
+  };
+
+  // Funciones para gestión de pagos
+  const handleAgregarPago = () => {
+    setEditingPago(undefined);
+    setShowPagoForm(true);
+  };
+
+  const handleGuardarPago = (data: Omit<PagoTemporal, 'id'>) => {
+    if (editingPago) {
+      // Editar pago existente
+      setPagos(prev => prev.map(p =>
+        p.id === editingPago.id
+          ? { ...data, id: editingPago.id }
+          : p
+      ));
+      showSuccess('Pago actualizado correctamente');
+    } else {
+      // Agregar nuevo pago
+      const nuevoPago: PagoTemporal = {
+        ...data,
+        id: crypto.randomUUID(),
+      };
+      setPagos(prev => [...prev, nuevoPago]);
+      showSuccess('Pago registrado correctamente');
+    }
+    setShowPagoForm(false);
+    setEditingPago(undefined);
+  };
+
+  const handleEditarPago = (pago: PagoTemporal) => {
+    setEditingPago(pago);
+    setShowPagoForm(true);
+  };
+
+  const handleEliminarPago = (id: string) => {
+    setPagos(prev => prev.filter(p => p.id !== id));
+    showSuccess('Pago eliminado correctamente');
   };
 
   const validarFormulario = (): boolean => {
@@ -277,6 +340,32 @@ export function CreateOrderPage() {
                               (resultAsociacion.countProduccion || 0) +
                               (resultAsociacion.countLinks || 0);
 
+        // Insertar pagos si existen
+        if (pagos.length > 0) {
+          console.log('[CreateOrderPage] Insertando pagos:', pagos.length);
+
+          const pagosInserts = pagos.map(pago => ({
+            orden_id: result.id,
+            fecha_pago: pago.fecha_pago,
+            monto: pago.monto,
+            medio_cobro_id: pago.medio_cobro_id,
+            referencia_pago: pago.referencia_pago || null,
+            notas: pago.notas || null,
+            created_by: profile.id,
+          }));
+
+          const { error: pagosError } = await supabase
+            .from('ordenes_trabajo_pagos')
+            .insert(pagosInserts);
+
+          if (pagosError) {
+            console.error('[CreateOrderPage] Error insertando pagos:', pagosError);
+            showError('Orden creada pero hubo un error al registrar los pagos');
+          } else {
+            console.log('[CreateOrderPage] Pagos insertados exitosamente');
+          }
+        }
+
         // Limpiar sessionStorage
         sessionStorage.removeItem('ordenTemporalCreacion');
 
@@ -286,11 +375,21 @@ export function CreateOrderPage() {
         console.log('[CreateOrderPage] Orden creada exitosamente, cleanup permanentemente deshabilitado');
 
         // Mostrar mensaje de éxito
-        if (totalAdjuntos > 0) {
-          showSuccess(`Orden creada exitosamente con ${totalAdjuntos} adjunto(s)`);
-        } else {
-          showSuccess('Orden creada exitosamente');
+        const saldoPendiente = calcularSaldoPendiente();
+        let mensajeExito = 'Orden creada exitosamente';
+
+        if (pagos.length > 0) {
+          mensajeExito += ` con ${pagos.length} pago(s) registrado(s)`;
+          if (saldoPendiente > 0) {
+            mensajeExito += ` (Saldo pendiente: $${saldoPendiente.toFixed(2)})`;
+          }
         }
+
+        if (totalAdjuntos > 0) {
+          mensajeExito += ` y ${totalAdjuntos} adjunto(s)`;
+        }
+
+        showSuccess(mensajeExito);
 
         // Navegar
         setTimeout(() => {
@@ -338,7 +437,8 @@ export function CreateOrderPage() {
     {
       id: 'pagos',
       label: 'Pagos',
-      disabled: true,
+      count: pagos.length,
+      disabled: false,
     },
     {
       id: 'historial',
@@ -412,9 +512,11 @@ export function CreateOrderPage() {
           <div className={activeTab === 'pagos' ? 'block' : 'hidden'}>
             <OrdenPagosTab
               totales={totales}
-              pagos={[]}
-              onAgregarPago={() => {}}
-              readOnly={true}
+              pagos={pagos}
+              onAgregarPago={handleAgregarPago}
+              onEditarPago={handleEditarPago}
+              onEliminarPago={handleEliminarPago}
+              readOnly={false}
             />
           </div>
 
@@ -446,8 +548,21 @@ export function CreateOrderPage() {
           iva={totales.iva}
           total={totales.total}
           requiereFactura={requiereFactura}
+          totalPagado={pagos.reduce((sum, p) => sum + p.monto, 0)}
+          mostrarSaldo={pagos.length > 0}
         />
       </div>
+
+      <PagoFormModal
+        isOpen={showPagoForm}
+        onClose={() => {
+          setShowPagoForm(false);
+          setEditingPago(undefined);
+        }}
+        onSubmit={handleGuardarPago}
+        saldoPendiente={calcularSaldoPendiente()}
+        pago={editingPago}
+      />
 
       <ConfirmDialog
         isOpen={isPromptOpen}
