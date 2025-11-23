@@ -6,7 +6,6 @@ import { supabase } from '../lib/supabase';
  */
 export async function limpiarArchivosTemporalesAntiguos() {
   try {
-    console.log('[Cleanup] Iniciando limpieza de archivos temporales antiguos...');
 
     const { data, error } = await supabase.rpc(
       'fn_limpiar_adjuntos_temporales_antiguos'
@@ -66,7 +65,6 @@ export async function limpiarArchivosTemporalesAntiguos() {
           stats
         };
       } else {
-        console.log('[Cleanup] No hay archivos temporales antiguos para eliminar');
         return {
           success: true,
           totalEliminados: 0
@@ -93,7 +91,6 @@ export async function limpiarArchivosTemporalesAntiguos() {
  * - Programa limpieza cada 6 horas
  */
 export function iniciarLimpiezaAutomatica() {
-  console.log('[Cleanup] Sistema de limpieza automática iniciado');
 
   // Ejecutar limpieza inmediata al cargar la app
   limpiarArchivosTemporalesAntiguos();
@@ -102,13 +99,11 @@ export function iniciarLimpiezaAutomatica() {
   const INTERVALO_6_HORAS = 6 * 60 * 60 * 1000; // 6 horas en milisegundos
 
   const intervalId = setInterval(() => {
-    console.log('[Cleanup] Ejecutando limpieza programada...');
     limpiarArchivosTemporalesAntiguos();
   }, INTERVALO_6_HORAS);
 
   // Retornar función para detener limpieza (si se necesita)
   return () => {
-    console.log('[Cleanup] Sistema de limpieza automática detenido');
     clearInterval(intervalId);
   };
 }

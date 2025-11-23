@@ -50,10 +50,7 @@ export function useOrdenArchivos(params: string | UseOrdenArchivosParams) {
 
   // Cargar archivos
   const loadArchivos = useCallback(async () => {
-    console.log('[useOrdenArchivos] loadArchivos llamado:', { ordenId, ordenTemporalId, modoTemporal });
-
     if (!ordenId && !ordenTemporalId) {
-      console.log('[useOrdenArchivos] No hay ordenId ni ordenTemporalId, saliendo early');
       setLoading(false);
       return;
     }
@@ -61,7 +58,6 @@ export function useOrdenArchivos(params: string | UseOrdenArchivosParams) {
     try {
       setLoading(true);
       setError(null);
-      console.log('[useOrdenArchivos] Iniciando carga...');
 
       let query = supabase
         .from('ordenes_trabajo_archivos')
@@ -71,10 +67,8 @@ export function useOrdenArchivos(params: string | UseOrdenArchivosParams) {
         `);
 
       if (modoTemporal && ordenTemporalId) {
-        console.log('[useOrdenArchivos] Modo temporal, filtrando por ordenTemporalId:', ordenTemporalId);
         query = query.eq('orden_temporal_id', ordenTemporalId);
       } else if (ordenId) {
-        console.log('[useOrdenArchivos] Modo normal, filtrando por ordenId:', ordenId);
         query = query.eq('orden_id', ordenId);
       }
 
@@ -82,7 +76,6 @@ export function useOrdenArchivos(params: string | UseOrdenArchivosParams) {
 
       if (fetchError) throw fetchError;
 
-      console.log('[useOrdenArchivos] Archivos cargados:', data?.length || 0);
       setArchivos(data || []);
 
       // Calcular tamaño total
@@ -92,7 +85,6 @@ export function useOrdenArchivos(params: string | UseOrdenArchivosParams) {
       console.error('[useOrdenArchivos] Error loading archivos:', err);
       setError(err.message);
     } finally {
-      console.log('[useOrdenArchivos] Finalizando carga, setLoading(false)');
       setLoading(false);
     }
   }, [ordenId, ordenTemporalId, modoTemporal]);
@@ -438,8 +430,107 @@ export function useOrdenArchivos(params: string | UseOrdenArchivosParams) {
         links: resultado.links_asociados
       });
 
-      // La función SQL ya mueve los archivos en storage automáticamente
-      // No necesitamos hacer nada más
+      // IMPORTANTE: Mover archivos físicos en storage
+      // La función SQL actualiza BD pero NO mueve archivos físicos
+      const totalArchivos = resultado.archivos_asociados + resultado.archivos_produccion_asociados;
+
+      if (totalArchivos > 0) {
+        console.log(`[asociarConOrden] Moviendo ${totalArchivos} archivos físicos en storage...`);
+
+        try {
+          // Mover archivos de cliente
+          if (resultado.archivos_asociados > 0) {
+            const { data: archivosCliente } = await supabase
+              .from('ordenes_trabajo_archivos')
+              .select('id, nombre_storage, storage_path')
+              .eq('orden_id', ordenIdReal)
+              .eq('company_id', efectivoCompanyId);
+
+            if (archivosCliente && archivosCliente.length > 0) {
+              for (const archivo of archivosCliente) {
+                const oldPath = `${efectivoCompanyId}/temporal/${efectivoTempId}/${archivo.nombre_storage}`;
+                const newPath = archivo.storage_path;
+
+                console.log(`[asociarConOrden] Moviendo: ${oldPath} → ${newPath}`);
+
+                // Descargar archivo temporal
+                const { data: fileData, error: downloadError } = await supabase.storage
+                  .from(BUCKET_NAME)
+                  .download(oldPath);
+
+                if (downloadError) {
+                  console.error(`[asociarConOrden] Error descargando ${oldPath}:`, downloadError);
+                  continue;
+                }
+
+                // Subir a ubicación final
+                const { error: uploadError } = await supabase.storage
+                  .from(BUCKET_NAME)
+                  .upload(newPath, fileData, { upsert: true });
+
+                if (uploadError) {
+                  console.error(`[asociarConOrden] Error subiendo ${newPath}:`, uploadError);
+                  continue;
+                }
+
+                // Eliminar archivo temporal
+                await supabase.storage
+                  .from(BUCKET_NAME)
+                  .remove([oldPath]);
+
+                console.log(`[asociarConOrden] ✅ Movido: ${archivo.nombre_storage}`);
+              }
+            }
+          }
+
+          // Mover archivos de producción
+          if (resultado.archivos_produccion_asociados > 0) {
+            const { data: archivosProduccion } = await supabase
+              .from('ordenes_trabajo_archivos_produccion')
+              .select('id, nombre_storage, storage_path')
+              .eq('orden_id', ordenIdReal)
+              .eq('company_id', efectivoCompanyId);
+
+            if (archivosProduccion && archivosProduccion.length > 0) {
+              for (const archivo of archivosProduccion) {
+                const oldPath = `${efectivoCompanyId}/temporal/${efectivoTempId}/${archivo.nombre_storage}`;
+                const newPath = archivo.storage_path;
+
+                console.log(`[asociarConOrden] Moviendo producción: ${oldPath} → ${newPath}`);
+
+                const { data: fileData, error: downloadError } = await supabase.storage
+                  .from(BUCKET_NAME)
+                  .download(oldPath);
+
+                if (downloadError) {
+                  console.error(`[asociarConOrden] Error descargando producción ${oldPath}:`, downloadError);
+                  continue;
+                }
+
+                const { error: uploadError } = await supabase.storage
+                  .from(BUCKET_NAME)
+                  .upload(newPath, fileData, { upsert: true });
+
+                if (uploadError) {
+                  console.error(`[asociarConOrden] Error subiendo producción ${newPath}:`, uploadError);
+                  continue;
+                }
+
+                await supabase.storage
+                  .from(BUCKET_NAME)
+                  .remove([oldPath]);
+
+                console.log(`[asociarConOrden] ✅ Movido producción: ${archivo.nombre_storage}`);
+              }
+            }
+          }
+
+          console.log(`[asociarConOrden] ✅ Todos los archivos físicos movidos exitosamente`);
+        } catch (moveError) {
+          console.error('[asociarConOrden] Error moviendo archivos físicos:', moveError);
+          // No lanzar error, la asociación en BD ya está hecha
+        }
+      }
 
       return {
         success: true,

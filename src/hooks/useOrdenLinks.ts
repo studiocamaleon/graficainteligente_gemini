@@ -45,10 +45,7 @@ export function useOrdenLinks(params: string | UseOrdenLinksParams) {
 
   // Cargar links
   const loadLinks = useCallback(async () => {
-    console.log('[useOrdenLinks] loadLinks llamado:', { ordenId, ordenTemporalId, modoTemporal });
-
     if (!ordenId && !ordenTemporalId) {
-      console.log('[useOrdenLinks] No hay ordenId ni ordenTemporalId, saliendo early');
       setLoading(false);
       return;
     }
@@ -56,7 +53,6 @@ export function useOrdenLinks(params: string | UseOrdenLinksParams) {
     try {
       setLoading(true);
       setError(null);
-      console.log('[useOrdenLinks] Iniciando carga...');
 
       let query = supabase
         .from('ordenes_trabajo_links')
@@ -66,10 +62,8 @@ export function useOrdenLinks(params: string | UseOrdenLinksParams) {
         `);
 
       if (modoTemporal && ordenTemporalId) {
-        console.log('[useOrdenLinks] Modo temporal, filtrando por ordenTemporalId:', ordenTemporalId);
         query = query.eq('orden_temporal_id', ordenTemporalId);
       } else if (ordenId) {
-        console.log('[useOrdenLinks] Modo normal, filtrando por ordenId:', ordenId);
         query = query.eq('orden_id', ordenId);
       }
 
@@ -77,13 +71,11 @@ export function useOrdenLinks(params: string | UseOrdenLinksParams) {
 
       if (fetchError) throw fetchError;
 
-      console.log('[useOrdenLinks] Links cargados:', data?.length || 0);
       setLinks(data || []);
     } catch (err: any) {
       console.error('[useOrdenLinks] Error loading links:', err);
       setError(err.message);
     } finally {
-      console.log('[useOrdenLinks] Finalizando carga, setLoading(false)');
       setLoading(false);
     }
   }, [ordenId, ordenTemporalId, modoTemporal]);

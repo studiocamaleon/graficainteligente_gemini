@@ -35,13 +35,11 @@ export function CreateOrderPage() {
     const existingId = sessionStorage.getItem('ordenTemporalCreacion');
 
     if (existingId) {
-      console.log('[CreateOrderPage] Recuperando sesión temporal:', existingId);
       return existingId;
     }
 
     // Si no existe, generar nuevo UUID
     const newId = crypto.randomUUID();
-    console.log('[CreateOrderPage] Nueva sesión temporal:', newId);
     sessionStorage.setItem('ordenTemporalCreacion', newId);
     return newId;
   });
@@ -122,18 +120,14 @@ export function CreateOrderPage() {
       // 1. La orden NO fue creada exitosamente
       // 2. NO estamos en proceso de crear la orden
       if (!ordenCreada && !isCreatingOrderRef.current) {
-        console.log('[Cleanup] Componente desmontado sin crear orden, limpiando temporales...');
         Promise.all([
           archivosTemp.limpiarTemporales(),
           linksTemp.limpiarTemporales()
         ]).then(() => {
           sessionStorage.removeItem('ordenTemporalCreacion');
-          console.log('[Cleanup] Archivos temporales limpiados al desmontar');
         }).catch(err => {
           console.error('[Cleanup] Error limpiando al desmontar:', err);
         });
-      } else {
-        console.log('[Cleanup] Skipping cleanup:', { ordenCreada, isCreatingOrder: isCreatingOrderRef.current });
       }
     };
   }, []);

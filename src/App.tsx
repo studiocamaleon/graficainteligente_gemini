@@ -135,11 +135,18 @@ function AppRoutes() {
 
 function App() {
   useEffect(() => {
+    // Guard para React Strict Mode (evitar doble ejecución)
+    let isSubscribed = true;
+    let detenerLimpieza: (() => void) | undefined;
+
     // Iniciar sistema de limpieza automática de archivos temporales
-    const detenerLimpieza = iniciarLimpiezaAutomatica();
+    if (isSubscribed) {
+      detenerLimpieza = iniciarLimpiezaAutomatica();
+    }
 
     // Cleanup al desmontar la app
     return () => {
+      isSubscribed = false;
       if (detenerLimpieza) {
         detenerLimpieza();
       }
