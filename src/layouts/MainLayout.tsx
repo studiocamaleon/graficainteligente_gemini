@@ -33,7 +33,6 @@ function MainLayoutContent({ children }: MainLayoutProps) {
 
   const handleSignOut = async () => {
     await signOut();
-    navigate('/');
   };
 
   const isActive = (path: string) => location.pathname === path;
