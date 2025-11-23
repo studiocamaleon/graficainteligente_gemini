@@ -363,14 +363,24 @@ export function OrderDetailPage() {
                       }
                     }
 
-                    // Extraer servicios seleccionados
+                    // Extraer servicios seleccionados (con nivel si existe)
                     const servicios = config.servicios_seleccionados && Array.isArray(config.servicios_seleccionados)
-                      ? config.servicios_seleccionados.map((s: any) => s.nombre).join(', ')
+                      ? config.servicios_seleccionados.map((s: any) => {
+                          if (s.nivel) {
+                            return `${s.nombre} (${s.nivel})`;
+                          }
+                          return s.nombre;
+                        }).join(', ')
                       : null;
 
-                    // Extraer acabados seleccionados
+                    // Extraer acabados seleccionados (con nivel si existe)
                     const acabados = config.acabados_seleccionados && Array.isArray(config.acabados_seleccionados)
-                      ? config.acabados_seleccionados.map((a: any) => a.nombre).join(', ')
+                      ? config.acabados_seleccionados.map((a: any) => {
+                          if (a.nivel) {
+                            return `${a.nombre} (${a.nivel})`;
+                          }
+                          return a.nombre;
+                        }).join(', ')
                       : null;
 
                     return (
