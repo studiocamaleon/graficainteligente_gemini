@@ -311,7 +311,7 @@ export function useOrdenLinks(params: string | UseOrdenLinksParams) {
     const efectivoTempId = tempId || ordenTemporalId;
     const efectivoCompanyId = companyId || profile?.company_id;
 
-    console.log('[useOrdenLinks.asociarConOrden] Iniciando asociación con parámetros:', {
+    console.log('[useOrdenLinks.asociarConOrden] Iniciando asociación con función SQL:', {
       ordenIdReal,
       tempId: efectivoTempId,
       companyId: efectivoCompanyId,
@@ -331,35 +331,38 @@ export function useOrdenLinks(params: string | UseOrdenLinksParams) {
     }
 
     try {
-      const { error } = await supabase
-        .from('ordenes_trabajo_links')
-        .update({
-          orden_id: ordenIdReal,
-          orden_temporal_id: null,
-          temporal_creado_en: null
-        })
-        .eq('orden_temporal_id', efectivoTempId)
-        .eq('company_id', efectivoCompanyId);
+      // Usar función SQL con SECURITY DEFINER (bypass RLS automático)
+      // La misma función maneja archivos, archivos de producción y links
+      console.log('[useOrdenLinks.asociarConOrden] Llamando fn_asociar_adjuntos_temporales...');
 
-      if (error) {
-        console.error('[useOrdenLinks.asociarConOrden] Error en UPDATE:', error);
-        throw error;
+      const { data, error: rpcError } = await supabase
+        .rpc('fn_asociar_adjuntos_temporales', {
+          p_orden_temporal_id: efectivoTempId,
+          p_orden_id: ordenIdReal,
+          p_company_id: efectivoCompanyId
+        });
+
+      if (rpcError) {
+        console.error('[useOrdenLinks.asociarConOrden] Error en función SQL:', rpcError);
+        throw rpcError;
       }
 
-      const { count, error: countError } = await supabase
-        .from('ordenes_trabajo_links')
-        .select('*', { count: 'exact', head: true })
-        .eq('orden_id', ordenIdReal);
+      const resultado = data?.[0] || { archivos_asociados: 0, archivos_produccion_asociados: 0, links_asociados: 0 };
 
-      if (countError) {
-        console.error('[useOrdenLinks.asociarConOrden] Error contando links:', countError);
-      }
+      console.log('[useOrdenLinks.asociarConOrden] Resultado de función SQL:', {
+        archivos: resultado.archivos_asociados,
+        archivosProduccion: resultado.archivos_produccion_asociados,
+        links: resultado.links_asociados
+      });
 
-      console.log(`[useOrdenLinks.asociarConOrden] ${count || 0} links asociados en BD`);
-
-      return { success: true, count: count || 0 };
+      return {
+        success: true,
+        count: resultado.links_asociados,
+        countArchivos: resultado.archivos_asociados,
+        countProduccion: resultado.archivos_produccion_asociados
+      };
     } catch (err: any) {
-      console.error('[useOrdenLinks.asociarConOrden] Error asociando links:', err);
+      console.error('[useOrdenLinks.asociarConOrden] ERROR:', err);
       throw err;
     }
   };

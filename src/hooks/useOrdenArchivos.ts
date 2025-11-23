@@ -345,7 +345,7 @@ export function useOrdenArchivos(params: string | UseOrdenArchivosParams) {
     const efectivoTempId = tempId || ordenTemporalId;
     const efectivoCompanyId = companyId || profile?.company_id;
 
-    console.log('[asociarConOrden] Iniciando asociación con parámetros:', {
+    console.log('[asociarConOrden] Iniciando asociación con función SQL:', {
       ordenIdReal,
       tempId: efectivoTempId,
       companyId: efectivoCompanyId,
@@ -370,54 +370,40 @@ export function useOrdenArchivos(params: string | UseOrdenArchivosParams) {
     }
 
     try {
-      // PASO 1: Actualizar BD PRIMERO (crítico, debe funcionar)
-      console.log('[asociarConOrden] Actualizando BD para orden:', ordenIdReal);
+      // Usar función SQL con SECURITY DEFINER (bypass RLS automático)
+      console.log('[asociarConOrden] Llamando fn_asociar_adjuntos_temporales...');
 
-      const { error: updateError } = await supabase
-        .from('ordenes_trabajo_archivos')
-        .update({
-          orden_id: ordenIdReal,
-          orden_temporal_id: null,
-          temporal_creado_en: null
-        })
-        .eq('orden_temporal_id', efectivoTempId)
-        .eq('company_id', efectivoCompanyId);
+      const { data, error: rpcError } = await supabase
+        .rpc('fn_asociar_adjuntos_temporales', {
+          p_orden_temporal_id: efectivoTempId,
+          p_orden_id: ordenIdReal,
+          p_company_id: efectivoCompanyId
+        });
 
-      if (updateError) {
-        console.error('[asociarConOrden] Error en UPDATE:', updateError);
-        throw updateError;
+      if (rpcError) {
+        console.error('[asociarConOrden] Error en función SQL:', rpcError);
+        throw rpcError;
       }
 
-      // Contar archivos actualizados
-      const { count, error: countError } = await supabase
-        .from('ordenes_trabajo_archivos')
-        .select('*', { count: 'exact', head: true })
-        .eq('orden_id', ordenIdReal);
+      const resultado = data?.[0] || { archivos_asociados: 0, archivos_produccion_asociados: 0, links_asociados: 0 };
 
-      if (countError) {
-        console.error('[asociarConOrden] Error contando archivos:', countError);
-      }
+      console.log('[asociarConOrden] Resultado de función SQL:', {
+        archivos: resultado.archivos_asociados,
+        archivosProduccion: resultado.archivos_produccion_asociados,
+        links: resultado.links_asociados
+      });
 
-      console.log(`[asociarConOrden] ${count || 0} archivos asociados en BD`);
+      // La función SQL ya mueve los archivos en storage automáticamente
+      // No necesitamos hacer nada más
 
-      // PASO 2: Obtener archivos para mover en storage (background)
-      const { data: archivos } = await supabase
-        .from('ordenes_trabajo_archivos')
-        .select('id, storage_path')
-        .eq('orden_id', ordenIdReal);
-
-      // PASO 3: Mover archivos en storage (no bloquea, background)
-      if (archivos && archivos.length > 0) {
-        moverArchivosEnStorage(archivos, efectivoTempId, ordenIdReal, BUCKET_NAME)
-          .catch(err => {
-            console.error('[WARNING] Error moviendo archivos en storage:', err);
-            // No lanzar - archivos ya visibles en BD
-          });
-      }
-
-      return { success: true, count: count || 0 };
+      return {
+        success: true,
+        count: resultado.archivos_asociados,
+        countProduccion: resultado.archivos_produccion_asociados,
+        countLinks: resultado.links_asociados
+      };
     } catch (err: any) {
-      console.error('[ERROR] Error asociando archivos:', err);
+      console.error('[asociarConOrden] ERROR:', err);
       throw err;
     }
   };

@@ -251,15 +251,25 @@ export function CreateOrderPage() {
       console.log('[CreateOrderPage] Orden creada exitosamente:', result.id);
 
       try {
-        console.log('[CreateOrderPage] Iniciando asociación de adjuntos...');
+        console.log('[CreateOrderPage] Iniciando asociación de adjuntos con función SQL...');
 
-        // Asociar adjuntos temporales con la orden real - PASAR PARÁMETROS EXPLÍCITOS
-        const [resultArchivos, resultLinks] = await Promise.all([
-          archivosTemp.asociarConOrden(result.id, ordenTemporalId, profile.company_id),
-          linksTemp.asociarConOrden(result.id, ordenTemporalId, profile.company_id)
-        ]);
+        // La función SQL maneja todo: archivos + links + archivos producción
+        // Solo necesitamos llamarla una vez desde cualquier hook
+        const resultAsociacion = await archivosTemp.asociarConOrden(
+          result.id,
+          ordenTemporalId,
+          profile.company_id
+        );
 
-        console.log(`[CreateOrderPage] Adjuntos asociados exitosamente: ${resultArchivos.count} archivos, ${resultLinks.count} links`);
+        console.log('[CreateOrderPage] Adjuntos asociados exitosamente:', {
+          archivos: resultAsociacion.count,
+          archivosProduccion: resultAsociacion.countProduccion,
+          links: resultAsociacion.countLinks
+        });
+
+        const totalAdjuntos = (resultAsociacion.count || 0) +
+                              (resultAsociacion.countProduccion || 0) +
+                              (resultAsociacion.countLinks || 0);
 
         // Limpiar sessionStorage
         sessionStorage.removeItem('ordenTemporalCreacion');
@@ -268,7 +278,11 @@ export function CreateOrderPage() {
         setOrdenCreada(true);
 
         // Mostrar mensaje de éxito
-        showSuccess('Orden creada exitosamente');
+        if (totalAdjuntos > 0) {
+          showSuccess(`Orden creada exitosamente con ${totalAdjuntos} adjunto(s)`);
+        } else {
+          showSuccess('Orden creada exitosamente');
+        }
 
         // Navegar
         setTimeout(() => {
