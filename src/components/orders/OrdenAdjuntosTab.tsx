@@ -557,17 +557,48 @@ export function OrdenAdjuntosTab({
           </select>
         </div>
 
-        <div className="flex gap-2 ml-auto">
-          <Button onClick={() => fileInputRef.current?.click()} disabled={archivos.availableSpace <= 0}>
-            <Upload className="w-4 h-4 mr-2" />
-            Archivo Cliente
-          </Button>
+        <div className="flex gap-3 ml-auto items-center">
+          <div className="flex flex-col items-end">
+            <Button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={archivos.availableSpace <= 0 || archivos.uploading}
+            >
+              {archivos.uploading ? (
+                <>
+                  <Loader className="w-4 h-4 mr-2 animate-spin" />
+                  Subiendo...
+                </>
+              ) : (
+                <>
+                  <Upload className="w-4 h-4 mr-2" />
+                  Adjuntar
+                </>
+              )}
+            </Button>
+            <span className="text-xs text-gray-500 mt-1">Archivos del cliente</span>
+          </div>
 
           {archivosProduccion.canUpload && !modoCreacion && (
-            <Button onClick={() => fileProduccionInputRef.current?.click()} variant="outline">
-              <Settings className="w-4 h-4 mr-2" />
-              Archivo Producción
-            </Button>
+            <div className="flex flex-col items-end">
+              <Button
+                onClick={() => fileProduccionInputRef.current?.click()}
+                variant="outline"
+                disabled={archivosProduccion.uploading}
+              >
+                {archivosProduccion.uploading ? (
+                  <>
+                    <Loader className="w-4 h-4 mr-2 animate-spin" />
+                    Subiendo...
+                  </>
+                ) : (
+                  <>
+                    <Settings className="w-4 h-4 mr-2" />
+                    Archivo Producción
+                  </>
+                )}
+              </Button>
+              <span className="text-xs text-gray-500 mt-1">Listos para producir</span>
+            </div>
           )}
 
           <Button onClick={() => setShowAddLink(true)} variant="outline">
@@ -1038,7 +1069,7 @@ export function OrdenAdjuntosTab({
             label="URL"
             value={linkForm.url}
             onChange={(e) => setLinkForm({ ...linkForm, url: e.target.value })}
-            placeholder="https://wetransfer.com/..."
+            placeholder="ejemplo.com o https://ejemplo.com/archivo"
             required
           />
           <Input
@@ -1080,6 +1111,7 @@ export function OrdenAdjuntosTab({
             label="URL"
             value={linkForm.url}
             onChange={(e) => setLinkForm({ ...linkForm, url: e.target.value })}
+            placeholder="ejemplo.com o https://ejemplo.com/archivo"
             required
           />
           <Input

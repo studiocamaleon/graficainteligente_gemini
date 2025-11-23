@@ -92,32 +92,42 @@ export function useOrdenLinks(params: string | UseOrdenLinksParams) {
     loadLinks();
   }, [ordenId, ordenTemporalId]);
 
-  // Validar URL
+  // Validar URL - Aceptar cualquier URL válida
   const validateUrl = (url: string): { valid: boolean; error?: string } => {
+    // Si está vacío, no es válido
+    if (!url || !url.trim()) {
+      return {
+        valid: false,
+        error: 'La URL no puede estar vacía'
+      };
+    }
+
+    const trimmedUrl = url.trim();
+
+    // Si no tiene protocolo, intentar agregarlo
+    let urlToValidate = trimmedUrl;
+    if (!trimmedUrl.includes('://')) {
+      urlToValidate = 'https://' + trimmedUrl;
+    }
+
     try {
-      const urlObj = new URL(url);
+      // Intentar crear objeto URL para validar formato básico
+      const urlObj = new URL(urlToValidate);
 
-      // Verificar que sea http o https
-      if (!['http:', 'https:'].includes(urlObj.protocol)) {
+      // Verificar que tenga al menos un hostname
+      if (!urlObj.hostname) {
         return {
           valid: false,
-          error: 'La URL debe comenzar con http:// o https://'
+          error: 'URL inválida. Debe incluir un dominio.'
         };
       }
 
-      // Verificar que tenga un dominio válido
-      if (!urlObj.hostname || urlObj.hostname.length < 3) {
-        return {
-          valid: false,
-          error: 'URL inválida. Debe incluir un dominio válido.'
-        };
-      }
-
+      // Aceptar cualquier protocolo común (http, https, ftp, file, etc.)
       return { valid: true };
     } catch {
       return {
         valid: false,
-        error: 'URL inválida. Formato correcto: https://ejemplo.com/archivo'
+        error: 'URL inválida. Ejemplo: https://ejemplo.com o ejemplo.com'
       };
     }
   };
@@ -138,13 +148,19 @@ export function useOrdenLinks(params: string | UseOrdenLinksParams) {
       throw new Error(validation.error);
     }
 
+    // Normalizar URL: agregar https:// si no tiene protocolo
+    let normalizedUrl = linkData.url.trim();
+    if (!normalizedUrl.includes('://')) {
+      normalizedUrl = 'https://' + normalizedUrl;
+    }
+
     try {
       setError(null);
 
       const insertData: any = {
         company_id: profile.company_id,
         titulo: linkData.titulo.trim(),
-        url: linkData.url.trim(),
+        url: normalizedUrl,
         descripcion: linkData.descripcion?.trim() || null,
         created_by: profile.id
       };
@@ -180,7 +196,7 @@ export function useOrdenLinks(params: string | UseOrdenLinksParams) {
     try {
       setError(null);
 
-      // Si se actualiza la URL, validarla
+      // Si se actualiza la URL, validarla y normalizarla
       if (updates.url) {
         const validation = validateUrl(updates.url);
         if (!validation.valid) {
@@ -190,7 +206,14 @@ export function useOrdenLinks(params: string | UseOrdenLinksParams) {
 
       const updateData: any = {};
       if (updates.titulo !== undefined) updateData.titulo = updates.titulo.trim();
-      if (updates.url !== undefined) updateData.url = updates.url.trim();
+      if (updates.url !== undefined) {
+        // Normalizar URL: agregar https:// si no tiene protocolo
+        let normalizedUrl = updates.url.trim();
+        if (!normalizedUrl.includes('://')) {
+          normalizedUrl = 'https://' + normalizedUrl;
+        }
+        updateData.url = normalizedUrl;
+      }
       if (updates.descripcion !== undefined) {
         updateData.descripcion = updates.descripcion?.trim() || null;
       }
