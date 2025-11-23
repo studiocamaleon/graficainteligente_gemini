@@ -8,7 +8,8 @@ const BUCKET_NAME = 'orden-trabajo-archivos';
 
 interface Archivo {
   id: string;
-  orden_id: string;
+  orden_id: string | null;
+  orden_temporal_id: string | null;
   company_id: string;
   nombre_archivo: string;
   nombre_storage: string;
@@ -28,7 +29,17 @@ interface UploadArchivoData {
   descripcion?: string;
 }
 
-export function useOrdenArchivos(ordenId: string) {
+interface UseOrdenArchivosParams {
+  ordenId?: string;
+  ordenTemporalId?: string;
+}
+
+export function useOrdenArchivos(params: string | UseOrdenArchivosParams) {
+  // Soportar tanto string legacy como objeto nuevo
+  const ordenId = typeof params === 'string' ? params : params.ordenId;
+  const ordenTemporalId = typeof params === 'string' ? undefined : params.ordenTemporalId;
+  const modoTemporal = !!ordenTemporalId && !ordenId;
+
   const [archivos, setArchivos] = useState<Archivo[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -39,20 +50,26 @@ export function useOrdenArchivos(ordenId: string) {
 
   // Cargar archivos
   const loadArchivos = async () => {
-    if (!ordenId) return;
+    if (!ordenId && !ordenTemporalId) return;
 
     try {
       setLoading(true);
       setError(null);
 
-      const { data, error: fetchError } = await supabase
+      let query = supabase
         .from('ordenes_trabajo_archivos')
         .select(`
           *,
           uploader:uploaded_by(nombre_completo)
-        `)
-        .eq('orden_id', ordenId)
-        .order('created_at', { ascending: false });
+        `);
+
+      if (modoTemporal && ordenTemporalId) {
+        query = query.eq('orden_temporal_id', ordenTemporalId);
+      } else if (ordenId) {
+        query = query.eq('orden_id', ordenId);
+      }
+
+      const { data, error: fetchError } = await query.order('created_at', { ascending: false });
 
       if (fetchError) throw fetchError;
 
@@ -71,7 +88,7 @@ export function useOrdenArchivos(ordenId: string) {
 
   useEffect(() => {
     loadArchivos();
-  }, [ordenId]);
+  }, [ordenId, ordenTemporalId]);
 
   // Obtener espacio disponible
   const getAvailableSpace = () => {
@@ -144,6 +161,10 @@ export function useOrdenArchivos(ordenId: string) {
       throw new Error('No se pudo obtener el ID de la empresa');
     }
 
+    if (!ordenId && !ordenTemporalId) {
+      throw new Error('Se requiere ordenId u ordenTemporalId');
+    }
+
     // Validar archivo
     const validation = validateFile(file);
     if (!validation.valid) {
@@ -158,7 +179,11 @@ export function useOrdenArchivos(ordenId: string) {
       // Generar nombre único para storage
       const fileExt = file.name.split('.').pop();
       const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
-      const storagePath = `${profile.company_id}/${ordenId}/${fileName}`;
+
+      // Path diferente para temporal vs definitivo
+      const storagePath = modoTemporal && ordenTemporalId
+        ? `${profile.company_id}/temporal/${ordenTemporalId}/${fileName}`
+        : `${profile.company_id}/${ordenId}/${fileName}`;
 
       // Subir a storage
       const { error: uploadError } = await supabase.storage
@@ -173,19 +198,28 @@ export function useOrdenArchivos(ordenId: string) {
       setUploadProgress(50);
 
       // Crear registro en base de datos
+      const insertData: any = {
+        company_id: profile.company_id,
+        nombre_archivo: file.name,
+        nombre_storage: fileName,
+        tipo_mime: file.type || 'application/octet-stream',
+        tamano_bytes: file.size,
+        storage_path: storagePath,
+        descripcion: descripcion || null,
+        uploaded_by: profile.id
+      };
+
+      // Agregar orden_id o orden_temporal_id según el modo
+      if (modoTemporal && ordenTemporalId) {
+        insertData.orden_temporal_id = ordenTemporalId;
+        insertData.temporal_creado_en = new Date().toISOString();
+      } else {
+        insertData.orden_id = ordenId;
+      }
+
       const { data, error: dbError } = await supabase
         .from('ordenes_trabajo_archivos')
-        .insert({
-          orden_id: ordenId,
-          company_id: profile.company_id,
-          nombre_archivo: file.name,
-          nombre_storage: fileName,
-          tipo_mime: file.type || 'application/octet-stream',
-          tamano_bytes: file.size,
-          storage_path: storagePath,
-          descripcion: descripcion || null,
-          uploaded_by: profile.id
-        })
+        .insert(insertData)
         .select()
         .single();
 
@@ -274,6 +308,103 @@ export function useOrdenArchivos(ordenId: string) {
     }
   };
 
+  // Asociar archivos temporales con orden real
+  const asociarConOrden = async (ordenIdReal: string) => {
+    if (!ordenTemporalId || !profile?.company_id) {
+      throw new Error('No hay archivos temporales para asociar');
+    }
+
+    try {
+      // Primero, obtener todos los archivos temporales
+      const { data: archivosTemporales } = await supabase
+        .from('ordenes_trabajo_archivos')
+        .select('*')
+        .eq('orden_temporal_id', ordenTemporalId)
+        .eq('company_id', profile.company_id);
+
+      if (!archivosTemporales || archivosTemporales.length === 0) {
+        return { success: true, count: 0 };
+      }
+
+      // Mover cada archivo en storage
+      for (const archivo of archivosTemporales) {
+        const oldPath = archivo.storage_path;
+        const newPath = oldPath.replace(`/temporal/${ordenTemporalId}`, `/${ordenIdReal}`);
+
+        // Copiar archivo a nueva ubicación
+        const { data: fileData } = await supabase.storage
+          .from(BUCKET_NAME)
+          .download(oldPath);
+
+        if (fileData) {
+          await supabase.storage
+            .from(BUCKET_NAME)
+            .upload(newPath, fileData, {
+              cacheControl: '3600',
+              upsert: false
+            });
+
+          // Eliminar archivo antiguo
+          await supabase.storage
+            .from(BUCKET_NAME)
+            .remove([oldPath]);
+
+          // Actualizar registro en BD
+          await supabase
+            .from('ordenes_trabajo_archivos')
+            .update({
+              orden_id: ordenIdReal,
+              orden_temporal_id: null,
+              temporal_creado_en: null,
+              storage_path: newPath
+            })
+            .eq('id', archivo.id);
+        }
+      }
+
+      return { success: true, count: archivosTemporales.length };
+    } catch (err: any) {
+      console.error('Error asociando archivos:', err);
+      throw err;
+    }
+  };
+
+  // Limpiar archivos temporales
+  const limpiarTemporales = async () => {
+    if (!ordenTemporalId || !profile?.company_id) {
+      return { success: true, count: 0 };
+    }
+
+    try {
+      // Obtener archivos temporales
+      const { data: archivosTemporales } = await supabase
+        .from('ordenes_trabajo_archivos')
+        .select('storage_path')
+        .eq('orden_temporal_id', ordenTemporalId)
+        .eq('company_id', profile.company_id);
+
+      if (archivosTemporales && archivosTemporales.length > 0) {
+        // Eliminar de storage
+        const paths = archivosTemporales.map(a => a.storage_path);
+        await supabase.storage
+          .from(BUCKET_NAME)
+          .remove(paths);
+
+        // Eliminar de BD
+        await supabase
+          .from('ordenes_trabajo_archivos')
+          .delete()
+          .eq('orden_temporal_id', ordenTemporalId)
+          .eq('company_id', profile.company_id);
+      }
+
+      return { success: true, count: archivosTemporales?.length || 0 };
+    } catch (err: any) {
+      console.error('Error limpiando temporales:', err);
+      throw err;
+    }
+  };
+
   // Descargar todos los archivos
   const downloadAll = async () => {
     try {
@@ -314,12 +445,15 @@ export function useOrdenArchivos(ordenId: string) {
     usagePercentage: getUsagePercentage(),
     maxTotalSize: MAX_ORDEN_TOTAL_SIZE,
     maxFileSize: MAX_FILE_SIZE,
+    modoTemporal,
     uploadArchivo,
     downloadArchivo,
     deleteArchivo,
     downloadAll,
     validateFile,
     formatSize,
+    asociarConOrden,
+    limpiarTemporales,
     refresh: loadArchivos
   };
 }

@@ -16,7 +16,10 @@ import { OrdenItemsTab } from '../../../components/orders/OrdenItemsTab';
 import { OrdenPagosTab } from '../../../components/orders/OrdenPagosTab';
 import { OrdenRutasTab } from '../../../components/orders/OrdenRutasTab';
 import { OrdenHistorialTab } from '../../../components/orders/OrdenHistorialTab';
+import { OrdenAdjuntosTab } from '../../../components/orders/OrdenAdjuntosTab';
 import { OrdenFooterTotales } from '../../../components/orders/OrdenFooterTotales';
+import { useOrdenArchivos } from '../../../hooks/useOrdenArchivos';
+import { useOrdenLinks } from '../../../hooks/useOrdenLinks';
 import type { CanalVenta } from '../../../types/database';
 
 export function CreateOrderPage() {
@@ -26,6 +29,14 @@ export function CreateOrderPage() {
   const { showSuccess, showError } = useToast();
 
   usePageHeader('Crear nueva orden de trabajo');
+
+  const [ordenTemporalId] = useState(() => {
+    const stored = sessionStorage.getItem('ordenTemporalCreacion');
+    if (stored) return stored;
+    const newId = crypto.randomUUID();
+    sessionStorage.setItem('ordenTemporalCreacion', newId);
+    return newId;
+  });
 
   const [activeTab, setActiveTab] = useState('items');
   const [clienteId, setClienteId] = useState('');
@@ -43,6 +54,10 @@ export function CreateOrderPage() {
     items,
     setItems,
   });
+
+  // Hooks para adjuntos temporales
+  const archivosTemp = useOrdenArchivos({ ordenTemporalId });
+  const linksTemp = useOrdenLinks({ ordenTemporalId });
 
   const resetFormulario = () => {
     setActiveTab('items');
@@ -70,9 +85,21 @@ export function CreateOrderPage() {
     !ordenCreada && formularioTieneDatos()
   );
 
-  const handleVolver = () => {
+  const handleVolver = async () => {
     if (formularioTieneDatos() && !ordenCreada) {
-      showPrompt(() => navigate('/app/orders/ordenes'));
+      showPrompt(async () => {
+        // Limpiar adjuntos temporales
+        try {
+          await Promise.all([
+            archivosTemp.limpiarTemporales(),
+            linksTemp.limpiarTemporales()
+          ]);
+          sessionStorage.removeItem('ordenTemporalCreacion');
+        } catch (err) {
+          console.error('Error limpiando temporales:', err);
+        }
+        navigate('/app/orders/ordenes');
+      });
       return;
     }
     navigate('/app/orders/ordenes');
@@ -153,16 +180,31 @@ export function CreateOrderPage() {
     });
 
     if (result) {
-      // Marcar orden como creada ANTES de navegar para evitar el prompt de confirmación
-      setOrdenCreada(true);
+      try {
+        // Asociar adjuntos temporales con la orden real
+        const [resultArchivos, resultLinks] = await Promise.all([
+          archivosTemp.asociarConOrden(result.id),
+          linksTemp.asociarConOrden(result.id)
+        ]);
 
-      // Mostrar mensaje de éxito
-      showSuccess('Orden creada exitosamente');
+        console.log(`Adjuntos asociados: ${resultArchivos.count} archivos, ${resultLinks.count} links`);
 
-      // Dar tiempo a React para procesar el cambio de estado y mostrar el toast antes de navegar
-      setTimeout(() => {
-        navigate('/app/orders/ordenes');
-      }, 500);
+        // Limpiar sessionStorage
+        sessionStorage.removeItem('ordenTemporalCreacion');
+
+        // Marcar orden como creada ANTES de navegar
+        setOrdenCreada(true);
+
+        // Mostrar mensaje de éxito
+        showSuccess('Orden creada exitosamente');
+
+        // Navegar
+        setTimeout(() => {
+          navigate('/app/orders/ordenes');
+        }, 500);
+      } catch (err: any) {
+        showError(`Error al asociar adjuntos: ${err.message}`);
+      }
     } else {
       showError(`Error al crear la orden: ${error || 'Error desconocido'}`);
     }
@@ -185,7 +227,7 @@ export function CreateOrderPage() {
     {
       id: 'adjuntos',
       label: 'Adjuntos',
-      disabled: true,
+      disabled: false,
     },
     {
       id: 'pagos',
@@ -279,15 +321,11 @@ export function CreateOrderPage() {
           )}
 
           {activeTab === 'adjuntos' && (
-            <div className="text-center py-12">
-              <AlertTriangle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Adjuntos disponibles después de crear la orden
-              </h3>
-              <p className="text-gray-600">
-                Podrás gestionar archivos de cliente, archivos de producción y links una vez que la orden sea creada
-              </p>
-            </div>
+            <OrdenAdjuntosTab
+              ordenTemporalId={ordenTemporalId}
+              estado="pendiente"
+              modoCreacion={true}
+            />
           )}
 
           {activeTab === 'historial' && (

@@ -18,9 +18,11 @@ import { useConfirmDialog } from '../../hooks/useConfirmDialog';
 import dayjs from 'dayjs';
 
 interface OrdenAdjuntosTabProps {
-  ordenId: string;
+  ordenId?: string;
+  ordenTemporalId?: string;
   fechaEntregaReal?: string;
   estado: string;
+  modoCreacion?: boolean;
 }
 
 type FiltroTipo = 'todos' | 'archivos_cliente' | 'archivos_produccion' | 'links';
@@ -35,12 +37,14 @@ const ETIQUETAS_DISPONIBLES = [
 
 export function OrdenAdjuntosTab({
   ordenId,
+  ordenTemporalId,
   fechaEntregaReal,
-  estado
+  estado,
+  modoCreacion = false
 }: OrdenAdjuntosTabProps) {
-  const archivos = useOrdenArchivos(ordenId);
-  const links = useOrdenLinks(ordenId);
-  const archivosProduccion = useOrdenArchivosProduccion(ordenId);
+  const archivos = useOrdenArchivos({ ordenId, ordenTemporalId });
+  const links = useOrdenLinks({ ordenId, ordenTemporalId });
+  const archivosProduccion = useOrdenArchivosProduccion(ordenId || '');
 
   const [filtroTipo, setFiltroTipo] = useState<FiltroTipo>('todos');
   const [showUploadArchivo, setShowUploadArchivo] = useState(false);
@@ -261,8 +265,30 @@ export function OrdenAdjuntosTab({
 
   return (
     <div className="space-y-6">
+      {/* Mensaje modo creación */}
+      {modoCreacion && (
+        <Card className="border-2 bg-blue-50 border-blue-300">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-blue-600" />
+            <div className="flex-1">
+              <h3 className="font-semibold text-gray-900 mb-2">
+                Adjuntos Pre-Carga
+              </h3>
+              <div className="text-sm text-gray-700">
+                <p>
+                  Los archivos y links que agregues aquí se asociarán automáticamente a la orden cuando la guardes.
+                </p>
+                <p className="mt-1 text-xs text-gray-600">
+                  Si cancelas sin guardar, los adjuntos se eliminarán automáticamente.
+                </p>
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
+
       {/* Advertencia de Política */}
-      {estado === 'entregada' && fechaEliminacion && (
+      {!modoCreacion && estado === 'entregada' && fechaEliminacion && (
         <Card className={`border-2 ${getWarningColor()}`}>
           <div className="flex items-start gap-3">
             <AlertTriangle className="w-5 h-5 text-red-600 animate-pulse" />
@@ -326,7 +352,7 @@ export function OrdenAdjuntosTab({
           >
             <option value="todos">Todos ({todosAdjuntos.length})</option>
             <option value="archivos_cliente">Archivos Cliente ({archivos.archivos.length})</option>
-            <option value="archivos_produccion">Archivos Producción ({archivosProduccion.archivos.length})</option>
+            {!modoCreacion && <option value="archivos_produccion">Archivos Producción ({archivosProduccion.archivos.length})</option>}
             <option value="links">Links ({links.links.length})</option>
           </select>
         </div>
@@ -337,7 +363,7 @@ export function OrdenAdjuntosTab({
             Archivo Cliente
           </Button>
 
-          {archivosProduccion.canUpload && (
+          {archivosProduccion.canUpload && !modoCreacion && (
             <Button onClick={() => fileProduccionInputRef.current?.click()} variant="outline">
               <Settings className="w-4 h-4 mr-2" />
               Archivo Producción

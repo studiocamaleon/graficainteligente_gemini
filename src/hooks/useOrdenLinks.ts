@@ -4,7 +4,8 @@ import { useAuth } from './useAuth';
 
 interface Link {
   id: string;
-  orden_id: string;
+  orden_id: string | null;
+  orden_temporal_id: string | null;
   company_id: string;
   titulo: string;
   url: string;
@@ -28,7 +29,15 @@ interface UpdateLinkData {
   descripcion?: string;
 }
 
-export function useOrdenLinks(ordenId: string) {
+interface UseOrdenLinksParams {
+  ordenId?: string;
+  ordenTemporalId?: string;
+}
+
+export function useOrdenLinks(params: string | UseOrdenLinksParams) {
+  const ordenId = typeof params === 'string' ? params : params.ordenId;
+  const ordenTemporalId = typeof params === 'string' ? undefined : params.ordenTemporalId;
+  const modoTemporal = !!ordenTemporalId && !ordenId;
   const [links, setLinks] = useState<Link[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -36,20 +45,26 @@ export function useOrdenLinks(ordenId: string) {
 
   // Cargar links
   const loadLinks = async () => {
-    if (!ordenId) return;
+    if (!ordenId && !ordenTemporalId) return;
 
     try {
       setLoading(true);
       setError(null);
 
-      const { data, error: fetchError } = await supabase
+      let query = supabase
         .from('ordenes_trabajo_links')
         .select(`
           *,
           creator:created_by(nombre_completo)
-        `)
-        .eq('orden_id', ordenId)
-        .order('created_at', { ascending: false });
+        `);
+
+      if (modoTemporal && ordenTemporalId) {
+        query = query.eq('orden_temporal_id', ordenTemporalId);
+      } else if (ordenId) {
+        query = query.eq('orden_id', ordenId);
+      }
+
+      const { data, error: fetchError } = await query.order('created_at', { ascending: false });
 
       if (fetchError) throw fetchError;
 
@@ -64,7 +79,7 @@ export function useOrdenLinks(ordenId: string) {
 
   useEffect(() => {
     loadLinks();
-  }, [ordenId]);
+  }, [ordenId, ordenTemporalId]);
 
   // Validar URL
   const validateUrl = (url: string): { valid: boolean; error?: string } => {
@@ -102,6 +117,10 @@ export function useOrdenLinks(ordenId: string) {
       throw new Error('No se pudo obtener el ID de la empresa');
     }
 
+    if (!ordenId && !ordenTemporalId) {
+      throw new Error('Se requiere ordenId u ordenTemporalId');
+    }
+
     // Validar URL
     const validation = validateUrl(linkData.url);
     if (!validation.valid) {
@@ -111,16 +130,24 @@ export function useOrdenLinks(ordenId: string) {
     try {
       setError(null);
 
+      const insertData: any = {
+        company_id: profile.company_id,
+        titulo: linkData.titulo.trim(),
+        url: linkData.url.trim(),
+        descripcion: linkData.descripcion?.trim() || null,
+        created_by: profile.id
+      };
+
+      if (modoTemporal && ordenTemporalId) {
+        insertData.orden_temporal_id = ordenTemporalId;
+        insertData.temporal_creado_en = new Date().toISOString();
+      } else {
+        insertData.orden_id = ordenId;
+      }
+
       const { data, error: insertError } = await supabase
         .from('ordenes_trabajo_links')
-        .insert({
-          orden_id: ordenId,
-          company_id: profile.company_id,
-          titulo: linkData.titulo.trim(),
-          url: linkData.url.trim(),
-          descripcion: linkData.descripcion?.trim() || null,
-          created_by: profile.id
-        })
+        .insert(insertData)
         .select()
         .single();
 
@@ -230,10 +257,68 @@ export function useOrdenLinks(ordenId: string) {
     }
   };
 
+  // Asociar links temporales con orden real
+  const asociarConOrden = async (ordenIdReal: string) => {
+    if (!ordenTemporalId || !profile?.company_id) {
+      throw new Error('No hay links temporales para asociar');
+    }
+
+    try {
+      const { error } = await supabase
+        .from('ordenes_trabajo_links')
+        .update({
+          orden_id: ordenIdReal,
+          orden_temporal_id: null,
+          temporal_creado_en: null
+        })
+        .eq('orden_temporal_id', ordenTemporalId)
+        .eq('company_id', profile.company_id);
+
+      if (error) throw error;
+
+      const { count } = await supabase
+        .from('ordenes_trabajo_links')
+        .select('*', { count: 'exact', head: true })
+        .eq('orden_id', ordenIdReal);
+
+      return { success: true, count: count || 0 };
+    } catch (err: any) {
+      console.error('Error asociando links:', err);
+      throw err;
+    }
+  };
+
+  // Limpiar links temporales
+  const limpiarTemporales = async () => {
+    if (!ordenTemporalId || !profile?.company_id) {
+      return { success: true, count: 0 };
+    }
+
+    try {
+      const { count } = await supabase
+        .from('ordenes_trabajo_links')
+        .select('*', { count: 'exact', head: true })
+        .eq('orden_temporal_id', ordenTemporalId)
+        .eq('company_id', profile.company_id);
+
+      await supabase
+        .from('ordenes_trabajo_links')
+        .delete()
+        .eq('orden_temporal_id', ordenTemporalId)
+        .eq('company_id', profile.company_id);
+
+      return { success: true, count: count || 0 };
+    } catch (err: any) {
+      console.error('Error limpiando links temporales:', err);
+      throw err;
+    }
+  };
+
   return {
     links,
     loading,
     error,
+    modoTemporal,
     createLink,
     updateLink,
     deleteLink,
@@ -241,6 +326,8 @@ export function useOrdenLinks(ordenId: string) {
     copyLink,
     validateUrl,
     getServiceType,
+    asociarConOrden,
+    limpiarTemporales,
     refresh: loadLinks
   };
 }
