@@ -193,9 +193,9 @@ export function DatePicker({
             </div>
 
             <div className="grid grid-cols-7 gap-1 mb-2">
-              {weekDays.map((day) => (
+              {weekDays.map((day, index) => (
                 <div
-                  key={day}
+                  key={index}
                   className="text-center text-xs font-medium text-slate-500 py-2"
                 >
                   {day}
