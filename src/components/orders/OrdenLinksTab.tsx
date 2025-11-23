@@ -308,9 +308,9 @@ export function OrdenLinksTab({
                         <span>
                           {dayjs(link.created_at).format('DD/MM/YYYY HH:mm')}
                         </span>
-                        {link.creator?.nombre_completo && (
+                        {link.creator?.full_name && (
                           <span>
-                            Por: {link.creator.nombre_completo}
+                            Por: {link.creator.full_name}
                           </span>
                         )}
                       </div>

@@ -362,9 +362,9 @@ export function OrdenArchivosTab({
                         <span className="text-xs text-gray-500">
                           {dayjs(archivo.created_at).format('DD/MM/YYYY HH:mm')}
                         </span>
-                        {archivo.uploader?.nombre_completo && (
+                        {archivo.uploader?.full_name && (
                           <span className="text-xs text-gray-500">
-                            Por: {archivo.uploader.nombre_completo}
+                            Por: {archivo.uploader.full_name}
                           </span>
                         )}
                       </div>

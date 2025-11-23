@@ -20,7 +20,7 @@ interface Archivo {
   uploaded_by: string;
   created_at: string;
   uploader?: {
-    nombre_completo: string;
+    full_name: string;
   };
 }
 
@@ -60,7 +60,7 @@ export function useOrdenArchivos(params: string | UseOrdenArchivosParams) {
         .from('ordenes_trabajo_archivos')
         .select(`
           *,
-          uploader:uploaded_by(nombre_completo)
+          uploader:uploaded_by(full_name)
         `);
 
       if (modoTemporal && ordenTemporalId) {

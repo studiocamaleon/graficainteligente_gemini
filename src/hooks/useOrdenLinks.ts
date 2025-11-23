@@ -13,7 +13,7 @@ interface Link {
   created_by: string;
   created_at: string;
   creator?: {
-    nombre_completo: string;
+    full_name: string;
   };
 }
 
@@ -55,7 +55,7 @@ export function useOrdenLinks(params: string | UseOrdenLinksParams) {
         .from('ordenes_trabajo_links')
         .select(`
           *,
-          creator:created_by(nombre_completo)
+          creator:created_by(full_name)
         `);
 
       if (modoTemporal && ordenTemporalId) {

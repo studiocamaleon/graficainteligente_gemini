@@ -85,19 +85,19 @@ export function OrdenAdjuntosTab({
       ...a,
       tipo: 'archivo_cliente' as const,
       fecha: a.created_at,
-      usuario: a.uploader?.nombre_completo
+      usuario: a.uploader?.full_name
     })),
     ...archivosProduccion.archivos.map(a => ({
       ...a,
       tipo: 'archivo_produccion' as const,
       fecha: a.created_at,
-      usuario: a.uploader?.nombre_completo
+      usuario: a.uploader?.full_name
     })),
     ...links.links.map(l => ({
       ...l,
       tipo: 'link' as const,
       fecha: l.created_at,
-      usuario: l.creator?.nombre_completo
+      usuario: l.creator?.full_name
     }))
   ].sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
 
@@ -746,7 +746,7 @@ export function OrdenAdjuntosTab({
               <p className="text-sm text-gray-700 mb-2">{archivo.nombre_archivo}</p>
               <div className="flex items-center gap-4 text-xs text-gray-500 mb-2">
                 <span>{dayjs(archivo.created_at).format('DD/MM/YYYY HH:mm')}</span>
-                {archivo.uploader?.nombre_completo && <span>Por: {archivo.uploader.nombre_completo}</span>}
+                {archivo.uploader?.full_name && <span>Por: {archivo.uploader.full_name}</span>}
               </div>
               {archivo.notas && <p className="text-xs text-gray-600 italic mb-2">Notas: {archivo.notas}</p>}
               <Button size="sm" variant="outline" onClick={() => archivosProduccion.downloadArchivo(archivo.id)}>

@@ -22,7 +22,7 @@ interface ArchivoProduccion {
   uploaded_by: string;
   created_at: string;
   uploader?: {
-    nombre_completo: string;
+    full_name: string;
   };
 }
 
@@ -57,7 +57,7 @@ export function useOrdenArchivosProduccion(ordenId: string) {
         .from('ordenes_trabajo_archivos_produccion')
         .select(`
           *,
-          uploader:uploaded_by(nombre_completo)
+          uploader:uploaded_by(full_name)
         `)
         .eq('orden_id', ordenId)
         .order('created_at', { ascending: false });

@@ -436,9 +436,9 @@ export function OrdenArchivosProduccionTab({
                         <span className="text-xs text-gray-500">
                           {dayjs(archivo.created_at).format('DD/MM/YYYY HH:mm')}
                         </span>
-                        {archivo.uploader?.nombre_completo && (
+                        {archivo.uploader?.full_name && (
                           <span className="text-xs text-gray-500">
-                            Por: {archivo.uploader.nombre_completo}
+                            Por: {archivo.uploader.full_name}
                           </span>
                         )}
                         {tieneVersiones && (
@@ -626,8 +626,8 @@ export function OrdenArchivosProduccionTab({
 
               <div className="flex items-center gap-4 text-xs text-gray-500 mb-2">
                 <span>{dayjs(archivo.created_at).format('DD/MM/YYYY HH:mm')}</span>
-                {archivo.uploader?.nombre_completo && (
-                  <span>Por: {archivo.uploader.nombre_completo}</span>
+                {archivo.uploader?.full_name && (
+                  <span>Por: {archivo.uploader.full_name}</span>
                 )}
               </div>
 
