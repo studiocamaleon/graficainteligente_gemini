@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
 
@@ -44,7 +44,7 @@ export function useOrdenLinks(params: string | UseOrdenLinksParams) {
   const { profile } = useAuth();
 
   // Cargar links
-  const loadLinks = async () => {
+  const loadLinks = useCallback(async () => {
     console.log('[useOrdenLinks] loadLinks llamado:', { ordenId, ordenTemporalId, modoTemporal });
 
     if (!ordenId && !ordenTemporalId) {
@@ -86,11 +86,22 @@ export function useOrdenLinks(params: string | UseOrdenLinksParams) {
       console.log('[useOrdenLinks] Finalizando carga, setLoading(false)');
       setLoading(false);
     }
-  };
+  }, [ordenId, ordenTemporalId, modoTemporal]);
 
   useEffect(() => {
-    loadLinks();
-  }, [ordenId, ordenTemporalId]);
+    let cancelled = false;
+
+    const load = async () => {
+      if (cancelled) return;
+      await loadLinks();
+    };
+
+    load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [loadLinks]);
 
   // Validar URL - Aceptar cualquier URL válida
   const validateUrl = (url: string): { valid: boolean; error?: string } => {

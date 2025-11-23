@@ -353,7 +353,7 @@ export function CreateOrderPage() {
         <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
 
         <div className="p-6">
-          {activeTab === 'items' && (
+          <div className={activeTab === 'items' ? 'block' : 'hidden'}>
             <OrdenItemsTab
               items={items}
               setItems={setItems}
@@ -362,36 +362,36 @@ export function CreateOrderPage() {
               requiereFactura={requiereFactura}
               setRequiereFactura={setRequiereFactura}
             />
-          )}
+          </div>
 
-          {activeTab === 'pagos' && (
+          <div className={activeTab === 'pagos' ? 'block' : 'hidden'}>
             <OrdenPagosTab
               totales={totales}
               pagos={[]}
               onAgregarPago={() => {}}
               readOnly={true}
             />
-          )}
+          </div>
 
-          {activeTab === 'rutas' && (
+          <div className={activeTab === 'rutas' ? 'block' : 'hidden'}>
             <OrdenRutasTab
               items={items}
               onUpdateStepComment={updateStepComment}
               readOnly={false}
             />
-          )}
+          </div>
 
-          {activeTab === 'adjuntos' && (
+          <div className={activeTab === 'adjuntos' ? 'block' : 'hidden'}>
             <OrdenAdjuntosTab
               ordenTemporalId={ordenTemporalId}
               estado="pendiente"
               modoCreacion={true}
             />
-          )}
+          </div>
 
-          {activeTab === 'historial' && (
+          <div className={activeTab === 'historial' ? 'block' : 'hidden'}>
             <OrdenHistorialTab eventos={[]} />
-          )}
+          </div>
         </div>
       </Card>
 

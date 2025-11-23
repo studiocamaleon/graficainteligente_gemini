@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
 
@@ -49,7 +49,7 @@ export function useOrdenArchivos(params: string | UseOrdenArchivosParams) {
   const { profile } = useAuth();
 
   // Cargar archivos
-  const loadArchivos = async () => {
+  const loadArchivos = useCallback(async () => {
     console.log('[useOrdenArchivos] loadArchivos llamado:', { ordenId, ordenTemporalId, modoTemporal });
 
     if (!ordenId && !ordenTemporalId) {
@@ -95,11 +95,22 @@ export function useOrdenArchivos(params: string | UseOrdenArchivosParams) {
       console.log('[useOrdenArchivos] Finalizando carga, setLoading(false)');
       setLoading(false);
     }
-  };
+  }, [ordenId, ordenTemporalId, modoTemporal]);
 
   useEffect(() => {
-    loadArchivos();
-  }, [ordenId, ordenTemporalId]);
+    let cancelled = false;
+
+    const load = async () => {
+      if (cancelled) return;
+      await loadArchivos();
+    };
+
+    load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [loadArchivos]);
 
   // Obtener espacio disponible
   const getAvailableSpace = () => {
