@@ -245,12 +245,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     try {
-      // Intentar cerrar sesión en el servidor
-      await supabase.auth.signOut();
+      // Verificar si hay una sesión válida antes de intentar cerrar sesión
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (session) {
+        // Solo intentar cerrar sesión en el servidor si hay una sesión válida
+        await supabase.auth.signOut();
+      } else {
+        // Si no hay sesión válida, solo limpiar el almacenamiento local
+        // Esto evita el error 403 cuando la sesión ya expiró
+        await supabase.auth.signOut({ scope: 'local' });
+      }
     } catch (error: any) {
-      // Si la sesión ya no existe (403) o cualquier otro error,
-      // continuar con la limpieza local de todos modos
-      console.log('Sesión ya cerrada o expirada en el servidor, limpiando estado local');
+      // Si hay cualquier error, continuar con la limpieza local
+      console.log('Error al cerrar sesión, limpiando estado local');
     }
 
     // Siempre limpiar el estado local, incluso si el signOut del servidor falla
