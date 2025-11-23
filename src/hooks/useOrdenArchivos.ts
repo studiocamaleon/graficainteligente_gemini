@@ -343,56 +343,48 @@ export function useOrdenArchivos(params: string | UseOrdenArchivosParams) {
     }
 
     try {
-      // Primero, obtener todos los archivos temporales
-      const { data: archivosTemporales } = await supabase
+      // PASO 1: Actualizar BD PRIMERO (crítico, debe funcionar)
+      console.log('[asociarConOrden] Actualizando BD para orden:', ordenIdReal);
+
+      const { error: updateError } = await supabase
         .from('ordenes_trabajo_archivos')
-        .select('*')
+        .update({
+          orden_id: ordenIdReal,
+          orden_temporal_id: null,
+          temporal_creado_en: null
+          // NO actualizamos storage_path aquí, lo hacemos después
+        })
         .eq('orden_temporal_id', ordenTemporalId)
         .eq('company_id', profile.company_id);
 
-      if (!archivosTemporales || archivosTemporales.length === 0) {
-        return { success: true, count: 0 };
+      if (updateError) throw updateError;
+
+      // Contar archivos actualizados
+      const { count } = await supabase
+        .from('ordenes_trabajo_archivos')
+        .select('*', { count: 'exact', head: true })
+        .eq('orden_id', ordenIdReal);
+
+      console.log(`[asociarConOrden] ${count} archivos asociados en BD`);
+
+      // PASO 2: Obtener archivos para mover en storage (background)
+      const { data: archivos } = await supabase
+        .from('ordenes_trabajo_archivos')
+        .select('id, storage_path')
+        .eq('orden_id', ordenIdReal);
+
+      // PASO 3: Mover archivos en storage (no bloquea, background)
+      if (archivos && archivos.length > 0) {
+        moverArchivosEnStorage(archivos, ordenTemporalId, ordenIdReal, BUCKET_NAME)
+          .catch(err => {
+            console.error('[WARNING] Error moviendo archivos en storage:', err);
+            // No lanzar - archivos ya visibles en BD
+          });
       }
 
-      // Mover cada archivo en storage
-      for (const archivo of archivosTemporales) {
-        const oldPath = archivo.storage_path;
-        const newPath = oldPath.replace(`/temporal/${ordenTemporalId}`, `/${ordenIdReal}`);
-
-        // Copiar archivo a nueva ubicación
-        const { data: fileData } = await supabase.storage
-          .from(BUCKET_NAME)
-          .download(oldPath);
-
-        if (fileData) {
-          await supabase.storage
-            .from(BUCKET_NAME)
-            .upload(newPath, fileData, {
-              cacheControl: '3600',
-              upsert: false
-            });
-
-          // Eliminar archivo antiguo
-          await supabase.storage
-            .from(BUCKET_NAME)
-            .remove([oldPath]);
-
-          // Actualizar registro en BD
-          await supabase
-            .from('ordenes_trabajo_archivos')
-            .update({
-              orden_id: ordenIdReal,
-              orden_temporal_id: null,
-              temporal_creado_en: null,
-              storage_path: newPath
-            })
-            .eq('id', archivo.id);
-        }
-      }
-
-      return { success: true, count: archivosTemporales.length };
+      return { success: true, count: count || 0 };
     } catch (err: any) {
-      console.error('Error asociando archivos:', err);
+      console.error('[ERROR] Error asociando archivos:', err);
       throw err;
     }
   };
@@ -484,4 +476,83 @@ export function useOrdenArchivos(params: string | UseOrdenArchivosParams) {
     limpiarTemporales,
     refresh: loadArchivos
   };
+}
+
+// Función auxiliar para mover archivos en storage (background, no bloquea)
+async function moverArchivosEnStorage(
+  archivos: Array<{ id: string; storage_path: string }>,
+  tempId: string,
+  ordenId: string,
+  bucketName: string
+) {
+  console.log(`[moverArchivosEnStorage] Moviendo ${archivos.length} archivos...`);
+
+  for (const archivo of archivos) {
+    try {
+      const oldPath = archivo.storage_path;
+
+      // Skip si ya está en path correcto
+      if (!oldPath.includes(`/temporal/${tempId}`)) {
+        console.log(`[moverArchivosEnStorage] Archivo ${archivo.id} ya en path correcto`);
+        continue;
+      }
+
+      const newPath = oldPath.replace(`/temporal/${tempId}`, `/${ordenId}`);
+
+      console.log(`[moverArchivosEnStorage] Moviendo ${oldPath} → ${newPath}`);
+
+      // Descargar
+      const { data: fileData, error: downloadError } = await supabase.storage
+        .from(bucketName)
+        .download(oldPath);
+
+      if (downloadError) {
+        console.error(`[moverArchivosEnStorage] Error descargando ${oldPath}:`, downloadError);
+        continue;
+      }
+
+      if (!fileData) {
+        console.warn(`[moverArchivosEnStorage] No se pudo descargar ${oldPath}`);
+        continue;
+      }
+
+      // Subir a nuevo path
+      const { error: uploadError } = await supabase.storage
+        .from(bucketName)
+        .upload(newPath, fileData, { upsert: false });
+
+      if (uploadError) {
+        console.error(`[moverArchivosEnStorage] Error subiendo ${newPath}:`, uploadError);
+        continue;
+      }
+
+      // Eliminar path viejo
+      const { error: removeError } = await supabase.storage
+        .from(bucketName)
+        .remove([oldPath]);
+
+      if (removeError) {
+        console.warn(`[moverArchivosEnStorage] Error eliminando ${oldPath}:`, removeError);
+        // No es crítico, continuamos
+      }
+
+      // Actualizar path en BD
+      const { error: updatePathError } = await supabase
+        .from('ordenes_trabajo_archivos')
+        .update({ storage_path: newPath })
+        .eq('id', archivo.id);
+
+      if (updatePathError) {
+        console.error(`[moverArchivosEnStorage] Error actualizando path en BD:`, updatePathError);
+      } else {
+        console.log(`[moverArchivosEnStorage] ✅ Archivo ${archivo.id} movido exitosamente`);
+      }
+
+    } catch (err) {
+      console.error(`[moverArchivosEnStorage] Error procesando archivo ${archivo.id}:`, err);
+      // Continuar con siguiente
+    }
+  }
+
+  console.log('[moverArchivosEnStorage] Proceso completado');
 }
