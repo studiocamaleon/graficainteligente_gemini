@@ -154,25 +154,6 @@ export function OrderDetailPage() {
     });
   };
 
-  const getAvailableStates = (): EstadoOrdenTrabajo[] => {
-    if (!orden) return [];
-
-    const currentState = orden.estado;
-
-    if (currentState === 'pendiente') {
-      return ['en_proceso'];
-    }
-
-    if (currentState === 'en_proceso') {
-      return ['finalizada'];
-    }
-
-    if (currentState === 'finalizada') {
-      return ['entregada'];
-    }
-
-    return [];
-  };
 
   const totalPagado = useMemo(() => {
     if (!orden?.pagos) return 0;
@@ -213,59 +194,18 @@ export function OrderDetailPage() {
   return (
     <div className="space-y-6">
       <Card>
-        <div className="p-6">
-          <div className="flex items-start justify-between mb-6">
-            <div className="flex items-start gap-4">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate('/app/orders/ordenes')}
-              >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Volver
-              </Button>
+        <div className="p-8">
+          <div className="flex items-center justify-between mb-8">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/app/orders/ordenes')}
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Volver
+            </Button>
 
-              <div>
-                <div className="flex items-center gap-3 mb-2">
-                  <h1 className="text-2xl font-bold text-gray-900">
-                    Orden {orden.numero_orden}
-                  </h1>
-                  <OrderStatusBadge estado={orden.estado} size="lg" />
-                </div>
-                <div className="flex items-center gap-4 text-sm text-gray-600">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4" />
-                    <span>Creada: {new Date(orden.fecha_creacion).toLocaleDateString()}</span>
-                  </div>
-                  {orden.fecha_estimada_entrega && (
-                    <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4" />
-                      <span>Entrega: {new Date(orden.fecha_estimada_entrega).toLocaleDateString()}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              {canChangeState && getAvailableStates().length > 0 && (
-                <div className="flex items-center gap-2">
-                  {getAvailableStates().map((estado) => (
-                    <Button
-                      key={estado}
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleChangeEstado(estado)}
-                      disabled={loading}
-                    >
-                      {estado === 'pendiente' && 'Marcar como Pendiente'}
-                      {estado === 'en_proceso' && 'Iniciar Producción'}
-                      {estado === 'finalizada' && 'Marcar como Finalizada'}
-                    </Button>
-                  ))}
-                </div>
-              )}
-
+            <div className="flex items-center gap-3">
               {canCancel && (
                 <Button
                   variant="outline"
@@ -292,20 +232,50 @@ export function OrderDetailPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div>
-              <h3 className="text-sm font-medium text-gray-600 mb-2">Cliente</h3>
-              <p className="font-semibold text-gray-900">{orden.cliente?.nombre_fantasia}</p>
-              <p className="text-sm text-gray-500">{orden.cliente?.numero_documento}</p>
+          <div className="mb-8">
+            <div className="flex items-center gap-4 mb-3">
+              <h1 className="text-3xl font-bold text-gray-900">
+                Orden {orden.numero_orden}
+              </h1>
+              <OrderStatusBadge estado={orden.estado} size="lg" />
+            </div>
+            <div className="flex items-center gap-6 text-sm text-gray-600">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-5 h-5" />
+                <span>Creada: {new Date(orden.fecha_creacion).toLocaleDateString()}</span>
+              </div>
+              {orden.fecha_estimada_entrega && (
+                <div className="flex items-center gap-2">
+                  <Clock className="w-5 h-5" />
+                  <span>Entrega estimada: {new Date(orden.fecha_estimada_entrega).toLocaleDateString()}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <div className="p-6 bg-gray-50 rounded-lg border border-gray-200">
+              <div className="flex items-center gap-3 mb-3">
+                <User className="w-5 h-5 text-blue-600" />
+                <h3 className="text-sm font-medium text-gray-600">Cliente</h3>
+              </div>
+              <p className="text-lg font-semibold text-gray-900">{orden.cliente?.nombre_fantasia}</p>
+              <p className="text-sm text-gray-500 mt-1">{orden.cliente?.numero_documento}</p>
             </div>
 
-            <div>
-              <h3 className="text-sm font-medium text-gray-600 mb-2">Canal de Venta</h3>
+            <div className="p-6 bg-gray-50 rounded-lg border border-gray-200">
+              <div className="flex items-center gap-3 mb-3">
+                <Settings className="w-5 h-5 text-blue-600" />
+                <h3 className="text-sm font-medium text-gray-600">Canal de Venta</h3>
+              </div>
               <ChannelBadge canal={orden.canal_venta} showLabel />
             </div>
 
-            <div>
-              <h3 className="text-sm font-medium text-gray-600 mb-2">Creado por</h3>
+            <div className="p-6 bg-gray-50 rounded-lg border border-gray-200">
+              <div className="flex items-center gap-3 mb-3">
+                <User className="w-5 h-5 text-blue-600" />
+                <h3 className="text-sm font-medium text-gray-600">Creado por</h3>
+              </div>
               <div className="flex items-center gap-2">
                 <Avatar
                   src={orden.created_by_profile?.avatar_url}
@@ -318,8 +288,11 @@ export function OrderDetailPage() {
           </div>
 
           {orden.notas_internas && (
-            <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-              <h3 className="text-sm font-medium text-gray-600 mb-2">Notas Internas</h3>
+            <div className="p-6 bg-amber-50 rounded-lg border border-amber-200">
+              <div className="flex items-center gap-2 mb-2">
+                <FileText className="w-5 h-5 text-amber-600" />
+                <h3 className="text-sm font-medium text-amber-900">Notas Internas</h3>
+              </div>
               <p className="text-sm text-gray-700">{orden.notas_internas}</p>
             </div>
           )}
@@ -374,39 +347,152 @@ export function OrderDetailPage() {
                   Items de la orden ({orden.items.length})
                 </h3>
 
-                <div className="space-y-3">
-                  {orden.items.map((item: any, index: number) => (
-                    <motion.div
-                      key={item.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                      className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200"
-                    >
-                      <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-100 text-blue-700 font-semibold flex-shrink-0">
-                        {index + 1}
-                      </div>
+                <div className="space-y-4">
+                  {orden.items.map((item: any, index: number) => {
+                    const config = item.configuracion || {};
+                    const renderConfigValue = (value: any): string => {
+                      if (Array.isArray(value)) {
+                        return value.join(', ');
+                      }
+                      if (typeof value === 'object' && value !== null) {
+                        return JSON.stringify(value);
+                      }
+                      return String(value);
+                    };
 
-                      <div className="flex-1">
-                        <p className="font-semibold text-gray-900">{item.producto?.nombre || 'Producto'}</p>
-                        <p className="text-sm text-gray-500">Cantidad: {item.cantidad}</p>
-                      </div>
+                    return (
+                      <motion.div
+                        key={item.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        className="p-6 bg-white rounded-lg border border-gray-200"
+                      >
+                        <div className="flex items-start gap-4 mb-4">
+                          <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-100 text-blue-700 font-semibold flex-shrink-0">
+                            {index + 1}
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="text-lg font-bold text-gray-900 mb-1">
+                              {item.producto_nombre || 'Producto'}
+                            </h4>
+                            {item.producto_categoria && (
+                              <Badge variant="secondary" className="mb-2">
+                                {item.producto_categoria}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
 
-                      <div className="text-right">
-                        <p className="text-sm text-gray-600">Precio unitario</p>
-                        <p className="font-semibold text-gray-900">
-                          ${Number(item.precio_unitario_final).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                        </p>
-                      </div>
+                        {config && Object.keys(config).length > 0 && (
+                          <div className="mb-4 pl-14">
+                            <h5 className="text-sm font-semibold text-gray-700 mb-2">Configuración:</h5>
+                            <ul className="space-y-1.5 text-sm text-gray-600">
+                              {config.ancho && config.alto && (
+                                <li className="flex items-start">
+                                  <span className="mr-2">•</span>
+                                  <span><strong>Dimensiones:</strong> {config.ancho} x {config.alto} {config.unidad_medida || 'cm'}</span>
+                                </li>
+                              )}
+                              {config.material && (
+                                <li className="flex items-start">
+                                  <span className="mr-2">•</span>
+                                  <span><strong>Material:</strong> {typeof config.material === 'object' ? config.material.nombre : config.material}</span>
+                                </li>
+                              )}
+                              {config.sustrato && (
+                                <li className="flex items-start">
+                                  <span className="mr-2">•</span>
+                                  <span><strong>Sustrato:</strong> {typeof config.sustrato === 'object' ? config.sustrato.nombre : config.sustrato}</span>
+                                </li>
+                              )}
+                              {config.espesor && (
+                                <li className="flex items-start">
+                                  <span className="mr-2">•</span>
+                                  <span><strong>Espesor:</strong> {config.espesor} mm</span>
+                                </li>
+                              )}
+                              {config.tecnologia && (
+                                <li className="flex items-start">
+                                  <span className="mr-2">•</span>
+                                  <span><strong>Tecnología:</strong> {typeof config.tecnologia === 'object' ? config.tecnologia.nombre : config.tecnologia}</span>
+                                </li>
+                              )}
+                              {config.tintas && (
+                                <li className="flex items-start">
+                                  <span className="mr-2">•</span>
+                                  <span><strong>Tintas:</strong> {renderConfigValue(config.tintas)}</span>
+                                </li>
+                              )}
+                              {config.color && (
+                                <li className="flex items-start">
+                                  <span className="mr-2">•</span>
+                                  <span><strong>Color:</strong> {config.color}</span>
+                                </li>
+                              )}
+                              {config.caras_impresas && (
+                                <li className="flex items-start">
+                                  <span className="mr-2">•</span>
+                                  <span><strong>Caras impresas:</strong> {renderConfigValue(config.caras_impresas)}</span>
+                                </li>
+                              )}
+                              {config.cantidad_paginas && (
+                                <li className="flex items-start">
+                                  <span className="mr-2">•</span>
+                                  <span><strong>Cantidad de páginas:</strong> {config.cantidad_paginas}</span>
+                                </li>
+                              )}
+                              {config.cantidad_hojas && (
+                                <li className="flex items-start">
+                                  <span className="mr-2">•</span>
+                                  <span><strong>Cantidad de hojas:</strong> {config.cantidad_hojas}</span>
+                                </li>
+                              )}
+                              {config.acabados && Array.isArray(config.acabados) && config.acabados.length > 0 && (
+                                <li className="flex items-start">
+                                  <span className="mr-2">•</span>
+                                  <span><strong>Acabados:</strong> {config.acabados.map((a: any) => typeof a === 'object' ? a.nombre : a).join(', ')}</span>
+                                </li>
+                              )}
+                              {config.servicios && Array.isArray(config.servicios) && config.servicios.length > 0 && (
+                                <li className="flex items-start">
+                                  <span className="mr-2">•</span>
+                                  <span><strong>Servicios:</strong> {config.servicios.map((s: any) => typeof s === 'object' ? s.nombre : s).join(', ')}</span>
+                                </li>
+                              )}
+                              {config.tipo_producto && (
+                                <li className="flex items-start">
+                                  <span className="mr-2">•</span>
+                                  <span><strong>Tipo:</strong> {config.tipo_producto}</span>
+                                </li>
+                              )}
+                              {config.medida && (
+                                <li className="flex items-start">
+                                  <span className="mr-2">•</span>
+                                  <span><strong>Medida:</strong> {config.medida}</span>
+                                </li>
+                              )}
+                            </ul>
+                          </div>
+                        )}
 
-                      <div className="text-right min-w-[120px]">
-                        <p className="text-sm text-gray-600">Total</p>
-                        <p className="text-lg font-bold text-blue-600">
-                          ${Number(item.precio_total).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                        </p>
-                      </div>
-                    </motion.div>
-                  ))}
+                        <div className="flex items-end justify-between pl-14 pt-4 border-t border-gray-200">
+                          <div>
+                            <p className="text-sm text-gray-600">Cantidad: <span className="font-semibold text-gray-900">{item.cantidad} unidades</span></p>
+                            <p className="text-sm text-gray-600 mt-1">Precio unitario: <span className="font-semibold text-gray-900">
+                              ${Number(item.precio_unitario_final).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                            </span></p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm text-gray-600 mb-1">Total del item</p>
+                            <p className="text-2xl font-bold text-blue-600">
+                              ${Number(item.precio_total).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                            </p>
+                          </div>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
                 </div>
 
                 <div className="border-t border-gray-200 pt-4 mt-6">
