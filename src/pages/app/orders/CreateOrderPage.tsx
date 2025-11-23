@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, Loader2, AlertTriangle } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
@@ -113,10 +113,16 @@ export function CreateOrderPage() {
   }, [ordenCreada, archivosTemp, linksTemp]);
 
   // Cleanup al desmontar componente (navegación)
+  // IMPORTANTE: Usar useRef para rastrear si estamos creando orden
+  const isCreatingOrderRef = useRef(false);
+
   useEffect(() => {
     return () => {
-      // Solo limpiar si orden no fue creada exitosamente
-      if (!ordenCreada) {
+      // Solo limpiar si:
+      // 1. La orden NO fue creada exitosamente
+      // 2. NO estamos en proceso de crear la orden
+      if (!ordenCreada && !isCreatingOrderRef.current) {
+        console.log('[Cleanup] Componente desmontado sin crear orden, limpiando temporales...');
         Promise.all([
           archivosTemp.limpiarTemporales(),
           linksTemp.limpiarTemporales()
@@ -126,9 +132,11 @@ export function CreateOrderPage() {
         }).catch(err => {
           console.error('[Cleanup] Error limpiando al desmontar:', err);
         });
+      } else {
+        console.log('[Cleanup] Skipping cleanup:', { ordenCreada, isCreatingOrder: isCreatingOrderRef.current });
       }
     };
-  }, [ordenCreada, archivosTemp, linksTemp]);
+  }, []);
 
   const formularioTieneDatos = () => {
     return clienteId !== '' || items.length > 0 || notasInternas !== '' || fechaEntrega !== '';
@@ -212,6 +220,10 @@ export function CreateOrderPage() {
       return;
     }
 
+    // Marcar que estamos creando orden para prevenir cleanup
+    isCreatingOrderRef.current = true;
+    console.log('[CreateOrderPage] Iniciando creación de orden (cleanup deshabilitado)');
+
     console.log('[CreateOrderPage] Creando orden con datos:', {
       clienteId,
       itemsCount: items.length,
@@ -276,6 +288,8 @@ export function CreateOrderPage() {
 
         // Marcar orden como creada ANTES de navegar
         setOrdenCreada(true);
+        isCreatingOrderRef.current = false;
+        console.log('[CreateOrderPage] Orden creada exitosamente, cleanup permanentemente deshabilitado');
 
         // Mostrar mensaje de éxito
         if (totalAdjuntos > 0) {
@@ -291,9 +305,13 @@ export function CreateOrderPage() {
       } catch (err: any) {
         console.error('[CreateOrderPage] Error al asociar adjuntos:', err);
         showError(`Error al asociar adjuntos: ${err.message}`);
+        // Permitir cleanup en caso de error
+        isCreatingOrderRef.current = false;
       }
     } else {
       showError(`Error al crear la orden: ${error || 'Error desconocido'}`);
+      // Permitir cleanup en caso de error
+      isCreatingOrderRef.current = false;
     }
   };
 
