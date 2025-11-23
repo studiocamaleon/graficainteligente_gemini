@@ -347,18 +347,31 @@ export function OrderDetailPage() {
                   Items de la orden ({orden.items.length})
                 </h3>
 
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {orden.items.map((item: any, index: number) => {
                     const config = item.configuracion || {};
-                    const renderConfigValue = (value: any): string => {
-                      if (Array.isArray(value)) {
-                        return value.join(', ');
+
+                    // Construir string de material
+                    let materialStr = '';
+                    if (config.material_nombre) {
+                      materialStr = config.material_nombre;
+                      if (config.variante_nombre) {
+                        materialStr += ` - ${config.variante_nombre}`;
                       }
-                      if (typeof value === 'object' && value !== null) {
-                        return JSON.stringify(value);
+                      if (config.espesor && config.unidad_espesor) {
+                        materialStr += ` (${config.espesor} ${config.unidad_espesor})`;
                       }
-                      return String(value);
-                    };
+                    }
+
+                    // Extraer servicios seleccionados
+                    const servicios = config.servicios_seleccionados && Array.isArray(config.servicios_seleccionados)
+                      ? config.servicios_seleccionados.map((s: any) => s.nombre).join(', ')
+                      : null;
+
+                    // Extraer acabados seleccionados
+                    const acabados = config.acabados_seleccionados && Array.isArray(config.acabados_seleccionados)
+                      ? config.acabados_seleccionados.map((a: any) => a.nombre).join(', ')
+                      : null;
 
                     return (
                       <motion.div
@@ -366,129 +379,53 @@ export function OrderDetailPage() {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.05 }}
-                        className="p-6 bg-white rounded-lg border border-gray-200"
+                        className="p-4 bg-white rounded-lg border border-gray-200"
                       >
-                        <div className="flex items-start gap-4 mb-4">
-                          <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-100 text-blue-700 font-semibold flex-shrink-0">
-                            {index + 1}
-                          </div>
-                          <div className="flex-1">
-                            <h4 className="text-lg font-bold text-gray-900 mb-1">
-                              {item.producto_nombre || 'Producto'}
-                            </h4>
-                            {item.producto_categoria && (
-                              <Badge variant="secondary" className="mb-2">
-                                {item.producto_categoria}
-                              </Badge>
-                            )}
-                          </div>
+                        {/* Línea 1: Número + Nombre + Categoría */}
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-xs font-semibold text-gray-500">#{index + 1}</span>
+                          <h4 className="font-semibold text-gray-900">
+                            {item.producto_nombre || 'Producto'}
+                          </h4>
+                          {item.producto_categoria && (
+                            <Badge variant="secondary" className="text-xs">
+                              {item.producto_categoria}
+                            </Badge>
+                          )}
                         </div>
 
-                        {config && Object.keys(config).length > 0 && (
-                          <div className="mb-4 pl-14">
-                            <h5 className="text-sm font-semibold text-gray-700 mb-2">Configuración:</h5>
-                            <ul className="space-y-1.5 text-sm text-gray-600">
-                              {config.ancho && config.alto && (
-                                <li className="flex items-start">
-                                  <span className="mr-2">•</span>
-                                  <span><strong>Dimensiones:</strong> {config.ancho} x {config.alto} {config.unidad_medida || 'cm'}</span>
-                                </li>
-                              )}
-                              {config.material && (
-                                <li className="flex items-start">
-                                  <span className="mr-2">•</span>
-                                  <span><strong>Material:</strong> {typeof config.material === 'object' ? config.material.nombre : config.material}</span>
-                                </li>
-                              )}
-                              {config.sustrato && (
-                                <li className="flex items-start">
-                                  <span className="mr-2">•</span>
-                                  <span><strong>Sustrato:</strong> {typeof config.sustrato === 'object' ? config.sustrato.nombre : config.sustrato}</span>
-                                </li>
-                              )}
-                              {config.espesor && (
-                                <li className="flex items-start">
-                                  <span className="mr-2">•</span>
-                                  <span><strong>Espesor:</strong> {config.espesor} mm</span>
-                                </li>
-                              )}
-                              {config.tecnologia && (
-                                <li className="flex items-start">
-                                  <span className="mr-2">•</span>
-                                  <span><strong>Tecnología:</strong> {typeof config.tecnologia === 'object' ? config.tecnologia.nombre : config.tecnologia}</span>
-                                </li>
-                              )}
-                              {config.tintas && (
-                                <li className="flex items-start">
-                                  <span className="mr-2">•</span>
-                                  <span><strong>Tintas:</strong> {renderConfigValue(config.tintas)}</span>
-                                </li>
-                              )}
-                              {config.color && (
-                                <li className="flex items-start">
-                                  <span className="mr-2">•</span>
-                                  <span><strong>Color:</strong> {config.color}</span>
-                                </li>
-                              )}
-                              {config.caras_impresas && (
-                                <li className="flex items-start">
-                                  <span className="mr-2">•</span>
-                                  <span><strong>Caras impresas:</strong> {renderConfigValue(config.caras_impresas)}</span>
-                                </li>
-                              )}
-                              {config.cantidad_paginas && (
-                                <li className="flex items-start">
-                                  <span className="mr-2">•</span>
-                                  <span><strong>Cantidad de páginas:</strong> {config.cantidad_paginas}</span>
-                                </li>
-                              )}
-                              {config.cantidad_hojas && (
-                                <li className="flex items-start">
-                                  <span className="mr-2">•</span>
-                                  <span><strong>Cantidad de hojas:</strong> {config.cantidad_hojas}</span>
-                                </li>
-                              )}
-                              {config.acabados && Array.isArray(config.acabados) && config.acabados.length > 0 && (
-                                <li className="flex items-start">
-                                  <span className="mr-2">•</span>
-                                  <span><strong>Acabados:</strong> {config.acabados.map((a: any) => typeof a === 'object' ? a.nombre : a).join(', ')}</span>
-                                </li>
-                              )}
-                              {config.servicios && Array.isArray(config.servicios) && config.servicios.length > 0 && (
-                                <li className="flex items-start">
-                                  <span className="mr-2">•</span>
-                                  <span><strong>Servicios:</strong> {config.servicios.map((s: any) => typeof s === 'object' ? s.nombre : s).join(', ')}</span>
-                                </li>
-                              )}
-                              {config.tipo_producto && (
-                                <li className="flex items-start">
-                                  <span className="mr-2">•</span>
-                                  <span><strong>Tipo:</strong> {config.tipo_producto}</span>
-                                </li>
-                              )}
-                              {config.medida && (
-                                <li className="flex items-start">
-                                  <span className="mr-2">•</span>
-                                  <span><strong>Medida:</strong> {config.medida}</span>
-                                </li>
-                              )}
-                            </ul>
-                          </div>
+                        {/* Línea 2: Material */}
+                        {materialStr && (
+                          <p className="text-sm text-gray-600 mb-1">
+                            <span className="font-medium">Material:</span> {materialStr}
+                          </p>
                         )}
 
-                        <div className="flex items-end justify-between pl-14 pt-4 border-t border-gray-200">
-                          <div>
-                            <p className="text-sm text-gray-600">Cantidad: <span className="font-semibold text-gray-900">{item.cantidad} unidades</span></p>
-                            <p className="text-sm text-gray-600 mt-1">Precio unitario: <span className="font-semibold text-gray-900">
-                              ${Number(item.precio_unitario_final).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                            </span></p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-sm text-gray-600 mb-1">Total del item</p>
-                            <p className="text-2xl font-bold text-blue-600">
-                              ${Number(item.precio_total).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                            </p>
-                          </div>
+                        {/* Línea 3: Servicios y Acabados */}
+                        {(servicios || acabados) && (
+                          <p className="text-sm text-gray-600 mb-2">
+                            {servicios && (
+                              <>
+                                <span className="font-medium">Servicios:</span> {servicios}
+                              </>
+                            )}
+                            {servicios && acabados && <span className="mx-2">•</span>}
+                            {acabados && (
+                              <>
+                                <span className="font-medium">Acabados:</span> {acabados}
+                              </>
+                            )}
+                          </p>
+                        )}
+
+                        {/* Línea 4: Cantidad y Total */}
+                        <div className="flex items-center justify-between pt-2 border-t border-gray-200">
+                          <span className="text-sm text-gray-600">
+                            Cantidad: <span className="font-semibold text-gray-900">{item.cantidad} unidades</span>
+                          </span>
+                          <span className="text-lg font-bold text-blue-600">
+                            ${Number(item.precio_total).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                          </span>
                         </div>
                       </motion.div>
                     );
