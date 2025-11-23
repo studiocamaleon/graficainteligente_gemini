@@ -203,6 +203,16 @@ function MainLayoutContent({ children }: MainLayoutProps) {
   const { description, action } = usePageHeaderContext();
 
   const getCurrentPageTitle = () => {
+    // Detectar rutas dinámicas de detalle de orden
+    if (location.pathname.match(/^\/app\/orders\/[a-f0-9-]+$/)) {
+      return 'Detalle de Orden';
+    }
+
+    // Detectar rutas dinámicas de detalle de orden de copiado
+    if (location.pathname.match(/^\/app\/centro-copiado\/ordenes\/[a-f0-9-]+$/)) {
+      return 'Detalle de Orden de Copiado';
+    }
+
     for (const module of availableModules) {
       if (isActive(module.path)) return module.name;
       if (module.children) {
