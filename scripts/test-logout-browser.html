@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Logout Flow - Supabase</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      border-radius: 8px;
+      padding: 30px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #333;
+      border-bottom: 3px solid #4CAF50;
+      padding-bottom: 10px;
+    }
+    h2 {
+      color: #555;
+      margin-top: 30px;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 15px;
+      border-left: 4px solid #2196F3;
+      background: #f9f9f9;
+    }
+    button {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      margin: 5px;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background: #45a049;
+    }
+    button.danger {
+      background: #f44336;
+    }
+    button.danger:hover {
+      background: #da190b;
+    }
+    button.warning {
+      background: #ff9800;
+    }
+    button.warning:hover {
+      background: #e68900;
+    }
+    .result {
+      margin-top: 15px;
+      padding: 15px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    .success {
+      background: #d4edda;
+      border: 1px solid #c3e6cb;
+      color: #155724;
+    }
+    .error {
+      background: #f8d7da;
+      border: 1px solid #f5c6cb;
+      color: #721c24;
+    }
+    .info {
+      background: #d1ecf1;
+      border: 1px solid #bee5eb;
+      color: #0c5460;
+    }
+    .warning {
+      background: #fff3cd;
+      border: 1px solid #ffeaa7;
+      color: #856404;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 Test de Flujo de Logout - Supabase</h1>
+    <p>Este test simula el comportamiento del navegador para validar la solución de logout sin errores 403.</p>
+
+    <div class="test-section">
+      <h2>1️⃣ Estado Actual</h2>
+      <button onclick="checkSession()">Verificar Sesión</button>
+      <button onclick="showLocalStorage()">Ver localStorage</button>
+      <div id="session-result"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>2️⃣ Probar Métodos de Logout</h2>
+      <button class="danger" onclick="testSupabaseSignOut()">signOut() - Original (esperado: ERROR 403)</button>
+      <button class="warning" onclick="testSupabaseSignOutLocal()">signOut({scope:'local'}) - (esperado: ERROR 403)</button>
+      <button onclick="testManualLogout()">Logout Manual - NUEVA SOLUCIÓN ✅</button>
+      <div id="logout-result"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>3️⃣ Simular Sesión Expirada</h2>
+      <p>Para probar la solución completa:</p>
+      <ol>
+        <li>Inicia sesión en la aplicación</li>
+        <li>Copia el contenido de localStorage aquí</li>
+        <li>Espera a que la sesión expire en el servidor (o invalídala manualmente)</li>
+        <li>Intenta hacer logout</li>
+      </ol>
+      <button onclick="simulateExpiredSession()">Simular Sesión Expirada</button>
+      <div id="simulation-result"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>📊 Consola de Logs</h2>
+      <div id="console-log" class="result info"></div>
+    </div>
+  </div>
+
+  <script>
+    // Capturar console.log
+    const consoleDiv = document.getElementById('console-log');
+    const originalLog = console.log;
+    const originalError = console.error;
+
+    console.log = function(...args) {
+      originalLog.apply(console, args);
+      consoleDiv.textContent += args.join(' ') + '\n';
+    };
+
+    console.error = function(...args) {
+      originalError.apply(console, args);
+      consoleDiv.textContent += '❌ ERROR: ' + args.join(' ') + '\n';
+    };
+
+    // Configuración de Supabase (necesitas tus credenciales)
+    const SUPABASE_URL = prompt('Ingresa tu SUPABASE_URL:', 'https://tu-proyecto.supabase.co');
+    const SUPABASE_KEY = prompt('Ingresa tu SUPABASE_ANON_KEY:');
+
+    if (!SUPABASE_URL || !SUPABASE_KEY) {
+      alert('Necesitas proporcionar las credenciales de Supabase para continuar');
+    }
+
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    console.log('🚀 Cliente de Supabase inicializado');
+
+    async function checkSession() {
+      console.log('\n🔍 Verificando sesión...');
+      const { data: { session }, error } = await supabase.auth.getSession();
+
+      const resultDiv = document.getElementById('session-result');
+
+      if (error) {
+        resultDiv.className = 'result error';
+        resultDiv.textContent = `Error: ${error.message}`;
+        console.error('Error al verificar sesión:', error);
+        return;
+      }
+
+      if (session) {
+        resultDiv.className = 'result success';
+        resultDiv.textContent = `✅ Sesión activa\n\nUser ID: ${session.user.id}\nEmail: ${session.user.email}\nExpira: ${new Date(session.expires_at * 1000).toLocaleString()}`;
+        console.log('✅ Sesión activa:', session.user.email);
+      } else {
+        resultDiv.className = 'result warning';
+        resultDiv.textContent = '⚠️ No hay sesión activa';
+        console.log('⚠️ No hay sesión activa');
+      }
+    }
+
+    function showLocalStorage() {
+      console.log('\n📦 Contenido de localStorage:');
+      const resultDiv = document.getElementById('session-result');
+      let content = 'LocalStorage Keys:\n\n';
+
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('sb-')) {
+          content += `${key}\n`;
+          console.log(`  - ${key}`);
+        }
+      }
+
+      resultDiv.className = 'result info';
+      resultDiv.textContent = content;
+    }
+
+    async function testSupabaseSignOut() {
+      console.log('\n🧪 Test: supabase.auth.signOut()');
+      const resultDiv = document.getElementById('logout-result');
+
+      try {
+        console.log('Ejecutando signOut()...');
+        await supabase.auth.signOut();
+        resultDiv.className = 'result success';
+        resultDiv.textContent = '✅ SignOut exitoso (no esperado si la sesión está expirada)';
+        console.log('✅ SignOut exitoso');
+      } catch (error) {
+        resultDiv.className = 'result error';
+        resultDiv.textContent = `❌ Error (esperado): ${error.message}`;
+        console.error('❌ Error en signOut:', error);
+      }
+
+      await checkSession();
+    }
+
+    async function testSupabaseSignOutLocal() {
+      console.log('\n🧪 Test: supabase.auth.signOut({ scope: "local" })');
+      const resultDiv = document.getElementById('logout-result');
+
+      try {
+        console.log('Ejecutando signOut con scope local...');
+        await supabase.auth.signOut({ scope: 'local' });
+        resultDiv.className = 'result success';
+        resultDiv.textContent = '✅ SignOut local exitoso (no esperado si la sesión está expirada)';
+        console.log('✅ SignOut local exitoso');
+      } catch (error) {
+        resultDiv.className = 'result error';
+        resultDiv.textContent = `❌ Error (esperado): ${error.message}`;
+        console.error('❌ Error en signOut local:', error);
+      }
+
+      await checkSession();
+    }
+
+    function testManualLogout() {
+      console.log('\n🧪 Test: Logout Manual (NUEVA SOLUCIÓN)');
+      const resultDiv = document.getElementById('logout-result');
+
+      try {
+        // Buscar y eliminar todas las claves de autenticación de Supabase
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('sb-') && key.includes('auth')) {
+            keysToRemove.push(key);
+          }
+        }
+
+        console.log('Claves a eliminar:', keysToRemove);
+        keysToRemove.forEach(key => localStorage.removeItem(key));
+
+        resultDiv.className = 'result success';
+        resultDiv.textContent = `✅ Logout manual exitoso\n\nClaves eliminadas: ${keysToRemove.length}\n${keysToRemove.join('\n')}`;
+        console.log('✅ LocalStorage limpiado:', keysToRemove.length, 'claves eliminadas');
+
+        // Simular actualización de estado (en React esto dispararía onAuthStateChange)
+        console.log('En React: setUser(null), setProfile(null), setCompany(null), setPlan(null)');
+
+      } catch (error) {
+        resultDiv.className = 'result error';
+        resultDiv.textContent = `❌ Error: ${error.message}`;
+        console.error('❌ Error en logout manual:', error);
+      }
+
+      setTimeout(checkSession, 500);
+    }
+
+    function simulateExpiredSession() {
+      console.log('\n🔬 Simulando sesión expirada...');
+      const resultDiv = document.getElementById('simulation-result');
+
+      // Crear un token JWT falso expirado
+      const expiredToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE1MTYyMzkwMjJ9.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
+
+      const authKey = `sb-${SUPABASE_URL.split('//')[1].split('.')[0]}-auth-token`;
+
+      const sessionData = {
+        access_token: expiredToken,
+        refresh_token: 'fake-refresh-token',
+        expires_at: Math.floor(Date.now() / 1000) - 3600, // Expirado hace 1 hora
+        user: {
+          id: 'fake-user-id',
+          email: 'test@example.com'
+        }
+      };
+
+      localStorage.setItem(authKey, JSON.stringify(sessionData));
+
+      resultDiv.className = 'result warning';
+      resultDiv.textContent = '⚠️ Sesión expirada simulada\n\nAhora intenta hacer logout con los botones de arriba.\nLa solución manual debería funcionar sin errores.';
+      console.log('⚠️ Sesión expirada simulada en localStorage');
+
+      setTimeout(checkSession, 500);
+    }
+
+    // Check initial session
+    checkSession();
+  </script>
+</body>
+</html>

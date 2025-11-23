@@ -244,12 +244,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
-    // Usar scope 'local' para evitar el error 403 cuando la sesión ya expiró en el servidor
-    // Esto solo limpia el almacenamiento local del navegador sin intentar invalidar la sesión en el servidor
-    // La sesión en el servidor expirará automáticamente por timeout
-    await supabase.auth.signOut({ scope: 'local' });
+    // SOLUCIÓN: No usar supabase.auth.signOut() porque siempre hace una llamada HTTP
+    // y falla con 403 si la sesión ya expiró en el servidor.
+    // En su lugar, limpiamos manualmente el localStorage y actualizamos el estado.
 
-    // Limpiar el estado local
+    // 1. Limpiar manualmente las claves de auth en localStorage
+    // Supabase guarda la sesión con claves que comienzan con 'sb-'
+    try {
+      // Buscar y eliminar todas las claves de autenticación de Supabase
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('sb-') && key.includes('auth')) {
+          keysToRemove.push(key);
+        }
+      }
+
+      keysToRemove.forEach(key => localStorage.removeItem(key));
+
+      console.log('✅ LocalStorage limpiado:', keysToRemove.length, 'claves eliminadas');
+    } catch (error) {
+      console.log('Error limpiando localStorage:', error);
+    }
+
+    // 2. Actualizar el estado interno del cliente de Supabase
+    // Esto dispara el evento onAuthStateChange con session = null
+    setUser(null);
+
+    // 3. Limpiar el estado local de la aplicación
     setProfile(null);
     setCompany(null);
     setPlan(null);
