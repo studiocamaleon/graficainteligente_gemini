@@ -303,9 +303,31 @@ export function useOrdenLinks(params: string | UseOrdenLinksParams) {
   };
 
   // Asociar links temporales con orden real
-  const asociarConOrden = async (ordenIdReal: string) => {
-    if (!ordenTemporalId || !profile?.company_id) {
-      throw new Error('No hay links temporales para asociar');
+  const asociarConOrden = async (
+    ordenIdReal: string,
+    tempId?: string,
+    companyId?: string
+  ) => {
+    const efectivoTempId = tempId || ordenTemporalId;
+    const efectivoCompanyId = companyId || profile?.company_id;
+
+    console.log('[useOrdenLinks.asociarConOrden] Iniciando asociación con parámetros:', {
+      ordenIdReal,
+      tempId: efectivoTempId,
+      companyId: efectivoCompanyId,
+      profileExists: !!profile
+    });
+
+    if (!efectivoTempId) {
+      const error = new Error('ordenTemporalId no disponible');
+      console.error('[useOrdenLinks.asociarConOrden] ERROR:', error);
+      throw error;
+    }
+
+    if (!efectivoCompanyId) {
+      const error = new Error('company_id no disponible');
+      console.error('[useOrdenLinks.asociarConOrden] ERROR:', error);
+      throw error;
     }
 
     try {
@@ -316,19 +338,28 @@ export function useOrdenLinks(params: string | UseOrdenLinksParams) {
           orden_temporal_id: null,
           temporal_creado_en: null
         })
-        .eq('orden_temporal_id', ordenTemporalId)
-        .eq('company_id', profile.company_id);
+        .eq('orden_temporal_id', efectivoTempId)
+        .eq('company_id', efectivoCompanyId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('[useOrdenLinks.asociarConOrden] Error en UPDATE:', error);
+        throw error;
+      }
 
-      const { count } = await supabase
+      const { count, error: countError } = await supabase
         .from('ordenes_trabajo_links')
         .select('*', { count: 'exact', head: true })
         .eq('orden_id', ordenIdReal);
 
+      if (countError) {
+        console.error('[useOrdenLinks.asociarConOrden] Error contando links:', countError);
+      }
+
+      console.log(`[useOrdenLinks.asociarConOrden] ${count || 0} links asociados en BD`);
+
       return { success: true, count: count || 0 };
     } catch (err: any) {
-      console.error('Error asociando links:', err);
+      console.error('[useOrdenLinks.asociarConOrden] Error asociando links:', err);
       throw err;
     }
   };

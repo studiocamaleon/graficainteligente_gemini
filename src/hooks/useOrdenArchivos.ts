@@ -337,9 +337,36 @@ export function useOrdenArchivos(params: string | UseOrdenArchivosParams) {
   };
 
   // Asociar archivos temporales con orden real
-  const asociarConOrden = async (ordenIdReal: string) => {
-    if (!ordenTemporalId || !profile?.company_id) {
-      throw new Error('No hay archivos temporales para asociar');
+  const asociarConOrden = async (
+    ordenIdReal: string,
+    tempId?: string,
+    companyId?: string
+  ) => {
+    const efectivoTempId = tempId || ordenTemporalId;
+    const efectivoCompanyId = companyId || profile?.company_id;
+
+    console.log('[asociarConOrden] Iniciando asociación con parámetros:', {
+      ordenIdReal,
+      tempId: efectivoTempId,
+      companyId: efectivoCompanyId,
+      profileExists: !!profile,
+      closureOrderId: ordenTemporalId,
+      closureCompanyId: profile?.company_id
+    });
+
+    if (!efectivoTempId) {
+      const error = new Error('ordenTemporalId no disponible');
+      console.error('[asociarConOrden] ERROR:', error);
+      throw error;
+    }
+
+    if (!efectivoCompanyId) {
+      const error = new Error('company_id no disponible');
+      console.error('[asociarConOrden] ERROR:', error, {
+        profileNull: profile === null,
+        profileUndefined: profile === undefined
+      });
+      throw error;
     }
 
     try {
@@ -352,20 +379,26 @@ export function useOrdenArchivos(params: string | UseOrdenArchivosParams) {
           orden_id: ordenIdReal,
           orden_temporal_id: null,
           temporal_creado_en: null
-          // NO actualizamos storage_path aquí, lo hacemos después
         })
-        .eq('orden_temporal_id', ordenTemporalId)
-        .eq('company_id', profile.company_id);
+        .eq('orden_temporal_id', efectivoTempId)
+        .eq('company_id', efectivoCompanyId);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error('[asociarConOrden] Error en UPDATE:', updateError);
+        throw updateError;
+      }
 
       // Contar archivos actualizados
-      const { count } = await supabase
+      const { count, error: countError } = await supabase
         .from('ordenes_trabajo_archivos')
         .select('*', { count: 'exact', head: true })
         .eq('orden_id', ordenIdReal);
 
-      console.log(`[asociarConOrden] ${count} archivos asociados en BD`);
+      if (countError) {
+        console.error('[asociarConOrden] Error contando archivos:', countError);
+      }
+
+      console.log(`[asociarConOrden] ${count || 0} archivos asociados en BD`);
 
       // PASO 2: Obtener archivos para mover en storage (background)
       const { data: archivos } = await supabase
@@ -375,7 +408,7 @@ export function useOrdenArchivos(params: string | UseOrdenArchivosParams) {
 
       // PASO 3: Mover archivos en storage (no bloquea, background)
       if (archivos && archivos.length > 0) {
-        moverArchivosEnStorage(archivos, ordenTemporalId, ordenIdReal, BUCKET_NAME)
+        moverArchivosEnStorage(archivos, efectivoTempId, ordenIdReal, BUCKET_NAME)
           .catch(err => {
             console.error('[WARNING] Error moviendo archivos en storage:', err);
             // No lanzar - archivos ya visibles en BD

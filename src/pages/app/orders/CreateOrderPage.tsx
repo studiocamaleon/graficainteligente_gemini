@@ -206,6 +206,20 @@ export function CreateOrderPage() {
       return;
     }
 
+    if (!profile?.company_id) {
+      showError('Error: No se pudo obtener la información del usuario. Por favor, recarga la página.');
+      console.error('[CreateOrderPage] profile no disponible:', { profile });
+      return;
+    }
+
+    console.log('[CreateOrderPage] Creando orden con datos:', {
+      clienteId,
+      itemsCount: items.length,
+      ordenTemporalId,
+      profileId: profile.id,
+      companyId: profile.company_id
+    });
+
     const totales = calcularTotales();
 
     const ordenData = {
@@ -234,14 +248,18 @@ export function CreateOrderPage() {
     });
 
     if (result) {
+      console.log('[CreateOrderPage] Orden creada exitosamente:', result.id);
+
       try {
-        // Asociar adjuntos temporales con la orden real
+        console.log('[CreateOrderPage] Iniciando asociación de adjuntos...');
+
+        // Asociar adjuntos temporales con la orden real - PASAR PARÁMETROS EXPLÍCITOS
         const [resultArchivos, resultLinks] = await Promise.all([
-          archivosTemp.asociarConOrden(result.id),
-          linksTemp.asociarConOrden(result.id)
+          archivosTemp.asociarConOrden(result.id, ordenTemporalId, profile.company_id),
+          linksTemp.asociarConOrden(result.id, ordenTemporalId, profile.company_id)
         ]);
 
-        console.log(`Adjuntos asociados: ${resultArchivos.count} archivos, ${resultLinks.count} links`);
+        console.log(`[CreateOrderPage] Adjuntos asociados exitosamente: ${resultArchivos.count} archivos, ${resultLinks.count} links`);
 
         // Limpiar sessionStorage
         sessionStorage.removeItem('ordenTemporalCreacion');
@@ -257,6 +275,7 @@ export function CreateOrderPage() {
           navigate('/app/orders/ordenes');
         }, 500);
       } catch (err: any) {
+        console.error('[CreateOrderPage] Error al asociar adjuntos:', err);
         showError(`Error al asociar adjuntos: ${err.message}`);
       }
     } else {
