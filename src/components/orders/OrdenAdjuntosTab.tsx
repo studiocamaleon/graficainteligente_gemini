@@ -210,17 +210,29 @@ export function OrdenAdjuntosTab({
 
   // Handlers para archivos de cliente
   const handleUploadArchivo = async () => {
+    console.log('[handleUploadArchivo] ===== LLAMADO =====', {
+      selectedFile: !!selectedFile,
+      fileName: selectedFile?.name,
+      descripcion: archivoForm.descripcion,
+      ordenId,
+      ordenTemporalId,
+      modoCreacion
+    });
+
     if (!selectedFile) {
+      console.warn('[handleUploadArchivo] ⚠️  No hay archivo seleccionado');
       showWarning('Por favor selecciona un archivo');
       return;
     }
 
     try {
+      console.log('[handleUploadArchivo] 📤 Llamando a archivos.uploadArchivo...');
       const nuevoArchivo = await archivos.uploadArchivo({
         file: selectedFile,
         descripcion: archivoForm.descripcion || undefined
       });
 
+      console.log('[handleUploadArchivo] ✅ Archivo subido exitosamente:', nuevoArchivo);
       showSuccess('Archivo subido correctamente');
 
       // Marcar como recién subido para highlight
@@ -236,6 +248,7 @@ export function OrdenAdjuntosTab({
       setArchivoForm({ descripcion: '' });
       if (fileInputRef.current) fileInputRef.current.value = '';
     } catch (err: any) {
+      console.error('[handleUploadArchivo] ❌ ERROR:', err);
       let errorMessage = 'Error al subir archivo';
 
       if (err.message?.includes('size')) {
@@ -246,6 +259,7 @@ export function OrdenAdjuntosTab({
         errorMessage = err.message;
       }
 
+      console.error('[handleUploadArchivo] Mostrando error al usuario:', errorMessage);
       showError(errorMessage);
     }
   };

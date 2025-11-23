@@ -179,19 +179,38 @@ export function useOrdenArchivos(params: string | UseOrdenArchivosParams) {
 
   // Subir archivo
   const uploadArchivo = async ({ file, descripcion }: UploadArchivoData) => {
+    console.log('[uploadArchivo] ===== INICIO =====');
+    console.log('[uploadArchivo] Parámetros:', {
+      fileName: file.name,
+      fileSize: file.size,
+      fileType: file.type,
+      descripcion,
+      ordenId,
+      ordenTemporalId,
+      modoTemporal,
+      profileExists: !!profile,
+      companyId: profile?.company_id,
+      userId: profile?.id
+    });
+
     if (!profile?.company_id) {
+      console.error('[uploadArchivo] ❌ ERROR: No hay company_id', { profile });
       throw new Error('No se pudo obtener el ID de la empresa');
     }
 
     if (!ordenId && !ordenTemporalId) {
+      console.error('[uploadArchivo] ❌ ERROR: No hay ordenId ni ordenTemporalId');
       throw new Error('Se requiere ordenId u ordenTemporalId');
     }
 
     // Validar archivo
     const validation = validateFile(file);
     if (!validation.valid) {
+      console.error('[uploadArchivo] ❌ ERROR: Validación falló', validation.error);
       throw new Error(validation.error);
     }
+
+    console.log('[uploadArchivo] ✅ Validaciones pasadas');
 
     try {
       setUploading(true);
@@ -207,6 +226,13 @@ export function useOrdenArchivos(params: string | UseOrdenArchivosParams) {
         ? `${profile.company_id}/temporal/${ordenTemporalId}/${fileName}`
         : `${profile.company_id}/${ordenId}/${fileName}`;
 
+      console.log('[uploadArchivo] 📁 Subiendo a storage:', {
+        bucket: BUCKET_NAME,
+        storagePath,
+        modoTemporal,
+        fileSize: file.size
+      });
+
       // Subir a storage
       const { error: uploadError } = await supabase.storage
         .from(BUCKET_NAME)
@@ -215,7 +241,12 @@ export function useOrdenArchivos(params: string | UseOrdenArchivosParams) {
           upsert: false
         });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('[uploadArchivo] ❌ ERROR en storage:', uploadError);
+        throw uploadError;
+      }
+
+      console.log('[uploadArchivo] ✅ Archivo subido a storage exitosamente');
 
       setUploadProgress(50);
 
@@ -239,6 +270,14 @@ export function useOrdenArchivos(params: string | UseOrdenArchivosParams) {
         insertData.orden_id = ordenId;
       }
 
+      console.log('[uploadArchivo] 💾 Insertando en BD:', {
+        table: 'ordenes_trabajo_archivos',
+        data: {
+          ...insertData,
+          file: file.name
+        }
+      });
+
       const { data, error: dbError } = await supabase
         .from('ordenes_trabajo_archivos')
         .insert(insertData)
@@ -246,16 +285,22 @@ export function useOrdenArchivos(params: string | UseOrdenArchivosParams) {
         .single();
 
       if (dbError) {
+        console.error('[uploadArchivo] ❌ ERROR en BD:', dbError);
         // Si falla la BD, eliminar el archivo del storage
+        console.log('[uploadArchivo] 🗑️  Eliminando archivo de storage debido a error en BD');
         await supabase.storage.from(BUCKET_NAME).remove([storagePath]);
         throw dbError;
       }
 
+      console.log('[uploadArchivo] ✅ Registro creado en BD:', data);
+
       setUploadProgress(100);
 
       // Recargar lista
+      console.log('[uploadArchivo] 🔄 Recargando lista de archivos');
       await loadArchivos();
 
+      console.log('[uploadArchivo] ===== FIN EXITOSO =====');
       return data;
     } catch (err: any) {
       console.error('Error uploading archivo:', err);
