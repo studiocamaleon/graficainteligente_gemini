@@ -5,7 +5,6 @@ import { ArrowRight, CheckCircle2, Zap, BarChart3, Users, Clock } from 'lucide-r
 import { BRAND } from '../../constants/branding';
 import { ComingSoonModal } from '../ui/ComingSoonModal';
 import { FEATURES } from '../../config/features';
-import { ColorBends } from '../backgrounds/ColorBends';
 
 export function HeroSection() {
   const [showComingSoonModal, setShowComingSoonModal] = useState(false);
@@ -24,7 +23,13 @@ export function HeroSection() {
         onClose={() => setShowComingSoonModal(false)}
       />
     <section className="relative min-h-screen flex items-center overflow-hidden">
-      <ColorBends speed={25} opacity={0.5} />
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-cyan-50"></div>
+
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-400/10 rounded-full blur-3xl"></div>
+        <div className="absolute top-1/2 -left-40 w-80 h-80 bg-cyan-400/10 rounded-full blur-3xl"></div>
+        <div className="absolute -bottom-40 right-1/3 w-80 h-80 bg-blue-400/5 rounded-full blur-3xl"></div>
+      </div>
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
@@ -50,10 +55,10 @@ export function HeroSection() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
-                className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight"
+                className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 leading-tight"
               >
-                <span className="text-gray-900 drop-shadow-sm">Transforma tu imprenta con{' '}</span>
-                <span className="bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent drop-shadow-lg">
+                Transforma tu imprenta con{' '}
+                <span className="bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
                   gestión inteligente
                 </span>
               </motion.h1>
@@ -62,7 +67,7 @@ export function HeroSection() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
-                className="text-lg sm:text-xl text-gray-700 leading-relaxed drop-shadow-sm"
+                className="text-lg sm:text-xl text-gray-600 leading-relaxed"
               >
                 {BRAND.description}
               </motion.p>
@@ -125,7 +130,7 @@ export function HeroSection() {
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-cyan-500/20 rounded-3xl blur-2xl"></div>
 
-              <div className="relative bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-gray-200/50 p-8">
+              <div className="relative bg-white/70 backdrop-blur-xl rounded-3xl shadow-2xl border border-gray-200/50 p-8">
                 <div className="space-y-6">
                   <div className="flex items-center justify-between pb-4 border-b border-gray-200">
                     <h3 className="text-xl font-bold text-gray-900">Panel de Control</h3>
