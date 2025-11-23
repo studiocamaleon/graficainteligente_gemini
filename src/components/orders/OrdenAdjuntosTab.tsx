@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import {
   Upload, Download, Trash2, FileText, Link as LinkIcon, Settings,
   AlertTriangle, Clock, Plus, ExternalLink, Copy, Edit2, CheckCircle2,
-  History, Filter
+  History, Filter, Loader, X
 } from 'lucide-react';
 import { useOrdenArchivos } from '../../hooks/useOrdenArchivos';
 import { useOrdenLinks } from '../../hooks/useOrdenLinks';
@@ -64,6 +64,8 @@ export function OrdenAdjuntosTab({
   const [showVersionHistory, setShowVersionHistory] = useState<string | null>(null);
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [recentlyUploadedId, setRecentlyUploadedId] = useState<string | null>(null);
   const [archivoForm, setArchivoForm] = useState({ descripcion: '' });
   const [produccionForm, setProduccionForm] = useState({
     etiquetas: [] as string[],
@@ -75,7 +77,7 @@ export function OrdenAdjuntosTab({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const fileProduccionInputRef = useRef<HTMLInputElement>(null);
-  const { showToast } = useToast();
+  const { showSuccess, showError, showWarning, showInfo } = useToast();
   const { showConfirm } = useConfirmDialog();
 
   // Calcular fecha de eliminación usando fecha_entrega_real
@@ -117,48 +119,165 @@ export function OrdenAdjuntosTab({
     return adj.tipo === filtroTipo;
   });
 
+  // Helper para limpiar nombre de archivo y sugerir descripción
+  const generarNombreDescriptivo = (fileName: string): string => {
+    const nombreSinExtension = fileName.replace(/\.[^/.]+$/, '');
+    const nombreLimpio = nombreSinExtension
+      .replace(/[-_]/g, ' ')
+      .replace(/\b\w/g, l => l.toUpperCase());
+    return nombreLimpio;
+  };
+
+  // Handler para selección de archivo
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validar archivo antes de aceptarlo
+    const validacion = archivos.validateFile(file);
+    if (!validacion.isValid) {
+      showError(validacion.error || 'Archivo no válido');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    setSelectedFile(file);
+
+    // Generar preview para imágenes
+    if (file.type.startsWith('image/')) {
+      const url = URL.createObjectURL(file);
+      setPreviewUrl(url);
+    } else {
+      setPreviewUrl(null);
+    }
+
+    // Auto-sugerir descripción basada en nombre de archivo
+    if (!archivoForm.descripcion) {
+      const nombreSugerido = generarNombreDescriptivo(file.name);
+      setArchivoForm({ descripcion: nombreSugerido });
+    }
+  };
+
+  // Handler para selección de archivo de producción
+  const handleFileProduccionSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validacion = archivosProduccion.validateFile(file);
+    if (!validacion.isValid) {
+      showError(validacion.error || 'Archivo no válido');
+      if (fileProduccionInputRef.current) fileProduccionInputRef.current.value = '';
+      return;
+    }
+
+    setSelectedFile(file);
+
+    if (file.type.startsWith('image/')) {
+      const url = URL.createObjectURL(file);
+      setPreviewUrl(url);
+    } else {
+      setPreviewUrl(null);
+    }
+  };
+
+  // Limpiar archivo seleccionado
+  const clearSelectedFile = () => {
+    setSelectedFile(null);
+    setPreviewUrl(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    if (fileProduccionInputRef.current) fileProduccionInputRef.current.value = '';
+  };
+
   // Handlers para archivos de cliente
   const handleUploadArchivo = async () => {
-    if (!selectedFile) return;
+    if (!selectedFile) {
+      showWarning('Por favor selecciona un archivo');
+      return;
+    }
+
     try {
-      await archivos.uploadArchivo({
+      const nuevoArchivo = await archivos.uploadArchivo({
         file: selectedFile,
         descripcion: archivoForm.descripcion || undefined
       });
-      showToast('Archivo subido correctamente', 'success');
+
+      showSuccess('Archivo subido correctamente');
+
+      // Marcar como recién subido para highlight
+      if (nuevoArchivo?.id) {
+        setRecentlyUploadedId(nuevoArchivo.id);
+        setTimeout(() => setRecentlyUploadedId(null), 3000);
+      }
+
+      // Cerrar modal y limpiar
       setShowUploadArchivo(false);
       setSelectedFile(null);
+      setPreviewUrl(null);
       setArchivoForm({ descripcion: '' });
       if (fileInputRef.current) fileInputRef.current.value = '';
     } catch (err: any) {
-      showToast(err.message, 'error');
+      let errorMessage = 'Error al subir archivo';
+
+      if (err.message?.includes('size')) {
+        errorMessage = 'El archivo es demasiado grande';
+      } else if (err.message?.includes('storage') || err.message?.includes('espacio')) {
+        errorMessage = 'No hay espacio suficiente';
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+
+      showError(errorMessage);
     }
   };
 
   // Handlers para archivos de producción
   const handleUploadProduccion = async () => {
-    if (!selectedFile) return;
+    if (!selectedFile) {
+      showWarning('Por favor selecciona un archivo');
+      return;
+    }
+
     try {
-      await archivosProduccion.uploadArchivo({
+      const nuevoArchivo = await archivosProduccion.uploadArchivo({
         file: selectedFile,
         etiquetas: produccionForm.etiquetas.length > 0 ? produccionForm.etiquetas : undefined,
         notas: produccionForm.notas || undefined,
         reemplaza_a: produccionForm.reemplaza_a || undefined
       });
-      showToast('Archivo de producción subido correctamente', 'success');
+
+      showSuccess('Archivo de producción subido correctamente');
+
+      // Marcar como recién subido
+      if (nuevoArchivo?.id) {
+        setRecentlyUploadedId(nuevoArchivo.id);
+        setTimeout(() => setRecentlyUploadedId(null), 3000);
+      }
+
+      // Cerrar modal y limpiar
       setShowUploadProduccion(false);
       setSelectedFile(null);
+      setPreviewUrl(null);
       setProduccionForm({ etiquetas: [], notas: '', reemplaza_a: '' });
       if (fileProduccionInputRef.current) fileProduccionInputRef.current.value = '';
     } catch (err: any) {
-      showToast(err.message, 'error');
+      let errorMessage = 'Error al subir archivo de producción';
+
+      if (err.message?.includes('size')) {
+        errorMessage = 'El archivo es demasiado grande';
+      } else if (err.message?.includes('storage') || err.message?.includes('espacio')) {
+        errorMessage = 'No hay espacio suficiente';
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+
+      showError(errorMessage);
     }
   };
 
   // Handlers para links
   const handleCreateLink = async () => {
     if (!linkForm.titulo.trim() || !linkForm.url.trim()) {
-      showToast('El título y la URL son obligatorios', 'error');
+      showError('El título y la URL son obligatorios');
       return;
     }
     try {
@@ -167,17 +286,17 @@ export function OrdenAdjuntosTab({
         url: linkForm.url,
         descripcion: linkForm.descripcion || undefined
       });
-      showToast('Link agregado correctamente', 'success');
+      showSuccess('Link agregado correctamente');
       setShowAddLink(false);
       setLinkForm({ titulo: '', url: '', descripcion: '' });
     } catch (err: any) {
-      showToast(err.message, 'error');
+      showError(err.message || 'Error al agregar link');
     }
   };
 
   const handleUpdateLink = async () => {
     if (!editingLink || !linkForm.titulo.trim() || !linkForm.url.trim()) {
-      showToast('El título y la URL son obligatorios', 'error');
+      showError('El título y la URL son obligatorios');
       return;
     }
     try {
@@ -186,12 +305,12 @@ export function OrdenAdjuntosTab({
         url: linkForm.url,
         descripcion: linkForm.descripcion || undefined
       });
-      showToast('Link actualizado correctamente', 'success');
+      showSuccess('Link actualizado correctamente');
       setShowEditLink(false);
       setEditingLink(null);
       setLinkForm({ titulo: '', url: '', descripcion: '' });
     } catch (err: any) {
-      showToast(err.message, 'error');
+      showError(err.message || 'Error al actualizar link');
     }
   };
 
@@ -216,9 +335,9 @@ export function OrdenAdjuntosTab({
       } else {
         await links.deleteLink(adjunto.id);
       }
-      showToast('Adjunto eliminado correctamente', 'success');
+      showSuccess('Adjunto eliminado correctamente');
     } catch (err: any) {
-      showToast(err.message, 'error');
+      showError(err.message || 'Error al eliminar adjunto');
     }
   };
 
@@ -229,9 +348,9 @@ export function OrdenAdjuntosTab({
       } else {
         await archivosProduccion.downloadArchivo(adjunto.id);
       }
-      showToast('Descarga iniciada', 'success');
+      showInfo('Descarga iniciada');
     } catch (err: any) {
-      showToast(err.message, 'error');
+      showError(err.message || 'Error al descargar archivo');
     }
   };
 
@@ -434,10 +553,19 @@ export function OrdenAdjuntosTab({
           <div className="divide-y divide-gray-200">
             {adjuntosFiltrados.map((adjunto) => {
               const esReciente = dayjs().diff(dayjs(adjunto.fecha), 'hours') < 24;
+              const esRecienSubido = adjunto.id === recentlyUploadedId;
               const tipoBadge = getTipoBadge(adjunto.tipo);
 
               return (
-                <div key={`${adjunto.tipo}-${adjunto.id}`} className="p-4 hover:bg-gray-50">
+                <div
+                  key={`${adjunto.tipo}-${adjunto.id}`}
+                  data-archivo-item
+                  className={`p-4 transition-all duration-300 ${
+                    esRecienSubido
+                      ? 'bg-green-50 ring-2 ring-green-500 ring-inset'
+                      : 'hover:bg-gray-50'
+                  }`}
+                >
                   <div className="flex items-center gap-4">
                     <div className={`w-10 h-10 ${getBgColor(adjunto.tipo)} rounded-lg flex items-center justify-center flex-shrink-0`}>
                       {getIcono(adjunto.tipo)}
@@ -550,39 +678,125 @@ export function OrdenAdjuntosTab({
       <Modal
         isOpen={showUploadArchivo}
         onClose={() => {
+          if (archivos.uploading) return; // No cerrar si está subiendo
           setShowUploadArchivo(false);
-          setSelectedFile(null);
+          clearSelectedFile();
           setArchivoForm({ descripcion: '' });
         }}
         title="Subir Archivo de Cliente"
       >
         <div className="space-y-4">
+          {/* Información del archivo seleccionado */}
           {selectedFile && (
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="flex items-center gap-3">
-                <FileText className="w-8 h-8 text-blue-600" />
-                <div>
-                  <p className="font-medium">{selectedFile.name}</p>
-                  <p className="text-sm text-gray-500">{archivos.formatSize(selectedFile.size)}</p>
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <div className="flex items-start gap-3">
+                <FileText className="w-8 h-8 text-blue-600 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-gray-900 truncate">{selectedFile.name}</p>
+                  <div className="flex items-center gap-3 text-xs text-gray-600 mt-1">
+                    <span>{archivos.formatSize(selectedFile.size)}</span>
+                    <span>•</span>
+                    <span>{selectedFile.type || 'Tipo desconocido'}</span>
+                  </div>
                 </div>
+                {!archivos.uploading && (
+                  <button
+                    onClick={clearSelectedFile}
+                    className="text-gray-400 hover:text-red-600 transition-colors"
+                    title="Quitar archivo"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                )}
               </div>
+
+              {/* Preview de imagen */}
+              {previewUrl && (
+                <div className="mt-3">
+                  <p className="text-sm font-medium text-gray-700 mb-2">Vista previa:</p>
+                  <img
+                    src={previewUrl}
+                    alt="Preview"
+                    className="max-h-48 w-auto rounded border border-gray-300"
+                  />
+                </div>
+              )}
             </div>
           )}
+
+          {/* Input de archivo si no hay seleccionado */}
+          {!selectedFile && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Seleccionar archivo
+              </label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                onChange={handleFileSelect}
+                className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+              />
+            </div>
+          )}
+
+          {/* Campo de descripción */}
           <Input
-            label="Descripción (opcional)"
+            label="Nombre descriptivo"
             value={archivoForm.descripcion}
             onChange={(e) => setArchivoForm({ descripcion: e.target.value })}
-            placeholder="Ej: Archivos enviados por el cliente"
+            placeholder="Ej: Logo Final V2, Contrato Firmado, Mockup Aprobado"
+            disabled={archivos.uploading}
           />
-          <div className="flex gap-3 justify-end">
-            <Button variant="outline" onClick={() => {
-              setShowUploadArchivo(false);
-              setSelectedFile(null);
-              setArchivoForm({ descripcion: '' });
-            }}>
+
+          {/* Indicador de progreso */}
+          {archivos.uploading && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-blue-600">
+                <Loader className="w-4 h-4 animate-spin" />
+                <span className="text-sm font-medium">Subiendo archivo...</span>
+              </div>
+              <div className="bg-gray-200 rounded-full h-2 overflow-hidden">
+                <div
+                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${archivos.uploadProgress}%` }}
+                />
+              </div>
+              <p className="text-xs text-gray-600">
+                {archivos.uploadProgress}% completado
+              </p>
+            </div>
+          )}
+
+          {/* Botones */}
+          <div className="flex gap-3 justify-end pt-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (archivos.uploading) return;
+                setShowUploadArchivo(false);
+                clearSelectedFile();
+                setArchivoForm({ descripcion: '' });
+              }}
+              disabled={archivos.uploading}
+            >
               Cancelar
             </Button>
-            <Button onClick={handleUploadArchivo}>Subir Archivo</Button>
+            <Button
+              onClick={handleUploadArchivo}
+              disabled={!selectedFile || archivos.uploading}
+            >
+              {archivos.uploading ? (
+                <>
+                  <Loader className="w-4 h-4 mr-2 animate-spin" />
+                  Subiendo...
+                </>
+              ) : (
+                <>
+                  <Upload className="w-4 h-4 mr-2" />
+                  Subir Archivo
+                </>
+              )}
+            </Button>
           </div>
         </div>
       </Modal>
@@ -591,24 +805,67 @@ export function OrdenAdjuntosTab({
       <Modal
         isOpen={showUploadProduccion}
         onClose={() => {
+          if (archivosProduccion.uploading) return;
           setShowUploadProduccion(false);
-          setSelectedFile(null);
+          clearSelectedFile();
           setProduccionForm({ etiquetas: [], notas: '', reemplaza_a: '' });
         }}
         title="Subir Archivo de Producción"
       >
         <div className="space-y-4">
+          {/* Información del archivo seleccionado */}
           {selectedFile && (
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="flex items-center gap-3">
-                <Settings className="w-8 h-8 text-green-600" />
-                <div>
-                  <p className="font-medium">{selectedFile.name}</p>
-                  <p className="text-sm text-gray-500">{archivosProduccion.formatSize(selectedFile.size)}</p>
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <div className="flex items-start gap-3">
+                <Settings className="w-8 h-8 text-green-600 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-gray-900 truncate">{selectedFile.name}</p>
+                  <div className="flex items-center gap-3 text-xs text-gray-600 mt-1">
+                    <span>{archivosProduccion.formatSize(selectedFile.size)}</span>
+                    <span>•</span>
+                    <span>{selectedFile.type || 'Tipo desconocido'}</span>
+                  </div>
                 </div>
+                {!archivosProduccion.uploading && (
+                  <button
+                    onClick={clearSelectedFile}
+                    className="text-gray-400 hover:text-red-600 transition-colors"
+                    title="Quitar archivo"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                )}
               </div>
+
+              {/* Preview de imagen */}
+              {previewUrl && (
+                <div className="mt-3">
+                  <p className="text-sm font-medium text-gray-700 mb-2">Vista previa:</p>
+                  <img
+                    src={previewUrl}
+                    alt="Preview"
+                    className="max-h-48 w-auto rounded border border-gray-300"
+                  />
+                </div>
+              )}
             </div>
           )}
+
+          {/* Input de archivo si no hay seleccionado */}
+          {!selectedFile && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Seleccionar archivo
+              </label>
+              <input
+                ref={fileProduccionInputRef}
+                type="file"
+                onChange={handleFileProduccionSelect}
+                className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
+              />
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Etiquetas (opcional)</label>
             <MultiSelect
@@ -616,14 +873,16 @@ export function OrdenAdjuntosTab({
               value={produccionForm.etiquetas}
               onChange={(etiquetas) => setProduccionForm({ ...produccionForm, etiquetas })}
               placeholder="Seleccionar etiquetas..."
+              disabled={archivosProduccion.uploading}
             />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">¿Reemplaza archivo?</label>
             <select
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
               value={produccionForm.reemplaza_a}
               onChange={(e) => setProduccionForm({ ...produccionForm, reemplaza_a: e.target.value })}
+              disabled={archivosProduccion.uploading}
             >
               <option value="">No reemplaza</option>
               {archivosProduccion.archivos.map((a) => (
@@ -634,22 +893,63 @@ export function OrdenAdjuntosTab({
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Notas</label>
             <textarea
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg resize-none"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg resize-none disabled:opacity-50 disabled:cursor-not-allowed"
               rows={3}
               value={produccionForm.notas}
               onChange={(e) => setProduccionForm({ ...produccionForm, notas: e.target.value })}
               placeholder="Ej: Ajustes de color aplicados..."
+              disabled={archivosProduccion.uploading}
             />
           </div>
-          <div className="flex gap-3 justify-end">
-            <Button variant="outline" onClick={() => {
-              setShowUploadProduccion(false);
-              setSelectedFile(null);
-              setProduccionForm({ etiquetas: [], notas: '', reemplaza_a: '' });
-            }}>
+
+          {/* Indicador de progreso */}
+          {archivosProduccion.uploading && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-green-600">
+                <Loader className="w-4 h-4 animate-spin" />
+                <span className="text-sm font-medium">Subiendo archivo de producción...</span>
+              </div>
+              <div className="bg-gray-200 rounded-full h-2 overflow-hidden">
+                <div
+                  className="bg-green-600 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${archivosProduccion.uploadProgress}%` }}
+                />
+              </div>
+              <p className="text-xs text-gray-600">
+                {archivosProduccion.uploadProgress}% completado
+              </p>
+            </div>
+          )}
+
+          <div className="flex gap-3 justify-end pt-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (archivosProduccion.uploading) return;
+                setShowUploadProduccion(false);
+                clearSelectedFile();
+                setProduccionForm({ etiquetas: [], notas: '', reemplaza_a: '' });
+              }}
+              disabled={archivosProduccion.uploading}
+            >
               Cancelar
             </Button>
-            <Button onClick={handleUploadProduccion}>Subir Archivo</Button>
+            <Button
+              onClick={handleUploadProduccion}
+              disabled={!selectedFile || archivosProduccion.uploading}
+            >
+              {archivosProduccion.uploading ? (
+                <>
+                  <Loader className="w-4 h-4 mr-2 animate-spin" />
+                  Subiendo...
+                </>
+              ) : (
+                <>
+                  <Upload className="w-4 h-4 mr-2" />
+                  Subir Archivo
+                </>
+              )}
+            </Button>
           </div>
         </div>
       </Modal>
