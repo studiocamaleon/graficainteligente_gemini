@@ -47,11 +47,18 @@ export function useOrdenArchivosProduccion(ordenId: string) {
 
   // Cargar archivos
   const loadArchivos = async () => {
-    if (!ordenId) return;
+    console.log('[useOrdenArchivosProduccion] loadArchivos llamado:', { ordenId });
+
+    if (!ordenId) {
+      console.log('[useOrdenArchivosProduccion] No hay ordenId, saliendo early y estableciendo loading=false');
+      setLoading(false);
+      return;
+    }
 
     try {
       setLoading(true);
       setError(null);
+      console.log('[useOrdenArchivosProduccion] Iniciando carga...');
 
       const { data, error: fetchError } = await supabase
         .from('ordenes_trabajo_archivos_produccion')
@@ -64,15 +71,17 @@ export function useOrdenArchivosProduccion(ordenId: string) {
 
       if (fetchError) throw fetchError;
 
+      console.log('[useOrdenArchivosProduccion] Archivos producción cargados:', data?.length || 0);
       setArchivos(data || []);
 
       // Calcular tamaño total
       const total = (data || []).reduce((sum, file) => sum + file.tamano_bytes, 0);
       setTotalSize(total);
     } catch (err: any) {
-      console.error('Error loading archivos produccion:', err);
+      console.error('[useOrdenArchivosProduccion] Error loading archivos produccion:', err);
       setError(err.message);
     } finally {
+      console.log('[useOrdenArchivosProduccion] Finalizando carga, setLoading(false)');
       setLoading(false);
     }
   };

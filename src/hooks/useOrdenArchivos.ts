@@ -50,11 +50,18 @@ export function useOrdenArchivos(params: string | UseOrdenArchivosParams) {
 
   // Cargar archivos
   const loadArchivos = async () => {
-    if (!ordenId && !ordenTemporalId) return;
+    console.log('[useOrdenArchivos] loadArchivos llamado:', { ordenId, ordenTemporalId, modoTemporal });
+
+    if (!ordenId && !ordenTemporalId) {
+      console.log('[useOrdenArchivos] No hay ordenId ni ordenTemporalId, saliendo early');
+      setLoading(false);
+      return;
+    }
 
     try {
       setLoading(true);
       setError(null);
+      console.log('[useOrdenArchivos] Iniciando carga...');
 
       let query = supabase
         .from('ordenes_trabajo_archivos')
@@ -64,8 +71,10 @@ export function useOrdenArchivos(params: string | UseOrdenArchivosParams) {
         `);
 
       if (modoTemporal && ordenTemporalId) {
+        console.log('[useOrdenArchivos] Modo temporal, filtrando por ordenTemporalId:', ordenTemporalId);
         query = query.eq('orden_temporal_id', ordenTemporalId);
       } else if (ordenId) {
+        console.log('[useOrdenArchivos] Modo normal, filtrando por ordenId:', ordenId);
         query = query.eq('orden_id', ordenId);
       }
 
@@ -73,15 +82,17 @@ export function useOrdenArchivos(params: string | UseOrdenArchivosParams) {
 
       if (fetchError) throw fetchError;
 
+      console.log('[useOrdenArchivos] Archivos cargados:', data?.length || 0);
       setArchivos(data || []);
 
       // Calcular tamaño total
       const total = (data || []).reduce((sum, file) => sum + file.tamano_bytes, 0);
       setTotalSize(total);
     } catch (err: any) {
-      console.error('Error loading archivos:', err);
+      console.error('[useOrdenArchivos] Error loading archivos:', err);
       setError(err.message);
     } finally {
+      console.log('[useOrdenArchivos] Finalizando carga, setLoading(false)');
       setLoading(false);
     }
   };

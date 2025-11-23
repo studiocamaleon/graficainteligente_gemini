@@ -42,9 +42,19 @@ export function OrdenAdjuntosTab({
   estado,
   modoCreacion = false
 }: OrdenAdjuntosTabProps) {
+  console.log('[OrdenAdjuntosTab] Props recibidos:', { ordenId, ordenTemporalId, modoCreacion, estado });
+
   const archivos = useOrdenArchivos({ ordenId, ordenTemporalId });
   const links = useOrdenLinks({ ordenId, ordenTemporalId });
+  // En modo creación, no cargar archivos de producción (no tiene sentido sin orden real)
   const archivosProduccion = useOrdenArchivosProduccion(ordenId || '');
+
+  console.log('[OrdenAdjuntosTab] Estados de carga:', {
+    archivosLoading: archivos.loading,
+    linksLoading: links.loading,
+    archivosProduccionLoading: archivosProduccion.loading,
+    modoCreacion
+  });
 
   const [filtroTipo, setFiltroTipo] = useState<FiltroTipo>('todos');
   const [showUploadArchivo, setShowUploadArchivo] = useState(false);
@@ -249,15 +259,23 @@ export function OrdenAdjuntosTab({
     return 'bg-yellow-50 border-yellow-300';
   };
 
-  const loading = archivos.loading || links.loading || archivosProduccion.loading;
+  // En modo creación, solo esperar archivos y links (no archivos de producción)
+  const loading = modoCreacion
+    ? (archivos.loading || links.loading)
+    : (archivos.loading || links.loading || archivosProduccion.loading);
+
+  console.log('[OrdenAdjuntosTab] Loading final:', loading);
 
   if (loading) {
+    console.log('[OrdenAdjuntosTab] Mostrando spinner...');
     return (
       <div className="flex items-center justify-center p-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
       </div>
     );
   }
+
+  console.log('[OrdenAdjuntosTab] Renderizando contenido completo');
 
   const totalSize = archivos.totalSize + archivosProduccion.totalSize;
   const maxSize = archivos.maxTotalSize + archivosProduccion.maxTotalSize;
