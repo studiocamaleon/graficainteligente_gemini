@@ -5,6 +5,7 @@ import { ArrowRight, CheckCircle2, Zap, BarChart3, Users, Clock } from 'lucide-r
 import { BRAND } from '../../constants/branding';
 import { ComingSoonModal } from '../ui/ComingSoonModal';
 import { FEATURES } from '../../config/features';
+import { ColorBends } from '../backgrounds/ColorBends';
 
 export function HeroSection() {
   const [showComingSoonModal, setShowComingSoonModal] = useState(false);
@@ -23,13 +24,18 @@ export function HeroSection() {
         onClose={() => setShowComingSoonModal(false)}
       />
     <section className="relative min-h-screen flex items-center overflow-hidden">
+      {/* Fondo base */}
       <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-cyan-50"></div>
 
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-400/10 rounded-full blur-3xl"></div>
-        <div className="absolute top-1/2 -left-40 w-80 h-80 bg-cyan-400/10 rounded-full blur-3xl"></div>
-        <div className="absolute -bottom-40 right-1/3 w-80 h-80 bg-blue-400/5 rounded-full blur-3xl"></div>
-      </div>
+      {/* Componente ColorBends animado */}
+      <ColorBends
+        colors={[
+          'from-blue-400 via-cyan-400 to-blue-500',
+          'from-cyan-400 via-blue-400 to-cyan-500',
+          'from-blue-300 via-cyan-300 to-blue-400',
+        ]}
+        speed="normal"
+      />
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
