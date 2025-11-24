@@ -1,9 +1,10 @@
-import { Plus, DollarSign, AlertCircle, Edit2, Trash2, TrendingDown, Calendar, CheckCircle } from 'lucide-react';
+import { Plus, DollarSign, AlertCircle, Edit2, Trash2, CheckCircle, CreditCard } from 'lucide-react';
 import { Button } from '../ui/Button';
-import { Badge } from '../ui/Badge';
 import { EmptyState } from '../ui/EmptyState';
 import { useMediosCobro } from '../../hooks/useMediosCobro';
 import { useConfirmDialog } from '../../hooks/useConfirmDialog';
+import { formatDateDisplay } from '../../utils/dates';
+import { PaymentMethodIcon } from './PaymentMethodIcon';
 
 interface Totales {
   subtotal: number;
@@ -66,13 +67,6 @@ export function OrdenPagosTab({
     if (confirmed) {
       onEliminarPago(id);
     }
-  };
-
-  const calcularDiasRestantes = (fechaLiberacion: string) => {
-    const hoy = new Date();
-    const fecha = new Date(fechaLiberacion);
-    const diff = Math.ceil((fecha.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
-    return diff;
   };
 
   return (
@@ -148,84 +142,70 @@ export function OrdenPagosTab({
               }
             />
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {pagos.map(pago => {
                 const medio = getMedioCobro(pago.medio_cobro_id);
-                const diasRestantes = pago.fecha_liberacion_estimada
-                  ? calcularDiasRestantes(pago.fecha_liberacion_estimada)
-                  : null;
 
                 return (
                   <div
                     key={pago.id}
-                    className="flex items-start justify-between p-4 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
+                    className="group relative flex items-center justify-between p-4 bg-white border border-gray-200 rounded-xl hover:shadow-md hover:border-gray-300 transition-all duration-200"
                   >
-                    <div className="flex-1">
-                      <div className="flex items-center flex-wrap gap-3 mb-2">
-                        <span className="font-bold text-xl text-gray-900">
-                          ${pago.monto.toFixed(2)}
-                        </span>
+                    <div className="flex items-center gap-4 flex-1">
+                      <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl">
                         {medio ? (
-                          <Badge variant="primary">{medio.nombre}</Badge>
-                        ) : pago.metodo_pago ? (
-                          <Badge variant="secondary">{pago.metodo_pago}</Badge>
-                        ) : null}
-                        <span className="text-sm text-gray-500">
-                          {new Date(pago.fecha_pago).toLocaleDateString('es-AR')}
-                        </span>
+                          <PaymentMethodIcon metodo={medio.nombre} className="w-6 h-6 text-blue-600" />
+                        ) : (
+                          <CreditCard className="w-6 h-6 text-blue-600" />
+                        )}
                       </div>
 
-                      {pago.referencia_pago && (
-                        <div className="text-sm text-gray-600 mb-1">
-                          <span className="font-medium">Ref:</span> {pago.referencia_pago}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-3 mb-1">
+                          <span className="text-base font-semibold text-gray-900">
+                            {medio?.nombre || pago.metodo_pago || 'Sin especificar'}
+                          </span>
+                          <span className="text-sm text-gray-500">
+                            {formatDateDisplay(pago.fecha_pago)}
+                          </span>
                         </div>
-                      )}
 
-                      {pago.notas && (
-                        <div className="text-sm text-gray-600 mb-2">
-                          {pago.notas}
-                        </div>
-                      )}
+                        {(pago.referencia_pago || pago.notas) && (
+                          <div className="text-xs text-gray-500 truncate">
+                            {pago.referencia_pago && (
+                              <span className="mr-2">Ref: {pago.referencia_pago}</span>
+                            )}
+                            {pago.notas && (
+                              <span>{pago.notas}</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
 
-                      {/* Información adicional de medios de cobro */}
-                      {medio && (
-                        <div className="flex flex-wrap items-center gap-3 mt-2">
-                          {pago.comision_aplicada && pago.comision_aplicada > 0 && (
-                            <div className="flex items-center gap-1 text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded">
-                              <TrendingDown className="w-3 h-3" />
-                              Comisión: ${pago.comision_aplicada.toFixed(2)}
-                            </div>
-                          )}
-                          {pago.fecha_liberacion_estimada && diasRestantes !== null && (
-                            <div className={`flex items-center gap-1 text-xs px-2 py-1 rounded ${
-                              diasRestantes <= 0
-                                ? 'text-green-600 bg-green-50'
-                                : 'text-purple-600 bg-purple-50'
-                            }`}>
-                              <Calendar className="w-3 h-3" />
-                              {diasRestantes <= 0 ? (
-                                'Liberado'
-                              ) : (
-                                `Liberación en ${diasRestantes} día${diasRestantes > 1 ? 's' : ''}`
-                              )}
-                            </div>
-                          )}
+                      <div className="text-right">
+                        <div className="text-2xl font-bold text-gray-900">
+                          ${pago.monto.toFixed(2)}
                         </div>
-                      )}
+                        {pago.comision_aplicada && pago.comision_aplicada > 0 && (
+                          <div className="text-xs text-orange-600 mt-0.5">
+                            -${pago.comision_aplicada.toFixed(2)} comisión
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     {onEditarPago && onEliminarPago && (
-                      <div className="flex items-center gap-2 ml-4">
+                      <div className="flex items-center gap-1 ml-4 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
                           onClick={() => onEditarPago(pago)}
-                          className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                          className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                           title="Editar pago"
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => handleEliminar(pago.id)}
-                          className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                          className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                           title="Eliminar pago"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -238,15 +218,12 @@ export function OrdenPagosTab({
             </div>
           )}
 
-          {/* Resumen de comisiones si hay pagos */}
           {pagos.length > 0 && pagos.some(p => p.comision_aplicada && p.comision_aplicada > 0) && (
-            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-orange-900">Total de Comisiones</span>
-                <span className="text-lg font-bold text-orange-900">
-                  ${pagos.reduce((sum, p) => sum + (p.comision_aplicada || 0), 0).toFixed(2)}
-                </span>
-              </div>
+            <div className="flex items-center justify-between p-4 bg-orange-50 border border-orange-200 rounded-xl">
+              <span className="text-sm font-medium text-orange-900">Total de Comisiones</span>
+              <span className="text-lg font-bold text-orange-900">
+                ${pagos.reduce((sum, p) => sum + (p.comision_aplicada || 0), 0).toFixed(2)}
+              </span>
             </div>
           )}
         </>

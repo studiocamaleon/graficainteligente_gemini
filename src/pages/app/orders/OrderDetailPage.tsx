@@ -32,6 +32,7 @@ import { OrderStatusBadge } from '../../../components/orders/OrderStatusBadge';
 import { ChannelBadge } from '../../../components/orders/ChannelBadge';
 import { OrderProductionRouteTab } from '../../../components/orders/OrderProductionRouteTab';
 import { OrdenAdjuntosTab } from '../../../components/orders/OrdenAdjuntosTab';
+import { OrdenPagosTab } from '../../../components/orders/OrdenPagosTab';
 import type { EstadoOrdenTrabajo } from '../../../types/database';
 
 type TabKey = 'items' | 'ruta' | 'adjuntos' | 'pagos' | 'historial';
@@ -488,80 +489,20 @@ export function OrderDetailPage() {
           </div>
         )}
 
-        {activeTab === 'pagos' && (
+        {activeTab === 'pagos' && orden && (
           <div className="p-6">
-            <div className="mb-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card>
-                  <div className="p-4">
-                    <p className="text-sm text-gray-600 mb-1">Total de la Orden</p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      ${Number(orden.total).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                    </p>
-                  </div>
-                </Card>
-
-                <Card>
-                  <div className="p-4">
-                    <p className="text-sm text-gray-600 mb-1">Total Pagado</p>
-                    <p className="text-2xl font-bold text-green-600">
-                      ${totalPagado.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                    </p>
-                  </div>
-                </Card>
-
-                <Card>
-                  <div className="p-4">
-                    <p className="text-sm text-gray-600 mb-1">Saldo Pendiente</p>
-                    <p className={`text-2xl font-bold ${saldoPendiente > 0 ? 'text-orange-600' : 'text-green-600'}`}>
-                      ${saldoPendiente.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                    </p>
-                  </div>
-                </Card>
-              </div>
-            </div>
-
-            {!orden.pagos || orden.pagos.length === 0 ? (
-              <EmptyState
-                icon={CreditCard}
-                title="No hay pagos registrados"
-                description="Aún no se han registrado pagos para esta orden"
-              />
-            ) : (
-              <div className="space-y-3">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  Pagos registrados ({orden.pagos.length})
-                </h3>
-
-                {orden.pagos.map((pago: any, index: number) => (
-                  <motion.div
-                    key={pago.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center justify-center w-10 h-10 rounded-full bg-green-100 text-green-700">
-                        <DollarSign className="w-5 h-5" />
-                      </div>
-
-                      <div>
-                        <p className="font-semibold text-gray-900">{pago.metodo_pago}</p>
-                        <p className="text-sm text-gray-500">
-                          {new Date(pago.fecha_pago).toLocaleDateString()}
-                          {pago.referencia_pago && ` • Ref: ${pago.referencia_pago}`}
-                        </p>
-                      </div>
-                    </div>
-
-                    <p className="text-xl font-bold text-green-600">
-                      ${Number(pago.monto).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                    </p>
-                  </motion.div>
-                ))}
-              </div>
-            )}
+            <OrdenPagosTab
+              totales={{
+                subtotal: Number(orden.subtotal || 0),
+                descuentoAplicado: Number(orden.descuento_aplicado || 0),
+                subtotalConDescuento: Number(orden.subtotal_con_descuento || 0),
+                iva: Number(orden.iva || 0),
+                total: Number(orden.total || 0),
+              }}
+              pagos={orden.pagos || []}
+              onAgregarPago={() => {}}
+              readOnly
+            />
           </div>
         )}
 
