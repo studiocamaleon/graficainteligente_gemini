@@ -67,9 +67,9 @@ export function OrdenFooterTotales({
             {/* Saldo pendiente (solo si mostrarSaldo es true) */}
             {mostrarSaldo && tienePagos && (
               <>
-                <div className="text-right">
-                  <div className="text-xs text-green-700">Pagado</div>
-                  <div className="text-sm font-medium text-green-600">
+                <div className="text-right border-l border-gray-200 pl-8">
+                  <div className="text-xs text-green-700 mb-1">Pagado</div>
+                  <div className="text-2xl font-bold text-green-600">
                     ${totalPagado.toFixed(2)}
                   </div>
                 </div>
