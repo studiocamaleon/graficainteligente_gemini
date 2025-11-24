@@ -2,9 +2,10 @@ import { Banknote, CreditCard, DollarSign, FileText, HelpCircle } from 'lucide-r
 import type { MetodoPago } from '../../types/database';
 
 interface PaymentMethodIconProps {
-  metodo: MetodoPago;
+  metodo: MetodoPago | string;
   size?: 'sm' | 'md' | 'lg';
   showLabel?: boolean;
+  className?: string;
 }
 
 const metodoConfig: Record<
@@ -49,18 +50,35 @@ const sizeClasses = {
   lg: 'w-6 h-6',
 };
 
-export function PaymentMethodIcon({ metodo, size = 'md', showLabel = false }: PaymentMethodIconProps) {
-  const config = metodoConfig[metodo];
+export function PaymentMethodIcon({ metodo, size = 'md', showLabel = false, className = '' }: PaymentMethodIconProps) {
+  const config = metodoConfig[metodo as MetodoPago];
+
+  if (!config) {
+    const Icon = CreditCard;
+    const defaultColor = 'text-gray-600';
+
+    if (showLabel) {
+      return (
+        <div className="inline-flex items-center gap-2">
+          <Icon className={`${sizeClasses[size]} ${defaultColor} ${className}`} />
+          <span className="text-sm font-medium text-gray-700">{metodo}</span>
+        </div>
+      );
+    }
+
+    return <Icon className={`${sizeClasses[size]} ${defaultColor} ${className}`} />;
+  }
+
   const Icon = config.icon;
 
   if (showLabel) {
     return (
       <div className="inline-flex items-center gap-2">
-        <Icon className={`${sizeClasses[size]} ${config.color}`} />
+        <Icon className={`${sizeClasses[size]} ${config.color} ${className}`} />
         <span className="text-sm font-medium text-gray-700">{config.label}</span>
       </div>
     );
   }
 
-  return <Icon className={`${sizeClasses[size]} ${config.color}`} />;
+  return <Icon className={`${sizeClasses[size]} ${config.color} ${className}`} />;
 }

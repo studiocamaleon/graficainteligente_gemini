@@ -154,7 +154,9 @@ export function OrdenPagosTab({
                     <div className="flex items-center gap-4 flex-1">
                       <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl">
                         {medio ? (
-                          <PaymentMethodIcon metodo={medio.nombre} className="w-6 h-6 text-blue-600" />
+                          <PaymentMethodIcon metodo={medio.nombre} size="lg" />
+                        ) : pago.metodo_pago ? (
+                          <PaymentMethodIcon metodo={pago.metodo_pago} size="lg" />
                         ) : (
                           <CreditCard className="w-6 h-6 text-blue-600" />
                         )}
