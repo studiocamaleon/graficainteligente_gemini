@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
+import { getArgentinaDate, startOfDay } from '../utils/dates';
 import type {
   CentroCopiadoOrden,
   EstadoOrdenCopiado,
@@ -154,14 +155,14 @@ export function useCentroCopiadoOrdenes(params: UseCentroCopiadoOrdenesParams = 
       try {
         setError(null);
 
-        const today = new Date();
-        const dateStr = today.toISOString().split('T')[0].replace(/-/g, '');
+        const today = getArgentinaDate();
+        const dateStr = today.format('YYYYMMDD');
 
         const { count } = await supabase
           .from('centro_copiado_ordenes')
           .select('*', { count: 'exact', head: true })
           .eq('company_id', profile.company_id)
-          .gte('created_at', new Date(today.setHours(0, 0, 0, 0)).toISOString());
+          .gte('created_at', startOfDay(today).toISOString());
 
         const numeroSecuencia = String((count || 0) + 1).padStart(4, '0');
         const numeroOrden = `CC-${dateStr}-${numeroSecuencia}`;

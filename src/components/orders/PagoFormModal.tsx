@@ -4,6 +4,7 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { useMediosCobro } from '../../hooks/useMediosCobro';
 import { MedioCobroSelector } from '../medios-cobro/MedioCobroSelector';
+import { getArgentinaDateString, isDateInFuture } from '../../utils/dates';
 
 interface PagoFormData {
   fecha_pago: string;
@@ -31,7 +32,7 @@ export function PagoFormModal({
   const { mediosCobro, calcularComisionYLiberacion } = useMediosCobro();
 
   const [formData, setFormData] = useState<PagoFormData>({
-    fecha_pago: new Date().toISOString().split('T')[0],
+    fecha_pago: getArgentinaDateString(),
     monto: 0,
     medio_cobro_id: '',
     referencia_pago: '',
@@ -51,7 +52,7 @@ export function PagoFormModal({
       });
     } else {
       setFormData({
-        fecha_pago: new Date().toISOString().split('T')[0],
+        fecha_pago: getArgentinaDateString(),
         monto: 0,
         medio_cobro_id: '',
         referencia_pago: '',
@@ -74,14 +75,8 @@ export function PagoFormModal({
 
     if (!formData.fecha_pago) {
       newErrors.fecha_pago = 'La fecha es requerida';
-    } else {
-      const fechaPago = new Date(formData.fecha_pago);
-      const hoy = new Date();
-      hoy.setHours(0, 0, 0, 0);
-
-      if (fechaPago > hoy) {
-        newErrors.fecha_pago = 'La fecha no puede ser futura';
-      }
+    } else if (isDateInFuture(formData.fecha_pago)) {
+      newErrors.fecha_pago = 'La fecha no puede ser futura';
     }
 
     if (!formData.monto || formData.monto <= 0) {
@@ -182,7 +177,7 @@ export function PagoFormModal({
                 id="fecha_pago"
                 value={formData.fecha_pago}
                 onChange={(e) => setFormData({ ...formData, fecha_pago: e.target.value })}
-                max={new Date().toISOString().split('T')[0]}
+                max={getArgentinaDateString()}
               />
               {errors.fecha_pago && (
                 <p className="text-sm text-red-600 mt-1">{errors.fecha_pago}</p>

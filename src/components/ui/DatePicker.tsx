@@ -2,6 +2,15 @@ import { useState, useRef, useEffect } from 'react';
 import { Calendar, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+import 'dayjs/locale/es';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+dayjs.locale('es');
+
+const ARGENTINA_TIMEZONE = 'America/Argentina/Buenos_Aires';
 
 interface DatePickerProps {
   label?: string;
@@ -30,12 +39,12 @@ export function DatePicker({
 }: DatePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(
-    value ? dayjs(value) : dayjs()
+    value ? dayjs(value).tz(ARGENTINA_TIMEZONE) : dayjs().tz(ARGENTINA_TIMEZONE)
   );
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const minDateObj = minDate ? dayjs(minDate) : null;
-  const maxDateObj = maxDate ? dayjs(maxDate) : null;
+  const minDateObj = minDate ? dayjs(minDate).tz(ARGENTINA_TIMEZONE) : null;
+  const maxDateObj = maxDate ? dayjs(maxDate).tz(ARGENTINA_TIMEZONE) : null;
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -92,7 +101,7 @@ export function DatePicker({
   };
 
   const handleShortcut = (daysToAdd: number) => {
-    const newDate = dayjs().add(daysToAdd, 'day');
+    const newDate = dayjs().tz(ARGENTINA_TIMEZONE).add(daysToAdd, 'day');
     if (!isDateDisabled(newDate)) {
       onChange(newDate.format('YYYY-MM-DD'));
       setIsOpen(false);
@@ -109,7 +118,7 @@ export function DatePicker({
 
   const formatDisplayDate = (date: string | null) => {
     if (!date) return '';
-    return dayjs(date).format('DD/MM/YYYY');
+    return dayjs(date).tz(ARGENTINA_TIMEZONE).format('DD/MM/YYYY');
   };
 
   const days = getDaysInMonth();
@@ -209,8 +218,8 @@ export function DatePicker({
                   return <div key={`empty-${index}`} className="aspect-square" />;
                 }
 
-                const isSelected = value && day.isSame(dayjs(value), 'day');
-                const isToday = day.isSame(dayjs(), 'day');
+                const isSelected = value && day.isSame(dayjs(value).tz(ARGENTINA_TIMEZONE), 'day');
+                const isToday = day.isSame(dayjs().tz(ARGENTINA_TIMEZONE), 'day');
                 const isDisabled = isDateDisabled(day);
 
                 return (
