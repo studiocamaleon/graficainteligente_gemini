@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
 import type { BusinessHours, DaySchedule, DayOfWeek } from '../types/database';
-import { getDayName, validateTimeRange, compareTimeRanges } from '../utils/timeUtils';
+import { getDayName, validateTimeRange, compareTimeRanges, normalizeTimeFormat } from '../utils/timeUtils';
 
 export function useBusinessHours() {
   const { company } = useAuth();
@@ -47,10 +47,10 @@ export function useBusinessHours() {
               day_of_week: existingDay.day_of_week,
               day_name: getDayName(existingDay.day_of_week),
               is_open: existingDay.is_open,
-              opening_time_1: existingDay.opening_time_1 || '',
-              closing_time_1: existingDay.closing_time_1 || '',
-              opening_time_2: existingDay.opening_time_2 || '',
-              closing_time_2: existingDay.closing_time_2 || '',
+              opening_time_1: normalizeTimeFormat(existingDay.opening_time_1 || ''),
+              closing_time_1: normalizeTimeFormat(existingDay.closing_time_1 || ''),
+              opening_time_2: normalizeTimeFormat(existingDay.opening_time_2 || ''),
+              closing_time_2: normalizeTimeFormat(existingDay.closing_time_2 || ''),
             };
           }
           return emptyDay;

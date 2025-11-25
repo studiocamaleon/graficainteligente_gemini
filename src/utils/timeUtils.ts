@@ -50,18 +50,32 @@ export function formatearFechaOrden(fecha: string): string {
 
 // Utilidades para horarios de atención
 
+export function normalizeTimeFormat(time: string): string {
+  if (!time) return '';
+  const trimmed = time.trim();
+  if (!trimmed) return '';
+
+  // Si tiene formato HH:MM:SS (8 caracteres), quitar los segundos
+  if (trimmed.length === 8 && trimmed.match(/^\d{2}:\d{2}:\d{2}$/)) {
+    return trimmed.substring(0, 5); // Retorna HH:MM
+  }
+
+  // Si ya tiene formato HH:MM o H:MM, retornarlo
+  return trimmed;
+}
+
 export function isValidTimeFormat(time: string): boolean {
   if (!time) return false;
-  const trimmedTime = time.trim();
-  if (!trimmedTime) return false;
+  const normalizedTime = normalizeTimeFormat(time);
+  if (!normalizedTime) return false;
   const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
-  return timeRegex.test(trimmedTime);
+  return timeRegex.test(normalizedTime);
 }
 
 export function parseTimeToMinutes(time: string): number {
-  const trimmedTime = time.trim();
-  if (!trimmedTime || !isValidTimeFormat(trimmedTime)) return 0;
-  const [hours, minutes] = trimmedTime.split(':').map(Number);
+  const normalizedTime = normalizeTimeFormat(time);
+  if (!normalizedTime || !isValidTimeFormat(normalizedTime)) return 0;
+  const [hours, minutes] = normalizedTime.split(':').map(Number);
   return hours * 60 + minutes;
 }
 
@@ -105,11 +119,11 @@ export function validateTimeRange(start: string, end: string): string | null {
   console.log('end original:', JSON.stringify(end), `(type: ${typeof end}, length: ${end?.length || 0})`);
   console.log('end codes:', end ? [...end].map(c => c.charCodeAt(0)).join(',') : 'N/A');
 
-  const trimmedStart = start?.trim() || '';
-  const trimmedEnd = end?.trim() || '';
+  const trimmedStart = normalizeTimeFormat(start || '');
+  const trimmedEnd = normalizeTimeFormat(end || '');
 
-  console.log('start trimmed:', JSON.stringify(trimmedStart), `(length: ${trimmedStart.length})`);
-  console.log('end trimmed:', JSON.stringify(trimmedEnd), `(length: ${trimmedEnd.length})`);
+  console.log('start normalizado:', JSON.stringify(trimmedStart), `(length: ${trimmedStart.length})`);
+  console.log('end normalizado:', JSON.stringify(trimmedEnd), `(length: ${trimmedEnd.length})`);
 
   if (!trimmedStart || !trimmedEnd) {
     console.warn('❌ Validación fallida: campos vacíos');
