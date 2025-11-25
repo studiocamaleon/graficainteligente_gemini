@@ -8,19 +8,31 @@ interface ResumenEquipoKPIsProps {
 }
 
 export function ResumenEquipoKPIs({ resumen, loading }: ResumenEquipoKPIsProps) {
-  const formatHoras = (horas: number) => {
+  const formatHoras = (horas: number | null) => {
+    if (horas === null || horas === undefined) return '0.0h';
     return `${horas.toFixed(1)}h`;
   };
 
-  const formatMinutos = (minutos: number) => {
+  const formatMinutos = (minutos: number | null) => {
+    if (minutos === null || minutos === undefined) return '0 min';
     return `${Math.round(minutos)} min`;
+  };
+
+  const safeToFixed = (value: number | null, decimals: number = 1): string => {
+    if (value === null || value === undefined) return '0';
+    return value.toFixed(decimals);
+  };
+
+  const safeToString = (value: number | null): string => {
+    if (value === null || value === undefined) return '0';
+    return value.toString();
   };
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
       <KpiCard
         title="Pasos Ejecutados"
-        value={resumen.total_pasos_ejecutados.toString()}
+        value={safeToString(resumen.total_pasos_ejecutados)}
         icon={Activity}
         color="blue"
         loading={loading}
@@ -28,7 +40,7 @@ export function ResumenEquipoKPIs({ resumen, loading }: ResumenEquipoKPIsProps) 
 
       <KpiCard
         title="Operadores Activos"
-        value={resumen.total_operadores_activos.toString()}
+        value={safeToString(resumen.total_operadores_activos)}
         icon={Users}
         color="green"
         loading={loading}
@@ -36,7 +48,7 @@ export function ResumenEquipoKPIs({ resumen, loading }: ResumenEquipoKPIsProps) 
 
       <KpiCard
         title="Promedio por Operador"
-        value={resumen.promedio_pasos_por_operador.toFixed(1)}
+        value={safeToFixed(resumen.promedio_pasos_por_operador, 1)}
         icon={Target}
         color="purple"
         loading={loading}
@@ -52,7 +64,7 @@ export function ResumenEquipoKPIs({ resumen, loading }: ResumenEquipoKPIsProps) 
 
       <KpiCard
         title="Tasa de Completitud"
-        value={`${resumen.tasa_completitud_equipo.toFixed(0)}%`}
+        value={`${safeToFixed(resumen.tasa_completitud_equipo, 0)}%`}
         icon={TrendingUp}
         color="green"
         loading={loading}

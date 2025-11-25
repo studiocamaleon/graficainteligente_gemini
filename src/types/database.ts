@@ -1787,3 +1787,71 @@ export interface Database {
     };
   };
 }
+
+// =====================================================
+// TIPOS PARA ACTIVIDAD Y RENDIMIENTO DE USUARIOS
+// =====================================================
+
+export interface ActividadUsuario {
+  ruta_id: string;
+  orden_item_id: string;
+  estado_paso: 'completado' | 'omitido';
+  fecha_inicio: string;
+  fecha_fin: string;
+  responsable_id: string;
+  notas: string | null;
+  paso_nombre: string;
+  tipo_etapa: TipoEtapaRuta;
+  orden_paso: number;
+  duracion_minutos: number | null;
+  responsable_nombre: string;
+  responsable_email: string;
+  responsable_role: UserRole;
+  responsable_avatar: string | null;
+  producto_nombre: string;
+  producto_categoria: string | null;
+  producto_cantidad: number;
+  item_estado: EstadoOrdenItem;
+  orden_id: string;
+  numero_orden: string;
+  orden_fecha_creacion: string;
+  company_id: string;
+  cliente_nombre: string | null;
+  estacion_id: string | null;
+  estacion_nombre: string | null;
+}
+
+export interface MetricasRendimientoOperador {
+  responsable_id: string;
+  responsable_nombre: string;
+  responsable_email: string;
+  responsable_avatar: string | null;
+  total_pasos_completados: number;
+  total_pasos_omitidos: number;
+  total_pasos: number;
+  tasa_completitud: number;
+  tiempo_total_minutos: number;
+  tiempo_total_horas: number;
+  tiempo_promedio_minutos: number;
+  pasos_prensa: number;
+  pasos_post_prensa: number;
+  pasos_terminacion: number;
+}
+
+export interface ResumenActividadEquipo {
+  total_pasos_ejecutados: number | null;
+  total_operadores_activos: number | null;
+  promedio_pasos_por_operador: number | null;
+  tiempo_promedio_por_paso: number | null;
+  tasa_completitud_equipo: number | null;
+  total_horas_trabajadas: number | null;
+}
+
+export interface FiltrosActividad {
+  fecha_desde: Date | null;
+  fecha_hasta: Date | null;
+  responsables: string[];
+  estaciones: string[];
+  estados: ('completado' | 'omitido')[];
+  tipo_etapa: TipoEtapaRuta | null;
+}
