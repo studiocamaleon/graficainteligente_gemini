@@ -295,6 +295,22 @@ export const MODULES: Module[] = [
     icon: TrendingUp,
     path: '/app/finanzas',
     color: 'text-yellow-600',
+    children: [
+      {
+        id: 'finance-cuentas-corrientes',
+        name: 'Cuentas Corrientes',
+        description: 'Gestión de cuentas corrientes de clientes',
+        path: '/app/finanzas/cuentas-corrientes',
+        icon: DollarSign,
+      },
+      {
+        id: 'finance-liquidaciones',
+        name: 'Liquidaciones',
+        description: 'Liquidaciones y órdenes de pago',
+        path: '/app/finanzas/liquidaciones',
+        icon: FileText,
+      },
+    ],
   },
   {
     id: 'team',

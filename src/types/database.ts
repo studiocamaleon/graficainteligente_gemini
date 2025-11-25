@@ -1855,3 +1855,105 @@ export interface FiltrosActividad {
   estados: ('completado' | 'omitido')[];
   tipo_etapa: TipoEtapaRuta | null;
 }
+
+// =====================================================
+// TIPOS PARA CUENTAS CORRIENTES Y LIQUIDACIONES
+// =====================================================
+
+export type TipoMovimientoCC = 'cargo' | 'pago' | 'ajuste' | 'nota_credito' | 'nota_debito';
+export type EstadoLiquidacion = 'pendiente' | 'pagada_parcial' | 'pagada_total' | 'vencida' | 'cancelada';
+
+export interface CuentaCorrienteMovimiento {
+  id: string;
+  company_id: string;
+  cliente_id: string;
+  tipo_movimiento: TipoMovimientoCC;
+  fecha: string;
+  orden_id: string | null;
+  pago_id: string | null;
+  liquidacion_id: string | null;
+  descripcion: string;
+  monto_debe: number;
+  monto_haber: number;
+  saldo_acumulado: number;
+  metadata: Record<string, any>;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Liquidacion {
+  id: string;
+  company_id: string;
+  cliente_id: string;
+  numero_liquidacion: string;
+  fecha_emision: string;
+  fecha_vencimiento: string | null;
+  periodo_desde: string | null;
+  periodo_hasta: string | null;
+  estado: EstadoLiquidacion;
+  subtotal_ordenes: number;
+  total_ajustes: number;
+  total_general: number;
+  total_pagado: number;
+  saldo_pendiente: number;
+  notas: string | null;
+  metadata: Record<string, any>;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LiquidacionItem {
+  id: string;
+  liquidacion_id: string;
+  orden_id: string;
+  descripcion: string;
+  fecha_orden: string;
+  numero_orden: string;
+  monto: number;
+  created_at: string;
+}
+
+export interface LiquidacionPago {
+  id: string;
+  liquidacion_id: string;
+  pago_id: string;
+  monto_aplicado: number;
+  created_at: string;
+}
+
+export interface LiquidacionConDetalles extends Liquidacion {
+  cliente_nombre: string;
+  cliente_documento: string;
+  items: LiquidacionItem[];
+  pagos: Array<{
+    id: string;
+    fecha_pago: string;
+    monto: number;
+    medio_cobro_nombre: string | null;
+  }>;
+}
+
+export interface EstadoCuentaMovimiento {
+  id: string;
+  fecha: string;
+  tipo_movimiento: TipoMovimientoCC;
+  descripcion: string;
+  orden_id: string | null;
+  numero_orden: string | null;
+  monto_debe: number;
+  monto_haber: number;
+  saldo_acumulado: number;
+}
+
+export interface ClienteConSaldo {
+  id: string;
+  nombre_fantasia: string;
+  razon_social: string;
+  numero_documento: string;
+  acuerdo_pago: string | null;
+  saldo_actual: number;
+  dias_vencimiento: number | null;
+  estado_cc: 'al_dia' | 'proximo_vencer' | 'vencido';
+}

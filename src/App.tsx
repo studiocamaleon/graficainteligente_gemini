@@ -16,7 +16,7 @@ import { OrdersListPage } from './pages/app/orders/OrdersListPage';
 import { CreateOrderPage } from './pages/app/orders/CreateOrderPage';
 import { OrderDetailPage } from './pages/app/orders/OrderDetailPage';
 import { ProductionPage } from './pages/app/production/ProductionPage';
-import { Finance } from './pages/app/Finance';
+import Finanzas from './pages/app/Finanzas';
 import { Team } from './pages/app/Team';
 import { Integrations } from './pages/app/Integrations';
 import { SystemSettings } from './pages/app/SystemSettings';
@@ -110,7 +110,7 @@ function AppRoutes() {
                 <Route path="orders/crear-ot" element={<CreateOrderPage />} />
                 <Route path="orders/:id" element={<OrderDetailPage />} />
                 <Route path="production" element={<ProductionPage />} />
-                <Route path="finanzas" element={<Finance />} />
+                <Route path="finanzas/*" element={<Finanzas />} />
                 <Route
                   path="team"
                   element={
