@@ -202,6 +202,40 @@ export interface CompanyFormData {
   industry: string;
 }
 
+export type DayOfWeek = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+
+export interface BusinessHours {
+  id: string;
+  company_id: string;
+  day_of_week: DayOfWeek;
+  is_open: boolean;
+  opening_time_1: string | null;
+  closing_time_1: string | null;
+  opening_time_2: string | null;
+  closing_time_2: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BusinessHoursFormData {
+  day_of_week: DayOfWeek;
+  is_open: boolean;
+  opening_time_1: string;
+  closing_time_1: string;
+  opening_time_2: string;
+  closing_time_2: string;
+}
+
+export interface DaySchedule {
+  day_of_week: DayOfWeek;
+  day_name: string;
+  is_open: boolean;
+  opening_time_1: string;
+  closing_time_1: string;
+  opening_time_2: string;
+  closing_time_2: string;
+}
+
 export interface Profile {
   id: string;
   email: string;

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Building2, Phone, Mail, Globe, MapPin, FileText, Settings as SettingsIcon, AlertCircle, CheckCircle } from 'lucide-react';
+import { Building2, Phone, Mail, Globe, MapPin, FileText, Settings as SettingsIcon, AlertCircle, CheckCircle, Clock, Copy } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Modal } from '../ui/Modal';
 import { Input } from '../ui/Input';
@@ -9,6 +9,9 @@ import { SearchableSelect } from '../ui/SearchableSelect';
 import { ImageUpload } from '../ui/ImageUpload';
 import { useCompany } from '../../hooks/useCompany';
 import { useCompanyLogo } from '../../hooks/useCompanyLogo';
+import { useBusinessHours } from '../../hooks/useBusinessHours';
+import { DayScheduleEditor } from './DayScheduleEditor';
+import { BulkScheduleApplicator } from './BulkScheduleApplicator';
 import type { CompanyFormData, DocumentType, TaxCondition } from '../../types/database';
 
 interface CompanyProfileModalProps {
@@ -16,7 +19,7 @@ interface CompanyProfileModalProps {
   onClose: () => void;
 }
 
-type TabType = 'general' | 'contact' | 'location' | 'fiscal' | 'settings';
+type TabType = 'general' | 'contact' | 'location' | 'fiscal' | 'settings' | 'hours';
 
 const TAX_CONDITIONS: TaxCondition[] = [
   'Responsable Inscripto',
@@ -62,11 +65,23 @@ export function CompanyProfileModal({ isOpen, onClose }: CompanyProfileModalProp
     isDeleting,
   } = useCompanyLogo();
 
+  const {
+    schedules,
+    loading: loadingHours,
+    error: hoursError,
+    updateSchedule,
+    toggleDayStatus,
+    applyToMultipleDays,
+    saveBusinessHours,
+  } = useBusinessHours();
+
   const [activeTab, setActiveTab] = useState<TabType>('general');
   const [formData, setFormData] = useState<CompanyFormData>(getInitialFormData());
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [showBulkApplicator, setShowBulkApplicator] = useState(false);
+  const [savingHours, setSavingHours] = useState(false);
 
   useEffect(() => {
     if (company) {
@@ -170,6 +185,22 @@ export function CompanyProfileModal({ isOpen, onClose }: CompanyProfileModalProp
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   };
 
+  const handleSaveHours = async () => {
+    setSavingHours(true);
+    setError(null);
+    setSuccess(null);
+
+    const result = await saveBusinessHours();
+
+    if (result.success) {
+      setSuccess('Horarios de atención guardados correctamente');
+    } else {
+      setError(result.error || 'Error al guardar horarios');
+    }
+
+    setSavingHours(false);
+  };
+
   if (!canEdit) {
     return null;
   }
@@ -180,6 +211,7 @@ export function CompanyProfileModal({ isOpen, onClose }: CompanyProfileModalProp
     { id: 'location' as const, label: 'Ubicación', icon: MapPin },
     { id: 'fiscal' as const, label: 'Fiscal', icon: FileText },
     { id: 'settings' as const, label: 'Configuración', icon: SettingsIcon },
+    { id: 'hours' as const, label: 'Horarios', icon: Clock },
   ];
 
   return (
@@ -573,6 +605,69 @@ export function CompanyProfileModal({ isOpen, onClose }: CompanyProfileModalProp
                 </div>
               </motion.div>
             )}
+
+            {activeTab === 'hours' && (
+              <motion.div
+                key="hours"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                transition={{ duration: 0.2 }}
+                className="space-y-4"
+              >
+                <div className="mb-4">
+                  <h3 className="text-sm font-semibold text-gray-900 mb-1">
+                    Horarios de Atención
+                  </h3>
+                  <p className="text-xs text-gray-600">
+                    Configure los días y horarios en que su empresa atiende al público.
+                    Puede agregar hasta dos rangos horarios por día (ej: mañana y tarde).
+                  </p>
+                </div>
+
+                {loadingHours ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                    <p className="text-sm text-gray-600 mt-2">Cargando horarios...</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="space-y-3">
+                      {schedules.map((schedule) => (
+                        <DayScheduleEditor
+                          key={schedule.day_of_week}
+                          schedule={schedule}
+                          onChange={updateSchedule}
+                          onToggle={toggleDayStatus}
+                          disabled={savingHours}
+                        />
+                      ))}
+                    </div>
+
+                    <div className="pt-4 border-t flex flex-col sm:flex-row gap-3">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setShowBulkApplicator(true)}
+                        disabled={savingHours}
+                        className="flex-1"
+                      >
+                        <Copy className="w-4 h-4 mr-2" />
+                        Aplicar a varios días
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={handleSaveHours}
+                        disabled={savingHours}
+                        className="flex-1"
+                      >
+                        {savingHours ? 'Guardando...' : 'Guardar Horarios'}
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </motion.div>
+            )}
           </AnimatePresence>
         </div>
 
@@ -590,6 +685,13 @@ export function CompanyProfileModal({ isOpen, onClose }: CompanyProfileModalProp
           </Button>
         </div>
       </form>
+
+      <BulkScheduleApplicator
+        isOpen={showBulkApplicator}
+        onClose={() => setShowBulkApplicator(false)}
+        schedules={schedules}
+        onApply={applyToMultipleDays}
+      />
     </Modal>
   );
 }
