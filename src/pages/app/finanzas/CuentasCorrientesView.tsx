@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Filter } from 'lucide-react';
+import { Search, Filter, Users } from 'lucide-react';
 import { useCuentasCorrientes } from '../../../hooks/useCuentasCorrientes';
 import { ClienteCard } from '../../../components/finanzas/ClienteCard';
 import { EstadoCuentaModal } from '../../../components/finanzas/EstadoCuentaModal';
@@ -70,6 +70,7 @@ export default function CuentasCorrientesView() {
         </div>
       ) : clientes.length === 0 ? (
         <EmptyState
+          icon={Users}
           title="No hay clientes con cuenta corriente"
           description={
             searchTerm || estadoFilter

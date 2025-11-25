@@ -1,6 +1,6 @@
 # Corrección de Errores - Módulo de Finanzas
 
-## ✅ Errores Corregidos
+## ✅ Errores Corregidos (Actualización Final)
 
 ### **Error 1: Props `leftIcon` en componentes Input y Select**
 
@@ -203,11 +203,58 @@ Para el componente Finanzas, se usó la forma 1 que es más simple y limpia.
 
 ---
 
+### **Error 3: Prop `icon` faltante en EmptyState**
+
+**Problema:**
+El componente `EmptyState` en `CuentasCorrientesView` se usaba sin la prop `icon` requerida, causando:
+```
+Error: Element type is invalid: expected a string (for built-in components)
+or a class/function (for composite components) but got: undefined.
+```
+
+**Solución:**
+Agregar la prop `icon` con el icono `Users` de lucide-react.
+
+#### Archivo Modificado:
+
+**`src/pages/app/finanzas/CuentasCorrientesView.tsx`**
+
+**Antes:**
+```tsx
+import { Search, Filter } from 'lucide-react';
+...
+<EmptyState
+  title="No hay clientes con cuenta corriente"
+  description={...}
+/>
+```
+
+**Después:**
+```tsx
+import { Search, Filter, Users } from 'lucide-react';
+...
+<EmptyState
+  icon={Users}
+  title="No hay clientes con cuenta corriente"
+  description={...}
+/>
+```
+
+**Detalles técnicos:**
+- El componente `EmptyState` requiere obligatoriamente la prop `icon: LucideIcon`
+- Se agregó el import del icono `Users` desde lucide-react
+- El icono `Users` es apropiado para representar clientes/cuentas corrientes
+- Este patrón ya se usaba correctamente en `LiquidacionesView` con `icon={FileText}`
+
+---
+
 ## ✅ Módulo de Finanzas - Estado Final
 
 **El módulo está 100% funcional sin errores:**
-- ✅ Compilación exitosa
+- ✅ Compilación exitosa (2736 módulos transformados)
 - ✅ Sin warnings de React
 - ✅ Sin errores de TypeScript
-- ✅ Interfaz visual correcta
+- ✅ Sin errores de componentes undefined
+- ✅ Interfaz visual correcta con todos los iconos
+- ✅ EmptyState funcionando correctamente
 - ✅ Funcionalidad completa implementada
