@@ -3,6 +3,7 @@ import { X, Download, Calendar } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { useEstadoCuenta } from '../../hooks/useCuentasCorrientes';
+import { generateEstadoCuentaPDF } from '../../utils/pdfGenerators/estadoCuentaPDF';
 import type { Client } from '../../types/database';
 import dayjs from 'dayjs';
 import { DatePicker } from '../ui/DatePicker';
@@ -16,6 +17,7 @@ interface EstadoCuentaModalProps {
 export function EstadoCuentaModal({ isOpen, onClose, cliente }: EstadoCuentaModalProps) {
   const [fechaDesde, setFechaDesde] = useState<Date | null>(dayjs().subtract(30, 'days').toDate());
   const [fechaHasta, setFechaHasta] = useState<Date | null>(dayjs().toDate());
+  const [isExporting, setIsExporting] = useState(false);
 
   const { movimientos, loading, saldoInicial, saldoFinal, fetchEstadoCuenta } = useEstadoCuenta(
     cliente?.id || ''
@@ -30,8 +32,24 @@ export function EstadoCuentaModal({ isOpen, onClose, cliente }: EstadoCuentaModa
     );
   };
 
-  const handleExportPDF = () => {
-    console.log('Exportar PDF - TODO');
+  const handleExportPDF = async () => {
+    if (!cliente) return;
+
+    setIsExporting(true);
+    try {
+      await generateEstadoCuentaPDF({
+        cliente,
+        movimientos,
+        saldoInicial,
+        saldoFinal,
+        fechaDesde: fechaDesde ? dayjs(fechaDesde).format('DD/MM/YYYY') : 'Inicio',
+        fechaHasta: fechaHasta ? dayjs(fechaHasta).format('DD/MM/YYYY') : dayjs().format('DD/MM/YYYY'),
+      });
+    } catch (error) {
+      console.error('Error al exportar PDF:', error);
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   if (!cliente) return null;
@@ -173,9 +191,13 @@ export function EstadoCuentaModal({ isOpen, onClose, cliente }: EstadoCuentaModa
             <X className="w-4 h-4 mr-2" />
             Cerrar
           </Button>
-          <Button variant="primary" onClick={handleExportPDF}>
+          <Button
+            variant="primary"
+            onClick={handleExportPDF}
+            disabled={isExporting || loading}
+          >
             <Download className="w-4 h-4 mr-2" />
-            Exportar PDF
+            {isExporting ? 'Generando PDF...' : 'Exportar PDF'}
           </Button>
         </div>
       </div>

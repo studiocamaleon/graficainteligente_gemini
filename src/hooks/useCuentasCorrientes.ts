@@ -119,6 +119,7 @@ export function useEstadoCuenta(clienteId: string) {
   const [loading, setLoading] = useState(true);
   const [saldoInicial, setSaldoInicial] = useState(0);
   const [saldoFinal, setSaldoFinal] = useState(0);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   const fetchEstadoCuenta = useCallback(async (fechaDesde?: string, fechaHasta?: string) => {
     if (!company || !clienteId) return;
@@ -155,12 +156,17 @@ export function useEstadoCuenta(clienteId: string) {
   }, [company, clienteId]);
 
   useEffect(() => {
-    if (company && clienteId) {
+    if (company && clienteId && !isInitialized) {
       const fechaDesde = dayjs().subtract(30, 'days').format('YYYY-MM-DD');
       const fechaHasta = dayjs().format('YYYY-MM-DD');
       fetchEstadoCuenta(fechaDesde, fechaHasta);
+      setIsInitialized(true);
     }
-  }, [company, clienteId, fetchEstadoCuenta]);
+  }, [company, clienteId, isInitialized, fetchEstadoCuenta]);
+
+  useEffect(() => {
+    setIsInitialized(false);
+  }, [clienteId]);
 
   return {
     movimientos,
