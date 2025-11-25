@@ -50,7 +50,7 @@ export function ResumenEquipoKPIs({ resumen, loading }: ResumenEquipoKPIsProps) 
         title="Promedio por Operador"
         value={safeToFixed(resumen.promedio_pasos_por_operador, 1)}
         icon={Target}
-        color="purple"
+        color="teal"
         loading={loading}
       />
 
