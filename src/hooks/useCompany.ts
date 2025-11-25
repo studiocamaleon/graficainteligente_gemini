@@ -5,7 +5,7 @@ import type { CompanyFormData } from '../types/database';
 
 export function useCompany() {
   const { company, profile, updateCompany } = useAuth();
-  const { countries, provinces, cities, loadProvinces, loadCities } = useLocations();
+  const { countries, provinces, cities, fetchProvinces, fetchCities } = useLocations();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -37,15 +37,15 @@ export function useCompany() {
 
   useEffect(() => {
     if (company?.country_id) {
-      loadProvinces(company.country_id);
+      fetchProvinces(company.country_id);
     }
-  }, [company?.country_id]);
+  }, [company?.country_id, fetchProvinces]);
 
   useEffect(() => {
     if (company?.province_id) {
-      loadCities(company.province_id);
+      fetchCities(company.province_id);
     }
-  }, [company?.province_id]);
+  }, [company?.province_id, fetchCities]);
 
   const handleUpdate = async (data: Partial<CompanyFormData>) => {
     if (!canEdit) {
@@ -84,8 +84,8 @@ export function useCompany() {
     countries,
     provinces,
     cities,
-    loadProvinces,
-    loadCities,
+    fetchProvinces,
+    fetchCities,
     getInitialFormData,
     handleUpdate,
   };

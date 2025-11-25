@@ -48,8 +48,8 @@ export function CompanyProfileModal({ isOpen, onClose }: CompanyProfileModalProp
     countries,
     provinces,
     cities,
-    loadProvinces,
-    loadCities,
+    fetchProvinces,
+    fetchCities,
     getInitialFormData,
     handleUpdate,
   } = useCompany();
@@ -95,14 +95,14 @@ export function CompanyProfileModal({ isOpen, onClose }: CompanyProfileModalProp
   const handleCountryChange = async (countryId: string) => {
     setFormData((prev) => ({ ...prev, country_id: countryId, province_id: '', city_id: '' }));
     if (countryId) {
-      await loadProvinces(countryId);
+      await fetchProvinces(countryId);
     }
   };
 
   const handleProvinceChange = async (provinceId: string) => {
     setFormData((prev) => ({ ...prev, province_id: provinceId, city_id: '' }));
     if (provinceId) {
-      await loadCities(provinceId);
+      await fetchCities(provinceId);
     }
   };
 
