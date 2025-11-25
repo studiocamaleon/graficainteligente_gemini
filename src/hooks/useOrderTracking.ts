@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import type { TrackingData, TrackingResponse, isTrackingError } from '../types/tracking';
+import type { TrackingData, TrackingResponse } from '../types/tracking';
 
 interface UseOrderTrackingOptions {
   autoRefresh?: boolean;
@@ -28,6 +28,10 @@ export function useOrderTracking(
   const [isUpdating, setIsUpdating] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
 
+  // Ref para evitar ciclos infinitos en suscripción
+  const isMountedRef = useRef(true);
+  const itemIdsRef = useRef<string[]>([]);
+
   const fetchTracking = useCallback(async (silent = false) => {
     if (!token || token.length !== 32) {
       setError('Token de seguimiento inválido');
@@ -35,25 +39,29 @@ export function useOrderTracking(
       return;
     }
 
+    console.log('🔍 Fetching tracking data...', { silent, timestamp: new Date().toISOString() });
+
     try {
       setError(null);
       if (!silent) {
         setIsUpdating(true);
       }
 
+      // Cache-busting con timestamp
       const { data: result, error: rpcError } = await supabase.rpc(
         'fn_get_public_order_tracking',
         { p_tracking_token: token }
       );
 
       if (rpcError) {
-        console.error('Error al obtener tracking:', rpcError);
+        console.error('❌ Error al obtener tracking:', rpcError);
         setError('Error al obtener el estado de la orden. Por favor, intenta nuevamente.');
         setData(null);
         return;
       }
 
       if (!result) {
+        console.warn('⚠️ No se encontró información de seguimiento');
         setError('No se encontró información de seguimiento');
         setData(null);
         return;
@@ -65,15 +73,47 @@ export function useOrderTracking(
         'error' in r;
 
       if (isError(typedResult)) {
+        console.error('❌ Error en respuesta:', typedResult.message);
         setError(typedResult.message);
         setData(null);
         return;
       }
 
-      setData(typedResult as TrackingData);
+      const trackingData = typedResult as TrackingData;
+
+      // Log detallado de datos recibidos
+      console.log('📦 Datos recibidos del RPC:', {
+        numero_orden: trackingData.numero_orden,
+        estado_orden: trackingData.estado,
+        items_count: trackingData.items?.length || 0,
+        items: trackingData.items?.map(item => ({
+          id: item.id,
+          nombre: item.producto_nombre,
+          estado_item: item.estado,
+          pasos_count: item.pasos?.length || 0,
+          pasos: item.pasos?.map(paso => ({
+            nombre: paso.paso_nombre,
+            tipo_etapa: paso.tipo_etapa,
+            orden: paso.orden,
+            estado: paso.estado_paso,
+            fecha_inicio: paso.fecha_inicio,
+            fecha_fin: paso.fecha_fin
+          }))
+        }))
+      });
+
+      // Actualizar ref con IDs actuales
+      if (trackingData.items) {
+        itemIdsRef.current = trackingData.items.map(i => i.id);
+      }
+
+      console.log('💾 Actualizando estado con nuevos datos...');
+      setData(trackingData);
       setLastUpdate(new Date());
+      console.log('✅ Estado actualizado correctamente');
+
     } catch (err) {
-      console.error('Error inesperado al obtener tracking:', err);
+      console.error('❌ Error inesperado al obtener tracking:', err);
       setError('Error inesperado. Por favor, verifica tu conexión.');
       setData(null);
     } finally {
@@ -82,33 +122,49 @@ export function useOrderTracking(
     }
   }, [token]);
 
+  // Initial fetch
   useEffect(() => {
+    console.log('🎬 Iniciando fetch inicial...');
     fetchTracking();
+
+    return () => {
+      isMountedRef.current = false;
+    };
   }, [fetchTracking]);
 
   // Polling como fallback
   useEffect(() => {
     if (!autoRefresh || !token) return;
 
+    console.log('⏰ Configurando polling cada', refreshInterval / 1000, 'segundos');
+
     const intervalId = setInterval(() => {
+      console.log('⏰ Polling ejecutándose...');
       fetchTracking(true);
     }, refreshInterval);
 
-    return () => clearInterval(intervalId);
+    return () => {
+      console.log('⏰ Limpiando polling');
+      clearInterval(intervalId);
+    };
   }, [autoRefresh, refreshInterval, token, fetchTracking]);
 
-  // Realtime subscription para actualizaciones instantáneas
+  // Realtime subscription - SIMPLIFICADO PARA EVITAR CICLOS
   useEffect(() => {
-    if (!data?.items || !token) return;
+    // Solo suscribirse cuando tengamos el token y datos iniciales
+    if (!token || !data?.items || data.items.length === 0) {
+      console.log('⏭️ Saltando suscripción Realtime (sin datos iniciales)');
+      return;
+    }
 
-    const itemIds = data.items.map((item) => item.id);
+    const itemIds = data.items.map(item => item.id);
+    console.log('🔴 Configurando suscripción Realtime para', itemIds.length, 'items');
 
-    if (itemIds.length === 0) return;
-
-    console.log('🔴 Suscribiéndose a cambios en tiempo real para items:', itemIds.length);
+    // Crear canal único por token
+    const channelName = `tracking-updates-${token}`;
 
     const channel = supabase
-      .channel(`tracking-${token}`)
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
@@ -117,9 +173,26 @@ export function useOrderTracking(
           table: 'ordenes_trabajo_items_rutas',
         },
         (payload) => {
-          console.log('🔴 Cambio detectado en rutas:', payload);
-          // Refetch silencioso (sin spinner)
-          fetchTracking(true);
+          console.log('🔴 Cambio detectado en rutas:', {
+            event: payload.eventType,
+            id: (payload.new as any)?.id || (payload.old as any)?.id,
+            orden_item_id: (payload.new as any)?.orden_item_id || (payload.old as any)?.orden_item_id,
+            estado_paso: (payload.new as any)?.estado_paso || (payload.old as any)?.estado_paso,
+          });
+
+          // Solo refetch si el cambio es de uno de nuestros items
+          const changedItemId = (payload.new as any)?.orden_item_id || (payload.old as any)?.orden_item_id;
+          if (changedItemId && itemIds.includes(changedItemId)) {
+            console.log('✅ Cambio relevante, ejecutando refetch...');
+            // Usar un pequeño delay para evitar llamadas múltiples
+            setTimeout(() => {
+              if (isMountedRef.current) {
+                fetchTracking(true);
+              }
+            }, 500);
+          } else {
+            console.log('⏭️ Cambio no relevante para esta orden');
+          }
         }
       )
       .on(
@@ -130,8 +203,21 @@ export function useOrderTracking(
           table: 'ordenes_trabajo_items',
         },
         (payload) => {
-          console.log('🔴 Cambio detectado en items:', payload);
-          fetchTracking(true);
+          console.log('🔴 Cambio detectado en items:', {
+            event: payload.eventType,
+            id: (payload.new as any)?.id || (payload.old as any)?.id,
+            estado: (payload.new as any)?.estado || (payload.old as any)?.estado,
+          });
+
+          const changedItemId = (payload.new as any)?.id || (payload.old as any)?.id;
+          if (changedItemId && itemIds.includes(changedItemId)) {
+            console.log('✅ Cambio relevante en item, ejecutando refetch...');
+            setTimeout(() => {
+              if (isMountedRef.current) {
+                fetchTracking(true);
+              }
+            }, 500);
+          }
         }
       )
       .on(
@@ -142,8 +228,22 @@ export function useOrderTracking(
           table: 'ordenes_trabajo',
         },
         (payload) => {
-          console.log('🔴 Cambio detectado en orden:', payload);
-          fetchTracking(true);
+          console.log('🔴 Cambio detectado en orden:', {
+            event: payload.eventType,
+            numero_orden: (payload.new as any)?.numero_orden || (payload.old as any)?.numero_orden,
+            estado: (payload.new as any)?.estado || (payload.old as any)?.estado,
+          });
+
+          // Verificar si es nuestra orden por tracking_token
+          const changedToken = (payload.new as any)?.tracking_token || (payload.old as any)?.tracking_token;
+          if (changedToken === token) {
+            console.log('✅ Cambio en nuestra orden, ejecutando refetch...');
+            setTimeout(() => {
+              if (isMountedRef.current) {
+                fetchTracking(true);
+              }
+            }, 500);
+          }
         }
       )
       .subscribe((status) => {
@@ -154,9 +254,26 @@ export function useOrderTracking(
       console.log('🔴 Desuscribiéndose de cambios en tiempo real');
       supabase.removeChannel(channel);
     };
-  }, [data?.items, token, fetchTracking]);
+  }, [token]); // ✅ SOLO depende del token, no de data ni fetchTracking
+
+  // Log cuando data cambie (para debugging)
+  useEffect(() => {
+    if (data) {
+      console.log('🎨 UI debería re-renderizar con:', {
+        numero_orden: data.numero_orden,
+        estado_orden: data.estado,
+        fecha_actualizacion: lastUpdate?.toISOString(),
+        items: data.items.map(i => ({
+          producto: i.producto_nombre,
+          estado: i.estado,
+          pasos: i.pasos.map(p => `${p.paso_nombre} (${p.tipo_etapa}): ${p.estado_paso}`)
+        }))
+      });
+    }
+  }, [data, lastUpdate]);
 
   const refetch = useCallback(async () => {
+    console.log('🔄 Refetch manual iniciado...');
     setLoading(true);
     await fetchTracking();
   }, [fetchTracking]);
