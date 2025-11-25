@@ -4,6 +4,7 @@ import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { useEstadoCuenta } from '../../hooks/useCuentasCorrientes';
 import { generateEstadoCuentaPDF } from '../../utils/pdfGenerators/estadoCuentaPDF';
+import { useAuth } from '../../hooks/useAuth';
 import type { Client } from '../../types/database';
 import dayjs from 'dayjs';
 import { DatePicker } from '../ui/DatePicker';
@@ -15,6 +16,7 @@ interface EstadoCuentaModalProps {
 }
 
 export function EstadoCuentaModal({ isOpen, onClose, cliente }: EstadoCuentaModalProps) {
+  const { company } = useAuth();
   const [fechaDesde, setFechaDesde] = useState<Date | null>(dayjs().subtract(30, 'days').toDate());
   const [fechaHasta, setFechaHasta] = useState<Date | null>(dayjs().toDate());
   const [isExporting, setIsExporting] = useState(false);
@@ -33,12 +35,13 @@ export function EstadoCuentaModal({ isOpen, onClose, cliente }: EstadoCuentaModa
   };
 
   const handleExportPDF = async () => {
-    if (!cliente) return;
+    if (!cliente || !company) return;
 
     setIsExporting(true);
     try {
       await generateEstadoCuentaPDF({
         cliente,
+        company,
         movimientos,
         saldoInicial,
         saldoFinal,

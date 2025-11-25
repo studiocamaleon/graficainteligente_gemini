@@ -1,12 +1,13 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import dayjs from 'dayjs';
-import { formatDateForFilename, addHeader, addFooter } from '../pdfHelpers';
-import type { Client } from '../../types/database';
+import { formatDateForFilename, addFooter } from '../pdfHelpers';
+import type { Client, Company } from '../../types/database';
 import type { EstadoCuentaMovimiento } from '../../types/database';
 
 interface GenerateEstadoCuentaPDFParams {
   cliente: Client;
+  company: Company;
   movimientos: EstadoCuentaMovimiento[];
   saldoInicial: number;
   saldoFinal: number;
@@ -32,14 +33,79 @@ const getTipoMovimientoLabel = (tipo: string): string => {
   return labels[tipo] || tipo;
 };
 
+const loadImageAsBase64 = async (url: string): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'Anonymous';
+
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        reject(new Error('No se pudo obtener el contexto del canvas'));
+        return;
+      }
+
+      ctx.drawImage(img, 0, 0);
+      const base64 = canvas.toDataURL('image/png');
+      resolve(base64);
+    };
+
+    img.onerror = () => {
+      reject(new Error('Error al cargar la imagen'));
+    };
+
+    img.src = url;
+  });
+};
+
 export const generateEstadoCuentaPDF = async (params: GenerateEstadoCuentaPDFParams) => {
-  const { cliente, movimientos, saldoInicial, saldoFinal, fechaDesde, fechaHasta } = params;
+  const { cliente, company, movimientos, saldoInicial, saldoFinal, fechaDesde, fechaHasta } = params;
 
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.width;
-  let currentY = 55;
+  let currentY = 10;
 
-  addHeader(doc, 'Estado de Cuenta', cliente.nombre_fantasia);
+  if (company.logo_url) {
+    try {
+      const imageBase64 = await loadImageAsBase64(company.logo_url);
+      doc.addImage(imageBase64, 'PNG', 15, currentY, 15, 15);
+
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(55, 65, 81);
+      doc.text(company.name, 35, currentY + 8);
+    } catch (error) {
+      console.warn('Error al cargar logo, usando fallback:', error);
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(55, 65, 81);
+      doc.text(company.name, pageWidth / 2, currentY + 8, { align: 'center' });
+    }
+  } else {
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(55, 65, 81);
+    doc.text(company.name, pageWidth / 2, currentY + 8, { align: 'center' });
+  }
+
+  currentY += 20;
+
+  doc.setFontSize(18);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(55, 65, 81);
+  doc.text('Estado de Cuenta', pageWidth / 2, currentY, { align: 'center' });
+
+  currentY += 5;
+
+  doc.setDrawColor(156, 163, 175);
+  doc.setLineWidth(0.5);
+  doc.line(10, currentY, pageWidth - 10, currentY);
+
+  currentY += 10;
 
   doc.setFillColor(239, 246, 255);
   doc.roundedRect(10, currentY, pageWidth - 20, 25, 2, 2, 'F');
@@ -95,6 +161,7 @@ export const generateEstadoCuentaPDF = async (params: GenerateEstadoCuentaPDFPar
       head: [['Fecha', 'Tipo', 'Descripción', 'Debe', 'Haber', 'Saldo']],
       body: tableData,
       theme: 'grid',
+      tableWidth: 'auto',
       styles: {
         fontSize: 8,
         cellPadding: 3,
@@ -107,12 +174,12 @@ export const generateEstadoCuentaPDF = async (params: GenerateEstadoCuentaPDFPar
         halign: 'left',
       },
       columnStyles: {
-        0: { halign: 'left', cellWidth: 22 },
-        1: { halign: 'left', cellWidth: 20 },
-        2: { halign: 'left', cellWidth: 60 },
-        3: { halign: 'right', cellWidth: 25, textColor: [220, 38, 38] },
-        4: { halign: 'right', cellWidth: 25, textColor: [22, 163, 74] },
-        5: { halign: 'right', cellWidth: 25, fontStyle: 'bold' },
+        0: { halign: 'left', cellWidth: 'auto' },
+        1: { halign: 'left', cellWidth: 'auto' },
+        2: { halign: 'left', cellWidth: 'wrap' },
+        3: { halign: 'right', cellWidth: 'auto', textColor: [220, 38, 38] },
+        4: { halign: 'right', cellWidth: 'auto', textColor: [22, 163, 74] },
+        5: { halign: 'right', cellWidth: 'auto', fontStyle: 'bold' },
       },
       alternateRowStyles: {
         fillColor: [249, 250, 251],
