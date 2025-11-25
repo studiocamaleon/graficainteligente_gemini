@@ -1,12 +1,15 @@
-import { CheckCircle, Package, PartyPopper, Clock } from 'lucide-react';
-import type { TrackingEstadoOrden } from '../../types/tracking';
+import { CheckCircle, Package, PartyPopper, Clock, MapPin } from 'lucide-react';
+import type { TrackingEstadoOrden, CompanyBusinessHours } from '../../types/tracking';
+import { formatBusinessHoursForDisplay } from '../../utils/timeUtils';
 
 interface TrackingStatusMessageProps {
   estado: TrackingEstadoOrden;
   numeroOrden: string;
+  companyAddress: string | null;
+  companyBusinessHours: CompanyBusinessHours[];
 }
 
-export function TrackingStatusMessage({ estado, numeroOrden }: TrackingStatusMessageProps) {
+export function TrackingStatusMessage({ estado, numeroOrden, companyAddress, companyBusinessHours }: TrackingStatusMessageProps) {
   if (estado === 'finalizada') {
     return (
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-green-500/20 via-[#1A1F3A] to-green-500/10 border border-green-500/30 shadow-2xl">
@@ -36,14 +39,25 @@ export function TrackingStatusMessage({ estado, numeroOrden }: TrackingStatusMes
           <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-6 text-left max-w-md mx-auto">
             <h3 className="font-semibold text-green-300 mb-4">Información de retiro:</h3>
             <div className="space-y-3 text-gray-300">
-              <p>
-                <span className="font-medium text-white">📍 Dirección:</span> Visita nuestro local
+              <p className="flex items-start gap-2">
+                <MapPin className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
+                <span>
+                  <span className="font-medium text-white">Dirección:</span>{' '}
+                  {companyAddress || 'Consultar al momento del retiro'}
+                </span>
               </p>
-              <p>
-                <span className="font-medium text-white">🕐 Horarios:</span> Lunes a Viernes 9:00 - 18:00
+              <p className="flex items-start gap-2">
+                <Clock className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
+                <span>
+                  <span className="font-medium text-white">Horarios:</span>{' '}
+                  {formatBusinessHoursForDisplay(companyBusinessHours)}
+                </span>
               </p>
-              <p>
-                <span className="font-medium text-white">📦 Número de orden:</span> {numeroOrden}
+              <p className="flex items-start gap-2">
+                <Package className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
+                <span>
+                  <span className="font-medium text-white">Número de orden:</span> {numeroOrden}
+                </span>
               </p>
               <p className="text-sm text-green-200 mt-4 bg-green-500/10 p-3 rounded-lg">
                 Por favor, trae tu número de orden al retirar

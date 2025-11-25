@@ -51,7 +51,12 @@ export function OrderTracking() {
         />
 
         <div className="mt-8">
-          <TrackingStatusMessage estado={data.estado} numeroOrden={data.numero_orden} />
+          <TrackingStatusMessage
+            estado={data.estado}
+            numeroOrden={data.numero_orden}
+            companyAddress={data.company_address}
+            companyBusinessHours={data.company_business_hours}
+          />
         </div>
 
         <div className="mt-8">

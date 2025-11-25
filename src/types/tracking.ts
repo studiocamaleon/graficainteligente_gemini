@@ -24,12 +24,25 @@ export interface TrackingItem {
   pasos: TrackingPaso[];
 }
 
+export interface CompanyBusinessHours {
+  day_of_week: number;
+  day_name: string;
+  is_open: boolean;
+  opening_time_1: string | null;
+  closing_time_1: string | null;
+  opening_time_2: string | null;
+  closing_time_2: string | null;
+}
+
 export interface TrackingData {
   numero_orden: string;
   estado: TrackingEstadoOrden;
   fecha_creacion: string;
   fecha_estimada_entrega: string | null;
   cliente_nombre: string;
+  company_id: string;
+  company_address: string | null;
+  company_business_hours: CompanyBusinessHours[];
   items: TrackingItem[];
 }
 

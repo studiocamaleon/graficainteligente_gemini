@@ -112,6 +112,105 @@ export function formatTimeForDisplay(time: string): string {
   return time;
 }
 
+export function formatBusinessHoursForDisplay(hours: any[]): string {
+  if (!hours || !Array.isArray(hours) || hours.length === 0) {
+    return 'Consultar horarios';
+  }
+
+  const openDays = hours.filter(h => h.is_open);
+
+  if (openDays.length === 0) {
+    return 'Cerrado temporalmente';
+  }
+
+  const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
+  const formatTimeRange = (
+    opening1: string | null,
+    closing1: string | null,
+    opening2: string | null,
+    closing2: string | null
+  ): string => {
+    const time1 = normalizeTimeFormat(opening1 || '');
+    const time2 = normalizeTimeFormat(closing1 || '');
+    const time3 = normalizeTimeFormat(opening2 || '');
+    const time4 = normalizeTimeFormat(closing2 || '');
+
+    if (!time1 || !time2) return '';
+
+    let result = `${time1}-${time2}`;
+
+    if (time3 && time4) {
+      result += ` y ${time3}-${time4}`;
+    }
+
+    return result;
+  };
+
+  type DayGroup = {
+    days: number[];
+    schedule: string;
+  };
+
+  const groups: DayGroup[] = [];
+
+  for (const day of openDays) {
+    const schedule = formatTimeRange(
+      day.opening_time_1,
+      day.closing_time_1,
+      day.opening_time_2,
+      day.closing_time_2
+    );
+
+    const existingGroup = groups.find(g => g.schedule === schedule);
+
+    if (existingGroup) {
+      existingGroup.days.push(day.day_of_week);
+    } else {
+      groups.push({ days: [day.day_of_week], schedule });
+    }
+  }
+
+  const formatDayRange = (days: number[]): string => {
+    if (days.length === 0) return '';
+    if (days.length === 1) return dayNames[days[0]];
+
+    days.sort((a, b) => a - b);
+
+    const consecutive: number[][] = [];
+    let currentRange: number[] = [days[0]];
+
+    for (let i = 1; i < days.length; i++) {
+      if (days[i] === currentRange[currentRange.length - 1] + 1) {
+        currentRange.push(days[i]);
+      } else {
+        consecutive.push(currentRange);
+        currentRange = [days[i]];
+      }
+    }
+    consecutive.push(currentRange);
+
+    return consecutive
+      .map(range => {
+        if (range.length === 1) {
+          return dayNames[range[0]];
+        } else if (range.length === 2) {
+          return `${dayNames[range[0]]} y ${dayNames[range[1]]}`;
+        } else {
+          return `${dayNames[range[0]]} a ${dayNames[range[range.length - 1]]}`;
+        }
+      })
+      .join(', ');
+  };
+
+  return groups
+    .map(group => {
+      const daysText = formatDayRange(group.days);
+      return `${daysText} ${group.schedule}`;
+    })
+    .join(' | ');
+}
+
 export function validateTimeRange(start: string, end: string): string | null {
   console.group('🔍 DEBUG: validateTimeRange');
   console.log('start original:', JSON.stringify(start), `(type: ${typeof start}, length: ${start?.length || 0})`);
