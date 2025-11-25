@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
 import type {
@@ -120,7 +120,7 @@ export function useEstadoCuenta(clienteId: string) {
   const [saldoInicial, setSaldoInicial] = useState(0);
   const [saldoFinal, setSaldoFinal] = useState(0);
 
-  const fetchEstadoCuenta = async (fechaDesde?: string, fechaHasta?: string) => {
+  const fetchEstadoCuenta = useCallback(async (fechaDesde?: string, fechaHasta?: string) => {
     if (!company || !clienteId) return;
 
     setLoading(true);
@@ -152,7 +152,15 @@ export function useEstadoCuenta(clienteId: string) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [company, clienteId]);
+
+  useEffect(() => {
+    if (company && clienteId) {
+      const fechaDesde = dayjs().subtract(30, 'days').format('YYYY-MM-DD');
+      const fechaHasta = dayjs().format('YYYY-MM-DD');
+      fetchEstadoCuenta(fechaDesde, fechaHasta);
+    }
+  }, [company, clienteId, fetchEstadoCuenta]);
 
   return {
     movimientos,
