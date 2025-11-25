@@ -31,6 +31,8 @@ export function useOrderTracking(
   // Ref para evitar ciclos infinitos en suscripción
   const isMountedRef = useRef(true);
   const itemIdsRef = useRef<string[]>([]);
+  const fetchTrackingRef = useRef<(silent?: boolean) => Promise<void>>(async () => {});
+  const refetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchTracking = useCallback(async (silent = false) => {
     if (!token || token.length !== 32) {
@@ -116,6 +118,12 @@ export function useOrderTracking(
     }
   }, [token]);
 
+  // Actualizar fetchTrackingRef cuando fetchTracking cambie
+  useEffect(() => {
+    fetchTrackingRef.current = fetchTracking;
+    console.log('🔄 fetchTrackingRef actualizado con nueva versión');
+  }, [fetchTracking]);
+
   // Initial fetch
   useEffect(() => {
     console.log('🎬 Iniciando fetch inicial...');
@@ -186,22 +194,46 @@ export function useOrderTracking(
 
           // Si aún no tenemos itemIds, hacer refetch igual (es nuestra primera actualización)
           if (itemIdsRef.current.length === 0) {
-            console.log('✅ Primera actualización, ejecutando refetch...');
-            setTimeout(() => {
+            console.log('✅ Primera actualización, programando refetch...');
+
+            // Cancelar timeout anterior si existe
+            if (refetchTimeoutRef.current) {
+              clearTimeout(refetchTimeoutRef.current);
+              console.log('⏰ Cancelando refetch anterior (debounce)');
+            }
+
+            refetchTimeoutRef.current = setTimeout(() => {
+              console.log('⏱️ Timeout ejecutándose, isMounted:', isMountedRef.current);
               if (isMountedRef.current) {
-                fetchTracking(true);
+                console.log('🚀 Llamando a fetchTrackingRef.current...');
+                fetchTrackingRef.current(true);
+              } else {
+                console.log('❌ Componente desmontado, no se ejecuta fetch');
               }
+              refetchTimeoutRef.current = null;
             }, 500);
             return;
           }
 
           // Si ya tenemos itemIds, verificar si el cambio es relevante
           if (changedItemId && itemIdsRef.current.includes(changedItemId)) {
-            console.log('✅ Cambio relevante, ejecutando refetch...');
-            setTimeout(() => {
+            console.log('✅ Cambio relevante, programando refetch...');
+
+            // Cancelar timeout anterior si existe
+            if (refetchTimeoutRef.current) {
+              clearTimeout(refetchTimeoutRef.current);
+              console.log('⏰ Cancelando refetch anterior (debounce)');
+            }
+
+            refetchTimeoutRef.current = setTimeout(() => {
+              console.log('⏱️ Timeout ejecutándose, isMounted:', isMountedRef.current);
               if (isMountedRef.current) {
-                fetchTracking(true);
+                console.log('🚀 Llamando a fetchTrackingRef.current...');
+                fetchTrackingRef.current(true);
+              } else {
+                console.log('❌ Componente desmontado, no se ejecuta fetch');
               }
+              refetchTimeoutRef.current = null;
             }, 500);
           } else {
             console.log('⏭️ Cambio no relevante para esta orden');
@@ -226,11 +258,23 @@ export function useOrderTracking(
 
           // Si no tenemos itemIds o el cambio es relevante, refetch
           if (itemIdsRef.current.length === 0 || (changedItemId && itemIdsRef.current.includes(changedItemId))) {
-            console.log('✅ Cambio relevante en item, ejecutando refetch...');
-            setTimeout(() => {
+            console.log('✅ Cambio relevante en item, programando refetch...');
+
+            // Cancelar timeout anterior si existe
+            if (refetchTimeoutRef.current) {
+              clearTimeout(refetchTimeoutRef.current);
+              console.log('⏰ Cancelando refetch anterior (debounce)');
+            }
+
+            refetchTimeoutRef.current = setTimeout(() => {
+              console.log('⏱️ Timeout ejecutándose, isMounted:', isMountedRef.current);
               if (isMountedRef.current) {
-                fetchTracking(true);
+                console.log('🚀 Llamando a fetchTrackingRef.current...');
+                fetchTrackingRef.current(true);
+              } else {
+                console.log('❌ Componente desmontado, no se ejecuta fetch');
               }
+              refetchTimeoutRef.current = null;
             }, 500);
           } else {
             console.log('⏭️ Cambio no relevante para esta orden');
@@ -254,11 +298,23 @@ export function useOrderTracking(
           // Verificar si es nuestra orden por tracking_token
           const changedToken = (payload.new as any)?.tracking_token || (payload.old as any)?.tracking_token;
           if (changedToken === token) {
-            console.log('✅ Cambio en nuestra orden, ejecutando refetch...');
-            setTimeout(() => {
+            console.log('✅ Cambio en nuestra orden, programando refetch...');
+
+            // Cancelar timeout anterior si existe
+            if (refetchTimeoutRef.current) {
+              clearTimeout(refetchTimeoutRef.current);
+              console.log('⏰ Cancelando refetch anterior (debounce)');
+            }
+
+            refetchTimeoutRef.current = setTimeout(() => {
+              console.log('⏱️ Timeout ejecutándose, isMounted:', isMountedRef.current);
               if (isMountedRef.current) {
-                fetchTracking(true);
+                console.log('🚀 Llamando a fetchTrackingRef.current...');
+                fetchTrackingRef.current(true);
+              } else {
+                console.log('❌ Componente desmontado, no se ejecuta fetch');
               }
+              refetchTimeoutRef.current = null;
             }, 500);
           } else {
             console.log('⏭️ Cambio no relevante para esta orden');
@@ -279,9 +335,17 @@ export function useOrderTracking(
 
     return () => {
       console.log('🔴 Desuscribiéndose de cambios en tiempo real');
+
+      // Limpiar timeout pendiente si existe
+      if (refetchTimeoutRef.current) {
+        clearTimeout(refetchTimeoutRef.current);
+        refetchTimeoutRef.current = null;
+        console.log('🧹 Limpiando timeout pendiente');
+      }
+
       supabase.removeChannel(channel);
     };
-  }, [token, fetchTracking]); // Depende de token y fetchTracking (fetchTracking está memoizado)
+  }, [token]); // Solo depende de token, no de fetchTracking
 
   // Log cuando data cambie (para debugging)
   useEffect(() => {
