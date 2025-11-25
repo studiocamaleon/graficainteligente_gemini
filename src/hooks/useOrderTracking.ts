@@ -47,7 +47,6 @@ export function useOrderTracking(
         setIsUpdating(true);
       }
 
-      // Cache-busting con timestamp
       const { data: result, error: rpcError } = await supabase.rpc(
         'fn_get_public_order_tracking',
         { p_tracking_token: token }
@@ -102,11 +101,6 @@ export function useOrderTracking(
         }))
       });
 
-      // Actualizar ref con IDs actuales
-      if (trackingData.items) {
-        itemIdsRef.current = trackingData.items.map(i => i.id);
-      }
-
       console.log('💾 Actualizando estado con nuevos datos...');
       setData(trackingData);
       setLastUpdate(new Date());
@@ -132,6 +126,15 @@ export function useOrderTracking(
     };
   }, [fetchTracking]);
 
+  // Actualizar itemIdsRef cuando data cambie
+  useEffect(() => {
+    if (data?.items) {
+      const newItemIds = data.items.map(i => i.id);
+      itemIdsRef.current = newItemIds;
+      console.log('📝 itemIds actualizados en ref:', newItemIds);
+    }
+  }, [data]);
+
   // Polling como fallback
   useEffect(() => {
     if (!autoRefresh || !token) return;
@@ -149,16 +152,14 @@ export function useOrderTracking(
     };
   }, [autoRefresh, refreshInterval, token, fetchTracking]);
 
-  // Realtime subscription - SIMPLIFICADO PARA EVITAR CICLOS
+  // Realtime subscription - SUSCRIPCIÓN INMEDIATA SIN ESPERAR DATA
   useEffect(() => {
-    // Solo suscribirse cuando tengamos el token y datos iniciales
-    if (!token || !data?.items || data.items.length === 0) {
-      console.log('⏭️ Saltando suscripción Realtime (sin datos iniciales)');
+    if (!token) {
+      console.log('⏭️ Sin token, no se puede suscribir a Realtime');
       return;
     }
 
-    const itemIds = data.items.map(item => item.id);
-    console.log('🔴 Configurando suscripción Realtime para', itemIds.length, 'items');
+    console.log('🔴 Configurando suscripción Realtime inmediata');
 
     // Crear canal único por token
     const channelName = `tracking-updates-${token}`;
@@ -180,11 +181,23 @@ export function useOrderTracking(
             estado_paso: (payload.new as any)?.estado_paso || (payload.old as any)?.estado_paso,
           });
 
-          // Solo refetch si el cambio es de uno de nuestros items
+          // Verificar si el cambio es relevante usando el ref actualizado
           const changedItemId = (payload.new as any)?.orden_item_id || (payload.old as any)?.orden_item_id;
-          if (changedItemId && itemIds.includes(changedItemId)) {
+
+          // Si aún no tenemos itemIds, hacer refetch igual (es nuestra primera actualización)
+          if (itemIdsRef.current.length === 0) {
+            console.log('✅ Primera actualización, ejecutando refetch...');
+            setTimeout(() => {
+              if (isMountedRef.current) {
+                fetchTracking(true);
+              }
+            }, 500);
+            return;
+          }
+
+          // Si ya tenemos itemIds, verificar si el cambio es relevante
+          if (changedItemId && itemIdsRef.current.includes(changedItemId)) {
             console.log('✅ Cambio relevante, ejecutando refetch...');
-            // Usar un pequeño delay para evitar llamadas múltiples
             setTimeout(() => {
               if (isMountedRef.current) {
                 fetchTracking(true);
@@ -210,13 +223,17 @@ export function useOrderTracking(
           });
 
           const changedItemId = (payload.new as any)?.id || (payload.old as any)?.id;
-          if (changedItemId && itemIds.includes(changedItemId)) {
+
+          // Si no tenemos itemIds o el cambio es relevante, refetch
+          if (itemIdsRef.current.length === 0 || (changedItemId && itemIdsRef.current.includes(changedItemId))) {
             console.log('✅ Cambio relevante en item, ejecutando refetch...');
             setTimeout(() => {
               if (isMountedRef.current) {
                 fetchTracking(true);
               }
             }, 500);
+          } else {
+            console.log('⏭️ Cambio no relevante para esta orden');
           }
         }
       )
@@ -243,18 +260,28 @@ export function useOrderTracking(
                 fetchTracking(true);
               }
             }, 500);
+          } else {
+            console.log('⏭️ Cambio no relevante para esta orden');
           }
         }
       )
       .subscribe((status) => {
         console.log('🔴 Estado de suscripción Realtime:', status);
+
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Suscripción Realtime activa y funcionando');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Error en canal Realtime - verificar configuración');
+        } else if (status === 'TIMED_OUT') {
+          console.error('❌ Timeout en suscripción Realtime');
+        }
       });
 
     return () => {
       console.log('🔴 Desuscribiéndose de cambios en tiempo real');
       supabase.removeChannel(channel);
     };
-  }, [token]); // ✅ SOLO depende del token, no de data ni fetchTracking
+  }, [token, fetchTracking]); // Depende de token y fetchTracking (fetchTracking está memoizado)
 
   // Log cuando data cambie (para debugging)
   useEffect(() => {
