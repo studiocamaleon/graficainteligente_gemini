@@ -4,17 +4,9 @@ import { Tabs } from '../../components/ui/Tabs';
 import CuentasCorrientesView from './finanzas/CuentasCorrientesView';
 import LiquidacionesView from './finanzas/LiquidacionesView';
 import { usePageHeader } from '../../hooks/usePageHeader';
-import { useEffect } from 'react';
 
 export default function Finanzas() {
-  const { setPageInfo } = usePageHeader();
-
-  useEffect(() => {
-    setPageInfo({
-      title: 'Finanzas',
-      description: 'Gestión financiera y contable',
-    });
-  }, [setPageInfo]);
+  usePageHeader('Gestión financiera y contable');
 
   const tabs = [
     {

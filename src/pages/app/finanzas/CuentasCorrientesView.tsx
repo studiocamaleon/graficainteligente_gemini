@@ -31,20 +31,26 @@ export default function CuentasCorrientesView() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row gap-4">
-        <div className="flex-1">
+        <div className="flex-1 relative">
+          <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
+            <Search className="w-5 h-5 text-gray-400" />
+          </div>
           <Input
             type="text"
             placeholder="Buscar por nombre, razón social o documento..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            leftIcon={<Search className="w-5 h-5" />}
+            className="pl-10"
           />
         </div>
-        <div className="w-full sm:w-64">
+        <div className="w-full sm:w-64 relative">
+          <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none z-10">
+            <Filter className="w-5 h-5 text-gray-400" />
+          </div>
           <Select
             value={estadoFilter || ''}
             onChange={(e) => setEstadoFilter((e.target.value as any) || null)}
-            leftIcon={<Filter className="w-5 h-5" />}
+            className="pl-10"
           >
             <option value="">Todos los estados</option>
             <option value="al_dia">Al día</option>

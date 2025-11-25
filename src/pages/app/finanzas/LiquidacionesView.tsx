@@ -35,11 +35,14 @@ export default function LiquidacionesView() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row gap-4">
-        <div className="w-full sm:w-64">
+        <div className="w-full sm:w-64 relative">
+          <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none z-10">
+            <Filter className="w-5 h-5 text-gray-400" />
+          </div>
           <Select
             value={estadoFilter}
             onChange={(e) => setEstadoFilter(e.target.value as EstadoLiquidacion | '')}
-            leftIcon={<Filter className="w-5 h-5" />}
+            className="pl-10"
           >
             <option value="">Todos los estados</option>
             <option value="pendiente">Pendiente</option>
