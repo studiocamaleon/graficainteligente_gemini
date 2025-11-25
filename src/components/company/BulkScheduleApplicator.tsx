@@ -56,7 +56,7 @@ export function BulkScheduleApplicator({
           </label>
           <Select
             value={sourceDayOfWeek.toString()}
-            onChange={(e) => setSourceDayOfWeek(Number(e.target.value) as DayOfWeek)}
+            onChange={(value) => setSourceDayOfWeek(Number(value) as DayOfWeek)}
           >
             <option value="">Selecciona un día</option>
             {schedules.map((schedule) => (

@@ -39,13 +39,13 @@ export function useCompany() {
     if (company?.country_id) {
       fetchProvinces(company.country_id);
     }
-  }, [company?.country_id, fetchProvinces]);
+  }, [company?.country_id]);
 
   useEffect(() => {
     if (company?.province_id) {
       fetchCities(company.province_id);
     }
-  }, [company?.province_id, fetchCities]);
+  }, [company?.province_id]);
 
   const handleUpdate = async (data: Partial<CompanyFormData>) => {
     if (!canEdit) {
