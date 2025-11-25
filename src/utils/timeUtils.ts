@@ -52,13 +52,16 @@ export function formatearFechaOrden(fecha: string): string {
 
 export function isValidTimeFormat(time: string): boolean {
   if (!time) return false;
+  const trimmedTime = time.trim();
+  if (!trimmedTime) return false;
   const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
-  return timeRegex.test(time);
+  return timeRegex.test(trimmedTime);
 }
 
 export function parseTimeToMinutes(time: string): number {
-  if (!time || !isValidTimeFormat(time)) return 0;
-  const [hours, minutes] = time.split(':').map(Number);
+  const trimmedTime = time.trim();
+  if (!trimmedTime || !isValidTimeFormat(trimmedTime)) return 0;
+  const [hours, minutes] = trimmedTime.split(':').map(Number);
   return hours * 60 + minutes;
 }
 
@@ -96,16 +99,19 @@ export function formatTimeForDisplay(time: string): string {
 }
 
 export function validateTimeRange(start: string, end: string): string | null {
-  if (!start || !end) {
+  const trimmedStart = start?.trim() || '';
+  const trimmedEnd = end?.trim() || '';
+
+  if (!trimmedStart || !trimmedEnd) {
     return 'Debe especificar hora de inicio y fin';
   }
 
-  if (!isValidTimeFormat(start) || !isValidTimeFormat(end)) {
+  if (!isValidTimeFormat(trimmedStart) || !isValidTimeFormat(trimmedEnd)) {
     return 'Formato de hora inválido (use HH:MM)';
   }
 
-  const startMinutes = parseTimeToMinutes(start);
-  const endMinutes = parseTimeToMinutes(end);
+  const startMinutes = parseTimeToMinutes(trimmedStart);
+  const endMinutes = parseTimeToMinutes(trimmedEnd);
 
   if (startMinutes >= endMinutes) {
     return 'La hora de inicio debe ser anterior a la hora de cierre';
