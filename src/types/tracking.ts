@@ -1,0 +1,87 @@
+export type TrackingEstadoOrden = 'pendiente' | 'en_proceso' | 'finalizada' | 'entregada' | 'cancelada';
+
+export type TrackingEstadoPaso = 'pendiente' | 'en_proceso' | 'completado' | 'omitido';
+
+export type TrackingTipoEtapa = 'pre_prensa' | 'principal' | 'post_prensa';
+
+export interface TrackingPaso {
+  id: string;
+  paso_nombre: string;
+  tipo_etapa: TrackingTipoEtapa;
+  orden: number;
+  estado_paso: TrackingEstadoPaso;
+  fecha_inicio: string | null;
+  fecha_fin: string | null;
+  comentario_vendedor: string | null;
+}
+
+export interface TrackingItem {
+  id: string;
+  producto_nombre: string;
+  producto_categoria: string | null;
+  cantidad: number;
+  estado: 'pendiente' | 'en_proceso' | 'finalizado';
+  pasos: TrackingPaso[];
+}
+
+export interface TrackingData {
+  numero_orden: string;
+  estado: TrackingEstadoOrden;
+  fecha_creacion: string;
+  fecha_estimada_entrega: string | null;
+  cliente_nombre: string;
+  items: TrackingItem[];
+}
+
+export interface TrackingError {
+  error: string;
+  message: string;
+}
+
+export type TrackingResponse = TrackingData | TrackingError;
+
+export function isTrackingError(response: TrackingResponse): response is TrackingError {
+  return 'error' in response;
+}
+
+export function getEstadoLabel(estado: TrackingEstadoOrden): string {
+  const labels: Record<TrackingEstadoOrden, string> = {
+    pendiente: 'Pendiente',
+    en_proceso: 'En Producción',
+    finalizada: 'Finalizada',
+    entregada: 'Entregada',
+    cancelada: 'Cancelada',
+  };
+  return labels[estado];
+}
+
+export function getEstadoPasoLabel(estado: TrackingEstadoPaso): string {
+  const labels: Record<TrackingEstadoPaso, string> = {
+    pendiente: 'Pendiente',
+    en_proceso: 'En Proceso',
+    completado: 'Completado',
+    omitido: 'Omitido',
+  };
+  return labels[estado];
+}
+
+export function getEtapaLabel(etapa: TrackingTipoEtapa): string {
+  const labels: Record<TrackingTipoEtapa, string> = {
+    pre_prensa: 'Pre-prensa',
+    principal: 'Producción',
+    post_prensa: 'Terminación',
+  };
+  return labels[etapa];
+}
+
+export function calculateItemProgress(pasos: TrackingPaso[]): {
+  completados: number;
+  total: number;
+  porcentaje: number;
+} {
+  const total = pasos.length;
+  const completados = pasos.filter((p) => p.estado_paso === 'completado').length;
+  const porcentaje = total > 0 ? Math.round((completados / total) * 100) : 0;
+
+  return { completados, total, porcentaje };
+}

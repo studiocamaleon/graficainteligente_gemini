@@ -44,6 +44,7 @@ import { Precios as CentroCopiadoPrecios } from './pages/app/centro-copiado/Prec
 import { Ordenes as CentroCopiadoOrdenes } from './pages/app/centro-copiado/Ordenes';
 import { CrearOrdenCopiado } from './pages/app/centro-copiado/CrearOrdenCopiado';
 import { DetalleOrdenCopiado } from './pages/app/centro-copiado/DetalleOrdenCopiado';
+import { OrderTracking } from './pages/public/OrderTracking';
 
 function AppRoutes() {
   const { user, loading } = useAuth();
@@ -73,6 +74,8 @@ function AppRoutes() {
         path="/register"
         element={user ? <Navigate to="/app/dashboard" replace /> : <Register />}
       />
+
+      <Route path="/track/:token" element={<OrderTracking />} />
 
       <Route
         path="/app/*"

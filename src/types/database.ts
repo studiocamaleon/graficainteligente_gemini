@@ -1304,6 +1304,7 @@ export interface OrdenTrabajo {
   subtotal: number;
   total_descuentos: number;
   total: number;
+  tracking_token: string | null;
   created_by: string | null;
   updated_by: string | null;
   created_at: string;

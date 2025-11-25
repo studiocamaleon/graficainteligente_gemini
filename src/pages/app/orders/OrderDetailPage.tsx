@@ -16,7 +16,10 @@ import {
   Clock,
   FileText,
   Link as LinkIcon,
-  Settings
+  Settings,
+  Share2,
+  Copy,
+  Check
 } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
@@ -54,6 +57,7 @@ export function OrderDetailPage() {
   const [orden, setOrden] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<TabKey>('items');
   const [loadingData, setLoadingData] = useState(true);
+  const [copiedTracking, setCopiedTracking] = useState(false);
 
   const isAdmin = profile?.role === 'superadmin' || profile?.role === 'admin';
 
@@ -95,6 +99,20 @@ export function OrderDetailPage() {
     if (orden.estado === 'finalizada' || orden.estado === 'cancelada') return false;
     return true;
   }, [orden]);
+
+  const handleCopyTrackingLink = async () => {
+    if (!orden?.tracking_token) return;
+
+    const trackingUrl = `${window.location.origin}/track/${orden.tracking_token}`;
+
+    try {
+      await navigator.clipboard.writeText(trackingUrl);
+      setCopiedTracking(true);
+      setTimeout(() => setCopiedTracking(false), 2000);
+    } catch (error) {
+      console.error('Error al copiar el enlace:', error);
+    }
+  };
 
   const handleDelete = async () => {
     if (!id) return;
@@ -207,6 +225,27 @@ export function OrderDetailPage() {
             </Button>
 
             <div className="flex items-center gap-3">
+              {orden.tracking_token && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCopyTrackingLink}
+                  className="bg-gradient-to-r from-cyan-50 to-blue-50 border-cyan-300 hover:border-cyan-400 text-cyan-700"
+                >
+                  {copiedTracking ? (
+                    <>
+                      <Check className="w-4 h-4 mr-2 text-green-600" />
+                      ¡Copiado!
+                    </>
+                  ) : (
+                    <>
+                      <Share2 className="w-4 h-4 mr-2" />
+                      Compartir Tracking
+                    </>
+                  )}
+                </Button>
+              )}
+
               {canCancel && (
                 <Button
                   variant="outline"
