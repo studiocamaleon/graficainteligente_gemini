@@ -99,23 +99,51 @@ export function formatTimeForDisplay(time: string): string {
 }
 
 export function validateTimeRange(start: string, end: string): string | null {
+  console.group('🔍 DEBUG: validateTimeRange');
+  console.log('start original:', JSON.stringify(start), `(type: ${typeof start}, length: ${start?.length || 0})`);
+  console.log('start codes:', start ? [...start].map(c => c.charCodeAt(0)).join(',') : 'N/A');
+  console.log('end original:', JSON.stringify(end), `(type: ${typeof end}, length: ${end?.length || 0})`);
+  console.log('end codes:', end ? [...end].map(c => c.charCodeAt(0)).join(',') : 'N/A');
+
   const trimmedStart = start?.trim() || '';
   const trimmedEnd = end?.trim() || '';
 
+  console.log('start trimmed:', JSON.stringify(trimmedStart), `(length: ${trimmedStart.length})`);
+  console.log('end trimmed:', JSON.stringify(trimmedEnd), `(length: ${trimmedEnd.length})`);
+
   if (!trimmedStart || !trimmedEnd) {
+    console.warn('❌ Validación fallida: campos vacíos');
+    console.groupEnd();
     return 'Debe especificar hora de inicio y fin';
   }
 
-  if (!isValidTimeFormat(trimmedStart) || !isValidTimeFormat(trimmedEnd)) {
+  console.log('Validando formato de start con isValidTimeFormat...');
+  const isStartValid = isValidTimeFormat(trimmedStart);
+  console.log('isStartValid:', isStartValid);
+
+  console.log('Validando formato de end con isValidTimeFormat...');
+  const isEndValid = isValidTimeFormat(trimmedEnd);
+  console.log('isEndValid:', isEndValid);
+
+  if (!isStartValid || !isEndValid) {
+    console.warn('❌ Validación fallida: formato inválido');
+    console.groupEnd();
     return 'Formato de hora inválido (use HH:MM)';
   }
 
   const startMinutes = parseTimeToMinutes(trimmedStart);
   const endMinutes = parseTimeToMinutes(trimmedEnd);
 
+  console.log('startMinutes:', startMinutes);
+  console.log('endMinutes:', endMinutes);
+
   if (startMinutes >= endMinutes) {
+    console.warn('❌ Validación fallida: hora de inicio >= hora de cierre');
+    console.groupEnd();
     return 'La hora de inicio debe ser anterior a la hora de cierre';
   }
 
+  console.log('✅ Validación exitosa');
+  console.groupEnd();
   return null;
 }

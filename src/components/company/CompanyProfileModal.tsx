@@ -186,19 +186,41 @@ export function CompanyProfileModal({ isOpen, onClose }: CompanyProfileModalProp
   };
 
   const handleSaveHours = async () => {
+    console.group('🔍 DEBUG: handleSaveHours - CompanyProfileModal');
+    console.log('Iniciando guardado de horarios desde el modal...');
+    console.log('Schedules actuales:', schedules);
+    console.log('Schedules abiertos:', schedules.filter(s => s.is_open));
+
+    console.log('\nDetalle de schedules abiertos:');
+    schedules.filter(s => s.is_open).forEach(s => {
+      console.group(`${s.day_name}`);
+      console.log('opening_time_1:', JSON.stringify(s.opening_time_1), `(length: ${s.opening_time_1.length})`);
+      console.log('closing_time_1:', JSON.stringify(s.closing_time_1), `(length: ${s.closing_time_1.length})`);
+      if (s.opening_time_2 || s.closing_time_2) {
+        console.log('opening_time_2:', JSON.stringify(s.opening_time_2), `(length: ${s.opening_time_2.length})`);
+        console.log('closing_time_2:', JSON.stringify(s.closing_time_2), `(length: ${s.closing_time_2.length})`);
+      }
+      console.groupEnd();
+    });
+
     setSavingHours(true);
     setError(null);
     setSuccess(null);
 
+    console.log('\n🚀 Llamando a saveBusinessHours()...');
     const result = await saveBusinessHours();
 
+    console.log('Resultado:', result);
     if (result.success) {
+      console.log('✅ Guardado exitoso');
       setSuccess('Horarios de atención guardados correctamente');
     } else {
+      console.error('❌ Error al guardar:', result.error);
       setError(result.error || 'Error al guardar horarios');
     }
 
     setSavingHours(false);
+    console.groupEnd();
   };
 
   if (!canEdit) {
