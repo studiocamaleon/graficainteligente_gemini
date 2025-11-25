@@ -4,13 +4,13 @@ import { Tabs } from '../../../components/ui/Tabs';
 import { JobsView } from './JobsView';
 import { StationsView } from './StationsView';
 import { ProductivityView } from './ProductivityView';
+import { ActivityView } from './ActivityView';
 import { useProductionJobs } from '../../../hooks/useProductionJobs';
 import { useProductionStations } from '../../../hooks/useProductionStations';
-import { Layers, Boxes, BarChart3, TrendingUp } from 'lucide-react';
+import { Layers, Boxes, Activity, TrendingUp } from 'lucide-react';
 import { Card } from '../../../components/ui/Card';
-import { EmptyState } from '../../../components/ui/EmptyState';
 
-type TabId = 'jobs' | 'estaciones' | 'productividad' | 'reportes';
+type TabId = 'jobs' | 'estaciones' | 'productividad' | 'actividad';
 
 export function ProductionPage() {
   usePageHeader('Control de Producción y Seguimiento');
@@ -37,10 +37,9 @@ export function ProductionPage() {
       icon: TrendingUp,
     },
     {
-      id: 'reportes' as TabId,
-      label: 'Reportes',
-      icon: BarChart3,
-      disabled: true,
+      id: 'actividad' as TabId,
+      label: 'Actividad',
+      icon: Activity,
     },
   ];
 
@@ -60,13 +59,7 @@ export function ProductionPage() {
 
           {activeTab === 'productividad' && <ProductivityView />}
 
-          {activeTab === 'reportes' && (
-            <EmptyState
-              icon={BarChart3}
-              title="Reportes"
-              description="Reportes de producción en desarrollo"
-            />
-          )}
+          {activeTab === 'actividad' && <ActivityView />}
         </div>
       </Card>
     </div>

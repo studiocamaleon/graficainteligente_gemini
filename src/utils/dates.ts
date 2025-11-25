@@ -1,10 +1,12 @@
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
+import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/es';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
+dayjs.extend(relativeTime);
 dayjs.locale('es');
 
 const ARGENTINA_TIMEZONE = 'America/Argentina/Buenos_Aires';
@@ -63,6 +65,10 @@ export function startOfDay(date: Date | string | dayjs.Dayjs): dayjs.Dayjs {
 
 export function endOfDay(date: Date | string | dayjs.Dayjs): dayjs.Dayjs {
   return dayjs(date).tz(ARGENTINA_TIMEZONE).endOf('day');
+}
+
+export function formatDistanceToNow(date: Date | string | dayjs.Dayjs): string {
+  return dayjs(date).tz(ARGENTINA_TIMEZONE).fromNow();
 }
 
 export { ARGENTINA_TIMEZONE };
