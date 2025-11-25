@@ -124,14 +124,21 @@ export function useOrderTracking(
     console.log('🔄 fetchTrackingRef actualizado con nueva versión');
   }, [fetchTracking]);
 
+  // Manejar mounted state del componente
+  useEffect(() => {
+    console.log('✅ Componente montado, isMountedRef = true');
+    isMountedRef.current = true;
+
+    return () => {
+      console.log('🧹 Componente desmontado, isMountedRef = false');
+      isMountedRef.current = false;
+    };
+  }, []); // Sin dependencias - solo mount/unmount
+
   // Initial fetch
   useEffect(() => {
     console.log('🎬 Iniciando fetch inicial...');
     fetchTracking();
-
-    return () => {
-      isMountedRef.current = false;
-    };
   }, [fetchTracking]);
 
   // Actualizar itemIdsRef cuando data cambie
