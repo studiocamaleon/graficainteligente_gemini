@@ -14,6 +14,7 @@ import { useConfirmDialog } from '../../../hooks/useConfirmDialog';
 import { useInfoDialog } from '../../../hooks/useInfoDialog';
 import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
 import { InfoDialog } from '../../../components/ui/InfoDialog';
+import { CentroCopiadoOrdenArchivos } from '../../../components/centro-copiado/CentroCopiadoOrdenArchivos';
 import type { EstadoOrdenCopiado, TipoItemCopiado } from '../../../types/database';
 
 export function DetalleOrdenCopiado() {
@@ -287,6 +288,8 @@ export function DetalleOrdenCopiado() {
           )}
         </div>
       </Card>
+
+      <CentroCopiadoOrdenArchivos ordenId={orden.id} />
 
       <Card>
         <div className="p-6">

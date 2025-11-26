@@ -248,65 +248,12 @@ export function useCentroCopiadoArchivos(params?: string | UseCentroCopiadoArchi
 
       const count = data?.[0]?.archivos_asociados || 0;
 
-      console.log('[asociarConOrden] Archivos asociados:', count);
+      console.log('[asociarConOrden] ✅ Archivos asociados exitosamente:', count);
+      console.log('[asociarConOrden] Los archivos permanecen en /temporal/ para acceso rápido');
 
-      // Mover archivos físicos en storage
-      if (count > 0) {
-        console.log('[asociarConOrden] Moviendo archivos en storage...');
-
-        const { data: archivosAsociados } = await supabase
-          .from('centro_copiado_ordenes_archivos')
-          .select('id, nombre_storage, storage_path')
-          .eq('orden_copiado_id', ordenIdReal)
-          .eq('company_id', efectivoCompanyId);
-
-        if (archivosAsociados && archivosAsociados.length > 0) {
-          for (const archivo of archivosAsociados) {
-            // Usar storage_path real de BD (ya incluye /temporal/ si es temporal)
-            const oldPath = archivo.storage_path;
-            const newPath = `${efectivoCompanyId}/${ordenIdReal}/${archivo.nombre_storage}`;
-
-            console.log(`[asociarConOrden] Moviendo: ${oldPath} → ${newPath}`);
-
-            try {
-              // Descargar archivo temporal
-              const { data: fileData, error: downloadError } = await supabase.storage
-                .from('centro-copiado-archivos')
-                .download(oldPath);
-
-              if (downloadError) {
-                console.error(`[asociarConOrden] Error descargando ${oldPath}:`, downloadError);
-                continue;
-              }
-
-              // Subir a ubicación final
-              const { error: uploadError } = await supabase.storage
-                .from('centro-copiado-archivos')
-                .upload(newPath, fileData, { upsert: true });
-
-              if (uploadError) {
-                console.error(`[asociarConOrden] Error subiendo ${newPath}:`, uploadError);
-                continue;
-              }
-
-              // Eliminar archivo temporal
-              await supabase.storage
-                .from('centro-copiado-archivos')
-                .remove([oldPath]);
-
-              // Actualizar path en BD
-              await supabase
-                .from('centro_copiado_ordenes_archivos')
-                .update({ storage_path: newPath })
-                .eq('id', archivo.id);
-
-              console.log(`[asociarConOrden] ✅ Movido: ${archivo.nombre_storage}`);
-            } catch (moveError) {
-              console.error(`[asociarConOrden] Error moviendo archivo ${archivo.id}:`, moveError);
-            }
-          }
-        }
-      }
+      // Los archivos quedan en /temporal/ - no es necesario moverlos físicamente
+      // La función SQL ya actualizó orden_copiado_id en la BD
+      // storage_path sigue apuntando a /temporal/ y funciona perfectamente
 
       return {
         success: true,
