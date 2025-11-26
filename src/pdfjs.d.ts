@@ -1,8 +1,4 @@
-declare module 'pdfjs-dist/legacy/build/pdf.mjs' {
-  export * from 'pdfjs-dist';
-}
-
-declare module 'pdfjs-dist/legacy/build/pdf.worker.mjs?url' {
+declare module "pdfjs-dist/build/pdf.worker.min.mjs?url" {
   const src: string;
   export default src;
 }
