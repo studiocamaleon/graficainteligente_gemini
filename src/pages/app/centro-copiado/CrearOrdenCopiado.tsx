@@ -25,7 +25,7 @@ interface ItemWithId {
   isCollapsed?: boolean;
   archivoId?: string;
   nombreArchivo?: string;
-  comentario?: string;
+  descripcion?: string;
 }
 
 export function CrearOrdenCopiado() {
@@ -58,7 +58,7 @@ export function CrearOrdenCopiado() {
 
   usePageHeader('Crea una nueva orden de copiado con items personalizados');
 
-  const handleArchivoGenerado = useCallback((archivoId: string, nombreArchivo: string, comentario?: string) => {
+  const handleArchivoGenerado = useCallback((archivoId: string, nombreArchivo: string) => {
     // Colapsar todos los items existentes
     setItems((prev) =>
       prev.map(item => ({ ...item, isCollapsed: true }))
@@ -73,7 +73,6 @@ export function CrearOrdenCopiado() {
       isCollapsed: false,
       archivoId,
       nombreArchivo,
-      comentario,
     };
     setItems((prev) => [...prev, nuevoItem]);
   }, []);
@@ -241,6 +240,7 @@ export function CrearOrdenCopiado() {
             : config.plastificado?.cantidad_especifica,
           precio_unitario: item.precio || 0,
           subtotal: item.precio || 0,
+          descripcion: item.descripcion || undefined,
         };
 
         const itemCreado = await createItemImpresion(datosItem);
@@ -433,7 +433,10 @@ export function CrearOrdenCopiado() {
                 key={item.id}
                 itemNumber={index + 1}
                 nombreArchivo={item.nombreArchivo}
-                comentario={item.comentario}
+                descripcion={item.descripcion}
+                onDescripcionChange={(desc) => {
+                  setItems(prev => prev.map(i => i.id === item.id ? { ...i, descripcion: desc } : i));
+                }}
                 value={item.config}
                 onChange={(config) => actualizarItem(item.id, config)}
                 onRemove={() => eliminarItem(item.id)}

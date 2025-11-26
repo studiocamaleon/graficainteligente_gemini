@@ -15,14 +15,13 @@ interface FileWithMetadata {
   archivoId?: string;
   error?: string;
   selected?: boolean;
-  comentario?: string;
   itemGenerado?: boolean;
 }
 
 interface CentroCopiadoArchivosSectionProps {
   ordenId?: string;
   ordenTemporalId?: string;
-  onArchivoGenerado?: (archivoId: string, nombreArchivo: string, comentario?: string) => void;
+  onArchivoGenerado?: (archivoId: string, nombreArchivo: string) => void;
   disabled?: boolean;
 }
 
@@ -139,20 +138,13 @@ export function CentroCopiadoArchivosSection({
     );
   };
 
-  const handleComentarioChange = (fileId: string, comentario: string) => {
-    setFiles(prev =>
-      prev.map(f =>
-        f.id === fileId ? { ...f, comentario } : f
-      )
-    );
-  };
 
   const handleGenerarItemsSeleccionados = () => {
     const archivosSeleccionados = files.filter(f => f.selected && f.status === 'completed' && !f.itemGenerado);
 
     archivosSeleccionados.forEach(file => {
       if (file.archivoId && onArchivoGenerado) {
-        onArchivoGenerado(file.archivoId, file.file.name, file.comentario);
+        onArchivoGenerado(file.archivoId, file.file.name);
       }
     });
 
@@ -168,7 +160,7 @@ export function CentroCopiadoArchivosSection({
 
     archivosSinItem.forEach(file => {
       if (file.archivoId && onArchivoGenerado) {
-        onArchivoGenerado(file.archivoId, file.file.name, file.comentario);
+        onArchivoGenerado(file.archivoId, file.file.name);
       }
     });
 
@@ -319,9 +311,7 @@ export function CentroCopiadoArchivosSection({
                   error={fileMetadata.error}
                   itemGenerado={fileMetadata.itemGenerado}
                   selected={fileMetadata.selected}
-                  comentario={fileMetadata.comentario}
                   onToggleSelection={() => handleToggleSelection(fileMetadata.id)}
-                  onComentarioChange={(comentario) => handleComentarioChange(fileMetadata.id, comentario)}
                   onDescargar={() => handleDescargar(fileMetadata)}
                   onEliminar={() => handleEliminar(fileMetadata)}
                 />

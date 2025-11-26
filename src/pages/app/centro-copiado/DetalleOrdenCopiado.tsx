@@ -452,6 +452,62 @@ export function DetalleOrdenCopiado() {
         </div>
       </Card>
 
+      {/* Archivos sin asignar */}
+      {archivos.some(archivo => !archivo.item_generado_id) && (
+        <Card>
+          <div className="p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <AlertCircle className="w-5 h-5 text-amber-600" />
+              <h2 className="text-xl font-bold text-gray-900">Archivos sin Asignar</h2>
+            </div>
+            <p className="text-sm text-gray-600 mb-4">
+              Los siguientes archivos fueron cargados pero no tienen un item asociado:
+            </p>
+            <div className="space-y-2">
+              {archivos
+                .filter(archivo => !archivo.item_generado_id)
+                .map(archivo => (
+                  <div
+                    key={archivo.id}
+                    className="flex items-center justify-between p-3 bg-amber-50 border border-amber-200 rounded-lg"
+                  >
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <FileText className="w-5 h-5 text-amber-600 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">
+                          {archivo.nombre_archivo}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {(archivo.tamano_bytes / 1048576).toFixed(2)} MB
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={async () => {
+                        setDescargandoId(archivo.id);
+                        await descargarArchivo(archivo.id);
+                        setDescargandoId(null);
+                      }}
+                      disabled={descargandoId === archivo.id}
+                    >
+                      {descargandoId === archivo.id ? (
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
+                      ) : (
+                        <>
+                          <Download className="w-4 h-4 mr-1" />
+                          Descargar
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                ))}
+            </div>
+          </div>
+        </Card>
+      )}
+
       <Modal
         isOpen={showCancelarModal}
         onClose={() => setShowCancelarModal(false)}

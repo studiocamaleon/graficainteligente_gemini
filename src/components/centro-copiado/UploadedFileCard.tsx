@@ -11,7 +11,6 @@ import {
   Trash2,
 } from 'lucide-react';
 import { Button } from '../ui/Button';
-import { Input } from '../ui/Input';
 
 interface UploadedFileCardProps {
   fileName: string;
@@ -21,9 +20,7 @@ interface UploadedFileCardProps {
   error?: string;
   itemGenerado?: boolean;
   selected?: boolean;
-  comentario?: string;
   onToggleSelection?: () => void;
-  onComentarioChange?: (comentario: string) => void;
   onDescargar?: () => void;
   onEliminar?: () => void;
 }
@@ -52,9 +49,7 @@ export function UploadedFileCard({
   error,
   itemGenerado,
   selected,
-  comentario,
   onToggleSelection,
-  onComentarioChange,
   onDescargar,
   onEliminar,
 }: UploadedFileCardProps) {
@@ -136,18 +131,6 @@ export function UploadedFileCard({
           {error && (
             <div className="mt-2 text-xs text-red-600 bg-red-50 px-2 py-1 rounded">
               {error}
-            </div>
-          )}
-
-          {status === 'completed' && !itemGenerado && onComentarioChange && (
-            <div className="mt-3">
-              <Input
-                type="text"
-                placeholder="Comentario opcional para este archivo..."
-                value={comentario || ''}
-                onChange={(e) => onComentarioChange(e.target.value)}
-                className="text-sm"
-              />
             </div>
           )}
 

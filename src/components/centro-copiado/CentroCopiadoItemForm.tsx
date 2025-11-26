@@ -32,7 +32,8 @@ export interface ItemCopiadoConfig {
 interface CentroCopiadoItemFormProps {
   itemNumber: number;
   nombreArchivo?: string;
-  comentario?: string;
+  descripcion?: string;
+  onDescripcionChange?: (descripcion: string) => void;
   value: Partial<ItemCopiadoConfig>;
   onChange: (config: Partial<ItemCopiadoConfig>) => void;
   onRemove: () => void;
@@ -44,7 +45,8 @@ interface CentroCopiadoItemFormProps {
 export function CentroCopiadoItemForm({
   itemNumber,
   nombreArchivo,
-  comentario,
+  descripcion,
+  onDescripcionChange,
   value,
   onChange,
   onRemove,
@@ -198,9 +200,6 @@ export function CentroCopiadoItemForm({
               <h3 className="text-lg font-semibold text-gray-900">Item #{itemNumber}</h3>
               {nombreArchivo && (
                 <p className="text-sm text-gray-500 mt-0.5">{nombreArchivo}</p>
-              )}
-              {comentario && (
-                <p className="text-sm text-blue-600 mt-1 italic">📝 {comentario}</p>
               )}
             </div>
           )}
@@ -357,6 +356,20 @@ export function CentroCopiadoItemForm({
               />
             </div>
           </div>
+
+          {onDescripcionChange && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Descripción / Comentarios (opcional)
+              </label>
+              <Input
+                type="text"
+                value={descripcion || ''}
+                onChange={(e) => onDescripcionChange(e.target.value)}
+                placeholder="Ej: Imprimir en alta calidad, cuidar los colores..."
+              />
+            </div>
+          )}
 
           {errorCalculo && (
             <div className="p-2 bg-red-50 border border-red-200 rounded-lg">
