@@ -36,6 +36,8 @@ import { ChannelBadge } from '../../../components/orders/ChannelBadge';
 import { OrderProductionRouteTab } from '../../../components/orders/OrderProductionRouteTab';
 import { OrdenAdjuntosTab } from '../../../components/orders/OrdenAdjuntosTab';
 import { OrdenPagosTab } from '../../../components/orders/OrdenPagosTab';
+import { PagoFormModal } from '../../../components/orders/PagoFormModal';
+import { useToast } from '../../../contexts/ToastContext';
 import type { EstadoOrdenTrabajo } from '../../../types/database';
 
 type TabKey = 'items' | 'ruta' | 'adjuntos' | 'pagos' | 'historial';
@@ -44,7 +46,8 @@ export function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { profile } = useAuth();
-  const { getOrdenById, deleteOrden, changeEstado, loading } = useOrdenTrabajo();
+  const { getOrdenById, deleteOrden, changeEstado, addPago, updatePago, deletePago, loading } = useOrdenTrabajo();
+  const { showSuccess, showError } = useToast();
   const {
     dialogState,
     isLoading: isConfirmLoading,
@@ -58,6 +61,8 @@ export function OrderDetailPage() {
   const [activeTab, setActiveTab] = useState<TabKey>('items');
   const [loadingData, setLoadingData] = useState(true);
   const [copiedTracking, setCopiedTracking] = useState(false);
+  const [showPagoModal, setShowPagoModal] = useState(false);
+  const [editingPago, setEditingPago] = useState<any>(null);
 
   const isAdmin = profile?.role === 'superadmin' || profile?.role === 'admin';
 
@@ -146,6 +151,55 @@ export function OrderDetailPage() {
         }
       },
     });
+  };
+
+  const handleAgregarPago = () => {
+    setEditingPago(null);
+    setShowPagoModal(true);
+  };
+
+  const handleEditarPago = (pago: any) => {
+    setEditingPago(pago);
+    setShowPagoModal(true);
+  };
+
+  const handleSubmitPago = async (pagoData: any) => {
+    if (!id) return;
+
+    try {
+      if (editingPago) {
+        const success = await updatePago(editingPago.id, id, pagoData);
+        if (success) {
+          showSuccess('Pago actualizado correctamente');
+          await loadOrden();
+        } else {
+          showError('Error al actualizar el pago');
+        }
+      } else {
+        const success = await addPago(id, pagoData);
+        if (success) {
+          showSuccess('Pago registrado correctamente');
+          await loadOrden();
+        } else {
+          showError('Error al registrar el pago');
+        }
+      }
+    } catch (error) {
+      console.error('Error en pago:', error);
+      showError(error instanceof Error ? error.message : 'Error al procesar el pago');
+    }
+  };
+
+  const handleEliminarPago = async (pagoId: string) => {
+    if (!id) return;
+
+    const success = await deletePago(pagoId, id);
+    if (success) {
+      showSuccess('Pago eliminado correctamente');
+      await loadOrden();
+    } else {
+      showError('Error al eliminar el pago');
+    }
   };
 
   const handleChangeEstado = async (nuevoEstado: EstadoOrdenTrabajo) => {
@@ -539,8 +593,9 @@ export function OrderDetailPage() {
                 total: Number(orden.total || 0),
               }}
               pagos={orden.pagos || []}
-              onAgregarPago={() => {}}
-              readOnly
+              onAgregarPago={handleAgregarPago}
+              onEditarPago={handleEditarPago}
+              onEliminarPago={handleEliminarPago}
             />
           </div>
         )}
@@ -597,6 +652,17 @@ export function OrderDetailPage() {
         cancelText={dialogState.cancelText}
         variant={dialogState.variant}
         isLoading={isConfirmLoading}
+      />
+
+      <PagoFormModal
+        isOpen={showPagoModal}
+        onClose={() => {
+          setShowPagoModal(false);
+          setEditingPago(null);
+        }}
+        onSubmit={handleSubmitPago}
+        saldoPendiente={orden ? Number(orden.total || 0) - (orden.pagos || []).reduce((sum: number, p: any) => sum + Number(p.monto), 0) : 0}
+        pago={editingPago}
       />
     </div>
   );

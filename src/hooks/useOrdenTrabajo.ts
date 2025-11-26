@@ -75,7 +75,8 @@ interface CreateOrdenConItemsData {
 interface AddPagoData {
   fecha_pago: string;
   monto: number;
-  metodo_pago: string;
+  medio_cobro_id?: string;
+  metodo_pago?: string;
   referencia_pago?: string;
   comprobante_url?: string;
   notas?: string;
@@ -461,8 +462,10 @@ export function useOrdenTrabajo() {
 
       if (pagoError) throw pagoError;
 
-      await addHistorialEvent(ordenId, 'pago_registrado', `Pago registrado: $${pagoData.monto}`, {
+      const metodoDescripcion = pagoData.medio_cobro_id ? 'Medio de cobro' : pagoData.metodo_pago;
+      await addHistorialEvent(ordenId, 'pago_registrado', `Pago registrado: $${pagoData.monto} - ${metodoDescripcion}`, {
         monto: pagoData.monto,
+        medio_cobro_id: pagoData.medio_cobro_id,
         metodo_pago: pagoData.metodo_pago,
       });
 
@@ -470,6 +473,30 @@ export function useOrdenTrabajo() {
     } catch (err) {
       console.error('Error adding pago:', err);
       setError(err instanceof Error ? err.message : 'Error al registrar pago');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updatePago = async (pagoId: string, ordenId: string, pagoData: Partial<AddPagoData>): Promise<boolean> => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const { error: updateError } = await supabase
+        .from('ordenes_trabajo_pagos')
+        .update(pagoData)
+        .eq('id', pagoId);
+
+      if (updateError) throw updateError;
+
+      await addHistorialEvent(ordenId, 'modificacion', 'Pago actualizado');
+
+      return true;
+    } catch (err) {
+      console.error('Error updating pago:', err);
+      setError(err instanceof Error ? err.message : 'Error al actualizar pago');
       return false;
     } finally {
       setLoading(false);
@@ -668,6 +695,7 @@ export function useOrdenTrabajo() {
     updateItem,
     deleteItem,
     addPago,
+    updatePago,
     deletePago,
     changeEstado,
   };
