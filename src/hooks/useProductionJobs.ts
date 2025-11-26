@@ -14,6 +14,7 @@ export interface JobItem {
   orden_id: string;
   numero_orden: string;
   fecha_creacion: string;
+  updated_at: string;
   cliente_nombre: string;
   total_pasos: number;
   pasos_completados: number;
@@ -92,6 +93,7 @@ export function useProductionJobs() {
           cantidad,
           estado,
           created_at,
+          updated_at,
           orden:ordenes_trabajo!inner(
             id,
             numero_orden,
@@ -166,6 +168,7 @@ export function useProductionJobs() {
           orden_id: item.orden.id,
           numero_orden: item.orden.numero_orden,
           fecha_creacion: item.orden.fecha_creacion,
+          updated_at: item.updated_at,
           cliente_nombre: item.orden.cliente?.nombre_fantasia || 'Sin cliente',
           total_pasos: totalPasos,
           pasos_completados: pasosCompletados,
@@ -177,9 +180,15 @@ export function useProductionJobs() {
       });
 
       const grouped: JobsByEstado = {
-        pendiente: jobsWithProgress.filter((j) => j.estado === 'pendiente'),
-        en_proceso: jobsWithProgress.filter((j) => j.estado === 'en_proceso'),
-        finalizado: jobsWithProgress.filter((j) => j.estado === 'finalizado'),
+        pendiente: jobsWithProgress
+          .filter((j) => j.estado === 'pendiente')
+          .sort((a, b) => new Date(a.fecha_creacion).getTime() - new Date(b.fecha_creacion).getTime()),
+        en_proceso: jobsWithProgress
+          .filter((j) => j.estado === 'en_proceso')
+          .sort((a, b) => new Date(a.fecha_creacion).getTime() - new Date(b.fecha_creacion).getTime()),
+        finalizado: jobsWithProgress
+          .filter((j) => j.estado === 'finalizado')
+          .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()),
       };
 
       setJobs(jobsWithProgress);
@@ -223,6 +232,7 @@ export function useProductionJobs() {
             cantidad,
             estado,
             created_at,
+            updated_at,
             orden:ordenes_trabajo!inner(
               id,
               numero_orden,
@@ -267,6 +277,7 @@ export function useProductionJobs() {
           orden_id: (itemData.orden as any).id,
           numero_orden: (itemData.orden as any).numero_orden,
           fecha_creacion: (itemData.orden as any).fecha_creacion,
+          updated_at: itemData.updated_at,
           cliente_nombre: (itemData.orden as any).cliente?.nombre_fantasia || 'Sin cliente',
           total_pasos: totalPasos,
           pasos_completados: pasosCompletados,
@@ -315,11 +326,17 @@ export function useProductionJobs() {
           const newEnProceso = prevGrouped.en_proceso.filter((j) => j.id !== itemId);
           const newFinalizado = prevGrouped.finalizado.filter((j) => j.id !== itemId);
 
-          const sortByDate = (jobs: JobItem[]) => {
+          const sortByEstado = (jobs: JobItem[], estado: EstadoOrdenItem) => {
             return jobs.sort((a, b) => {
-              const fechaA = new Date(a.fecha_creacion).getTime();
-              const fechaB = new Date(b.fecha_creacion).getTime();
-              return fechaA - fechaB;
+              if (estado === 'finalizado') {
+                const updatedA = new Date(a.updated_at).getTime();
+                const updatedB = new Date(b.updated_at).getTime();
+                return updatedB - updatedA;
+              } else {
+                const fechaA = new Date(a.fecha_creacion).getTime();
+                const fechaB = new Date(b.fecha_creacion).getTime();
+                return fechaA - fechaB;
+              }
             });
           };
 
@@ -332,9 +349,9 @@ export function useProductionJobs() {
           }
 
           return {
-            pendiente: sortByDate(newPendiente),
-            en_proceso: sortByDate(newEnProceso),
-            finalizado: sortByDate(newFinalizado),
+            pendiente: sortByEstado(newPendiente, 'pendiente'),
+            en_proceso: sortByEstado(newEnProceso, 'en_proceso'),
+            finalizado: sortByEstado(newFinalizado, 'finalizado'),
           };
         });
 
