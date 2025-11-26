@@ -102,7 +102,24 @@ export function useIngresosPeriodo(fechaDesde?: string, fechaHasta?: string) {
       const desde = fechaDesde || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
       const hasta = fechaHasta || new Date().toISOString().split('T')[0];
 
-      // Obtener movimientos de tipo ingreso
+      // Primero obtener IDs de cajas de la empresa
+      const { data: cajasData, error: cajasError } = await supabase
+        .from('cajas')
+        .select('id')
+        .eq('company_id', profile.company_id);
+
+      if (cajasError) throw cajasError;
+
+      const cajaIds = (cajasData || []).map(c => c.id);
+
+      if (cajaIds.length === 0) {
+        setIngresos([]);
+        setTotalIngresos(0);
+        setLoading(false);
+        return;
+      }
+
+      // Obtener movimientos de tipo ingreso de esas cajas
       const { data, error } = await supabase
         .from('cajas_movimientos')
         .select(`
@@ -110,12 +127,7 @@ export function useIngresosPeriodo(fechaDesde?: string, fechaHasta?: string) {
           caja:cajas(nombre, tipo, moneda),
           medio_cobro:medios_cobro(nombre, categoria)
         `)
-        .in('caja_id',
-          supabase
-            .from('cajas')
-            .select('id')
-            .eq('company_id', profile.company_id)
-        )
+        .in('caja_id', cajaIds)
         .eq('tipo_movimiento', 'ingreso')
         .gte('fecha', desde)
         .lte('fecha', hasta)

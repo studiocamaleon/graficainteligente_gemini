@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { TrendingUp, Calendar, Filter } from 'lucide-react';
 import { Card } from '../ui/Card';
 import { Badge } from '../ui/Badge';
@@ -11,9 +11,21 @@ export function IngresosPanel() {
   );
   const [fechaHasta, setFechaHasta] = useState<Date>(new Date());
 
+  const fechaDesdeStr = useMemo(() => {
+    return fechaDesde instanceof Date && !isNaN(fechaDesde.getTime())
+      ? fechaDesde.toISOString().split('T')[0]
+      : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  }, [fechaDesde]);
+
+  const fechaHastaStr = useMemo(() => {
+    return fechaHasta instanceof Date && !isNaN(fechaHasta.getTime())
+      ? fechaHasta.toISOString().split('T')[0]
+      : new Date().toISOString().split('T')[0];
+  }, [fechaHasta]);
+
   const { ingresos, totalIngresos, loading } = useIngresosPeriodo(
-    fechaDesde.toISOString().split('T')[0],
-    fechaHasta.toISOString().split('T')[0]
+    fechaDesdeStr,
+    fechaHastaStr
   );
 
   return (
@@ -56,7 +68,7 @@ export function IngresosPanel() {
         <div className="px-6 py-4 border-b border-gray-200">
           <h3 className="font-semibold text-gray-900">Detalle de Ingresos</h3>
           <p className="text-sm text-gray-500 mt-1">
-            {fechaDesde.toLocaleDateString('es-AR')} - {fechaHasta.toLocaleDateString('es-AR')}
+            {fechaDesde instanceof Date ? fechaDesde.toLocaleDateString('es-AR') : fechaDesdeStr} - {fechaHasta instanceof Date ? fechaHasta.toLocaleDateString('es-AR') : fechaHastaStr}
           </p>
         </div>
 
