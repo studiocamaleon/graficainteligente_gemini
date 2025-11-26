@@ -368,20 +368,26 @@ export function useProductionJobs() {
     updateTimeoutsRef.current.set(itemId, timeoutId);
   }, [profile?.company_id]);
 
+  const updateJobGranularRef = useRef<(itemId: string) => void>();
+
+  useEffect(() => {
+    updateJobGranularRef.current = updateJobGranular;
+  }, [updateJobGranular]);
+
   const handleJobItemUpdate = useCallback(
     (itemId: string) => {
       console.log('🔄 Realtime: Job item updated:', itemId);
-      updateJobGranular(itemId);
+      updateJobGranularRef.current?.(itemId);
     },
-    [updateJobGranular]
+    []
   );
 
   const handleRutaUpdate = useCallback(
     (rutaId: string, ordenItemId: string) => {
       console.log('🔄 Realtime: Ruta updated:', rutaId, 'for item:', ordenItemId);
-      updateJobGranular(ordenItemId);
+      updateJobGranularRef.current?.(ordenItemId);
     },
-    [updateJobGranular]
+    []
   );
 
   useRealtimeJobs({

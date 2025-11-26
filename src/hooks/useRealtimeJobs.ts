@@ -12,6 +12,10 @@ export function useRealtimeJobs(options: RealtimeJobsOptions = {}) {
   const { profile } = useAuth();
   const channelRef = useRef<RealtimeChannel | null>(null);
   const rutasChannelRef = useRef<RealtimeChannel | null>(null);
+  const isSubscribedRef = useRef(false);
+
+  const channelId = useRef(`jobs_items_${Math.random().toString(36).substr(2, 9)}`).current;
+  const rutasChannelId = useRef(`jobs_rutas_${Math.random().toString(36).substr(2, 9)}`).current;
 
   const onJobItemUpdatedRef = useRef(options.onJobItemUpdated);
   const onRutaUpdatedRef = useRef(options.onRutaUpdated);
@@ -27,7 +31,13 @@ export function useRealtimeJobs(options: RealtimeJobsOptions = {}) {
       return;
     }
 
-    // Cleanup previous subscriptions
+    if (isSubscribedRef.current && channelRef.current && rutasChannelRef.current) {
+      console.log('⏭️ Already subscribed, skipping re-subscription');
+      return;
+    }
+
+    console.log('📡 Setting up realtime subscriptions for Jobs view');
+
     if (channelRef.current) {
       console.log('🧹 Cleaning up previous items subscription');
       supabase.removeChannel(channelRef.current);
@@ -40,10 +50,9 @@ export function useRealtimeJobs(options: RealtimeJobsOptions = {}) {
       rutasChannelRef.current = null;
     }
 
-    // Subscribe to ordenes_trabajo_items changes
-    console.log('📡 Setting up realtime subscription for ordenes_trabajo_items');
+    console.log(`📡 [${channelId}] Setting up realtime subscription for ordenes_trabajo_items`);
     const itemsChannel = supabase
-      .channel('ordenes_trabajo_items_changes')
+      .channel(channelId)
       .on(
         'postgres_changes',
         {
@@ -53,7 +62,7 @@ export function useRealtimeJobs(options: RealtimeJobsOptions = {}) {
         },
         (payload) => {
           const timestamp = new Date().toISOString();
-          console.log(`🔔 [${timestamp}] Received ordenes_trabajo_items change:`, payload.eventType, payload);
+          console.log(`🔔 [${timestamp}] [${channelId}] Received ordenes_trabajo_items change:`, payload.eventType, payload);
 
           if (payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') {
             const itemId = payload.new?.id;
@@ -70,21 +79,29 @@ export function useRealtimeJobs(options: RealtimeJobsOptions = {}) {
           }
         }
       )
-      .subscribe((status) => {
-        console.log('📡 Items subscription status:', status);
+      .subscribe((status, err) => {
+        console.log(`📡 [${channelId}] Items subscription status:`, status);
+
         if (status === 'SUBSCRIBED') {
-          console.log('✅ Successfully subscribed to ordenes_trabajo_items changes');
+          console.log(`✅ [${channelId}] Successfully subscribed to ordenes_trabajo_items changes`);
+        } else if (status === 'CLOSED') {
+          console.error(`❌ [${channelId}] Channel closed unexpectedly!`, err);
+          isSubscribedRef.current = false;
+          setTimeout(() => {
+            console.log(`🔄 [${channelId}] Attempting to reconnect...`);
+            setupRealtimeSubscriptions();
+          }, 2000);
         } else if (status === 'CHANNEL_ERROR') {
-          console.error('❌ Error subscribing to ordenes_trabajo_items');
+          console.error(`❌ [${channelId}] Channel error:`, err);
+          isSubscribedRef.current = false;
         }
       });
 
     channelRef.current = itemsChannel;
 
-    // Subscribe to ordenes_trabajo_items_rutas changes
-    console.log('📡 Setting up realtime subscription for ordenes_trabajo_items_rutas');
+    console.log(`📡 [${rutasChannelId}] Setting up realtime subscription for ordenes_trabajo_items_rutas`);
     const rutasChannel = supabase
-      .channel('ordenes_trabajo_items_rutas_changes')
+      .channel(rutasChannelId)
       .on(
         'postgres_changes',
         {
@@ -95,7 +112,7 @@ export function useRealtimeJobs(options: RealtimeJobsOptions = {}) {
         },
         (payload) => {
           const timestamp = new Date().toISOString();
-          console.log(`🔔 [${timestamp}] Received ordenes_trabajo_items_rutas change:`, payload.eventType, payload);
+          console.log(`🔔 [${timestamp}] [${rutasChannelId}] Received ordenes_trabajo_items_rutas change:`, payload.eventType, payload);
 
           if (payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') {
             const rutaId = payload.new?.id;
@@ -108,33 +125,52 @@ export function useRealtimeJobs(options: RealtimeJobsOptions = {}) {
           }
         }
       )
-      .subscribe((status) => {
-        console.log('📡 Rutas subscription status:', status);
+      .subscribe((status, err) => {
+        console.log(`📡 [${rutasChannelId}] Rutas subscription status:`, status);
+
         if (status === 'SUBSCRIBED') {
-          console.log('✅ Successfully subscribed to ordenes_trabajo_items_rutas changes');
+          console.log(`✅ [${rutasChannelId}] Successfully subscribed to ordenes_trabajo_items_rutas changes`);
+        } else if (status === 'CLOSED') {
+          console.error(`❌ [${rutasChannelId}] Channel closed unexpectedly!`, err);
+          isSubscribedRef.current = false;
+          setTimeout(() => {
+            console.log(`🔄 [${rutasChannelId}] Attempting to reconnect...`);
+            setupRealtimeSubscriptions();
+          }, 2000);
         } else if (status === 'CHANNEL_ERROR') {
-          console.error('❌ Error subscribing to ordenes_trabajo_items_rutas');
+          console.error(`❌ [${rutasChannelId}] Channel error:`, err);
+          isSubscribedRef.current = false;
         }
       });
 
     rutasChannelRef.current = rutasChannel;
-  }, [profile?.company_id]);
+    isSubscribedRef.current = true;
+  }, [profile?.company_id, channelId, rutasChannelId]);
 
   useEffect(() => {
     setupRealtimeSubscriptions();
 
     return () => {
-      console.log('🧹 Cleaning up realtime subscriptions');
+      console.log('🧹 useRealtimeJobs: Component unmounting, cleaning up subscriptions');
+      isSubscribedRef.current = false;
+
       if (channelRef.current) {
+        console.log(`🧹 Removing channel: ${channelId}`);
         supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
       }
+
       if (rutasChannelRef.current) {
+        console.log(`🧹 Removing channel: ${rutasChannelId}`);
         supabase.removeChannel(rutasChannelRef.current);
+        rutasChannelRef.current = null;
       }
     };
-  }, [setupRealtimeSubscriptions]);
+  }, [profile?.company_id, channelId, rutasChannelId]);
 
   return {
-    isSubscribed: channelRef.current !== null && rutasChannelRef.current !== null,
+    isSubscribed: isSubscribedRef.current &&
+                  channelRef.current !== null &&
+                  rutasChannelRef.current !== null,
   };
 }
