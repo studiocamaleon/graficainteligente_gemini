@@ -298,6 +298,13 @@ export const MODULES: Module[] = [
     color: 'text-yellow-600',
     children: [
       {
+        id: 'finance-tesoreria',
+        name: 'Tesorería',
+        description: 'Control de cajas, ingresos y saldos por cobrar',
+        path: '/app/finanzas/tesoreria',
+        icon: Briefcase,
+      },
+      {
         id: 'finance-cuentas-corrientes',
         name: 'Cuentas Corrientes',
         description: 'Gestión de cuentas corrientes de clientes',

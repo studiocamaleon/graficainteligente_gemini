@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
+import TesoreriaView from './finanzas/TesoreriaView';
 import CuentasCorrientesView from './finanzas/CuentasCorrientesView';
 import LiquidacionesView from './finanzas/LiquidacionesView';
 import ReportesView from './finanzas/ReportesView';
@@ -10,7 +11,8 @@ export default function Finanzas() {
   return (
     <div className="space-y-6">
       <Routes>
-        <Route path="/" element={<Navigate to="/app/finanzas/cuentas-corrientes" replace />} />
+        <Route path="/" element={<Navigate to="/app/finanzas/tesoreria" replace />} />
+        <Route path="/tesoreria" element={<TesoreriaView />} />
         <Route path="/cuentas-corrientes" element={<CuentasCorrientesView />} />
         <Route path="/liquidaciones" element={<LiquidacionesView />} />
         <Route path="/reportes/*" element={<ReportesView />} />
