@@ -25,6 +25,7 @@ export function VentasKPICards({ data, loading }: VentasKPICardsProps) {
       change: data?.variacion_ventas || 0,
       icon: DollarSign,
       color: 'bg-blue-500',
+      description: undefined,
     },
     {
       title: 'Cantidad de Órdenes',
@@ -32,6 +33,7 @@ export function VentasKPICards({ data, loading }: VentasKPICardsProps) {
       change: data?.variacion_ordenes || 0,
       icon: ShoppingCart,
       color: 'bg-green-500',
+      description: undefined,
     },
     {
       title: 'Ticket Promedio',
@@ -39,6 +41,7 @@ export function VentasKPICards({ data, loading }: VentasKPICardsProps) {
       change: 0,
       icon: Target,
       color: 'bg-orange-500',
+      description: undefined,
     },
     {
       title: 'Total Cobrado',
@@ -46,6 +49,7 @@ export function VentasKPICards({ data, loading }: VentasKPICardsProps) {
       change: 0,
       icon: CreditCard,
       color: 'bg-teal-500',
+      description: undefined,
     },
     {
       title: 'Saldo Pendiente',
@@ -53,6 +57,7 @@ export function VentasKPICards({ data, loading }: VentasKPICardsProps) {
       change: 0,
       icon: DollarSign,
       color: 'bg-amber-500',
+      description: undefined,
     },
     {
       title: 'Tasa de Cobro',
@@ -60,6 +65,7 @@ export function VentasKPICards({ data, loading }: VentasKPICardsProps) {
       change: 0,
       icon: Percent,
       color: 'bg-cyan-500',
+      description: 'No incluye órdenes de cuenta corriente',
     },
   ];
 
@@ -108,6 +114,9 @@ export function VentasKPICards({ data, loading }: VentasKPICardsProps) {
               <div>
                 <p className="text-sm text-gray-600 mb-1">{kpi.title}</p>
                 <p className="text-2xl font-bold text-gray-900">{kpi.value}</p>
+                {kpi.description && (
+                  <p className="text-xs text-gray-500 mt-1">{kpi.description}</p>
+                )}
               </div>
             </div>
           </Card>
