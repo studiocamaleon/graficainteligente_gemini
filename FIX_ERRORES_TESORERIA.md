@@ -114,4 +114,65 @@ Para futuras implementaciones similares:
 
 ---
 
-**Estado:** ✅ Correcciones aplicadas y verificadas
+## 🐛 Errores SQL Adicionales Corregidos
+
+### Error 3: Referencia incorrecta en `fn_calcular_saldos_pendientes_cobro`
+
+**Ubicación:** Migración `20251126060557_create_cajas_sync_triggers.sql` línea 155
+
+**Problema:**
+```sql
+LEFT JOIN pagos_por_orden p ON ot.orden_id = p.orden_id
+```
+
+La tabla `ordenes_trabajo` no tiene columna `orden_id`, solo tiene `id`. Esto causaba:
+```
+Error: column ot.orden_id does not exist
+Hint: Perhaps you meant to reference the column "p.orden_id"
+```
+
+**Solución:**
+```sql
+LEFT JOIN pagos_por_orden p ON ot.id = p.orden_id
+```
+
+### Error 4: Ambigüedad en `fn_obtener_detalle_por_cobrar`
+
+**Problema:**
+El nombre de la columna de retorno `orden_id` era ambiguo con el alias usado internamente.
+
+**Solución:**
+Se agregó alias explícito en la subconsulta CTE:
+```sql
+WITH pagos_por_orden AS (
+  SELECT
+    otp.orden_id,  -- Alias explícito 'otp'
+    COALESCE(SUM(otp.monto), 0) as total_pagado
+  FROM ordenes_trabajo_pagos otp
+  GROUP BY otp.orden_id
+)
+```
+
+## 📋 Migración Aplicada
+
+**Archivo:** `fix_tesoreria_functions_orden_id.sql`
+
+Se creó una nueva migración que:
+1. ✅ Corrige `fn_calcular_saldos_pendientes_cobro` con el JOIN correcto
+2. ✅ Reaplica `fn_obtener_detalle_por_cobrar` con aliases explícitos
+3. ✅ Ambas funciones marcadas como `SECURITY DEFINER`
+
+---
+
+**Estado:** ✅ Todas las correcciones aplicadas y verificadas
+
+## 📊 Resumen de Correcciones
+
+| Error | Tipo | Ubicación | Estado |
+|-------|------|-----------|--------|
+| Query .in() incorrecta | TypeScript | useTesoreria.ts | ✅ Corregido |
+| Validación fechas | TypeScript | IngresosPanel.tsx | ✅ Corregido |
+| JOIN con ot.orden_id | SQL | fn_calcular_saldos_pendientes_cobro | ✅ Corregido |
+| Ambigüedad orden_id | SQL | fn_obtener_detalle_por_cobrar | ✅ Corregido |
+
+**Build Status:** ✅ Exitoso sin errores
