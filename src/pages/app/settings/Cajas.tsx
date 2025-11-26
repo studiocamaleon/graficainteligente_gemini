@@ -6,6 +6,7 @@ import { CajaForm, CajaFormData } from '../../../components/cajas/CajaForm';
 import { Button } from '../../../components/ui/Button';
 import { Modal } from '../../../components/ui/Modal';
 import { EmptyState } from '../../../components/ui/EmptyState';
+import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
 import { useConfirmDialog } from '../../../hooks/useConfirmDialog';
 import { useToast } from '../../../contexts/ToastContext';
 import { usePageHeader } from '../../../hooks/usePageHeader';
@@ -16,8 +17,8 @@ type FilterTab = 'todas' | 'efectivo' | 'banco' | 'virtual';
 export default function Cajas() {
   const { cajas, loading, refetch } = useCajas();
   const { crearCaja, actualizarCaja, eliminarCaja } = useCajaMutations();
-  const { showConfirm } = useConfirmDialog();
-  const { showToast } = useToast();
+  const { dialogState, isLoading: isDialogLoading, closeDialog, handleConfirm, showConfirm } = useConfirmDialog();
+  const { showSuccess, showError } = useToast();
 
   const [showForm, setShowForm] = useState(false);
   const [editingCaja, setEditingCaja] = useState<CajaConMediosCobro | undefined>();
@@ -53,7 +54,7 @@ export default function Cajas() {
           is_active: data.is_active,
           notas: data.notas,
         });
-        showToast('Caja actualizada correctamente', 'success');
+        showSuccess('Caja actualizada correctamente');
       } else {
         await crearCaja({
           nombre: data.nombre,
@@ -64,16 +65,15 @@ export default function Cajas() {
           is_active: data.is_active,
           notas: data.notas,
         });
-        showToast('Caja creada correctamente', 'success');
+        showSuccess('Caja creada correctamente');
       }
       setShowForm(false);
       setEditingCaja(undefined);
       refetch();
     } catch (error) {
       console.error('Error saving caja:', error);
-      showToast(
-        error instanceof Error ? error.message : 'Error al guardar la caja',
-        'error'
+      showError(
+        error instanceof Error ? error.message : 'Error al guardar la caja'
       );
     }
   };
@@ -89,13 +89,12 @@ export default function Cajas() {
     if (confirmed) {
       try {
         await eliminarCaja(id);
-        showToast('Caja eliminada correctamente', 'success');
+        showSuccess('Caja eliminada correctamente');
         refetch();
       } catch (error) {
         console.error('Error deleting caja:', error);
-        showToast(
-          error instanceof Error ? error.message : 'Error al eliminar la caja',
-          'error'
+        showError(
+          error instanceof Error ? error.message : 'Error al eliminar la caja'
         );
       }
     }
@@ -171,10 +170,12 @@ export default function Cajas() {
               ? 'Crea tu primera caja para comenzar a gestionar tu flujo de efectivo'
               : `No hay cajas del tipo "${activeTab}"`
           }
-          action={{
-            label: 'Crear Primera Caja',
-            onClick: handleCreate,
-          }}
+          action={
+            <Button variant="primary" onClick={handleCreate}>
+              <Plus className="w-5 h-5" />
+              Crear Primera Caja
+            </Button>
+          }
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -208,6 +209,19 @@ export default function Cajas() {
           }}
         />
       </Modal>
+
+      {/* Dialog de Confirmación */}
+      <ConfirmDialog
+        isOpen={dialogState.isOpen}
+        title={dialogState.title}
+        message={dialogState.message}
+        confirmText={dialogState.confirmText}
+        cancelText={dialogState.cancelText}
+        variant={dialogState.variant}
+        onConfirm={handleConfirm}
+        onCancel={closeDialog}
+        isLoading={isDialogLoading}
+      />
     </div>
   );
 }
