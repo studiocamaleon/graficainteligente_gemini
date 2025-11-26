@@ -10,7 +10,7 @@ interface KPIData {
   ticket_promedio: number;
   total_cobrado: number;
   saldo_pendiente: number;
-  tasa_conversion: number;
+  tasa_cobro: number;
   variacion_ventas: number;
   variacion_ordenes: number;
 }

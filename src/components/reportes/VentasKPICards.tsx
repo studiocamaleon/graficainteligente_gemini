@@ -7,7 +7,7 @@ interface KPIData {
   ticket_promedio: number;
   total_cobrado: number;
   saldo_pendiente: number;
-  tasa_conversion: number;
+  tasa_cobro: number;
   variacion_ventas: number;
   variacion_ordenes: number;
 }
@@ -55,8 +55,8 @@ export function VentasKPICards({ data, loading }: VentasKPICardsProps) {
       color: 'bg-amber-500',
     },
     {
-      title: 'Tasa de Conversión',
-      value: data ? `${data.tasa_conversion.toFixed(1)}%` : '-',
+      title: 'Tasa de Cobro',
+      value: data ? `${data.tasa_cobro.toFixed(1)}%` : '-',
       change: 0,
       icon: Percent,
       color: 'bg-cyan-500',
