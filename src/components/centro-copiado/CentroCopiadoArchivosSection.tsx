@@ -1,0 +1,275 @@
+import { useState, useEffect } from 'react';
+import { FileText, AlertCircle } from 'lucide-react';
+import { FileUploadZone } from './FileUploadZone';
+import { UploadedFileCard } from './UploadedFileCard';
+import { usePDFPageCount } from '../../hooks/usePDFPageCount';
+import { useFileUpload } from '../../hooks/useFileUpload';
+import { useCentroCopiadoArchivos } from '../../hooks/useCentroCopiadoArchivos';
+import { Card } from '../ui/Card';
+import { useAuth } from '../../hooks/useAuth';
+
+interface FileWithMetadata {
+  id: string;
+  file: File;
+  status: 'pending' | 'uploading' | 'processing' | 'completed' | 'error';
+  paginas?: number | null;
+  archivoId?: string;
+  error?: string;
+}
+
+interface CentroCopiadoArchivosSectionProps {
+  ordenId?: string;
+  onArchivoGenerado?: (archivoId: string, paginas: number | null) => void;
+  disabled?: boolean;
+}
+
+export function CentroCopiadoArchivosSection({
+  ordenId,
+  onArchivoGenerado,
+  disabled = false,
+}: CentroCopiadoArchivosSectionProps) {
+  const { profile } = useAuth();
+  const [files, setFiles] = useState<FileWithMetadata[]>([]);
+  const { detectPages } = usePDFPageCount();
+  const { uploadFile, downloadFile, deleteFile } = useFileUpload();
+  const { createArchivo, deleteArchivo, espacioUsado, refetch } = useCentroCopiadoArchivos(ordenId);
+
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  useEffect(() => {
+    if (ordenId) {
+      refetch();
+    }
+  }, [ordenId, refetch]);
+
+  const handleFilesSelected = async (selectedFiles: File[]) => {
+    const newFiles: FileWithMetadata[] = selectedFiles.map(file => ({
+      id: `${Date.now()}-${Math.random()}`,
+      file,
+      status: 'pending' as const,
+    }));
+
+    setFiles(prev => [...prev, ...newFiles]);
+
+    // Procesar cada archivo
+    for (const fileMetadata of newFiles) {
+      await processFile(fileMetadata);
+    }
+  };
+
+  const processFile = async (fileMetadata: FileWithMetadata) => {
+    if (!profile?.company_id || !ordenId) return;
+
+    setIsProcessing(true);
+
+    try {
+      // 1. Detectar páginas si es PDF
+      let paginas: number | null = null;
+      if (fileMetadata.file.type === 'application/pdf') {
+        setFiles(prev =>
+          prev.map(f =>
+            f.id === fileMetadata.id ? { ...f, status: 'processing' as const } : f
+          )
+        );
+
+        paginas = await detectPages(fileMetadata.file);
+      }
+
+      // 2. Subir archivo a Storage
+      setFiles(prev =>
+        prev.map(f =>
+          f.id === fileMetadata.id ? { ...f, status: 'uploading' as const } : f
+        )
+      );
+
+      const uploadResult = await uploadFile(
+        fileMetadata.file,
+        profile.company_id,
+        ordenId,
+        fileMetadata.id
+      );
+
+      if (!uploadResult) {
+        throw new Error('Error al subir archivo');
+      }
+
+      // 3. Crear registro en base de datos
+      const archivo = await createArchivo({
+        orden_copiado_id: ordenId,
+        nombre_archivo: fileMetadata.file.name,
+        nombre_storage: uploadResult.nombreStorage,
+        tipo_mime: fileMetadata.file.type,
+        tamano_bytes: fileMetadata.file.size,
+        storage_path: uploadResult.storagePath,
+        paginas_detectadas: paginas,
+      });
+
+      if (!archivo) {
+        throw new Error('Error al guardar archivo en base de datos');
+      }
+
+      // 4. Actualizar estado
+      setFiles(prev =>
+        prev.map(f =>
+          f.id === fileMetadata.id
+            ? {
+                ...f,
+                status: 'completed' as const,
+                paginas,
+                archivoId: archivo.id,
+              }
+            : f
+        )
+      );
+
+      // 5. Notificar al padre si es PDF y se detectaron páginas
+      if (paginas && onArchivoGenerado) {
+        onArchivoGenerado(archivo.id, paginas);
+      }
+    } catch (error) {
+      console.error('Error processing file:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Error al procesar archivo';
+
+      setFiles(prev =>
+        prev.map(f =>
+          f.id === fileMetadata.id
+            ? { ...f, status: 'error' as const, error: errorMessage }
+            : f
+        )
+      );
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleGenerarItem = (fileMetadata: FileWithMetadata) => {
+    if (fileMetadata.archivoId && onArchivoGenerado) {
+      onArchivoGenerado(fileMetadata.archivoId, fileMetadata.paginas || null);
+    }
+  };
+
+  const handleDescargar = async (fileMetadata: FileWithMetadata) => {
+    if (!fileMetadata.archivoId) return;
+
+    const archivo = (await refetch()).archivos?.find(a => a.id === fileMetadata.archivoId);
+    if (!archivo) return;
+
+    await downloadFile(archivo.storage_path, archivo.nombre_archivo);
+  };
+
+  const handleEliminar = async (fileMetadata: FileWithMetadata) => {
+    if (!fileMetadata.archivoId) return;
+
+    const archivo = (await refetch()).archivos?.find(a => a.id === fileMetadata.archivoId);
+    if (!archivo) return;
+
+    const confirmacion = window.confirm(
+      `¿Estás seguro de eliminar el archivo "${archivo.nombre_archivo}"?`
+    );
+
+    if (!confirmacion) return;
+
+    // Eliminar del storage
+    await deleteFile(archivo.storage_path);
+
+    // Eliminar de la base de datos
+    const success = await deleteArchivo(archivo.id);
+
+    if (success) {
+      setFiles(prev => prev.filter(f => f.id !== fileMetadata.id));
+    }
+  };
+
+  const espacioDisponibleMB = espacioUsado
+    ? espacioUsado.espacio_disponible_mb
+    : 200;
+
+  const porcentajeUsado = espacioUsado ? espacioUsado.porcentaje_usado : 0;
+
+  return (
+    <Card>
+      <div className="p-4 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <FileText className="w-5 h-5 text-gray-700" />
+            <h3 className="text-lg font-bold text-gray-900">Archivos para Imprimir</h3>
+          </div>
+
+          {espacioUsado && (
+            <div className="text-sm text-gray-600">
+              <span className="font-medium">{espacioUsado.espacio_usado_mb.toFixed(2)} MB</span>
+              {' / '}
+              <span>{(espacioUsado.limite_total_bytes / 1048576).toFixed(0)} MB</span>
+            </div>
+          )}
+        </div>
+
+        {espacioUsado && espacioUsado.espacio_usado_mb > 0 && (
+          <div className="space-y-1">
+            <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all ${
+                  porcentajeUsado >= 90
+                    ? 'bg-red-600'
+                    : porcentajeUsado >= 70
+                    ? 'bg-yellow-600'
+                    : 'bg-blue-600'
+                }`}
+                style={{ width: `${Math.min(porcentajeUsado, 100)}%` }}
+              />
+            </div>
+            <p className="text-xs text-gray-500 text-right">
+              {porcentajeUsado.toFixed(1)}% usado
+            </p>
+          </div>
+        )}
+
+        {porcentajeUsado >= 100 && (
+          <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <div className="text-sm text-red-700">
+              <p className="font-medium">Límite de almacenamiento alcanzado</p>
+              <p className="mt-1">Elimina archivos para poder subir más.</p>
+            </div>
+          </div>
+        )}
+
+        {!disabled && porcentajeUsado < 100 && (
+          <FileUploadZone
+            onFilesSelected={handleFilesSelected}
+            disabled={disabled || isProcessing}
+            espacioDisponibleMB={espacioDisponibleMB}
+          />
+        )}
+
+        {files.length > 0 && (
+          <div className="space-y-2">
+            <h4 className="text-sm font-medium text-gray-700">Archivos cargados</h4>
+            <div className="space-y-2">
+              {files.map(fileMetadata => (
+                <UploadedFileCard
+                  key={fileMetadata.id}
+                  fileName={fileMetadata.file.name}
+                  fileSize={fileMetadata.file.size}
+                  fileType={fileMetadata.file.type}
+                  paginasDetectadas={fileMetadata.paginas}
+                  status={fileMetadata.status}
+                  error={fileMetadata.error}
+                  onGenerarItem={() => handleGenerarItem(fileMetadata)}
+                  onDescargar={() => handleDescargar(fileMetadata)}
+                  onEliminar={() => handleEliminar(fileMetadata)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {files.length === 0 && !disabled && (
+          <p className="text-sm text-gray-500 text-center py-4">
+            No hay archivos cargados aún. Arrastra archivos arriba para comenzar.
+          </p>
+        )}
+      </div>
+    </Card>
+  );
+}

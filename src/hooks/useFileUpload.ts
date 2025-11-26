@@ -1,0 +1,149 @@
+import { useState } from 'react';
+import { supabase } from '../lib/supabase';
+
+export interface UploadProgress {
+  fileId: string;
+  fileName: string;
+  progress: number;
+  status: 'uploading' | 'processing' | 'completed' | 'error';
+  error?: string;
+}
+
+export function useFileUpload() {
+  const [uploadProgress, setUploadProgress] = useState<Record<string, UploadProgress>>({});
+
+  const uploadFile = async (
+    file: File,
+    companyId: string,
+    ordenId: string,
+    fileId: string
+  ): Promise<{ storagePath: string; nombreStorage: string } | null> => {
+    const nombreStorage = `${fileId}-${file.name}`;
+    const storagePath = `${companyId}/${ordenId}/${nombreStorage}`;
+
+    // Inicializar progreso
+    setUploadProgress(prev => ({
+      ...prev,
+      [fileId]: {
+        fileId,
+        fileName: file.name,
+        progress: 0,
+        status: 'uploading',
+      },
+    }));
+
+    try {
+      // Subir archivo a Storage
+      const { error: uploadError } = await supabase.storage
+        .from('centro-copiado-archivos')
+        .upload(storagePath, file, {
+          cacheControl: '3600',
+          upsert: false,
+        });
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      // Actualizar progreso a completado
+      setUploadProgress(prev => ({
+        ...prev,
+        [fileId]: {
+          ...prev[fileId],
+          progress: 100,
+          status: 'completed',
+        },
+      }));
+
+      return { storagePath, nombreStorage };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Error al subir archivo';
+
+      setUploadProgress(prev => ({
+        ...prev,
+        [fileId]: {
+          ...prev[fileId],
+          status: 'error',
+          error: errorMessage,
+        },
+      }));
+
+      console.error('Error uploading file:', error);
+      return null;
+    }
+  };
+
+  const deleteFile = async (storagePath: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase.storage
+        .from('centro-copiado-archivos')
+        .remove([storagePath]);
+
+      if (error) {
+        throw error;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error deleting file:', error);
+      return false;
+    }
+  };
+
+  const getPublicUrl = (storagePath: string): string => {
+    const { data } = supabase.storage
+      .from('centro-copiado-archivos')
+      .getPublicUrl(storagePath);
+
+    return data.publicUrl;
+  };
+
+  const downloadFile = async (storagePath: string, fileName: string): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('centro-copiado-archivos')
+        .download(storagePath);
+
+      if (error) {
+        throw error;
+      }
+
+      // Crear URL temporal y descargar
+      const url = URL.createObjectURL(data);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      return true;
+    } catch (error) {
+      console.error('Error downloading file:', error);
+      return false;
+    }
+  };
+
+  const clearProgress = (fileId: string) => {
+    setUploadProgress(prev => {
+      const newProgress = { ...prev };
+      delete newProgress[fileId];
+      return newProgress;
+    });
+  };
+
+  const clearAllProgress = () => {
+    setUploadProgress({});
+  };
+
+  return {
+    uploadFile,
+    deleteFile,
+    getPublicUrl,
+    downloadFile,
+    uploadProgress,
+    clearProgress,
+    clearAllProgress,
+  };
+}

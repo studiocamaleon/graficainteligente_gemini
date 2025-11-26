@@ -1544,6 +1544,22 @@ export interface CentroCopiadoOrdenItem {
   updated_at: string;
 }
 
+export interface CentroCopiadoOrdenArchivo {
+  id: string;
+  orden_copiado_id: string;
+  company_id: string;
+  nombre_archivo: string;
+  nombre_storage: string;
+  tipo_mime: string;
+  tamano_bytes: number;
+  storage_path: string;
+  paginas_detectadas: number | null;
+  item_generado_id: string | null;
+  uploaded_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
 // Form Data Types
 export interface CentroCopiadoTamanioPapelFormData {
   nombre: string;

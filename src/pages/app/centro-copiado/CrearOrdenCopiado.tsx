@@ -8,18 +8,22 @@ import { SearchableSelect } from '../../../components/ui/SearchableSelect';
 import { DatePicker } from '../../../components/ui/DatePicker';
 import { CentroCopiadoItemForm, ItemCopiadoConfig } from '../../../components/centro-copiado/CentroCopiadoItemForm';
 import { CentroCopiadoResumenOrden } from '../../../components/centro-copiado/CentroCopiadoResumenOrden';
+import { CentroCopiadoArchivosSection } from '../../../components/centro-copiado/CentroCopiadoArchivosSection';
 import { usePageHeader } from '../../../hooks/usePageHeader';
 import { useClients } from '../../../hooks/useClients';
 import { useCentroCopiadoOrdenes } from '../../../hooks/useCentroCopiadoOrdenes';
 import { useCentroCopiadoOrdenItems } from '../../../hooks/useCentroCopiadoOrdenItems';
+import { useCentroCopiadoArchivos } from '../../../hooks/useCentroCopiadoArchivos';
 import { useInfoDialog } from '../../../hooks/useInfoDialog';
 import { InfoDialog } from '../../../components/ui/InfoDialog';
+import { supabase } from '../../../lib/supabase';
 
 interface ItemWithId {
   id: string;
   config: Partial<ItemCopiadoConfig>;
   precio?: number;
   isCollapsed?: boolean;
+  archivoId?: string;
 }
 
 export function CrearOrdenCopiado() {
@@ -37,14 +41,35 @@ export function CrearOrdenCopiado() {
   const [guardando, setGuardando] = useState(false);
   const [infoGeneralCollapsed, setInfoGeneralCollapsed] = useState(false);
   const [initialized, setInitialized] = useState(false);
+  const [ordenCreada, setOrdenCreada] = useState<string | null>(null);
   const resumenContainerRef = useRef<HTMLDivElement>(null);
 
   const { clients, loading: loadingClients } = useClients({ page: 1, itemsPerPage: 100 });
-  const { createOrden } = useCentroCopiadoOrdenes();
+  const { createOrden, updateOrden } = useCentroCopiadoOrdenes();
   const { createItemImpresion } = useCentroCopiadoOrdenItems();
+  const { updateArchivo } = useCentroCopiadoArchivos(ordenCreada || undefined);
   const { dialogState, openDialog, closeDialog } = useInfoDialog();
 
   usePageHeader('Crea una nueva orden de copiado con items personalizados');
+
+  const handleArchivoGenerado = useCallback((archivoId: string, paginas: number | null) => {
+    // Colapsar todos los items existentes
+    setItems((prev) =>
+      prev.map(item => ({ ...item, isCollapsed: true }))
+    );
+
+    // Crear nuevo item con la cantidad de hojas del PDF
+    const nuevoItem: ItemWithId = {
+      id: `item-${Date.now()}-${Math.random()}`,
+      config: {
+        cantidad_hojas: paginas || undefined,
+        cantidad_copias: 1,
+      },
+      isCollapsed: false,
+      archivoId,
+    };
+    setItems((prev) => [...prev, nuevoItem]);
+  }, []);
 
   const agregarItem = useCallback(() => {
     setItems((prev) =>
@@ -73,6 +98,29 @@ export function CrearOrdenCopiado() {
       setInitialized(true);
     }
   }, [initialized, agregarItem, clienteIdParam]);
+
+  // Crear orden temporal cuando se selecciona cliente
+  useEffect(() => {
+    const crearOrdenTemporal = async () => {
+      if (clienteId && !ordenCreada) {
+        try {
+          const ordenTemporal = await createOrden({
+            cliente_id: clienteId,
+            orden_trabajo_id: ordenTrabajoIdParam || undefined,
+            observaciones: 'Orden en proceso de creación',
+          });
+
+          if (ordenTemporal) {
+            setOrdenCreada(ordenTemporal.id);
+          }
+        } catch (error) {
+          console.error('Error creating temporal orden:', error);
+        }
+      }
+    };
+
+    crearOrdenTemporal();
+  }, [clienteId, ordenCreada, createOrden, ordenTrabajoIdParam]);
 
   const actualizarItem = useCallback((id: string, config: Partial<ItemCopiadoConfig>) => {
     setItems((prev) =>
@@ -156,17 +204,34 @@ export function CrearOrdenCopiado() {
         ? `${fechaEntrega}T${horaEntrega}:00`
         : undefined;
 
-      const datosOrden = {
-        cliente_id: clienteId,
-        orden_trabajo_id: ordenTrabajoIdParam || undefined,
-        fecha_entrega_estimada: fechaEntregaCompleta,
-        observaciones: observaciones || undefined,
-      };
+      let ordenIdFinal = ordenCreada;
 
-      const nuevaOrden = await createOrden(datosOrden);
+      // Si ya existe una orden temporal, actualizarla. Si no, crear una nueva
+      if (ordenCreada) {
+        await updateOrden(ordenCreada, {
+          fecha_entrega_estimada: fechaEntregaCompleta || null,
+          observaciones: observaciones || null,
+        });
+      } else {
+        const datosOrden = {
+          cliente_id: clienteId,
+          orden_trabajo_id: ordenTrabajoIdParam || undefined,
+          fecha_entrega_estimada: fechaEntregaCompleta,
+          observaciones: observaciones || undefined,
+        };
 
-      if (!nuevaOrden) {
-        throw new Error('No se pudo crear la orden');
+        const nuevaOrden = await createOrden(datosOrden);
+
+        if (!nuevaOrden) {
+          throw new Error('No se pudo crear la orden');
+        }
+
+        ordenIdFinal = nuevaOrden.id;
+        setOrdenCreada(nuevaOrden.id);
+      }
+
+      if (!ordenIdFinal) {
+        throw new Error('No se pudo obtener el ID de la orden');
       }
 
       for (const item of items) {
@@ -183,7 +248,7 @@ export function CrearOrdenCopiado() {
         }
 
         const datosItem = {
-          orden_copiado_id: nuevaOrden.id,
+          orden_copiado_id: ordenIdFinal,
           tamanio_papel_id: config.tamanio_papel_id,
           papel_id: config.papel_id,
           tipo_tinta: config.tipo_tinta,
@@ -199,14 +264,28 @@ export function CrearOrdenCopiado() {
           subtotal: item.precio || 0,
         };
 
-        await createItemImpresion(datosItem);
+        const itemCreado = await createItemImpresion(datosItem);
+
+        // Si el item tiene archivo asociado, actualizar la referencia
+        if (itemCreado && item.archivoId) {
+          await updateArchivo(item.archivoId, {
+            item_generado_id: itemCreado.id,
+          });
+        }
       }
+
+      // Obtener información de la orden para mostrar en el diálogo
+      const { data: ordenFinal } = await supabase
+        .from('centro_copiado_ordenes')
+        .select('numero_orden')
+        .eq('id', ordenIdFinal)
+        .single();
 
       openDialog(
         'Orden Creada',
-        `La orden ${nuevaOrden.numero_orden} ha sido creada exitosamente. Estado: Pendiente.`,
+        `La orden ${ordenFinal?.numero_orden || ''} ha sido creada exitosamente. Estado: Pendiente.`,
         () => {
-          navigate(`/app/centro-copiado/ordenes/${nuevaOrden.id}`);
+          navigate(`/app/centro-copiado/ordenes/${ordenIdFinal}`);
         }
       );
     } catch (error) {
@@ -348,6 +427,12 @@ export function CrearOrdenCopiado() {
               </div>
             )}
           </Card>
+
+          <CentroCopiadoArchivosSection
+            ordenId={ordenCreada || undefined}
+            onArchivoGenerado={handleArchivoGenerado}
+            disabled={!clienteId}
+          />
 
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold text-gray-900">Items de la Orden</h2>
