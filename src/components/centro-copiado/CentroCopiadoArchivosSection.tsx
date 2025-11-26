@@ -18,7 +18,7 @@ interface FileWithMetadata {
 interface CentroCopiadoArchivosSectionProps {
   ordenId?: string;
   ordenTemporalId?: string;
-  onArchivoGenerado?: (archivoId: string) => void;
+  onArchivoGenerado?: (archivoId: string, nombreArchivo: string) => void;
   disabled?: boolean;
 }
 
@@ -112,7 +112,7 @@ export function CentroCopiadoArchivosSection({
 
       // 4. Notificar al padre para crear item automáticamente
       if (onArchivoGenerado) {
-        onArchivoGenerado(archivo.id);
+        onArchivoGenerado(archivo.id, fileMetadata.file.name);
       }
     } catch (error) {
       console.error('Error processing file:', error);
@@ -132,7 +132,7 @@ export function CentroCopiadoArchivosSection({
 
   const handleGenerarItem = (fileMetadata: FileWithMetadata) => {
     if (fileMetadata.archivoId && onArchivoGenerado) {
-      onArchivoGenerado(fileMetadata.archivoId);
+      onArchivoGenerado(fileMetadata.archivoId, fileMetadata.file.name);
     }
   };
 

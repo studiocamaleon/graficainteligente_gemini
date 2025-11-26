@@ -31,6 +31,7 @@ export interface ItemCopiadoConfig {
 
 interface CentroCopiadoItemFormProps {
   itemNumber: number;
+  nombreArchivo?: string;
   value: Partial<ItemCopiadoConfig>;
   onChange: (config: Partial<ItemCopiadoConfig>) => void;
   onRemove: () => void;
@@ -41,6 +42,7 @@ interface CentroCopiadoItemFormProps {
 
 export function CentroCopiadoItemForm({
   itemNumber,
+  nombreArchivo,
   value,
   onChange,
   onRemove,
@@ -172,9 +174,16 @@ export function CentroCopiadoItemForm({
           className="flex items-center gap-3 flex-1 min-w-0 text-left hover:opacity-80 transition-opacity"
         >
           <Badge variant="primary">#{itemNumber}</Badge>
-          {isCollapsed && isConfigComplete && (
+          {isCollapsed && (
             <>
-              <span className="text-sm text-gray-700 truncate">{getResumenItem()}</span>
+              <div className="flex flex-col gap-1 flex-1 min-w-0">
+                {nombreArchivo && (
+                  <span className="text-sm font-medium text-gray-900 truncate">{nombreArchivo}</span>
+                )}
+                {isConfigComplete && (
+                  <span className="text-xs text-gray-500 truncate">{getResumenItem()}</span>
+                )}
+              </div>
               {precioCalculado !== null && (
                 <Badge variant="success" className="ml-auto">
                   ${precioCalculado.toFixed(2)}
@@ -183,7 +192,12 @@ export function CentroCopiadoItemForm({
             </>
           )}
           {!isCollapsed && (
-            <h3 className="text-lg font-semibold text-gray-900">Item #{itemNumber}</h3>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">Item #{itemNumber}</h3>
+              {nombreArchivo && (
+                <p className="text-sm text-gray-500 mt-0.5">{nombreArchivo}</p>
+              )}
+            </div>
           )}
           <div className="ml-auto flex items-center">
             {isCollapsed ? (
