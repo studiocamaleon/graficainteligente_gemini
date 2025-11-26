@@ -3,10 +3,14 @@ import { JobsKanbanBoard } from '../../../components/production/JobsKanbanBoard'
 import { JobExecutionModal } from '../../../components/production/JobExecutionModal';
 import { useProductionJobs } from '../../../hooks/useProductionJobs';
 import type { JobItem } from '../../../hooks/useProductionJobs';
-import { RefreshCw, Radio } from 'lucide-react';
+import { RefreshCw, Radio, Monitor } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
+import { useAuth } from '../../../hooks/useAuth';
+import { useToast } from '../../../contexts/ToastContext';
 
 export function JobsView() {
+  const { profile } = useAuth();
+  const { showSuccess, showError } = useToast();
   const { jobsByEstado, loading, error, refreshJobs, isUpdating, recentlyUpdatedJobs } = useProductionJobs();
   const [selectedJob, setSelectedJob] = useState<JobItem | null>(null);
   const [showExecutionModal, setShowExecutionModal] = useState(false);
@@ -19,6 +23,24 @@ export function JobsView() {
   const handleCloseModal = () => {
     setShowExecutionModal(false);
     setSelectedJob(null);
+  };
+
+  const handleCopyMonitorUrl = async () => {
+    if (!profile?.company_id) {
+      showError('No se pudo obtener el ID de la empresa');
+      return;
+    }
+
+    const baseUrl = window.location.origin;
+    const monitorUrl = `${baseUrl}/monitor/jobs/${profile.company_id}`;
+
+    try {
+      await navigator.clipboard.writeText(monitorUrl);
+      showSuccess('URL del monitor copiada al portapapeles');
+    } catch (err) {
+      showError('Error al copiar la URL');
+      console.error(err);
+    }
   };
 
   if (loading) {
@@ -62,10 +84,16 @@ export function JobsView() {
             </div>
           )}
         </div>
-        <Button onClick={refreshJobs} variant="outline" size="sm">
-          <RefreshCw className="w-4 h-4 mr-2" />
-          Actualizar
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={handleCopyMonitorUrl} variant="outline" size="sm">
+            <Monitor className="w-4 h-4 mr-2" />
+            Copiar URL Monitor
+          </Button>
+          <Button onClick={refreshJobs} variant="outline" size="sm">
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Actualizar
+          </Button>
+        </div>
       </div>
 
       <JobsKanbanBoard

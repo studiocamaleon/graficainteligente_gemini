@@ -45,6 +45,7 @@ import { Ordenes as CentroCopiadoOrdenes } from './pages/app/centro-copiado/Orde
 import { CrearOrdenCopiado } from './pages/app/centro-copiado/CrearOrdenCopiado';
 import { DetalleOrdenCopiado } from './pages/app/centro-copiado/DetalleOrdenCopiado';
 import { OrderTracking } from './pages/public/OrderTracking';
+import { JobsMonitor } from './pages/public/JobsMonitor';
 
 function AppRoutes() {
   const { user, loading } = useAuth();
@@ -76,6 +77,7 @@ function AppRoutes() {
       />
 
       <Route path="/track/:token" element={<OrderTracking />} />
+      <Route path="/monitor/jobs/:companyId" element={<JobsMonitor />} />
 
       <Route
         path="/app/*"
