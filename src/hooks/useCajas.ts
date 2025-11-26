@@ -188,6 +188,31 @@ export function useCajaMutations() {
     return caja;
   };
 
+  const verificarDependenciasCaja = async (cajaId: string) => {
+    // Contar medios de cobro activos asociados
+    const { count: mediosCobro, error: errorMedios } = await supabase
+      .from('medios_cobro')
+      .select('id', { count: 'exact', head: true })
+      .eq('caja_id', cajaId)
+      .eq('is_active', true);
+
+    if (errorMedios) throw errorMedios;
+
+    // Contar movimientos asociados
+    const { count: movimientos, error: errorMovs } = await supabase
+      .from('cajas_movimientos')
+      .select('id', { count: 'exact', head: true })
+      .eq('caja_id', cajaId);
+
+    if (errorMovs) throw errorMovs;
+
+    return {
+      puedeEliminar: (mediosCobro || 0) === 0,
+      mediosCobro: mediosCobro || 0,
+      movimientos: movimientos || 0,
+    };
+  };
+
   const eliminarCaja = async (id: string) => {
     const { error } = await supabase
       .from('cajas')
@@ -259,6 +284,7 @@ export function useCajaMutations() {
     crearCaja,
     actualizarCaja,
     eliminarCaja,
+    verificarDependenciasCaja,
     transferirEntreCajas,
     registrarAjuste,
   };

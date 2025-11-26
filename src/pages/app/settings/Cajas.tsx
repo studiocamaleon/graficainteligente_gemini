@@ -16,7 +16,7 @@ type FilterTab = 'todas' | 'efectivo' | 'banco' | 'virtual';
 
 export default function Cajas() {
   const { cajas, loading, refetch } = useCajas();
-  const { crearCaja, actualizarCaja, eliminarCaja } = useCajaMutations();
+  const { crearCaja, actualizarCaja, eliminarCaja, verificarDependenciasCaja } = useCajaMutations();
   const { dialogState, isLoading: isDialogLoading, closeDialog, handleConfirm, showConfirm } = useConfirmDialog();
   const { showSuccess, showError } = useToast();
 
@@ -79,20 +79,45 @@ export default function Cajas() {
   };
 
   const handleDelete = async (id: string) => {
-    const confirmed = await showConfirm({
-      title: 'Eliminar Caja',
-      message: '¿Estás seguro de que deseas eliminar esta caja? Si tiene movimientos asociados, no podrá eliminarse.',
-      confirmText: 'Eliminar',
-      cancelText: 'Cancelar',
-    });
+    try {
+      // 1. Verificar dependencias antes de intentar eliminar
+      const dependencias = await verificarDependenciasCaja(id);
 
-    if (confirmed) {
-      try {
+      // 2. Si tiene medios de cobro asociados, no permitir eliminar
+      if (!dependencias.puedeEliminar) {
+        await showConfirm({
+          title: 'No se puede eliminar la caja',
+          message: `Esta caja tiene ${dependencias.mediosCobro} medio(s) de cobro asociado(s).\n\nPara eliminar esta caja, primero debes reasignar los medios de cobro a otra caja desde el módulo de Configuración > Medios de Cobro.${dependencias.movimientos > 0 ? `\n\nNota: Esta caja tiene ${dependencias.movimientos} movimiento(s) registrado(s) en el historial.` : ''}`,
+          confirmText: 'Entendido',
+          variant: 'warning'
+        });
+        return; // No continuar con la eliminación
+      }
+
+      // 3. Confirmar eliminación normal
+      const mensaje = dependencias.movimientos > 0
+        ? `¿Estás seguro de que deseas eliminar esta caja?\n\nTiene ${dependencias.movimientos} movimiento(s) registrado(s) que se mantendrán como historial.\n\nEsta acción no se puede deshacer.`
+        : '¿Estás seguro de que deseas eliminar esta caja?\n\nEsta acción no se puede deshacer.';
+
+      const confirmed = await showConfirm({
+        title: 'Eliminar Caja',
+        message: mensaje,
+        confirmText: 'Eliminar',
+        cancelText: 'Cancelar',
+      });
+
+      if (confirmed) {
         await eliminarCaja(id);
         showSuccess('Caja eliminada correctamente');
         refetch();
-      } catch (error) {
-        console.error('Error deleting caja:', error);
+      }
+    } catch (error) {
+      console.error('Error deleting caja:', error);
+
+      // Manejo específico de error de constraint
+      if (error && typeof error === 'object' && 'code' in error && error.code === '23503') {
+        showError('No se puede eliminar la caja porque tiene medios de cobro o movimientos asociados. Reasigna los medios de cobro primero.');
+      } else {
         showError(
           error instanceof Error ? error.message : 'Error al eliminar la caja'
         );
