@@ -20,9 +20,9 @@ export interface ClientFormData {
   whatsapp: string;
   email: string;
   domicilio: string;
-  country_id: string;
-  province_id: string;
-  city_id: string;
+  country_id: string | null;
+  province_id: string | null;
+  city_id: string | null;
   codigo_postal: string;
   tiene_cuenta_corriente: boolean;
   acuerdo_pago: PaymentTerm | null;
@@ -45,9 +45,9 @@ export function ClientForm({ client, onSubmit, onCancel }: ClientFormProps) {
     whatsapp: client?.whatsapp || '',
     email: client?.email || '',
     domicilio: client?.domicilio || '',
-    country_id: client?.country_id || '',
-    province_id: client?.province_id || '',
-    city_id: client?.city_id || '',
+    country_id: client?.country_id || null,
+    province_id: client?.province_id || null,
+    city_id: client?.city_id || null,
     codigo_postal: client?.codigo_postal || '',
     tiene_cuenta_corriente: client?.tiene_cuenta_corriente || false,
     acuerdo_pago: client?.acuerdo_pago || null,
@@ -216,11 +216,11 @@ export function ClientForm({ client, onSubmit, onCancel }: ClientFormProps) {
 
           <Select
             label="País"
-            value={formData.country_id}
+            value={formData.country_id || ''}
             onChange={(value) => {
-              handleChange('country_id', value);
-              handleChange('province_id', '');
-              handleChange('city_id', '');
+              handleChange('country_id', value || null);
+              handleChange('province_id', null);
+              handleChange('city_id', null);
             }}
             options={countries.map(c => ({ value: c.id, label: c.name }))}
             placeholder="Seleccione un país"
@@ -228,10 +228,10 @@ export function ClientForm({ client, onSubmit, onCancel }: ClientFormProps) {
 
           <Select
             label="Provincia"
-            value={formData.province_id}
+            value={formData.province_id || ''}
             onChange={(value) => {
-              handleChange('province_id', value);
-              handleChange('city_id', '');
+              handleChange('province_id', value || null);
+              handleChange('city_id', null);
             }}
             options={provinces.map(p => ({ value: p.id, label: p.name }))}
             placeholder="Seleccione una provincia"
@@ -240,8 +240,8 @@ export function ClientForm({ client, onSubmit, onCancel }: ClientFormProps) {
 
           <Select
             label="Ciudad"
-            value={formData.city_id}
-            onChange={(value) => handleChange('city_id', value)}
+            value={formData.city_id || ''}
+            onChange={(value) => handleChange('city_id', value || null)}
             options={cities.map(c => ({ value: c.id, label: c.name }))}
             placeholder="Seleccione una ciudad"
             disabled={!formData.province_id}

@@ -21,12 +21,17 @@ export function useClient() {
       setLoading(true);
       setError(null);
 
+      const sanitizedData = {
+        ...clientData,
+        country_id: clientData.country_id || null,
+        province_id: clientData.province_id || null,
+        city_id: clientData.city_id || null,
+        company_id: profile.company_id,
+      };
+
       const { data, error: createError } = await supabase
         .from('clients')
-        .insert({
-          ...clientData,
-          company_id: profile.company_id,
-        })
+        .insert(sanitizedData)
         .select()
         .single();
 
@@ -48,9 +53,16 @@ export function useClient() {
       setLoading(true);
       setError(null);
 
+      const sanitizedData = {
+        ...clientData,
+        country_id: clientData.country_id || null,
+        province_id: clientData.province_id || null,
+        city_id: clientData.city_id || null,
+      };
+
       const { data, error: updateError } = await supabase
         .from('clients')
-        .update(clientData)
+        .update(sanitizedData)
         .eq('id', clientId)
         .select()
         .single();

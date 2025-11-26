@@ -176,3 +176,99 @@ Se creó una nueva migración que:
 | Ambigüedad orden_id | SQL | fn_obtener_detalle_por_cobrar | ✅ Corregido |
 
 **Build Status:** ✅ Exitoso sin errores
+
+---
+
+## 🐛 Errores Adicionales Corregidos (Segunda Ronda)
+
+### Error 5: EXTRACT con tipo incorrecto en `fn_obtener_detalle_por_cobrar`
+
+**Ubicación:** Migración `fix_tesoreria_functions_orden_id.sql` línea 109
+
+**Problema:**
+```sql
+EXTRACT(DAY FROM (CURRENT_DATE - ot.fecha_creacion::date))::integer
+```
+
+La resta `CURRENT_DATE - fecha::date` retorna un `integer` (número de días) directamente, no un `interval`. La función `EXTRACT` no puede operar sobre integers, solo sobre intervals. Error:
+```
+function pg_catalog.extract(unknown, integer) does not exist
+```
+
+**Solución:**
+```sql
+(CURRENT_DATE - ot.fecha_creacion::date)::integer as dias_transcurridos
+```
+
+Se eliminó `EXTRACT` ya que la resta de fechas ya retorna el número de días como integer.
+
+### Error 6: UUIDs vacíos al crear/editar clientes
+
+**Ubicación:** `ClientForm.tsx` líneas 48-50 y `useClient.ts`
+
+**Problema:**
+```typescript
+country_id: client?.country_id || '',
+province_id: client?.province_id || '',
+city_id: client?.city_id || '',
+```
+
+Los campos UUID opcionales se inicializaban como strings vacíos `''`. Al enviarlos a Supabase, causaba:
+```
+invalid input syntax for type uuid: ""
+```
+
+**Solución en ClientForm:**
+```typescript
+country_id: client?.country_id || null,
+province_id: client?.province_id || null,
+city_id: client?.city_id || null,
+```
+
+**Solución en useClient (sanitización):**
+```typescript
+const sanitizedData = {
+  ...clientData,
+  country_id: clientData.country_id || null,
+  province_id: clientData.province_id || null,
+  city_id: clientData.city_id || null,
+};
+```
+
+También se actualizó la interfaz `ClientFormData` para reflejar que estos campos aceptan `string | null`.
+
+## 📋 Migraciones Aplicadas
+
+### Migración 1: `fix_tesoreria_functions_orden_id.sql`
+- Corrige referencias `ot.orden_id` → `ot.id`
+
+### Migración 2: `fix_extract_dias_transcurridos.sql`
+- Elimina uso incorrecto de `EXTRACT` con integers
+- Usa resta de fechas directamente para obtener días transcurridos
+
+## 📊 Resumen Final de Correcciones
+
+| # | Error | Tipo | Ubicación | Estado |
+|---|-------|------|-----------|--------|
+| 1 | Query .in() incorrecta | TypeScript | useTesoreria.ts | ✅ Corregido |
+| 2 | Validación fechas | TypeScript | IngresosPanel.tsx | ✅ Corregido |
+| 3 | JOIN con ot.orden_id | SQL | fn_calcular_saldos_pendientes_cobro | ✅ Corregido |
+| 4 | Ambigüedad orden_id | SQL | fn_obtener_detalle_por_cobrar | ✅ Corregido |
+| 5 | EXTRACT con integer | SQL | fn_obtener_detalle_por_cobrar | ✅ Corregido |
+| 6 | UUIDs vacíos en clientes | TypeScript | ClientForm + useClient | ✅ Corregido |
+
+**Build Status:** ✅ Exitoso sin errores (23.19s)
+
+## ✅ Funcionalidades Verificadas
+
+### Módulo de Tesorería
+- ✅ Tab "Por Cobrar" funciona correctamente
+- ✅ Cálculo de saldos pendientes (CC y sin CC)
+- ✅ Listado de órdenes por cobrar con días transcurridos
+- ✅ Panel de ingresos con filtros de fecha
+
+### Módulo de Clientes
+- ✅ Creación de clientes sin campos de ubicación
+- ✅ Edición de clientes existentes
+- ✅ Campos UUID opcionales manejan correctamente valores null
+- ✅ No se envían strings vacíos a la base de datos
