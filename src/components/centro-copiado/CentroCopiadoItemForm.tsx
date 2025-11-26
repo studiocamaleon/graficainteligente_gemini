@@ -32,6 +32,7 @@ export interface ItemCopiadoConfig {
 interface CentroCopiadoItemFormProps {
   itemNumber: number;
   nombreArchivo?: string;
+  comentario?: string;
   value: Partial<ItemCopiadoConfig>;
   onChange: (config: Partial<ItemCopiadoConfig>) => void;
   onRemove: () => void;
@@ -43,6 +44,7 @@ interface CentroCopiadoItemFormProps {
 export function CentroCopiadoItemForm({
   itemNumber,
   nombreArchivo,
+  comentario,
   value,
   onChange,
   onRemove,
@@ -196,6 +198,9 @@ export function CentroCopiadoItemForm({
               <h3 className="text-lg font-semibold text-gray-900">Item #{itemNumber}</h3>
               {nombreArchivo && (
                 <p className="text-sm text-gray-500 mt-0.5">{nombreArchivo}</p>
+              )}
+              {comentario && (
+                <p className="text-sm text-blue-600 mt-1 italic">📝 {comentario}</p>
               )}
             </div>
           )}

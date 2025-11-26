@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FileText, AlertCircle } from 'lucide-react';
+import { FileText, AlertCircle, CheckSquare, ListChecks } from 'lucide-react';
 import { FileUploadZone } from './FileUploadZone';
 import { UploadedFileCard } from './UploadedFileCard';
 import { useFileUpload } from '../../hooks/useFileUpload';
@@ -13,12 +13,15 @@ interface FileWithMetadata {
   status: 'pending' | 'uploading' | 'completed' | 'error';
   archivoId?: string;
   error?: string;
+  selected?: boolean;
+  comentario?: string;
+  itemGenerado?: boolean;
 }
 
 interface CentroCopiadoArchivosSectionProps {
   ordenId?: string;
   ordenTemporalId?: string;
-  onArchivoGenerado?: (archivoId: string, nombreArchivo: string) => void;
+  onArchivoGenerado?: (archivoId: string, nombreArchivo: string, comentario?: string) => void;
   disabled?: boolean;
 }
 
@@ -110,10 +113,7 @@ export function CentroCopiadoArchivosSection({
         )
       );
 
-      // 4. Notificar al padre para crear item automáticamente
-      if (onArchivoGenerado) {
-        onArchivoGenerado(archivo.id, fileMetadata.file.name);
-      }
+      // Archivo subido correctamente - NO crear item automáticamente
     } catch (error) {
       console.error('Error processing file:', error);
       const errorMessage = error instanceof Error ? error.message : 'Error al procesar archivo';
@@ -130,10 +130,52 @@ export function CentroCopiadoArchivosSection({
     }
   };
 
-  const handleGenerarItem = (fileMetadata: FileWithMetadata) => {
-    if (fileMetadata.archivoId && onArchivoGenerado) {
-      onArchivoGenerado(fileMetadata.archivoId, fileMetadata.file.name);
-    }
+  const handleToggleSelection = (fileId: string) => {
+    setFiles(prev =>
+      prev.map(f =>
+        f.id === fileId ? { ...f, selected: !f.selected } : f
+      )
+    );
+  };
+
+  const handleComentarioChange = (fileId: string, comentario: string) => {
+    setFiles(prev =>
+      prev.map(f =>
+        f.id === fileId ? { ...f, comentario } : f
+      )
+    );
+  };
+
+  const handleGenerarItemsSeleccionados = () => {
+    const archivosSeleccionados = files.filter(f => f.selected && f.status === 'completed' && !f.itemGenerado);
+
+    archivosSeleccionados.forEach(file => {
+      if (file.archivoId && onArchivoGenerado) {
+        onArchivoGenerado(file.archivoId, file.file.name, file.comentario);
+      }
+    });
+
+    setFiles(prev =>
+      prev.map(f =>
+        f.selected && f.status === 'completed' ? { ...f, itemGenerado: true, selected: false } : f
+      )
+    );
+  };
+
+  const handleGenerarItemsTodos = () => {
+    const archivosSinItem = files.filter(f => f.status === 'completed' && !f.itemGenerado);
+
+    archivosSinItem.forEach(file => {
+      if (file.archivoId && onArchivoGenerado) {
+        onArchivoGenerado(file.archivoId, file.file.name, file.comentario);
+      }
+    });
+
+    setFiles(prev =>
+      prev.map(f =>
+        f.status === 'completed' ? { ...f, itemGenerado: true, selected: false } : f
+      )
+    );
   };
 
   const handleDescargar = async (fileMetadata: FileWithMetadata) => {
@@ -173,6 +215,12 @@ export function CentroCopiadoArchivosSection({
     : 200;
 
   const porcentajeUsado = espacioUsado ? espacioUsado.porcentaje_usado : 0;
+
+  const archivosCompletados = files.filter(f => f.status === 'completed');
+  const archivosSinItem = archivosCompletados.filter(f => !f.itemGenerado);
+  const archivosSeleccionados = archivosSinItem.filter(f => f.selected);
+  const haySeleccionados = archivosSeleccionados.length > 0;
+  const hayArchivosSinItem = archivosSinItem.length > 0;
 
   return (
     <Card>
@@ -231,8 +279,34 @@ export function CentroCopiadoArchivosSection({
         )}
 
         {files.length > 0 && (
-          <div className="space-y-2">
-            <h4 className="text-sm font-medium text-gray-700">Archivos cargados</h4>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-medium text-gray-700">
+                Archivos cargados ({archivosCompletados.length})
+              </h4>
+              {hayArchivosSinItem && (
+                <div className="flex items-center gap-2">
+                  {haySeleccionados && (
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={handleGenerarItemsSeleccionados}
+                    >
+                      <CheckSquare className="w-4 h-4 mr-1" />
+                      Generar Items Seleccionados ({archivosSeleccionados.length})
+                    </Button>
+                  )}
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={handleGenerarItemsTodos}
+                  >
+                    <ListChecks className="w-4 h-4 mr-1" />
+                    Generar Items para Todos ({archivosSinItem.length})
+                  </Button>
+                </div>
+              )}
+            </div>
             <div className="space-y-2">
               {files.map(fileMetadata => (
                 <UploadedFileCard
@@ -242,7 +316,11 @@ export function CentroCopiadoArchivosSection({
                   fileType={fileMetadata.file.type}
                   status={fileMetadata.status}
                   error={fileMetadata.error}
-                  onGenerarItem={() => handleGenerarItem(fileMetadata)}
+                  itemGenerado={fileMetadata.itemGenerado}
+                  selected={fileMetadata.selected}
+                  comentario={fileMetadata.comentario}
+                  onToggleSelection={() => handleToggleSelection(fileMetadata.id)}
+                  onComentarioChange={(comentario) => handleComentarioChange(fileMetadata.id, comentario)}
                   onDescargar={() => handleDescargar(fileMetadata)}
                   onEliminar={() => handleEliminar(fileMetadata)}
                 />

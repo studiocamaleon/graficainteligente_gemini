@@ -9,9 +9,9 @@ import {
   XCircle,
   Download,
   Trash2,
-  Plus,
 } from 'lucide-react';
 import { Button } from '../ui/Button';
+import { Input } from '../ui/Input';
 
 interface UploadedFileCardProps {
   fileName: string;
@@ -20,7 +20,10 @@ interface UploadedFileCardProps {
   status: 'uploading' | 'completed' | 'error';
   error?: string;
   itemGenerado?: boolean;
-  onGenerarItem?: () => void;
+  selected?: boolean;
+  comentario?: string;
+  onToggleSelection?: () => void;
+  onComentarioChange?: (comentario: string) => void;
   onDescargar?: () => void;
   onEliminar?: () => void;
 }
@@ -48,7 +51,10 @@ export function UploadedFileCard({
   status,
   error,
   itemGenerado,
-  onGenerarItem,
+  selected,
+  comentario,
+  onToggleSelection,
+  onComentarioChange,
   onDescargar,
   onEliminar,
 }: UploadedFileCardProps) {
@@ -85,11 +91,24 @@ export function UploadedFileCard({
 
   return (
     <div
-      className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+      className={`bg-white border rounded-lg p-4 transition-all ${
+        selected ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:shadow-md'
+      } ${itemGenerado ? 'opacity-60' : ''}`}
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => setShowActions(false)}
     >
       <div className="flex items-start gap-3">
+        {status === 'completed' && !itemGenerado && onToggleSelection && (
+          <div className="flex-shrink-0 pt-1">
+            <input
+              type="checkbox"
+              checked={selected || false}
+              onChange={onToggleSelection}
+              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
+            />
+          </div>
+        )}
+
         <div className="flex-shrink-0">
           <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center">
             <FileIcon className="w-5 h-5 text-gray-600" />
@@ -120,36 +139,39 @@ export function UploadedFileCard({
             </div>
           )}
 
+          {status === 'completed' && !itemGenerado && onComentarioChange && (
+            <div className="mt-3">
+              <Input
+                type="text"
+                placeholder="Comentario opcional para este archivo..."
+                value={comentario || ''}
+                onChange={(e) => onComentarioChange(e.target.value)}
+                className="text-sm"
+              />
+            </div>
+          )}
+
           {status === 'completed' && showActions && (
             <div className="flex items-center gap-2 mt-3">
-              {!itemGenerado && onGenerarItem && (
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={onGenerarItem}
-                >
-                  <Plus className="w-3 h-3" />
-                  Configurar Item
-                </Button>
-              )}
-
               {onDescargar && (
                 <Button
-                  variant="secondary"
+                  variant="ghost"
                   size="sm"
                   onClick={onDescargar}
+                  title="Descargar archivo"
                 >
                   <Download className="w-3 h-3" />
                 </Button>
               )}
 
-              {onEliminar && (
+              {onEliminar && !itemGenerado && (
                 <Button
-                  variant="danger"
+                  variant="ghost"
                   size="sm"
                   onClick={onEliminar}
+                  title="Eliminar archivo"
                 >
-                  <Trash2 className="w-3 h-3" />
+                  <Trash2 className="w-3 h-3 text-red-600" />
                 </Button>
               )}
             </div>
@@ -157,7 +179,7 @@ export function UploadedFileCard({
 
           {itemGenerado && (
             <div className="mt-2 text-xs text-green-700 bg-green-50 px-2 py-1 rounded inline-block">
-              Vinculado a item de la orden
+              Item ya generado
             </div>
           )}
         </div>

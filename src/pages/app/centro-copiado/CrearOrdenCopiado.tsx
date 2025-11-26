@@ -25,6 +25,7 @@ interface ItemWithId {
   isCollapsed?: boolean;
   archivoId?: string;
   nombreArchivo?: string;
+  comentario?: string;
 }
 
 export function CrearOrdenCopiado() {
@@ -57,7 +58,7 @@ export function CrearOrdenCopiado() {
 
   usePageHeader('Crea una nueva orden de copiado con items personalizados');
 
-  const handleArchivoGenerado = useCallback((archivoId: string, nombreArchivo: string) => {
+  const handleArchivoGenerado = useCallback((archivoId: string, nombreArchivo: string, comentario?: string) => {
     // Colapsar todos los items existentes
     setItems((prev) =>
       prev.map(item => ({ ...item, isCollapsed: true }))
@@ -72,6 +73,7 @@ export function CrearOrdenCopiado() {
       isCollapsed: false,
       archivoId,
       nombreArchivo,
+      comentario,
     };
     setItems((prev) => [...prev, nuevoItem]);
   }, []);
@@ -431,6 +433,7 @@ export function CrearOrdenCopiado() {
                 key={item.id}
                 itemNumber={index + 1}
                 nombreArchivo={item.nombreArchivo}
+                comentario={item.comentario}
                 value={item.config}
                 onChange={(config) => actualizarItem(item.id, config)}
                 onRemove={() => eliminarItem(item.id)}
