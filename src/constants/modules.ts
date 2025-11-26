@@ -303,13 +303,6 @@ export const MODULES: Module[] = [
         path: '/app/finanzas/cuentas-corrientes',
         icon: DollarSign,
       },
-      {
-        id: 'finance-liquidaciones',
-        name: 'Liquidaciones',
-        description: 'Liquidaciones y órdenes de pago',
-        path: '/app/finanzas/liquidaciones',
-        icon: FileText,
-      },
     ],
   },
   {
