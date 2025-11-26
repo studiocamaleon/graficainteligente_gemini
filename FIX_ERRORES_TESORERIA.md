@@ -373,7 +373,31 @@ Se especificó explícitamente la relación usando el nombre de la foreign key c
 | Visualización de Caja en Medios | MedioCobroCard actualizado | ✅ Implementado |
 | Ruta de configuración | App.tsx | ✅ Implementado |
 
-**Build Status:** ✅ Exitoso sin errores (19.63s)
+**Build Status:** ✅ Exitoso sin errores (19.23s)
+
+### Corrección Final: Link en Sidebar
+
+**Problema:** El link a "Cajas" no aparecía en el menú lateral de Configuración.
+
+**Solución:** Agregado submódulo en `constants/modules.ts`:
+
+```typescript
+{
+  id: 'settings-cajas',
+  name: 'Cajas',
+  description: 'Gestión de cajas de efectivo, cuentas bancarias y billeteras virtuales',
+  path: '/app/settings/cajas',
+  icon: Wallet,
+}
+```
+
+**Ubicación en el menú:**
+```
+Configuración (Wrench icon)
+├── Ubicaciones
+├── Cajas ⭐ (NUEVO)
+└── Medios de Cobro
+```
 
 ## ✅ Funcionalidades Completas Verificadas
 

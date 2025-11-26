@@ -35,6 +35,7 @@ import {
   Briefcase,
   CreditCard,
   BarChart3,
+  Wallet,
 } from 'lucide-react';
 
 export interface SubModule {
@@ -350,6 +351,13 @@ export const MODULES: Module[] = [
         description: 'Gestión de países, provincias y ciudades',
         path: '/app/settings/locations',
         icon: MapPin,
+      },
+      {
+        id: 'settings-cajas',
+        name: 'Cajas',
+        description: 'Gestión de cajas de efectivo, cuentas bancarias y billeteras virtuales',
+        path: '/app/settings/cajas',
+        icon: Wallet,
       },
       {
         id: 'settings-medios-cobro',
