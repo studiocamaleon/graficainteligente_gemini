@@ -4,6 +4,8 @@ import { MedioCobro, MedioCobroFormData, TipoMedioCobro } from '../../types/medi
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
+import { SearchableSelect } from '../ui/SearchableSelect';
+import { useCajas } from '../../hooks/useCajas';
 
 interface MedioCobroFormProps {
   medio?: MedioCobro;
@@ -37,6 +39,7 @@ const FORMAS_COBRO_BANCARIO = [
 ];
 
 export function MedioCobroForm({ medio, onSubmit, onClose }: MedioCobroFormProps) {
+  const { cajas } = useCajas();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<MedioCobroFormData>({
     nombre: '',
@@ -46,6 +49,7 @@ export function MedioCobroForm({ medio, onSubmit, onClose }: MedioCobroFormProps
     comision_porcentaje: 0,
     dias_liberacion: 0,
     is_active: true,
+    caja_id: '',
   });
 
   useEffect(() => {
@@ -58,6 +62,7 @@ export function MedioCobroForm({ medio, onSubmit, onClose }: MedioCobroFormProps
         comision_porcentaje: medio.comision_porcentaje,
         dias_liberacion: medio.dias_liberacion,
         is_active: medio.is_active,
+        caja_id: medio.caja_id || '',
       });
     }
   }, [medio]);
@@ -210,6 +215,24 @@ export function MedioCobroForm({ medio, onSubmit, onClose }: MedioCobroFormProps
             </div>
           )}
 
+          <div>
+            <label htmlFor="caja_id" className="block text-sm font-medium text-gray-700 mb-1">
+              Caja Asociada *
+            </label>
+            <SearchableSelect
+              value={formData.caja_id}
+              onChange={(value) => setFormData({ ...formData, caja_id: value })}
+              options={cajas.map((caja) => ({
+                value: caja.id,
+                label: `${caja.nombre} (${caja.tipo})`,
+              }))}
+              placeholder="Seleccionar caja..."
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Los pagos con este medio se registrarán en esta caja
+            </p>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label htmlFor="comision" className="block text-sm font-medium text-gray-700 mb-1">
@@ -268,7 +291,7 @@ export function MedioCobroForm({ medio, onSubmit, onClose }: MedioCobroFormProps
             <Button type="button" variant="secondary" onClick={onClose}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={loading || !formData.nombre}>
+            <Button type="submit" disabled={loading || !formData.nombre || !formData.caja_id}>
               {loading ? 'Guardando...' : medio ? 'Actualizar' : 'Crear'}
             </Button>
           </div>

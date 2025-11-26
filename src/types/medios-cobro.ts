@@ -69,6 +69,7 @@ export interface Caja {
   icono: string | null;
   es_principal: boolean;
   is_active: boolean;
+  notas: string | null;
   created_at: string;
   updated_at: string;
 }

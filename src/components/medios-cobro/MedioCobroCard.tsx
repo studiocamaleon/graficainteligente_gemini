@@ -1,8 +1,9 @@
-import { CreditCard, Building2, Wallet, MoreVertical, Edit2, Trash2 } from 'lucide-react';
+import { CreditCard, Building2, Wallet, MoreVertical, Edit2, Trash2, Inbox } from 'lucide-react';
 import { MedioCobro } from '../../types/medios-cobro';
 import { Badge } from '../ui/Badge';
 import { Switch } from '../ui/Switch';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { supabase } from '../../lib/supabase';
 
 interface MedioCobroCardProps {
   medio: MedioCobro;
@@ -13,6 +14,25 @@ interface MedioCobroCardProps {
 
 export function MedioCobroCard({ medio, onEdit, onDelete, onToggleActive }: MedioCobroCardProps) {
   const [showMenu, setShowMenu] = useState(false);
+  const [cajaNombre, setCajaNombre] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchCaja = async () => {
+      if (!medio.caja_id) return;
+
+      const { data } = await supabase
+        .from('cajas')
+        .select('nombre')
+        .eq('id', medio.caja_id)
+        .single();
+
+      if (data) {
+        setCajaNombre(data.nombre);
+      }
+    };
+
+    fetchCaja();
+  }, [medio.caja_id]);
 
   const getIcon = () => {
     switch (medio.tipo) {
@@ -121,27 +141,37 @@ export function MedioCobroCard({ medio, onEdit, onDelete, onToggleActive }: Medi
             )}
           </div>
 
-          {(medio.comision_porcentaje > 0 || medio.dias_liberacion > 0) && (
-            <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
-              {medio.comision_porcentaje > 0 && (
-                <div>
-                  <span className="font-medium">Comisión:</span>{' '}
-                  <span className="text-orange-600 font-semibold">{medio.comision_porcentaje}%</span>
-                </div>
-              )}
-              {medio.dias_liberacion > 0 ? (
-                <div>
-                  <span className="font-medium">Liberación:</span>{' '}
-                  <span className="text-blue-600 font-semibold">{medio.dias_liberacion} días</span>
-                </div>
-              ) : medio.comision_porcentaje === 0 && (
-                <div>
-                  <span className="font-medium">Liberación:</span>{' '}
-                  <span className="text-green-600 font-semibold">Inmediato</span>
-                </div>
-              )}
-            </div>
-          )}
+          <div className="space-y-2">
+            {cajaNombre && (
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <Inbox className="w-4 h-4 text-gray-400" />
+                <span className="font-medium">Caja:</span>
+                <span className="text-blue-600 font-semibold">{cajaNombre}</span>
+              </div>
+            )}
+
+            {(medio.comision_porcentaje > 0 || medio.dias_liberacion > 0) && (
+              <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
+                {medio.comision_porcentaje > 0 && (
+                  <div>
+                    <span className="font-medium">Comisión:</span>{' '}
+                    <span className="text-orange-600 font-semibold">{medio.comision_porcentaje}%</span>
+                  </div>
+                )}
+                {medio.dias_liberacion > 0 ? (
+                  <div>
+                    <span className="font-medium">Liberación:</span>{' '}
+                    <span className="text-blue-600 font-semibold">{medio.dias_liberacion} días</span>
+                  </div>
+                ) : medio.comision_porcentaje === 0 && (
+                  <div>
+                    <span className="font-medium">Liberación:</span>{' '}
+                    <span className="text-green-600 font-semibold">Inmediato</span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

@@ -272,3 +272,160 @@ También se actualizó la interfaz `ClientFormData` para reflejar que estos camp
 - ✅ Edición de clientes existentes
 - ✅ Campos UUID opcionales manejan correctamente valores null
 - ✅ No se envían strings vacíos a la base de datos
+
+---
+
+## 🐛 Errores Adicionales Corregidos (Tercera Ronda - Módulo Cajas)
+
+### Error 7: Ambigüedad en relación con tabla cajas
+
+**Ubicación:** `useTesoreria.ts` línea 127
+
+**Problema:**
+```typescript
+caja:cajas(nombre, tipo, moneda)
+```
+
+La tabla `cajas_movimientos` tiene dos foreign keys que apuntan a `cajas`:
+- `caja_id` (caja principal del movimiento)
+- `caja_destino_id` (caja destino para transferencias)
+
+Esto causaba el error:
+```
+Could not embed because more than one relationship was found for 'cajas_movimientos' and 'cajas'
+```
+
+**Solución:**
+```typescript
+caja:cajas!caja_id(nombre, tipo, moneda)
+```
+
+Se especificó explícitamente la relación usando el nombre de la foreign key con el símbolo `!`.
+
+### Implementación Completa del Módulo de Cajas
+
+**Problema:** No existía interfaz de usuario para gestionar cajas ni asociar medios de cobro a cajas.
+
+**Componentes Creados:**
+
+1. **`CajaForm.tsx`**
+   - Formulario para crear/editar cajas
+   - Campos: nombre, tipo (efectivo/banco/virtual), moneda, saldo inicial
+   - Configuración de caja principal y estado activo
+   - Validaciones y estados de carga
+
+2. **`CajaCard.tsx`**
+   - Tarjeta visual para mostrar información de cada caja
+   - Muestra saldo actual, ingresos y egresos del día
+   - Lista medios de cobro asociados
+   - Acciones de edición y eliminación
+   - Indicador de caja principal (estrella)
+
+3. **`Cajas.tsx` (Página principal)**
+   - ABM completo de cajas
+   - Filtros por tipo (todas/efectivo/banco/virtual)
+   - Toggle para mostrar/ocultar cajas inactivas
+   - Grid responsive con todas las cajas
+   - Modal para crear/editar cajas
+
+**Actualizaciones en Medios de Cobro:**
+
+4. **`MedioCobroForm.tsx`**
+   - Agregado campo obligatorio `caja_id`
+   - Selector con lista de cajas activas
+   - Validación: no se puede crear medio sin caja asociada
+
+5. **`MedioCobroCard.tsx`**
+   - Muestra el nombre de la caja asociada
+   - Icono de caja para identificación visual
+   - Fetch automático del nombre de la caja
+
+**Tipos Actualizados:**
+
+6. **`medios-cobro.ts`**
+   - Agregado campo `notas` a interfaz `Caja`
+   - Campo `caja_id` ya existía en `MedioCobroFormData`
+
+**Rutas Agregadas:**
+
+7. **`App.tsx`**
+   - Ruta `/app/settings/cajas` configurada
+   - Import del componente Cajas
+
+## 📊 Resumen Completo de Correcciones
+
+| # | Error | Tipo | Ubicación | Estado |
+|---|-------|------|-----------|--------|
+| 1 | Query .in() incorrecta | TypeScript | useTesoreria.ts | ✅ Corregido |
+| 2 | Validación fechas | TypeScript | IngresosPanel.tsx | ✅ Corregido |
+| 3 | JOIN con ot.orden_id | SQL | fn_calcular_saldos_pendientes_cobro | ✅ Corregido |
+| 4 | Ambigüedad orden_id | SQL | fn_obtener_detalle_por_cobrar | ✅ Corregido |
+| 5 | EXTRACT con integer | SQL | fn_obtener_detalle_por_cobrar | ✅ Corregido |
+| 6 | UUIDs vacíos en clientes | TypeScript | ClientForm + useClient | ✅ Corregido |
+| 7 | Ambigüedad relación cajas | TypeScript | useTesoreria.ts | ✅ Corregido |
+
+**Funcionalidades Implementadas:**
+
+| Funcionalidad | Componentes | Estado |
+|--------------|-------------|--------|
+| ABM de Cajas | CajaForm, CajaCard, Cajas.tsx | ✅ Implementado |
+| Asociación Medio-Caja | MedioCobroForm actualizado | ✅ Implementado |
+| Visualización de Caja en Medios | MedioCobroCard actualizado | ✅ Implementado |
+| Ruta de configuración | App.tsx | ✅ Implementado |
+
+**Build Status:** ✅ Exitoso sin errores (19.63s)
+
+## ✅ Funcionalidades Completas Verificadas
+
+### Módulo de Tesorería
+- ✅ Tab "Por Cobrar" funciona correctamente
+- ✅ Tab "Ingresos" funciona correctamente
+- ✅ Tab "Cajas y Saldos" muestra resumen actualizado
+- ✅ Cálculo de saldos pendientes (CC y sin CC)
+- ✅ Listado de órdenes por cobrar con días transcurridos
+- ✅ Panel de ingresos con filtros de fecha
+- ✅ Relaciones con cajas correctamente especificadas
+
+### Módulo de Clientes
+- ✅ Creación de clientes sin campos de ubicación
+- ✅ Edición de clientes existentes
+- ✅ Campos UUID opcionales manejan correctamente valores null
+- ✅ No se envían strings vacíos a la base de datos
+
+### Módulo de Cajas (NUEVO)
+- ✅ Crear nuevas cajas (efectivo, banco, virtual)
+- ✅ Editar cajas existentes
+- ✅ Ver saldo actual y movimientos del día
+- ✅ Marcar caja como principal
+- ✅ Activar/desactivar cajas
+- ✅ Filtrar por tipo de caja
+- ✅ Ver medios de cobro asociados a cada caja
+- ✅ Ruta `/app/settings/cajas` funcionando
+
+### Módulo de Medios de Cobro (ACTUALIZADO)
+- ✅ Campo caja asociada obligatorio
+- ✅ Selector de cajas activas en formulario
+- ✅ Visualización de caja en tarjeta de medio
+- ✅ Validación: no permite crear medio sin caja
+
+## 🎯 Próximos Pasos Sugeridos
+
+1. **Modal de Detalle de Movimientos por Caja**
+   - Ver historial completo de movimientos
+   - Filtros por fecha y tipo
+   - Exportación de movimientos
+
+2. **Funcionalidad de Transferencias**
+   - Transferir dinero entre cajas
+   - Registrar transferencias con comisiones
+   - Historial de transferencias
+
+3. **Ajustes de Saldo**
+   - Ajustar saldo de caja (arqueos)
+   - Justificar diferencias
+   - Auditoría de ajustes
+
+4. **Reportes de Flujo de Caja**
+   - Gráficos de ingresos/egresos
+   - Proyección de flujo
+   - Comparativas entre cajas

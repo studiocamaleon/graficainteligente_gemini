@@ -22,6 +22,7 @@ import { Integrations } from './pages/app/Integrations';
 import { SystemSettings } from './pages/app/SystemSettings';
 import { Locations } from './pages/app/settings/Locations';
 import MediosCobro from './pages/app/settings/MediosCobro';
+import Cajas from './pages/app/settings/Cajas';
 import { Estaciones } from './pages/app/abm-core/Estaciones';
 import { Tecnologias } from './pages/app/abm-core/Tecnologias';
 import { Materiales } from './pages/app/abm-core/Materiales';
@@ -128,6 +129,7 @@ function AppRoutes() {
                 <Route path="settings" element={<SystemSettings />} />
                 <Route path="settings/locations" element={<Locations />} />
                 <Route path="settings/medios-cobro" element={<MediosCobro />} />
+                <Route path="settings/cajas" element={<Cajas />} />
                 <Route path="*" element={<Navigate to="/app/dashboard" replace />} />
               </Routes>
             </MainLayout>

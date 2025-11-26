@@ -124,7 +124,7 @@ export function useIngresosPeriodo(fechaDesde?: string, fechaHasta?: string) {
         .from('cajas_movimientos')
         .select(`
           *,
-          caja:cajas(nombre, tipo, moneda),
+          caja:cajas!caja_id(nombre, tipo, moneda),
           medio_cobro:medios_cobro(nombre, categoria)
         `)
         .in('caja_id', cajaIds)
