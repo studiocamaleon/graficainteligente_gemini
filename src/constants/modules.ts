@@ -34,6 +34,7 @@ import {
   Settings2,
   Briefcase,
   CreditCard,
+  BarChart3,
 } from 'lucide-react';
 
 export interface SubModule {
@@ -302,6 +303,13 @@ export const MODULES: Module[] = [
         description: 'Gestión de cuentas corrientes de clientes',
         path: '/app/finanzas/cuentas-corrientes',
         icon: DollarSign,
+      },
+      {
+        id: 'finance-reportes',
+        name: 'Reportes',
+        description: 'Reportes de gerencia y análisis de ventas',
+        path: '/app/finanzas/reportes',
+        icon: BarChart3,
       },
     ],
   },
