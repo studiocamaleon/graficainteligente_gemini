@@ -19,7 +19,20 @@ export function useFileUpload() {
     fileId: string
   ): Promise<{ storagePath: string; nombreStorage: string } | null> => {
     const nombreStorage = `${fileId}-${file.name}`;
-    const storagePath = `${companyId}/${ordenId}/${nombreStorage}`;
+
+    // Detectar si es un ID temporal (comienza con "temp_")
+    const isTemporalId = ordenId.startsWith('temp_');
+
+    // Construir path según sea temporal o definitivo
+    const storagePath = isTemporalId
+      ? `${companyId}/temporal/${ordenId}/${nombreStorage}`
+      : `${companyId}/${ordenId}/${nombreStorage}`;
+
+    console.log('[useFileUpload] Subiendo archivo:', {
+      isTemporalId,
+      ordenId,
+      storagePath
+    });
 
     // Inicializar progreso
     setUploadProgress(prev => ({

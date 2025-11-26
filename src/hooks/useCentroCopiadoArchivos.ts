@@ -256,13 +256,14 @@ export function useCentroCopiadoArchivos(params?: string | UseCentroCopiadoArchi
 
         const { data: archivosAsociados } = await supabase
           .from('centro_copiado_ordenes_archivos')
-          .select('id, nombre_storage')
+          .select('id, nombre_storage, storage_path')
           .eq('orden_copiado_id', ordenIdReal)
           .eq('company_id', efectivoCompanyId);
 
         if (archivosAsociados && archivosAsociados.length > 0) {
           for (const archivo of archivosAsociados) {
-            const oldPath = `${efectivoCompanyId}/temporal/${efectivoTempId}/${archivo.nombre_storage}`;
+            // Usar storage_path real de BD (ya incluye /temporal/ si es temporal)
+            const oldPath = archivo.storage_path;
             const newPath = `${efectivoCompanyId}/${ordenIdReal}/${archivo.nombre_storage}`;
 
             console.log(`[asociarConOrden] Moviendo: ${oldPath} → ${newPath}`);
