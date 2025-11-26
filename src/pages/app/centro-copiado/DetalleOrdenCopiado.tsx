@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Calendar, User, FileText, DollarSign, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Calendar, User, FileText, DollarSign, AlertCircle, Download } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
 import { Badge } from '../../../components/ui/Badge';
@@ -14,7 +14,7 @@ import { useConfirmDialog } from '../../../hooks/useConfirmDialog';
 import { useInfoDialog } from '../../../hooks/useInfoDialog';
 import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
 import { InfoDialog } from '../../../components/ui/InfoDialog';
-import { CentroCopiadoOrdenArchivos } from '../../../components/centro-copiado/CentroCopiadoOrdenArchivos';
+import { useCentroCopiadoOrdenArchivos } from '../../../hooks/useCentroCopiadoOrdenArchivos';
 import type { EstadoOrdenCopiado, TipoItemCopiado } from '../../../types/database';
 
 export function DetalleOrdenCopiado() {
@@ -25,8 +25,11 @@ export function DetalleOrdenCopiado() {
 
   const { orden, loading, error, refetch } = useCentroCopiadoOrden(id);
   const { updateEstado } = useCentroCopiadoOrdenes();
+  const { archivos, descargarArchivo, descargarTodosArchivos } = useCentroCopiadoOrdenArchivos(id);
   const { dialogState: confirmDialogState, closeDialog: closeConfirmDialog, handleConfirm, openConfirm } = useConfirmDialog();
   const { dialogState: infoDialogState, closeDialog: closeInfoDialog, openDialog: openInfoDialog } = useInfoDialog();
+  const [descargandoId, setDescargandoId] = useState<string | null>(null);
+  const [descargandoTodos, setDescargandoTodos] = useState(false);
 
   usePageHeader(`Detalle de Orden ${orden?.numero_orden || ''}`);
 
@@ -91,6 +94,19 @@ export function DetalleOrdenCopiado() {
       plastificado: 'Plastificado',
     };
     return labels[tipo] || tipo;
+  };
+
+  const getArchivoParaItem = (itemId: string) => {
+    return archivos.find(archivo => archivo.item_generado_id === itemId);
+  };
+
+  const handleDescargarArchivo = async (itemId: string) => {
+    const archivo = getArchivoParaItem(itemId);
+    if (!archivo) return;
+
+    setDescargandoId(itemId);
+    await descargarArchivo(archivo);
+    setDescargandoId(null);
   };
 
   if (loading) {
@@ -289,11 +305,35 @@ export function DetalleOrdenCopiado() {
         </div>
       </Card>
 
-      <CentroCopiadoOrdenArchivos ordenId={orden.id} />
-
       <Card>
         <div className="p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Items de la Orden</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-gray-900">Items de la Orden</h2>
+            {archivos.length > 0 && (
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={async () => {
+                  setDescargandoTodos(true);
+                  await descargarTodosArchivos();
+                  setDescargandoTodos(false);
+                }}
+                disabled={descargandoTodos}
+              >
+                {descargandoTodos ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Descargando...
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-4 h-4 mr-2" />
+                    Descargar Todos
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
 
           {orden.items.length === 0 ? (
             <EmptyState
@@ -361,6 +401,39 @@ export function DetalleOrdenCopiado() {
                       )}
                     </div>
                   ),
+                },
+                {
+                  key: 'archivo',
+                  header: 'Archivo',
+                  render: (item) => {
+                    const archivo = getArchivoParaItem(item.id);
+                    if (!archivo) {
+                      return <span className="text-sm text-gray-400">Sin archivo</span>;
+                    }
+                    return (
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs text-gray-600 truncate max-w-[150px]" title={archivo.nombre_archivo}>
+                          {archivo.nombre_archivo}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDescargarArchivo(item.id)}
+                          disabled={descargandoId === item.id}
+                          className="w-fit"
+                        >
+                          {descargandoId === item.id ? (
+                            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+                          ) : (
+                            <>
+                              <Download className="w-3 h-3 mr-1" />
+                              Descargar
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    );
+                  },
                 },
                 {
                   key: 'subtotal',

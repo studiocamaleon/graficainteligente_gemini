@@ -11,6 +11,7 @@ export interface ArchivoOrdenCopiado {
   tamano_bytes: number;
   storage_path: string;
   paginas_detectadas: number | null;
+  item_generado_id: string | null;
   created_at: string;
 }
 
@@ -76,12 +77,19 @@ export function useCentroCopiadoOrdenArchivos(ordenId?: string) {
     }
   };
 
-  const obtenerUrlPublica = (archivo: ArchivoOrdenCopiado): string => {
-    const { data } = supabase.storage
-      .from('centro-copiado-archivos')
-      .getPublicUrl(archivo.storage_path);
+  const descargarTodosArchivos = async (): Promise<boolean> => {
+    if (archivos.length === 0) return false;
 
-    return data.publicUrl;
+    try {
+      for (const archivo of archivos) {
+        await descargarArchivo(archivo);
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+      return true;
+    } catch (err) {
+      console.error('Error descargando todos los archivos:', err);
+      return false;
+    }
   };
 
   const formatearTamano = (bytes: number): string => {
@@ -96,7 +104,7 @@ export function useCentroCopiadoOrdenArchivos(ordenId?: string) {
     error,
     refetch: fetchArchivos,
     descargarArchivo,
-    obtenerUrlPublica,
+    descargarTodosArchivos,
     formatearTamano,
   };
 }
