@@ -9,6 +9,7 @@ interface JobsKanbanBoardProps {
     finalizado: JobItem[];
   };
   onJobClick?: (job: JobItem) => void;
+  recentlyUpdatedJobs?: Set<string>;
 }
 
 interface ColumnConfig {
@@ -43,7 +44,7 @@ const columnsConfig: ColumnConfig[] = [
   },
 ];
 
-export function JobsKanbanBoard({ jobsByEstado, onJobClick }: JobsKanbanBoardProps) {
+export function JobsKanbanBoard({ jobsByEstado, onJobClick, recentlyUpdatedJobs }: JobsKanbanBoardProps) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 auto-rows-fr">
       {columnsConfig.map((config) => (
@@ -59,6 +60,7 @@ export function JobsKanbanBoard({ jobsByEstado, onJobClick }: JobsKanbanBoardPro
             bgColor={config.bgColor}
             borderColor={config.borderColor}
             onJobClick={onJobClick}
+            recentlyUpdatedJobs={recentlyUpdatedJobs}
           />
         </div>
       ))}

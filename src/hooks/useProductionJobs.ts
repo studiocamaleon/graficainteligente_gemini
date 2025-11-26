@@ -71,7 +71,9 @@ export function useProductionJobs() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
-  const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [recentlyUpdatedJobs, setRecentlyUpdatedJobs] = useState<Set<string>>(new Set());
+  const updateTimeoutsRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
+  const pendingUpdatesRef = useRef<Set<string>>(new Set());
 
   const fetchJobs = useCallback(async () => {
     if (!profile?.company_id) return;
@@ -197,14 +199,20 @@ export function useProductionJobs() {
   const updateJobGranular = useCallback(async (itemId: string) => {
     if (!profile?.company_id) return;
 
-    setIsUpdating(true);
+    const startTime = Date.now();
+    console.log(`🔄 [${new Date().toISOString()}] Starting granular update for job: ${itemId}`);
 
-    if (updateTimeoutRef.current) {
-      clearTimeout(updateTimeoutRef.current);
+    if (updateTimeoutsRef.current.has(itemId)) {
+      clearTimeout(updateTimeoutsRef.current.get(itemId)!);
+      console.log(`⏱️ Cleared previous timeout for job: ${itemId}`);
     }
 
-    updateTimeoutRef.current = setTimeout(async () => {
+    pendingUpdatesRef.current.add(itemId);
+    setIsUpdating(true);
+
+    const timeoutId = setTimeout(async () => {
       try {
+        console.log(`🔍 Fetching updated data for job: ${itemId}`);
         const { data: itemData, error: itemError } = await supabase
           .from('ordenes_trabajo_items')
           .select(`
@@ -268,11 +276,35 @@ export function useProductionJobs() {
           paso_relevante: pasoRelevante,
         };
 
+        console.log(`📊 Job ${itemId} updated:`, {
+          estado: updatedJob.estado,
+          progreso: `${pasosCompletados}/${totalPasos}`,
+          porcentaje: `${progresoPortcentaje}%`,
+          paso_relevante: pasoRelevante?.nombre,
+        });
+
         setJobs((prevJobs) => {
           const jobIndex = prevJobs.findIndex((j) => j.id === itemId);
           if (jobIndex === -1) {
-            return [...prevJobs, updatedJob];
+            console.log(`➕ Adding new job to list: ${itemId}`);
+            return [...prevJobs, updatedJob].sort((a, b) => {
+              const fechaA = new Date(a.fecha_creacion).getTime();
+              const fechaB = new Date(b.fecha_creacion).getTime();
+              return fechaA - fechaB;
+            });
           }
+
+          const oldJob = prevJobs[jobIndex];
+          const estadoChanged = oldJob.estado !== updatedJob.estado;
+          const progresoChanged = oldJob.progreso_porcentaje !== updatedJob.progreso_porcentaje;
+
+          if (estadoChanged) {
+            console.log(`🔄 Job ${itemId} estado changed: ${oldJob.estado} → ${updatedJob.estado}`);
+          }
+          if (progresoChanged) {
+            console.log(`📈 Job ${itemId} progreso changed: ${oldJob.progreso_porcentaje}% → ${updatedJob.progreso_porcentaje}%`);
+          }
+
           const newJobs = [...prevJobs];
           newJobs[jobIndex] = updatedJob;
           return newJobs;
@@ -283,6 +315,14 @@ export function useProductionJobs() {
           const newEnProceso = prevGrouped.en_proceso.filter((j) => j.id !== itemId);
           const newFinalizado = prevGrouped.finalizado.filter((j) => j.id !== itemId);
 
+          const sortByDate = (jobs: JobItem[]) => {
+            return jobs.sort((a, b) => {
+              const fechaA = new Date(a.fecha_creacion).getTime();
+              const fechaB = new Date(b.fecha_creacion).getTime();
+              return fechaA - fechaB;
+            });
+          };
+
           if (updatedJob.estado === 'pendiente') {
             newPendiente.push(updatedJob);
           } else if (updatedJob.estado === 'en_proceso') {
@@ -292,17 +332,40 @@ export function useProductionJobs() {
           }
 
           return {
-            pendiente: newPendiente,
-            en_proceso: newEnProceso,
-            finalizado: newFinalizado,
+            pendiente: sortByDate(newPendiente),
+            en_proceso: sortByDate(newEnProceso),
+            finalizado: sortByDate(newFinalizado),
           };
         });
+
+        setRecentlyUpdatedJobs((prev) => {
+          const newSet = new Set(prev);
+          newSet.add(itemId);
+          return newSet;
+        });
+
+        setTimeout(() => {
+          setRecentlyUpdatedJobs((prev) => {
+            const newSet = new Set(prev);
+            newSet.delete(itemId);
+            return newSet;
+          });
+        }, 3000);
+        const elapsedTime = Date.now() - startTime;
+        console.log(`✅ Job ${itemId} updated successfully in ${elapsedTime}ms`);
       } catch (err) {
-        console.error('Error updating job granularly:', err);
+        console.error(`❌ Error updating job ${itemId}:`, err);
       } finally {
-        setIsUpdating(false);
+        pendingUpdatesRef.current.delete(itemId);
+        updateTimeoutsRef.current.delete(itemId);
+
+        if (pendingUpdatesRef.current.size === 0) {
+          setIsUpdating(false);
+        }
       }
     }, 300);
+
+    updateTimeoutsRef.current.set(itemId, timeoutId);
   }, [profile?.company_id]);
 
   const handleJobItemUpdate = useCallback(
@@ -328,9 +391,10 @@ export function useProductionJobs() {
 
   useEffect(() => {
     return () => {
-      if (updateTimeoutRef.current) {
-        clearTimeout(updateTimeoutRef.current);
-      }
+      updateTimeoutsRef.current.forEach((timeoutId) => {
+        clearTimeout(timeoutId);
+      });
+      updateTimeoutsRef.current.clear();
     };
   }, []);
 
@@ -346,5 +410,6 @@ export function useProductionJobs() {
     refreshJobs,
     totalJobs: jobs.length,
     isUpdating,
+    recentlyUpdatedJobs,
   };
 }

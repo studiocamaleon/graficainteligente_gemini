@@ -7,7 +7,7 @@ import { RefreshCw, Radio } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 
 export function JobsView() {
-  const { jobsByEstado, loading, error, refreshJobs, isUpdating } = useProductionJobs();
+  const { jobsByEstado, loading, error, refreshJobs, isUpdating, recentlyUpdatedJobs } = useProductionJobs();
   const [selectedJob, setSelectedJob] = useState<JobItem | null>(null);
   const [showExecutionModal, setShowExecutionModal] = useState(false);
 
@@ -68,7 +68,11 @@ export function JobsView() {
         </Button>
       </div>
 
-      <JobsKanbanBoard jobsByEstado={jobsByEstado} onJobClick={handleJobClick} />
+      <JobsKanbanBoard
+        jobsByEstado={jobsByEstado}
+        onJobClick={handleJobClick}
+        recentlyUpdatedJobs={recentlyUpdatedJobs}
+      />
 
       {selectedJob && (
         <JobExecutionModal

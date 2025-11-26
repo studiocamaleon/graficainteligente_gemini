@@ -7,19 +7,33 @@ import { Package } from 'lucide-react';
 interface JobCardProps {
   job: JobItem;
   onClick?: (job: JobItem) => void;
+  isRecentlyUpdated?: boolean;
 }
 
-export const JobCard = memo(function JobCard({ job, onClick }: JobCardProps) {
+export const JobCard = memo(function JobCard({ job, onClick, isRecentlyUpdated = false }: JobCardProps) {
   return (
     <div
       onClick={() => onClick?.(job)}
       className={`
-        bg-white rounded-lg border-2 border-gray-200 p-4 space-y-3
-        transition-all duration-200 cursor-pointer
-        hover:border-blue-300 hover:shadow-md
+        relative bg-white rounded-lg border-2 p-4 space-y-3
+        transition-all duration-300 cursor-pointer
+        hover:shadow-md
+        ${
+          isRecentlyUpdated
+            ? 'border-blue-400 shadow-lg shadow-blue-100'
+            : 'border-gray-200 hover:border-blue-300'
+        }
       `}
     >
       <div className="flex items-start justify-between gap-3">
+        {isRecentlyUpdated && (
+          <div className="absolute -top-2 -right-2 z-10">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-500 text-white shadow-md animate-pulse">
+              <span className="w-1.5 h-1.5 bg-white rounded-full animate-ping" />
+              Actualizado
+            </span>
+          </div>
+        )}
         <ActiveStepBadge
           pasoRelevante={job.paso_relevante}
           estadoJob={job.estado}
@@ -53,14 +67,16 @@ export const JobCard = memo(function JobCard({ job, onClick }: JobCardProps) {
       </div>
 
       <div className="pt-2 border-t border-gray-100">
-        <JobProgressBar
-          totalPasos={job.total_pasos}
-          pasosCompletados={job.pasos_completados}
-          pasosEnProceso={job.pasos_en_proceso}
-          pasosPendientes={job.pasos_pendientes}
-          showPercentage={true}
-          size="sm"
-        />
+        <div className={isRecentlyUpdated ? 'animate-pulse' : ''}>
+          <JobProgressBar
+            totalPasos={job.total_pasos}
+            pasosCompletados={job.pasos_completados}
+            pasosEnProceso={job.pasos_en_proceso}
+            pasosPendientes={job.pasos_pendientes}
+            showPercentage={true}
+            size="sm"
+          />
+        </div>
       </div>
 
       {job.total_pasos === 0 && (

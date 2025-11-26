@@ -13,6 +13,14 @@ export function useRealtimeJobs(options: RealtimeJobsOptions = {}) {
   const channelRef = useRef<RealtimeChannel | null>(null);
   const rutasChannelRef = useRef<RealtimeChannel | null>(null);
 
+  const onJobItemUpdatedRef = useRef(options.onJobItemUpdated);
+  const onRutaUpdatedRef = useRef(options.onRutaUpdated);
+
+  useEffect(() => {
+    onJobItemUpdatedRef.current = options.onJobItemUpdated;
+    onRutaUpdatedRef.current = options.onRutaUpdated;
+  }, [options.onJobItemUpdated, options.onRutaUpdated]);
+
   const setupRealtimeSubscriptions = useCallback(() => {
     if (!profile?.company_id) {
       console.log('⚠️ useRealtimeJobs: No company_id, skipping subscriptions');
@@ -42,21 +50,33 @@ export function useRealtimeJobs(options: RealtimeJobsOptions = {}) {
           event: '*',
           schema: 'public',
           table: 'ordenes_trabajo_items',
-          filter: `company_id=eq.${profile.company_id}`,
         },
         (payload) => {
-          console.log('🔔 Received ordenes_trabajo_items change:', payload.eventType, payload);
+          const timestamp = new Date().toISOString();
+          console.log(`🔔 [${timestamp}] Received ordenes_trabajo_items change:`, payload.eventType, payload);
 
           if (payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') {
             const itemId = payload.new?.id;
-            if (itemId && options.onJobItemUpdated) {
-              options.onJobItemUpdated(itemId);
+            if (itemId && onJobItemUpdatedRef.current) {
+              console.log(`✅ Triggering job update for item: ${itemId}`);
+              onJobItemUpdatedRef.current(itemId);
+            }
+          } else if (payload.eventType === 'DELETE') {
+            const itemId = payload.old?.id;
+            if (itemId && onJobItemUpdatedRef.current) {
+              console.log(`🗑️ Job deleted, removing item: ${itemId}`);
+              onJobItemUpdatedRef.current(itemId);
             }
           }
         }
       )
       .subscribe((status) => {
         console.log('📡 Items subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Successfully subscribed to ordenes_trabajo_items changes');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Error subscribing to ordenes_trabajo_items');
+        }
       });
 
     channelRef.current = itemsChannel;
@@ -74,23 +94,31 @@ export function useRealtimeJobs(options: RealtimeJobsOptions = {}) {
           filter: `company_id=eq.${profile.company_id}`,
         },
         (payload) => {
-          console.log('🔔 Received ordenes_trabajo_items_rutas change:', payload.eventType, payload);
+          const timestamp = new Date().toISOString();
+          console.log(`🔔 [${timestamp}] Received ordenes_trabajo_items_rutas change:`, payload.eventType, payload);
 
           if (payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') {
             const rutaId = payload.new?.id;
             const ordenItemId = payload.new?.orden_item_id;
-            if (rutaId && ordenItemId && options.onRutaUpdated) {
-              options.onRutaUpdated(rutaId, ordenItemId);
+            const estadoPaso = payload.new?.estado_paso;
+            if (rutaId && ordenItemId && onRutaUpdatedRef.current) {
+              console.log(`✅ Triggering job update for ruta: ${rutaId}, item: ${ordenItemId}, estado: ${estadoPaso}`);
+              onRutaUpdatedRef.current(rutaId, ordenItemId);
             }
           }
         }
       )
       .subscribe((status) => {
         console.log('📡 Rutas subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Successfully subscribed to ordenes_trabajo_items_rutas changes');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Error subscribing to ordenes_trabajo_items_rutas');
+        }
       });
 
     rutasChannelRef.current = rutasChannel;
-  }, [profile?.company_id, options.onJobItemUpdated, options.onRutaUpdated]);
+  }, [profile?.company_id]);
 
   useEffect(() => {
     setupRealtimeSubscriptions();

@@ -12,6 +12,7 @@ interface JobsKanbanColumnProps {
   bgColor: string;
   borderColor: string;
   onJobClick?: (job: JobItem) => void;
+  recentlyUpdatedJobs?: Set<string>;
 }
 
 const estadoEmptyMessages: Record<EstadoOrdenItem, string> = {
@@ -28,6 +29,7 @@ export function JobsKanbanColumn({
   bgColor,
   borderColor,
   onJobClick,
+  recentlyUpdatedJobs = new Set(),
 }: JobsKanbanColumnProps) {
   return (
     <div className="flex flex-col h-full">
@@ -45,7 +47,12 @@ export function JobsKanbanColumn({
       <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50">
         {jobs.length > 0 ? (
           jobs.map((job) => (
-            <JobCard key={job.id} job={job} onClick={onJobClick} />
+            <JobCard
+              key={job.id}
+              job={job}
+              onClick={onJobClick}
+              isRecentlyUpdated={recentlyUpdatedJobs.has(job.id)}
+            />
           ))
         ) : (
           <div className="pt-8">
