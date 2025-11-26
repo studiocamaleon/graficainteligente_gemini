@@ -6,21 +6,20 @@ El hook `usePDFPageCount` detecta automáticamente el número de páginas en arc
 
 ## 🔧 Configuración (YA APLICADA)
 
-### ✅ Vite Config
-```typescript
-// vite.config.ts
-optimizeDeps: {
-  include: ['pdfjs-dist'],  // NECESARIO para que funcione
-}
-```
-
-### ✅ Hook Config
+### ✅ Hook Config - Imports Correctos para Vite
 ```typescript
 // src/hooks/usePDFPageCount.ts
-import * as pdfjsLib from 'pdfjs-dist';
-pdfjsLib.GlobalWorkerOptions.workerSrc =
-  'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build/pdf.worker.min.mjs';
+import * as pdfjsLib from 'pdfjs-dist/build/pdf.mjs';
+import workerSrc from 'pdfjs-dist/build/pdf.worker.mjs?url';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
 ```
+
+**⚠️ Importante:**
+- ✅ Import directo a `pdfjs-dist/build/pdf.mjs` (compatible con Vite ESM)
+- ✅ Worker con sufijo `?url` para que Vite lo empaquete como asset
+- ✅ Worker local (1.8MB en bundle) - NO depende de CDN
+- ✅ Funciona offline y es más rápido
 
 ## 📖 Uso del Hook
 
@@ -96,10 +95,11 @@ function MyComponent() {
    - Verifica `file.type === 'application/pdf'`
    - Retorna `null` para otros tipos
 
-2. **Worker desde CDN**
-   - El worker se carga desde CDN (no localmente)
-   - Requiere conexión a internet
-   - Versión: 4.0.379
+2. **Worker Local Empaquetado**
+   - El worker se empaqueta en el bundle (1.8MB)
+   - NO requiere conexión a internet
+   - Funciona offline
+   - Carga más rápida que desde CDN
 
 3. **Manejo de Errores**
    - PDFs corruptos: Capturado y retorna `null`
@@ -119,31 +119,40 @@ npm run dev
 ## 🐛 Troubleshooting
 
 ### Error: "Failed to resolve import pdfjs-dist"
-**Solución:** Verificar que `vite.config.ts` tenga:
+**Solución:** Asegurarse de usar imports explícitos:
 ```typescript
-optimizeDeps: {
-  include: ['pdfjs-dist'],
-}
+// ✅ CORRECTO
+import * as pdfjsLib from 'pdfjs-dist/build/pdf.mjs';
+import workerSrc from 'pdfjs-dist/build/pdf.worker.mjs?url';
+
+// ❌ INCORRECTO (no funciona con Vite)
+import * as pdfjsLib from 'pdfjs-dist';
 ```
 
-Luego:
+Luego limpiar cache:
 ```bash
 rm -rf node_modules/.vite
 npm run dev
 ```
 
 ### Worker no carga
-**Verificar:** URL del worker en `usePDFPageCount.ts`
-```typescript
-pdfjsLib.GlobalWorkerOptions.workerSrc =
-  'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build/pdf.worker.min.mjs';
+**Verificar en consola del navegador:**
+```javascript
+console.log(pdfjsLib.GlobalWorkerOptions.workerSrc);
+// Debe mostrar: /assets/pdf.worker-[hash].mjs
+```
+
+**Verificar que el worker esté en el bundle:**
+```bash
+ls dist/assets/pdf.worker-*.mjs
+# Debe existir un archivo de ~1.8MB
 ```
 
 ### Detección falla
 **Verificar:**
 1. Archivo es PDF válido
 2. Archivo no está corrupto
-3. Browser tiene acceso a internet (para el worker)
+3. Worker está correctamente empaquetado en el build
 
 ## 📦 Dependencias
 
