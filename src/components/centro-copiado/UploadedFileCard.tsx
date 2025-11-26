@@ -17,8 +17,7 @@ interface UploadedFileCardProps {
   fileName: string;
   fileSize: number;
   fileType: string;
-  paginasDetectadas?: number | null;
-  status: 'uploading' | 'processing' | 'completed' | 'error';
+  status: 'uploading' | 'completed' | 'error';
   error?: string;
   itemGenerado?: boolean;
   onGenerarItem?: () => void;
@@ -46,7 +45,6 @@ export function UploadedFileCard({
   fileName,
   fileSize,
   fileType,
-  paginasDetectadas,
   status,
   error,
   itemGenerado,
@@ -56,7 +54,6 @@ export function UploadedFileCard({
 }: UploadedFileCardProps) {
   const [showActions, setShowActions] = useState(false);
   const FileIcon = getFileIcon(fileType);
-  const isPDF = fileType === 'application/pdf';
 
   const getStatusDisplay = () => {
     switch (status) {
@@ -67,19 +64,12 @@ export function UploadedFileCard({
             <span className="text-sm font-medium">Subiendo...</span>
           </div>
         );
-      case 'processing':
-        return (
-          <div className="flex items-center gap-2 text-blue-600">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            <span className="text-sm font-medium">Procesando PDF...</span>
-          </div>
-        );
       case 'completed':
         return (
           <div className="flex items-center gap-2 text-green-600">
             <CheckCircle2 className="w-4 h-4" />
             <span className="text-sm font-medium">
-              {itemGenerado ? 'Item generado' : 'Listo'}
+              {itemGenerado ? 'Item creado' : 'Listo'}
             </span>
           </div>
         );
@@ -116,11 +106,6 @@ export function UploadedFileCard({
                 <p className="text-xs text-gray-500">
                   {formatFileSize(fileSize)}
                 </p>
-                {isPDF && paginasDetectadas !== null && paginasDetectadas !== undefined && (
-                  <p className="text-xs font-medium text-blue-600">
-                    {paginasDetectadas} {paginasDetectadas === 1 ? 'página' : 'páginas'}
-                  </p>
-                )}
               </div>
             </div>
 
@@ -137,25 +122,14 @@ export function UploadedFileCard({
 
           {status === 'completed' && showActions && (
             <div className="flex items-center gap-2 mt-3">
-              {!itemGenerado && isPDF && paginasDetectadas && onGenerarItem && (
+              {!itemGenerado && onGenerarItem && (
                 <Button
                   variant="primary"
                   size="sm"
                   onClick={onGenerarItem}
                 >
                   <Plus className="w-3 h-3" />
-                  Generar Item
-                </Button>
-              )}
-
-              {!itemGenerado && !isPDF && onGenerarItem && (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={onGenerarItem}
-                >
-                  <Plus className="w-3 h-3" />
-                  Crear Item
+                  Configurar Item
                 </Button>
               )}
 

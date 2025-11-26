@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { FileText, AlertCircle } from 'lucide-react';
 import { FileUploadZone } from './FileUploadZone';
 import { UploadedFileCard } from './UploadedFileCard';
-import { usePDFPageCount } from '../../hooks/usePDFPageCount';
 import { useFileUpload } from '../../hooks/useFileUpload';
 import { useCentroCopiadoArchivos } from '../../hooks/useCentroCopiadoArchivos';
 import { Card } from '../ui/Card';
@@ -11,15 +10,14 @@ import { useAuth } from '../../hooks/useAuth';
 interface FileWithMetadata {
   id: string;
   file: File;
-  status: 'pending' | 'uploading' | 'processing' | 'completed' | 'error';
-  paginas?: number | null;
+  status: 'pending' | 'uploading' | 'completed' | 'error';
   archivoId?: string;
   error?: string;
 }
 
 interface CentroCopiadoArchivosSectionProps {
   ordenId?: string;
-  onArchivoGenerado?: (archivoId: string, paginas: number | null) => void;
+  onArchivoGenerado?: (archivoId: string) => void;
   disabled?: boolean;
 }
 
@@ -30,7 +28,6 @@ export function CentroCopiadoArchivosSection({
 }: CentroCopiadoArchivosSectionProps) {
   const { profile } = useAuth();
   const [files, setFiles] = useState<FileWithMetadata[]>([]);
-  const { detectPages } = usePDFPageCount();
   const { uploadFile, downloadFile, deleteFile } = useFileUpload();
   const { createArchivo, deleteArchivo, espacioUsado, refetch } = useCentroCopiadoArchivos(ordenId);
 
@@ -63,19 +60,7 @@ export function CentroCopiadoArchivosSection({
     setIsProcessing(true);
 
     try {
-      // 1. Detectar páginas si es PDF
-      let paginas: number | null = null;
-      if (fileMetadata.file.type === 'application/pdf') {
-        setFiles(prev =>
-          prev.map(f =>
-            f.id === fileMetadata.id ? { ...f, status: 'processing' as const } : f
-          )
-        );
-
-        paginas = await detectPages(fileMetadata.file);
-      }
-
-      // 2. Subir archivo a Storage
+      // 1. Subir archivo a Storage
       setFiles(prev =>
         prev.map(f =>
           f.id === fileMetadata.id ? { ...f, status: 'uploading' as const } : f
@@ -93,7 +78,7 @@ export function CentroCopiadoArchivosSection({
         throw new Error('Error al subir archivo');
       }
 
-      // 3. Crear registro en base de datos
+      // 2. Crear registro en base de datos (sin páginas detectadas)
       const archivo = await createArchivo({
         orden_copiado_id: ordenId,
         nombre_archivo: fileMetadata.file.name,
@@ -101,30 +86,29 @@ export function CentroCopiadoArchivosSection({
         tipo_mime: fileMetadata.file.type,
         tamano_bytes: fileMetadata.file.size,
         storage_path: uploadResult.storagePath,
-        paginas_detectadas: paginas,
+        paginas_detectadas: null,
       });
 
       if (!archivo) {
         throw new Error('Error al guardar archivo en base de datos');
       }
 
-      // 4. Actualizar estado
+      // 3. Actualizar estado
       setFiles(prev =>
         prev.map(f =>
           f.id === fileMetadata.id
             ? {
                 ...f,
                 status: 'completed' as const,
-                paginas,
                 archivoId: archivo.id,
               }
             : f
         )
       );
 
-      // 5. Notificar al padre si es PDF y se detectaron páginas
-      if (paginas && onArchivoGenerado) {
-        onArchivoGenerado(archivo.id, paginas);
+      // 4. Notificar al padre para crear item automáticamente
+      if (onArchivoGenerado) {
+        onArchivoGenerado(archivo.id);
       }
     } catch (error) {
       console.error('Error processing file:', error);
@@ -144,7 +128,7 @@ export function CentroCopiadoArchivosSection({
 
   const handleGenerarItem = (fileMetadata: FileWithMetadata) => {
     if (fileMetadata.archivoId && onArchivoGenerado) {
-      onArchivoGenerado(fileMetadata.archivoId, fileMetadata.paginas || null);
+      onArchivoGenerado(fileMetadata.archivoId);
     }
   };
 
@@ -252,7 +236,6 @@ export function CentroCopiadoArchivosSection({
                   fileName={fileMetadata.file.name}
                   fileSize={fileMetadata.file.size}
                   fileType={fileMetadata.file.type}
-                  paginasDetectadas={fileMetadata.paginas}
                   status={fileMetadata.status}
                   error={fileMetadata.error}
                   onGenerarItem={() => handleGenerarItem(fileMetadata)}

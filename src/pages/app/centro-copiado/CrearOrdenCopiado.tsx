@@ -52,17 +52,16 @@ export function CrearOrdenCopiado() {
 
   usePageHeader('Crea una nueva orden de copiado con items personalizados');
 
-  const handleArchivoGenerado = useCallback((archivoId: string, paginas: number | null) => {
+  const handleArchivoGenerado = useCallback((archivoId: string) => {
     // Colapsar todos los items existentes
     setItems((prev) =>
       prev.map(item => ({ ...item, isCollapsed: true }))
     );
 
-    // Crear nuevo item con la cantidad de hojas del PDF
+    // Crear nuevo item en blanco para que el usuario configure manualmente
     const nuevoItem: ItemWithId = {
       id: `item-${Date.now()}-${Math.random()}`,
       config: {
-        cantidad_hojas: paginas || undefined,
         cantidad_copias: 1,
       },
       isCollapsed: false,
