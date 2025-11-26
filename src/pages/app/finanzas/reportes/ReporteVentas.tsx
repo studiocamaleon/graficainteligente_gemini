@@ -51,7 +51,7 @@ export default function ReporteVentas() {
             </label>
             <Select
               value={periodoPreset}
-              onChange={(e) => setPeriodoPreset(e.target.value as PeriodoPreset)}
+              onChange={(value) => setPeriodoPreset(value as PeriodoPreset)}
               options={periodosOptions}
             />
           </div>
