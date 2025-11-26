@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useMonitorJobs } from '../../hooks/useMonitorJobs';
 import { JobsKanbanBoard } from '../../components/production/JobsKanbanBoard';
@@ -10,6 +11,8 @@ dayjs.locale('es');
 
 export function JobsMonitor() {
   const { companyId } = useParams<{ companyId: string }>();
+  const [currentTime, setCurrentTime] = useState(dayjs());
+  const [previousFinalizadosCount, setPreviousFinalizadosCount] = useState(0);
 
   if (!isValidUUID(companyId)) {
     return (
@@ -30,6 +33,36 @@ export function JobsMonitor() {
   }
 
   const { jobsByEstado, loading, error, isUpdating, recentlyUpdatedJobs } = useMonitorJobs(companyId);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(dayjs());
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const currentCount = jobsByEstado.finalizado.length;
+
+    if (currentCount > previousFinalizadosCount && previousFinalizadosCount > 0) {
+      playCompletionSound();
+    }
+
+    setPreviousFinalizadosCount(currentCount);
+  }, [jobsByEstado.finalizado.length, previousFinalizadosCount]);
+
+  const playCompletionSound = () => {
+    try {
+      const audio = new Audio('/sounds/completion.wav');
+      audio.volume = 0.6;
+      audio.play().catch(err => {
+        console.log('No se pudo reproducir el sonido:', err);
+      });
+    } catch (err) {
+      console.error('Error al reproducir sonido:', err);
+    }
+  };
 
   if (loading) {
     return (
@@ -79,7 +112,7 @@ export function JobsMonitor() {
             <div className="flex items-center gap-3">
               <MonitorCheck className="w-7 h-7 text-cyan-400" />
               <h1 className="text-2xl font-bold text-white">
-                Monitor de Producción
+                Producción en tiempo real
               </h1>
             </div>
             <div className="px-4 py-1.5 bg-cyan-500/10 border border-cyan-500/30 rounded-full">
@@ -96,8 +129,10 @@ export function JobsMonitor() {
                 <span className="text-sm font-medium text-cyan-400">En vivo</span>
               </div>
             )}
-            <div className="text-sm text-gray-500">
-              {dayjs().format('HH:mm:ss')}
+            <div className="bg-white px-5 py-2.5 rounded-lg shadow-md border border-gray-200">
+              <div className="text-2xl font-bold text-gray-900 font-mono tabular-nums tracking-tight">
+                {currentTime.format('HH:mm:ss')}
+              </div>
             </div>
           </div>
         </div>
@@ -113,13 +148,34 @@ export function JobsMonitor() {
       </main>
 
       <style>{`
+        .monitor-kanban {
+          height: 100%;
+          display: flex;
+          flex-direction: column;
+        }
+
+        .monitor-kanban > div {
+          flex: 1;
+          height: 100%;
+        }
+
         .monitor-kanban .grid {
           grid-template-columns: repeat(3, 1fr) !important;
           height: 100%;
         }
 
-        .monitor-kanban > div {
+        .monitor-kanban .grid > div {
           height: 100%;
+          max-height: none !important;
+          display: flex;
+          flex-direction: column;
+        }
+
+        .monitor-kanban .grid > div > div {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
         }
 
         @media (orientation: portrait) {
