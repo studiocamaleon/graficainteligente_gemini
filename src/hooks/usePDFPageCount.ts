@@ -1,11 +1,8 @@
 import { useState } from 'react';
-import { GlobalWorkerOptions, getDocument } from 'pdfjs-dist';
+import * as pdfjsLib from 'pdfjs-dist';
 
-// Configurar el worker usando la ruta del paquete
-GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.min.mjs',
-  import.meta.url
-).toString();
+// Configurar el worker desde CDN (más confiable)
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
 
 export function usePDFPageCount() {
   const [loading, setLoading] = useState(false);
@@ -22,7 +19,7 @@ export function usePDFPageCount() {
     try {
       const arrayBuffer = await file.arrayBuffer();
 
-      const loadingTask = getDocument({ data: arrayBuffer });
+      const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
       const pdf = await loadingTask.promise;
 
       const pageCount = pdf.numPages;
