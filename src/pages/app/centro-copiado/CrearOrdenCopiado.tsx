@@ -32,6 +32,11 @@ export function CrearOrdenCopiado() {
   const clienteIdParam = searchParams.get('cliente_id');
   const ordenTrabajoIdParam = searchParams.get('orden_trabajo_id');
 
+  // Generar ID temporal único para archivos
+  const [ordenTemporalId] = useState(() =>
+    `temp_${Date.now()}_${Math.random().toString(36).substring(7)}`
+  );
+
   const [clienteId, setClienteId] = useState<string>(clienteIdParam || '');
   const [fechaEntrega, setFechaEntrega] = useState('');
   const [horaEntrega, setHoraEntrega] = useState('');
@@ -41,13 +46,12 @@ export function CrearOrdenCopiado() {
   const [guardando, setGuardando] = useState(false);
   const [infoGeneralCollapsed, setInfoGeneralCollapsed] = useState(false);
   const [initialized, setInitialized] = useState(false);
-  const [ordenCreada, setOrdenCreada] = useState<string | null>(null);
   const resumenContainerRef = useRef<HTMLDivElement>(null);
 
   const { clients, loading: loadingClients } = useClients({ page: 1, itemsPerPage: 100 });
-  const { createOrden, updateOrden } = useCentroCopiadoOrdenes();
+  const { createOrden } = useCentroCopiadoOrdenes();
   const { createItemImpresion } = useCentroCopiadoOrdenItems();
-  const { updateArchivo } = useCentroCopiadoArchivos(ordenCreada || undefined);
+  const { asociarConOrden, limpiarTemporales, updateArchivo } = useCentroCopiadoArchivos({ ordenTemporalId });
   const { dialogState, openDialog, closeDialog } = useInfoDialog();
 
   usePageHeader('Crea una nueva orden de copiado con items personalizados');
@@ -97,29 +101,6 @@ export function CrearOrdenCopiado() {
       setInitialized(true);
     }
   }, [initialized, agregarItem, clienteIdParam]);
-
-  // Crear orden temporal cuando se selecciona cliente
-  useEffect(() => {
-    const crearOrdenTemporal = async () => {
-      if (clienteId && !ordenCreada) {
-        try {
-          const ordenTemporal = await createOrden({
-            cliente_id: clienteId,
-            orden_trabajo_id: ordenTrabajoIdParam || undefined,
-            observaciones: 'Orden en proceso de creación',
-          });
-
-          if (ordenTemporal) {
-            setOrdenCreada(ordenTemporal.id);
-          }
-        } catch (error) {
-          console.error('Error creating temporal orden:', error);
-        }
-      }
-    };
-
-    crearOrdenTemporal();
-  }, [clienteId, ordenCreada, createOrden, ordenTrabajoIdParam]);
 
   const actualizarItem = useCallback((id: string, config: Partial<ItemCopiadoConfig>) => {
     setItems((prev) =>
@@ -203,36 +184,31 @@ export function CrearOrdenCopiado() {
         ? `${fechaEntrega}T${horaEntrega}:00`
         : undefined;
 
-      let ordenIdFinal = ordenCreada;
+      // 1. Crear orden real
+      const datosOrden = {
+        cliente_id: clienteId,
+        orden_trabajo_id: ordenTrabajoIdParam || undefined,
+        fecha_entrega_estimada: fechaEntregaCompleta,
+        observaciones: observaciones || undefined,
+      };
 
-      // Si ya existe una orden temporal, actualizarla. Si no, crear una nueva
-      if (ordenCreada) {
-        await updateOrden(ordenCreada, {
-          fecha_entrega_estimada: fechaEntregaCompleta || null,
-          observaciones: observaciones || null,
-        });
-      } else {
-        const datosOrden = {
-          cliente_id: clienteId,
-          orden_trabajo_id: ordenTrabajoIdParam || undefined,
-          fecha_entrega_estimada: fechaEntregaCompleta,
-          observaciones: observaciones || undefined,
-        };
+      const nuevaOrden = await createOrden(datosOrden);
 
-        const nuevaOrden = await createOrden(datosOrden);
-
-        if (!nuevaOrden) {
-          throw new Error('No se pudo crear la orden');
-        }
-
-        ordenIdFinal = nuevaOrden.id;
-        setOrdenCreada(nuevaOrden.id);
+      if (!nuevaOrden) {
+        throw new Error('No se pudo crear la orden');
       }
 
-      if (!ordenIdFinal) {
-        throw new Error('No se pudo obtener el ID de la orden');
+      const ordenIdFinal = nuevaOrden.id;
+
+      // 2. Asociar archivos temporales con orden real
+      try {
+        await asociarConOrden(ordenIdFinal, ordenTemporalId);
+      } catch (err) {
+        console.error('Error asociando archivos:', err);
+        // Continuar aunque falle la asociación de archivos
       }
 
+      // 3. Crear items
       for (const item of items) {
         const config = item.config;
         if (
@@ -273,7 +249,7 @@ export function CrearOrdenCopiado() {
         }
       }
 
-      // Obtener información de la orden para mostrar en el diálogo
+      // 4. Obtener información de la orden para mostrar en el diálogo
       const { data: ordenFinal } = await supabase
         .from('centro_copiado_ordenes')
         .select('numero_orden')
@@ -298,7 +274,13 @@ export function CrearOrdenCopiado() {
     }
   };
 
-  const cancelar = () => {
+  const cancelar = async () => {
+    // Limpiar archivos temporales si existen
+    try {
+      await limpiarTemporales(ordenTemporalId);
+    } catch (err) {
+      console.error('Error limpiando archivos temporales:', err);
+    }
     navigate('/app/centro-copiado/ordenes');
   };
 
@@ -428,9 +410,9 @@ export function CrearOrdenCopiado() {
           </Card>
 
           <CentroCopiadoArchivosSection
-            ordenId={ordenCreada || undefined}
+            ordenTemporalId={ordenTemporalId}
             onArchivoGenerado={handleArchivoGenerado}
-            disabled={!clienteId}
+            disabled={false}
           />
 
           <div className="flex items-center justify-between">

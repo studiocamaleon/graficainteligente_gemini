@@ -17,19 +17,22 @@ interface FileWithMetadata {
 
 interface CentroCopiadoArchivosSectionProps {
   ordenId?: string;
+  ordenTemporalId?: string;
   onArchivoGenerado?: (archivoId: string) => void;
   disabled?: boolean;
 }
 
 export function CentroCopiadoArchivosSection({
   ordenId,
+  ordenTemporalId,
   onArchivoGenerado,
   disabled = false,
 }: CentroCopiadoArchivosSectionProps) {
   const { profile } = useAuth();
   const [files, setFiles] = useState<FileWithMetadata[]>([]);
   const { uploadFile, downloadFile, deleteFile } = useFileUpload();
-  const { createArchivo, deleteArchivo, espacioUsado, refetch } = useCentroCopiadoArchivos(ordenId);
+  const { createArchivo, deleteArchivo, espacioUsado, refetch } = useCentroCopiadoArchivos({ ordenId, ordenTemporalId });
+  const modoTemporal = !!ordenTemporalId && !ordenId;
 
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -55,7 +58,7 @@ export function CentroCopiadoArchivosSection({
   };
 
   const processFile = async (fileMetadata: FileWithMetadata) => {
-    if (!profile?.company_id || !ordenId) return;
+    if (!profile?.company_id || (!ordenId && !ordenTemporalId)) return;
 
     setIsProcessing(true);
 
@@ -67,10 +70,11 @@ export function CentroCopiadoArchivosSection({
         )
       );
 
+      const targetId = modoTemporal ? ordenTemporalId! : ordenId!;
       const uploadResult = await uploadFile(
         fileMetadata.file,
         profile.company_id,
-        ordenId,
+        targetId,
         fileMetadata.id
       );
 
@@ -80,7 +84,7 @@ export function CentroCopiadoArchivosSection({
 
       // 2. Crear registro en base de datos (sin páginas detectadas)
       const archivo = await createArchivo({
-        orden_copiado_id: ordenId,
+        [modoTemporal ? 'orden_temporal_id' : 'orden_copiado_id']: targetId,
         nombre_archivo: fileMetadata.file.name,
         nombre_storage: uploadResult.nombreStorage,
         tipo_mime: fileMetadata.file.type,

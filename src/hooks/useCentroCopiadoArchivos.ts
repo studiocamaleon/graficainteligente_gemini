@@ -4,7 +4,8 @@ import { useAuth } from './useAuth';
 
 export interface CentroCopiadoArchivo {
   id: string;
-  orden_copiado_id: string;
+  orden_copiado_id: string | null;
+  orden_temporal_id: string | null;
   company_id: string;
   nombre_archivo: string;
   nombre_storage: string;
@@ -16,6 +17,7 @@ export interface CentroCopiadoArchivo {
   uploaded_by: string;
   created_at: string;
   updated_at: string;
+  temporal_creado_en: string | null;
   uploader?: {
     id: string;
     full_name: string;
@@ -32,7 +34,17 @@ export interface EspacioUsado {
   limite_total_bytes: number;
 }
 
-export function useCentroCopiadoArchivos(ordenId?: string) {
+interface UseCentroCopiadoArchivosParams {
+  ordenId?: string;
+  ordenTemporalId?: string;
+}
+
+export function useCentroCopiadoArchivos(params?: string | UseCentroCopiadoArchivosParams) {
+  // Soportar tanto string legacy como objeto nuevo
+  const ordenId = typeof params === 'string' ? params : params?.ordenId;
+  const ordenTemporalId = typeof params === 'string' ? undefined : params?.ordenTemporalId;
+  const modoTemporal = !!ordenTemporalId && !ordenId;
+
   const { profile } = useAuth();
   const [archivos, setArchivos] = useState<CentroCopiadoArchivo[]>([]);
   const [espacioUsado, setEspacioUsado] = useState<EspacioUsado | null>(null);
@@ -40,21 +52,30 @@ export function useCentroCopiadoArchivos(ordenId?: string) {
   const [error, setError] = useState<string | null>(null);
 
   const fetchArchivos = useCallback(async () => {
-    if (!profile?.company_id || !ordenId) return;
+    if (!profile?.company_id || (!ordenId && !ordenTemporalId)) return;
 
     try {
       setLoading(true);
       setError(null);
 
-      const { data, error: fetchError } = await supabase
+      let query = supabase
         .from('centro_copiado_ordenes_archivos')
         .select(`
           *,
           uploader:profiles!centro_copiado_ordenes_archivos_uploaded_by_fkey(id, full_name, avatar_url)
         `)
-        .eq('orden_copiado_id', ordenId)
-        .eq('company_id', profile.company_id)
-        .order('created_at', { ascending: false });
+        .eq('company_id', profile.company_id);
+
+      // Filtrar por orden real o temporal
+      if (modoTemporal && ordenTemporalId) {
+        query = query.eq('orden_temporal_id', ordenTemporalId);
+      } else if (ordenId) {
+        query = query.eq('orden_copiado_id', ordenId);
+      }
+
+      query = query.order('created_at', { ascending: false });
+
+      const { data, error: fetchError } = await query;
 
       if (fetchError) throw fetchError;
 
@@ -65,14 +86,17 @@ export function useCentroCopiadoArchivos(ordenId?: string) {
     } finally {
       setLoading(false);
     }
-  }, [profile?.company_id, ordenId]);
+  }, [profile?.company_id, ordenId, ordenTemporalId, modoTemporal]);
 
   const fetchEspacioUsado = useCallback(async () => {
-    if (!ordenId) return;
+    if (!ordenId && !ordenTemporalId) return;
 
     try {
       const { data, error: fetchError } = await supabase
-        .rpc('fn_calcular_espacio_usado_copiado', { p_orden_id: ordenId });
+        .rpc('fn_calcular_espacio_usado_copiado_temporal', {
+          p_orden_id: ordenId || null,
+          p_orden_temporal_id: ordenTemporalId || null
+        });
 
       if (fetchError) throw fetchError;
 
@@ -82,7 +106,7 @@ export function useCentroCopiadoArchivos(ordenId?: string) {
     } catch (err) {
       console.error('Error fetching espacio usado:', err);
     }
-  }, [ordenId]);
+  }, [ordenId, ordenTemporalId]);
 
   useEffect(() => {
     fetchArchivos();
@@ -90,7 +114,8 @@ export function useCentroCopiadoArchivos(ordenId?: string) {
   }, [fetchArchivos, fetchEspacioUsado]);
 
   const createArchivo = async (data: {
-    orden_copiado_id: string;
+    orden_copiado_id?: string | null;
+    orden_temporal_id?: string | null;
     nombre_archivo: string;
     nombre_storage: string;
     tipo_mime: string;
@@ -102,13 +127,20 @@ export function useCentroCopiadoArchivos(ordenId?: string) {
     if (!profile?.company_id) return null;
 
     try {
+      const insertData: any = {
+        ...data,
+        company_id: profile.company_id,
+        uploaded_by: profile.id,
+      };
+
+      // Agregar timestamp para archivos temporales
+      if (data.orden_temporal_id) {
+        insertData.temporal_creado_en = new Date().toISOString();
+      }
+
       const { data: archivo, error: createError } = await supabase
         .from('centro_copiado_ordenes_archivos')
-        .insert({
-          ...data,
-          company_id: profile.company_id,
-          uploaded_by: profile.id,
-        })
+        .insert(insertData)
         .select(`
           *,
           uploader:profiles!centro_copiado_ordenes_archivos_uploaded_by_fkey(id, full_name, avatar_url)
@@ -177,14 +209,163 @@ export function useCentroCopiadoArchivos(ordenId?: string) {
     }
   };
 
+  // Asociar archivos temporales con orden real
+  const asociarConOrden = async (
+    ordenIdReal: string,
+    tempId?: string
+  ) => {
+    const efectivoTempId = tempId || ordenTemporalId;
+    const efectivoCompanyId = profile?.company_id;
+
+    console.log('[asociarConOrden] Iniciando asociación:', {
+      ordenIdReal,
+      tempId: efectivoTempId,
+      companyId: efectivoCompanyId,
+      modoTemporal
+    });
+
+    if (!efectivoTempId) {
+      throw new Error('ordenTemporalId no disponible');
+    }
+
+    if (!efectivoCompanyId) {
+      throw new Error('company_id no disponible');
+    }
+
+    try {
+      // Usar función SQL con SECURITY DEFINER
+      const { data, error: rpcError } = await supabase
+        .rpc('fn_asociar_archivos_copiado_temporales', {
+          p_orden_temporal_id: efectivoTempId,
+          p_orden_copiado_id: ordenIdReal,
+          p_company_id: efectivoCompanyId
+        });
+
+      if (rpcError) {
+        console.error('[asociarConOrden] Error en función SQL:', rpcError);
+        throw rpcError;
+      }
+
+      const count = data?.[0]?.archivos_asociados || 0;
+
+      console.log('[asociarConOrden] Archivos asociados:', count);
+
+      // Mover archivos físicos en storage
+      if (count > 0) {
+        console.log('[asociarConOrden] Moviendo archivos en storage...');
+
+        const { data: archivosAsociados } = await supabase
+          .from('centro_copiado_ordenes_archivos')
+          .select('id, nombre_storage')
+          .eq('orden_copiado_id', ordenIdReal)
+          .eq('company_id', efectivoCompanyId);
+
+        if (archivosAsociados && archivosAsociados.length > 0) {
+          for (const archivo of archivosAsociados) {
+            const oldPath = `${efectivoCompanyId}/temporal/${efectivoTempId}/${archivo.nombre_storage}`;
+            const newPath = `${efectivoCompanyId}/${ordenIdReal}/${archivo.nombre_storage}`;
+
+            console.log(`[asociarConOrden] Moviendo: ${oldPath} → ${newPath}`);
+
+            try {
+              // Descargar archivo temporal
+              const { data: fileData, error: downloadError } = await supabase.storage
+                .from('centro-copiado-archivos')
+                .download(oldPath);
+
+              if (downloadError) {
+                console.error(`[asociarConOrden] Error descargando ${oldPath}:`, downloadError);
+                continue;
+              }
+
+              // Subir a ubicación final
+              const { error: uploadError } = await supabase.storage
+                .from('centro-copiado-archivos')
+                .upload(newPath, fileData, { upsert: true });
+
+              if (uploadError) {
+                console.error(`[asociarConOrden] Error subiendo ${newPath}:`, uploadError);
+                continue;
+              }
+
+              // Eliminar archivo temporal
+              await supabase.storage
+                .from('centro-copiado-archivos')
+                .remove([oldPath]);
+
+              // Actualizar path en BD
+              await supabase
+                .from('centro_copiado_ordenes_archivos')
+                .update({ storage_path: newPath })
+                .eq('id', archivo.id);
+
+              console.log(`[asociarConOrden] ✅ Movido: ${archivo.nombre_storage}`);
+            } catch (moveError) {
+              console.error(`[asociarConOrden] Error moviendo archivo ${archivo.id}:`, moveError);
+            }
+          }
+        }
+      }
+
+      return {
+        success: true,
+        count
+      };
+    } catch (err: any) {
+      console.error('[asociarConOrden] ERROR:', err);
+      throw err;
+    }
+  };
+
+  // Limpiar archivos temporales
+  const limpiarTemporales = async (tempId?: string) => {
+    const efectivoTempId = tempId || ordenTemporalId;
+
+    if (!efectivoTempId || !profile?.company_id) {
+      return { success: true, count: 0 };
+    }
+
+    try {
+      // Obtener archivos temporales
+      const { data: archivosTemporales } = await supabase
+        .from('centro_copiado_ordenes_archivos')
+        .select('id, storage_path')
+        .eq('orden_temporal_id', efectivoTempId)
+        .eq('company_id', profile.company_id);
+
+      if (archivosTemporales && archivosTemporales.length > 0) {
+        // Eliminar de storage
+        const paths = archivosTemporales.map(a => a.storage_path);
+        await supabase.storage
+          .from('centro-copiado-archivos')
+          .remove(paths);
+
+        // Eliminar de BD
+        await supabase
+          .from('centro_copiado_ordenes_archivos')
+          .delete()
+          .eq('orden_temporal_id', efectivoTempId)
+          .eq('company_id', profile.company_id);
+      }
+
+      return { success: true, count: archivosTemporales?.length || 0 };
+    } catch (err: any) {
+      console.error('Error limpiando temporales:', err);
+      throw err;
+    }
+  };
+
   return {
     archivos,
     espacioUsado,
     loading,
     error,
+    modoTemporal,
     createArchivo,
     updateArchivo,
     deleteArchivo,
+    asociarConOrden,
+    limpiarTemporales,
     refetch: fetchArchivos,
   };
 }
