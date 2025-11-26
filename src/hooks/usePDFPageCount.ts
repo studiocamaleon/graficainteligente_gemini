@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import * as pdfjsLib from 'pdfjs-dist/build/pdf.mjs';
-import workerSrc from 'pdfjs-dist/build/pdf.worker.mjs?url';
+import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
+import workerSrc from 'pdfjs-dist/legacy/build/pdf.worker.mjs?url';
 
 // Configurar el worker de PDF.js con archivo local
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
