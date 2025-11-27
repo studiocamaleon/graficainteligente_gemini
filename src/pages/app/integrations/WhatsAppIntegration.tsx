@@ -1,226 +1,252 @@
-import { MessageSquare, QrCode, CheckCircle2, XCircle, Loader2, AlertCircle } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { MessageSquare, QrCode, CheckCircle2, XCircle, Loader2, AlertCircle, Send } from 'lucide-react';
 import { Card } from '../../../components/ui/Card';
 import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
 import { Badge } from '../../../components/ui/Badge';
+import { Modal } from '../../../components/ui/Modal';
 import { usePageHeader } from '../../../hooks/usePageHeader';
-import { useEvolutionIntegration } from '../../../hooks/useEvolutionIntegration';
+import { useAuth } from '../../../hooks/useAuth';
 import { useToast } from '../../../contexts/ToastContext';
+import { connectWhatsApp, getConnectionStatus, sendMessage } from '../../../lib/whatsappApi';
+
+const MAX_POLLING_TIME = 120; // 120 segundos
+const POLLING_INTERVAL = 2000; // 2 segundos
 
 export function WhatsAppIntegration() {
   usePageHeader('Integración con WhatsApp');
+  const { profile } = useAuth();
   const { showSuccess, showError } = useToast();
-  const {
-    config,
-    formData,
-    qrData,
-    isLoading,
-    isSaving,
-    error,
-    timeLeft,
-    pollingAttempts,
-    saveConfig,
-    generateQR,
-    clearQR,
-    updateFormData,
-    setError,
-    checkConnectionState,
-    resetState,
-  } = useEvolutionIntegration();
 
-  const handleSaveConfig = async () => {
-    const success = await saveConfig();
-    if (success) {
-      showSuccess('Configuración guardada correctamente');
-    } else if (error) {
-      showError(error);
+  // Estado de conexión
+  const [isConnected, setIsConnected] = useState(false);
+  const [connectedNumber, setConnectedNumber] = useState<string | null>(null);
+  const [isCheckingStatus, setIsCheckingStatus] = useState(true);
+
+  // Estado de QR
+  const [showQRModal, setShowQRModal] = useState(false);
+  const [qrCode, setQrCode] = useState<string | null>(null);
+  const [isGeneratingQR, setIsGeneratingQR] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(MAX_POLLING_TIME);
+  const [pollingActive, setPollingActive] = useState(false);
+
+  // Estado de envío de prueba
+  const [testPhone, setTestPhone] = useState('');
+  const [testMessage, setTestMessage] = useState('');
+  const [isSendingTest, setIsSendingTest] = useState(false);
+
+  // Referencias para polling
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const companyId = profile?.company_id;
+
+  // Verificar estado inicial
+  useEffect(() => {
+    if (companyId) {
+      checkStatus();
+    }
+  }, [companyId]);
+
+  // Cleanup de polling al desmontar
+  useEffect(() => {
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
+
+  const checkStatus = async () => {
+    if (!companyId) return;
+
+    try {
+      setIsCheckingStatus(true);
+      const status = await getConnectionStatus(companyId);
+      setIsConnected(status.connected);
+      setConnectedNumber(status.number);
+    } catch (error) {
+      console.error('Error al verificar estado:', error);
+      showError('Error al verificar el estado de conexión');
+    } finally {
+      setIsCheckingStatus(false);
     }
   };
 
-  const handleGenerateQR = async () => {
-    setError(null);
-    const success = await generateQR();
-    if (success) {
-      showSuccess('QR generado. Escanéalo con WhatsApp.');
-    } else if (error) {
-      showError(error);
+  const startPolling = () => {
+    if (!companyId) return;
+
+    setPollingActive(true);
+    let elapsedTime = 0;
+
+    // Actualizar contador cada segundo
+    timeoutRef.current = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          stopPolling();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    // Verificar estado cada 2 segundos
+    pollingIntervalRef.current = setInterval(async () => {
+      elapsedTime += POLLING_INTERVAL / 1000;
+
+      try {
+        const status = await getConnectionStatus(companyId);
+
+        if (status.connected) {
+          // ¡Conexión exitosa!
+          setIsConnected(true);
+          setConnectedNumber(status.number);
+          setShowQRModal(false);
+          setQrCode(null);
+          stopPolling();
+          showSuccess('¡WhatsApp conectado correctamente!');
+        }
+      } catch (error) {
+        console.error('Error en polling:', error);
+      }
+
+      // Timeout después de 120 segundos
+      if (elapsedTime >= MAX_POLLING_TIME) {
+        stopPolling();
+        setShowQRModal(false);
+        setQrCode(null);
+        showError('No se detectó la conexión. Intentá de nuevo.');
+      }
+    }, POLLING_INTERVAL);
+  };
+
+  const stopPolling = () => {
+    setPollingActive(false);
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
+    if (timeoutRef.current) {
+      clearInterval(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    setTimeLeft(MAX_POLLING_TIME);
+  };
+
+  const handleConnectWhatsApp = async () => {
+    if (!companyId) {
+      showError('No se pudo obtener el ID de la empresa');
+      return;
+    }
+
+    try {
+      setIsGeneratingQR(true);
+      const response = await connectWhatsApp(companyId);
+      setQrCode(response.qr);
+      setShowQRModal(true);
+      setTimeLeft(MAX_POLLING_TIME);
+
+      // Iniciar polling
+      startPolling();
+    } catch (error) {
+      console.error('Error al generar QR:', error);
+      showError('Error al generar el código QR');
+    } finally {
+      setIsGeneratingQR(false);
     }
   };
 
-  const handleManualCheck = async () => {
-    console.log('[Manual Check] 🕵️ User triggered manual connection check');
-    showSuccess('Verificando conexión...');
-    const state = await checkConnectionState();
-    if (state === 'open') {
-      showSuccess('¡WhatsApp conectado correctamente!');
-    } else {
-      showError(`Estado actual: ${state}`);
-    }
+  const handleCloseQRModal = () => {
+    stopPolling();
+    setShowQRModal(false);
+    setQrCode(null);
   };
 
-  const handleResetState = async () => {
-    console.log('[Manual Reset] 🔄 User triggered state reset');
-    const success = await resetState();
-    if (success) {
-      showSuccess('Estado restablecido correctamente');
-    } else {
-      showError('Error al restablecer el estado');
+  const handleSendTest = async () => {
+    if (!companyId) {
+      showError('No se pudo obtener el ID de la empresa');
+      return;
+    }
+
+    if (!testPhone.trim() || !testMessage.trim()) {
+      showError('Por favor completá todos los campos');
+      return;
+    }
+
+    try {
+      setIsSendingTest(true);
+      const response = await sendMessage(companyId, testPhone, testMessage);
+
+      if (response.success) {
+        showSuccess('Mensaje enviado correctamente');
+        setTestMessage(''); // Limpiar solo el mensaje
+      } else {
+        showError('Error al enviar el mensaje');
+      }
+    } catch (error) {
+      console.error('Error al enviar mensaje:', error);
+      showError('Error al enviar el mensaje de prueba');
+    } finally {
+      setIsSendingTest(false);
     }
   };
 
   const getConnectionBadge = () => {
-    const state = config.connectionState || 'disconnected';
-
-    switch (state) {
-      case 'open':
-        return (
-          <Badge variant="success" className="flex items-center gap-1.5">
-            <CheckCircle2 className="w-3.5 h-3.5" />
-            Conectado
-          </Badge>
-        );
-      case 'connecting':
-        return (
-          <Badge variant="warning" className="flex items-center gap-1.5">
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            Conectando...
-          </Badge>
-        );
-      case 'error':
-        return (
-          <Badge variant="error" className="flex items-center gap-1.5">
-            <XCircle className="w-3.5 h-3.5" />
-            Error
-          </Badge>
-        );
-      default:
-        return (
-          <Badge variant="neutral" className="flex items-center gap-1.5">
-            <XCircle className="w-3.5 h-3.5" />
-            Desconectado
-          </Badge>
-        );
+    if (isCheckingStatus) {
+      return (
+        <Badge variant="neutral" className="flex items-center gap-1.5">
+          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          Verificando...
+        </Badge>
+      );
     }
+
+    if (isConnected) {
+      return (
+        <Badge variant="success" className="flex items-center gap-1.5">
+          <CheckCircle2 className="w-3.5 h-3.5" />
+          Conectado
+        </Badge>
+      );
+    }
+
+    return (
+      <Badge variant="neutral" className="flex items-center gap-1.5">
+        <XCircle className="w-3.5 h-3.5" />
+        No conectado
+      </Badge>
+    );
   };
-
-  const formatLastConnected = () => {
-    if (!config.lastConnectedAt) return null;
-
-    const date = new Date(config.lastConnectedAt);
-    return new Intl.DateTimeFormat('es-AR', {
-      dateStyle: 'short',
-      timeStyle: 'short',
-    }).format(date);
-  };
-
-  const canGenerateQR =
-    config.hasConfig &&
-    config.hasApiKey &&
-    formData.instanceId.trim() !== '' &&
-    config.connectionState !== 'connecting' &&
-    !qrData;
 
   return (
     <div className="space-y-6">
-      {/* Card de Configuración */}
+      {/* Card de Estado de Conexión */}
       <Card
-        title="Configuración de Evolution API"
+        title="Estado de Conexión"
         icon={MessageSquare}
-        description="Configura tu instancia de Evolution API para conectar WhatsApp"
-      >
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              URL Base
-            </label>
-            <Input
-              type="text"
-              value={formData.baseUrl}
-              disabled
-              className="bg-gray-50"
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              URL fija de Evolution API
-            </p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Instance ID <span className="text-red-500">*</span>
-            </label>
-            <Input
-              type="text"
-              value={formData.instanceId}
-              onChange={(e) => updateFormData('instanceId', e.target.value)}
-              placeholder="mi-instancia-whatsapp"
-              disabled={isSaving}
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              ID único de tu instancia en Evolution API
-            </p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              API Key <span className="text-red-500">*</span>
-            </label>
-            <Input
-              type="password"
-              value={formData.apiKey}
-              onChange={(e) => updateFormData('apiKey', e.target.value)}
-              placeholder={config.hasApiKey ? '••••••••••••' : 'Tu API Key de Evolution'}
-              disabled={isSaving}
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              {config.hasApiKey
-                ? 'API Key configurada. Deja en blanco para mantener la actual.'
-                : 'API Key para autenticación con Evolution API'}
-            </p>
-          </div>
-
-          <div className="flex justify-end pt-2">
-            <Button
-              onClick={handleSaveConfig}
-              disabled={isSaving || !formData.instanceId.trim()}
-              className="min-w-[140px]"
-            >
-              {isSaving ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Guardando...
-                </>
-              ) : (
-                'Guardar configuración'
-              )}
-            </Button>
-          </div>
-        </div>
-      </Card>
-
-      {/* Card de Conexión */}
-      <Card
-        title="Conexión de WhatsApp"
-        icon={QrCode}
-        description="Genera un código QR para conectar tu cuenta de WhatsApp"
+        description="Estado actual de tu conexión con WhatsApp"
       >
         <div className="space-y-6">
-          {/* Estado de Conexión */}
+          {/* Estado actual */}
           <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
             <div>
               <p className="text-sm font-medium text-gray-700 mb-1">
-                Estado de Conexión
+                Estado de WhatsApp
               </p>
-              {formatLastConnected() && (
+              {isConnected && connectedNumber && (
                 <p className="text-xs text-gray-500">
-                  Última conexión: {formatLastConnected()}
+                  Número conectado: {connectedNumber}
                 </p>
               )}
             </div>
             {getConnectionBadge()}
           </div>
 
-          {/* Mensaje de éxito */}
-          {config.connectionState === 'open' && (
+          {/* Mensaje de estado */}
+          {isConnected ? (
             <div className="flex items-start gap-3 p-4 bg-green-50 border border-green-200 rounded-lg">
               <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
               <div>
@@ -232,85 +258,171 @@ export function WhatsAppIntegration() {
                 </p>
               </div>
             </div>
-          )}
-
-          {/* Alerta de estado bloqueado */}
-          {config.connectionState === 'connecting' && !qrData && (
-            <div className="flex items-start gap-3 p-4 bg-orange-50 border border-orange-200 rounded-lg">
-              <AlertCircle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <p className="text-sm font-medium text-orange-900">
-                  Estado de conexión bloqueado
+          ) : (
+            <div className="flex items-start gap-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-blue-900">
+                  WhatsApp no conectado
                 </p>
-                <p className="text-xs text-orange-700 mt-1">
-                  El sistema detectó un estado "conectando" sin QR activo. Esto puede ocurrir si la sesión anterior expiró. Haz click en el botón para restablecer.
+                <p className="text-xs text-blue-700 mt-1">
+                  Hacé clic en "Conectar WhatsApp" para vincular tu cuenta.
                 </p>
               </div>
-              <Button
-                onClick={handleResetState}
-                variant="outline"
-                size="sm"
-                className="flex-shrink-0"
-              >
-                🔄 Restablecer
-              </Button>
             </div>
           )}
 
-          {/* Botón Generar QR */}
-          {!qrData && config.connectionState !== 'open' && (
-            <div>
+          {/* Botón de conexión */}
+          {!isConnected && (
+            <div className="flex gap-3">
               <Button
-                onClick={handleGenerateQR}
-                disabled={!canGenerateQR || isLoading}
+                onClick={handleConnectWhatsApp}
+                disabled={isGeneratingQR || !companyId}
                 variant="primary"
-                className="w-full"
+                className="flex-1"
               >
-                {isLoading ? (
+                {isGeneratingQR ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Generando QR...
+                    Generando código QR...
                   </>
                 ) : (
                   <>
                     <QrCode className="w-4 h-4 mr-2" />
-                    Generar Código QR
+                    Conectar WhatsApp
                   </>
                 )}
               </Button>
-
-              {!config.hasConfig && (
-                <div className="flex items-start gap-2 mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                  <AlertCircle className="w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5" />
-                  <p className="text-xs text-yellow-800">
-                    Primero configura tu Instance ID y API Key arriba
-                  </p>
-                </div>
-              )}
+              <Button
+                onClick={checkStatus}
+                disabled={isCheckingStatus}
+                variant="outline"
+              >
+                {isCheckingStatus ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  '🔄'
+                )}
+              </Button>
             </div>
           )}
+        </div>
+      </Card>
 
-          {/* Área de QR */}
-          {qrData && (
-            <div className="space-y-4">
+      {/* Card de Envío de Prueba */}
+      {isConnected && (
+        <Card
+          title="Enviar Mensaje de Prueba"
+          icon={Send}
+          description="Enviá un mensaje de prueba para verificar la conexión"
+        >
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Número de destino (con código de país)
+              </label>
+              <Input
+                type="text"
+                value={testPhone}
+                onChange={(e) => setTestPhone(e.target.value)}
+                placeholder="5491112345678"
+                disabled={isSendingTest}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Ejemplo: 5491112345678 (Argentina)
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Mensaje
+              </label>
+              <textarea
+                value={testMessage}
+                onChange={(e) => setTestMessage(e.target.value)}
+                placeholder="Hola, este es un mensaje de prueba..."
+                disabled={isSendingTest}
+                rows={4}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              />
+            </div>
+
+            <div className="flex justify-end">
+              <Button
+                onClick={handleSendTest}
+                disabled={isSendingTest || !testPhone.trim() || !testMessage.trim()}
+                variant="primary"
+              >
+                {isSendingTest ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Enviando...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4 mr-2" />
+                    Enviar mensaje de prueba
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Card de Información */}
+      <Card title="¿Cómo funciona?" icon={AlertCircle}>
+        <div className="space-y-3 text-sm text-gray-600">
+          <div className="flex gap-3">
+            <div className="flex-shrink-0 w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-bold">
+              1
+            </div>
+            <p>
+              Hacé clic en <strong>"Conectar WhatsApp"</strong> para generar el código QR.
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <div className="flex-shrink-0 w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-bold">
+              2
+            </div>
+            <p>
+              Abrí WhatsApp en tu teléfono, ve a <strong>Ajustes → Dispositivos vinculados → Vincular dispositivo</strong>.
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <div className="flex-shrink-0 w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-bold">
+              3
+            </div>
+            <p>
+              Escaneá el código QR que aparece en pantalla. El sistema detectará automáticamente la conexión.
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <div className="flex-shrink-0 w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-bold">
+              4
+            </div>
+            <p>
+              Una vez conectado, podés enviar mensajes de prueba para verificar que todo funciona correctamente.
+            </p>
+          </div>
+        </div>
+      </Card>
+
+      {/* Modal de QR */}
+      <Modal
+        isOpen={showQRModal}
+        onClose={handleCloseQRModal}
+        title="Escaneá este código con tu WhatsApp"
+      >
+        <div className="space-y-4">
+          {qrCode ? (
+            <>
               <div className="bg-white border-2 border-gray-200 rounded-lg p-6 flex flex-col items-center">
                 <img
-                  src={qrData.base64}
-                  alt="QR Code WhatsApp"
+                  src={qrCode}
+                  alt="Código QR de WhatsApp"
                   className="w-64 h-64 mb-4"
                 />
-
-                {qrData.pairingCode && (
-                  <div className="text-center mb-4">
-                    <p className="text-sm text-gray-600 mb-1">
-                      Código de emparejamiento:
-                    </p>
-                    <p className="text-2xl font-mono font-bold text-blue-600">
-                      {qrData.pairingCode}
-                    </p>
-                  </div>
-                )}
-
                 <div className="text-center">
                   <p className="text-sm font-medium text-gray-900 mb-1">
                     Escanea el QR con WhatsApp
@@ -321,110 +433,50 @@ export function WhatsAppIntegration() {
                 </div>
               </div>
 
-              {/* Contador */}
-              <div className="flex items-center justify-between p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
-                    <span className="text-sm text-blue-900">
-                      Esperando conexión...
-                    </span>
+              {/* Contador de tiempo */}
+              {pollingActive && (
+                <>
+                  <div className="flex items-center justify-between p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
+                        <span className="text-sm text-blue-900">
+                          Esperando conexión...
+                        </span>
+                      </div>
+                      <p className="text-xs text-blue-600">
+                        El sistema verificará automáticamente cuando escanees el código
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-blue-700">Tiempo restante</p>
+                      <p className="text-lg font-bold text-blue-900">{timeLeft}s</p>
+                    </div>
                   </div>
-                  <p className="text-xs text-blue-600">
-                    Intentos de verificación: {pollingAttempts}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs text-blue-700">Tiempo restante</p>
-                  <p className="text-lg font-bold text-blue-900">{timeLeft}s</p>
-                </div>
-              </div>
 
-              {/* Barra de progreso */}
-              <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-                <div
-                  className="bg-blue-600 h-2 transition-all duration-1000"
-                  style={{ width: `${(timeLeft / 120) * 100}%` }}
-                />
-              </div>
+                  {/* Barra de progreso */}
+                  <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                    <div
+                      className="bg-blue-600 h-2 transition-all duration-1000"
+                      style={{ width: `${(timeLeft / MAX_POLLING_TIME) * 100}%` }}
+                    />
+                  </div>
+                </>
+              )}
 
-              {/* Botones de acción */}
-              <div className="flex gap-3">
-                <Button
-                  onClick={handleManualCheck}
-                  variant="outline"
-                  className="flex-1"
-                >
-                  🔄 Verificar manualmente
-                </Button>
-                <Button
-                  onClick={clearQR}
-                  variant="outline"
-                  className="flex-1"
-                >
+              <div className="flex justify-end gap-3 pt-2">
+                <Button onClick={handleCloseQRModal} variant="outline">
                   Cancelar
                 </Button>
               </div>
-            </div>
-          )}
-
-          {/* Mensaje de QR expirado */}
-          {timeLeft === 0 && !qrData && config.connectionState === 'connecting' && (
-            <div className="flex items-start gap-3 p-4 bg-orange-50 border border-orange-200 rounded-lg">
-              <AlertCircle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm font-medium text-orange-900">
-                  El código QR ha expirado
-                </p>
-                <p className="text-xs text-orange-700 mt-1">
-                  Haz clic en "Generar Código QR" para crear uno nuevo.
-                </p>
-              </div>
+            </>
+          ) : (
+            <div className="flex items-center justify-center p-8">
+              <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
             </div>
           )}
         </div>
-      </Card>
-
-      {/* Card de Información */}
-      <Card
-        title="¿Cómo funciona?"
-        icon={AlertCircle}
-      >
-        <div className="space-y-3 text-sm text-gray-600">
-          <div className="flex gap-3">
-            <div className="flex-shrink-0 w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-bold">
-              1
-            </div>
-            <p>
-              Ingresa tu <strong>Instance ID</strong> y <strong>API Key</strong> de Evolution API en la configuración.
-            </p>
-          </div>
-          <div className="flex gap-3">
-            <div className="flex-shrink-0 w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-bold">
-              2
-            </div>
-            <p>
-              Haz clic en <strong>"Generar Código QR"</strong> para obtener el código de vinculación.
-            </p>
-          </div>
-          <div className="flex gap-3">
-            <div className="flex-shrink-0 w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-bold">
-              3
-            </div>
-            <p>
-              Abre WhatsApp en tu teléfono, ve a <strong>Ajustes → Dispositivos vinculados → Vincular dispositivo</strong> y escanea el QR.
-            </p>
-          </div>
-          <div className="flex gap-3">
-            <div className="flex-shrink-0 w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-bold">
-              4
-            </div>
-            <p>
-              Una vez conectado, podrás enviar y recibir mensajes de WhatsApp desde el sistema.
-            </p>
-          </div>
-        </div>
-      </Card>
+      </Modal>
     </div>
   );
 }
