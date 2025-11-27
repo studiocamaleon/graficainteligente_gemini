@@ -52,11 +52,11 @@ export function formatPhoneNumber(phone: string): string {
   let cleaned = phone.replace(/[\s\-()]/g, '');
 
   if (cleaned.startsWith('+')) {
-    return cleaned;
+    cleaned = cleaned.substring(1);
   }
 
   if (cleaned.startsWith('54')) {
-    return `+${cleaned}`;
+    return cleaned;
   }
 
   if (cleaned.startsWith('0')) {
@@ -67,7 +67,7 @@ export function formatPhoneNumber(phone: string): string {
     cleaned = `54${cleaned}`;
   }
 
-  return `+${cleaned}`;
+  return cleaned;
 }
 
 export function buildTrackingUrl(trackingToken: string): string {
