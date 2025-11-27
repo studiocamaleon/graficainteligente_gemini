@@ -1,10 +1,13 @@
-import { Plus, DollarSign, AlertCircle, Edit2, Trash2, CheckCircle, CreditCard } from 'lucide-react';
+import { Plus, DollarSign, AlertCircle, Edit2, Trash2, CheckCircle, CreditCard, FileText, ExternalLink, Info } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { Button } from '../ui/Button';
 import { EmptyState } from '../ui/EmptyState';
+import { Card } from '../ui/Card';
 import { useMediosCobro } from '../../hooks/useMediosCobro';
 import { useConfirmDialog } from '../../hooks/useConfirmDialog';
 import { formatDateDisplay } from '../../utils/dates';
 import { PaymentMethodIcon } from './PaymentMethodIcon';
+import type { CentroCopiadoOrdenResumida } from '../../types/database';
 
 interface Totales {
   subtotal: number;
@@ -33,6 +36,7 @@ interface OrdenPagosTabProps {
   onEditarPago?: (pago: Pago) => void;
   onEliminarPago?: (id: string) => void;
   readOnly?: boolean;
+  ordenCopiado?: CentroCopiadoOrdenResumida | null;
 }
 
 export function OrdenPagosTab({
@@ -42,6 +46,7 @@ export function OrdenPagosTab({
   onEditarPago,
   onEliminarPago,
   readOnly = false,
+  ordenCopiado,
 }: OrdenPagosTabProps) {
   const { mediosCobro } = useMediosCobro();
   const { showConfirm } = useConfirmDialog();
@@ -71,12 +76,60 @@ export function OrdenPagosTab({
 
   return (
     <div className="space-y-6">
+      {/* Banner informativo cuando hay orden de copiado asociada */}
+      {ordenCopiado && (
+        <Card className="bg-gradient-to-r from-blue-50 to-cyan-50 border-blue-300">
+          <div className="p-4">
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-blue-600 rounded-lg">
+                <Info className="w-5 h-5 text-white" />
+              </div>
+              <div className="flex-1">
+                <h4 className="font-semibold text-blue-900 mb-1">
+                  Orden con Servicios de Copiado Incluidos
+                </h4>
+                <p className="text-sm text-blue-800 mb-3">
+                  Esta orden incluye una <strong>Orden de Copiado asociada</strong>. Los pagos registrados aquí cubren el total consolidado de ambas órdenes.
+                </p>
+                <div className="flex items-center gap-4 text-sm">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-blue-600" />
+                    <span className="text-blue-900">
+                      <strong>OC {ordenCopiado.numero_orden}</strong>
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="w-4 h-4 text-green-600" />
+                    <span className="text-gray-700">
+                      Total OC: <strong>${Number(ordenCopiado.total).toFixed(2)}</strong>
+                    </span>
+                  </div>
+                  <Link to={`/app/centro-copiado/ordenes/${ordenCopiado.id}`}>
+                    <Button variant="outline" size="sm">
+                      <ExternalLink className="w-4 h-4" />
+                      Ver Detalle de OC
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="text-sm text-blue-700 mb-1">Total de la Orden</div>
+          <div className="text-sm text-blue-700 mb-1">
+            Total de la Orden{ordenCopiado ? ' (Consolidado)' : ''}
+          </div>
           <div className="text-2xl font-bold text-blue-900">
             ${totales.total.toFixed(2)}
           </div>
+          {ordenCopiado && (
+            <div className="text-xs text-blue-600 mt-1">
+              Incluye OC de ${Number(ordenCopiado.total).toFixed(2)}
+            </div>
+          )}
         </div>
 
         <div className="bg-green-50 border border-green-200 rounded-lg p-4">

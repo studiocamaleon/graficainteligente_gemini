@@ -73,7 +73,17 @@ export function Ordenes() {
 
   const getEstadoPagoBadge = (orden: any) => {
     if (orden.orden_trabajo_id) {
-      return <span className="text-xs text-gray-500">Ver OT</span>;
+      // Para órdenes asociadas a OT, mostrar badge clickeable con número de OT
+      return (
+        <button
+          onClick={() => navigate(`/app/orders/ordenes/${orden.orden_trabajo_id}`)}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-100 hover:bg-blue-200 text-blue-800 rounded-lg text-sm font-medium transition-colors"
+          title="Ver gestión de pagos en orden de trabajo"
+        >
+          <FileText className="w-3.5 h-3.5" />
+          <span>Ver OT</span>
+        </button>
+      );
     }
 
     const pagosInfo = pagosPorOrden[orden.id];

@@ -37,7 +37,9 @@ import { OrderProductionRouteTab } from '../../../components/orders/OrderProduct
 import { OrdenAdjuntosTab } from '../../../components/orders/OrdenAdjuntosTab';
 import { OrdenPagosTab } from '../../../components/orders/OrdenPagosTab';
 import { PagoFormModal } from '../../../components/orders/PagoFormModal';
+import { OrdenCopiadoAsociadaCard } from '../../../components/orders/OrdenCopiadoAsociadaCard';
 import { useToast } from '../../../contexts/ToastContext';
+import { calcularTotalesConsolidados } from '../../../utils/ordenesConsolidadas';
 import type { EstadoOrdenTrabajo } from '../../../types/database';
 
 type TabKey = 'items' | 'ruta' | 'adjuntos' | 'pagos' | 'historial';
@@ -46,7 +48,7 @@ export function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { profile } = useAuth();
-  const { getOrdenById, deleteOrden, changeEstado, addPago, updatePago, deletePago, loading } = useOrdenTrabajo();
+  const { getOrdenById, deleteOrden, changeEstado, addPago, updatePago, deletePago, desvincularOrdenCopiado, loading } = useOrdenTrabajo();
   const { showSuccess, showError } = useToast();
   const {
     dialogState,
@@ -228,6 +230,18 @@ export function OrderDetailPage() {
   };
 
 
+  const handleDesvincularOrdenCopiado = async () => {
+    if (!id) return;
+
+    const success = await desvincularOrdenCopiado(id);
+    if (success) {
+      showSuccess('Orden de copiado desvinculada correctamente');
+      await loadOrden();
+    } else {
+      showError('Error al desvincular orden de copiado');
+    }
+  };
+
   const totalPagado = useMemo(() => {
     if (!orden?.pagos) return 0;
     return orden.pagos.reduce((sum: number, pago: any) => sum + Number(pago.monto), 0);
@@ -237,6 +251,17 @@ export function OrderDetailPage() {
     if (!orden) return 0;
     return Number(orden.total) - totalPagado;
   }, [orden, totalPagado]);
+
+  const totalesConsolidados = useMemo(() => {
+    if (!orden) return null;
+    const totalOC = orden.ordenCopiado?.total || 0;
+    return calcularTotalesConsolidados(
+      Number(orden.subtotal),
+      Number(orden.total_descuentos),
+      Number(totalOC),
+      false // IVA se calcula según cliente
+    );
+  }, [orden]);
 
   if (loadingData) {
     return (
@@ -536,6 +561,18 @@ export function OrderDetailPage() {
                   })}
                 </div>
 
+                {/* Orden de Copiado Asociada */}
+                {orden.ordenCopiado && (
+                  <div className="mt-6">
+                    <OrdenCopiadoAsociadaCard
+                      ordenCopiado={orden.ordenCopiado}
+                      numeroOrdenTrabajo={orden.numero_orden}
+                      onDesvincular={handleDesvincularOrdenCopiado}
+                      canDesvincular={isAdmin}
+                    />
+                  </div>
+                )}
+
                 <div className="border-t border-gray-200 pt-4 mt-6">
                   <div className="flex justify-end items-center gap-8">
                     <div className="text-right">
@@ -596,6 +633,7 @@ export function OrderDetailPage() {
               onAgregarPago={handleAgregarPago}
               onEditarPago={handleEditarPago}
               onEliminarPago={handleEliminarPago}
+              ordenCopiado={orden.ordenCopiado}
             />
           </div>
         )}
