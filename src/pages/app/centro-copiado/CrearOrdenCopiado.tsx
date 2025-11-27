@@ -41,7 +41,6 @@ export function CrearOrdenCopiado() {
 
   const [clienteId, setClienteId] = useState<string>(clienteIdParam || '');
   const [fechaEntrega, setFechaEntrega] = useState('');
-  const [horaEntrega, setHoraEntrega] = useState('');
   const [observaciones, setObservaciones] = useState('');
   const [items, setItems] = useState<ItemWithId[]>([]);
   const [descuento, setDescuento] = useState(0);
@@ -97,7 +96,6 @@ export function CrearOrdenCopiado() {
       setItems([]);
       setClienteId(clienteIdParam || '');
       setFechaEntrega('');
-      setHoraEntrega('');
       setObservaciones('');
       setDescuento(0);
       // No agregar item inicial - se crean al subir archivos
@@ -183,8 +181,8 @@ export function CrearOrdenCopiado() {
     setGuardando(true);
 
     try {
-      const fechaEntregaCompleta = fechaEntrega && horaEntrega
-        ? `${fechaEntrega}T${horaEntrega}:00`
+      const fechaEntregaCompleta = fechaEntrega
+        ? `${fechaEntrega}T00:00:00`
         : undefined;
 
       // 1. Crear orden real
@@ -293,7 +291,7 @@ export function CrearOrdenCopiado() {
     label: `${client.nombre_fantasia} (${client.numero_documento})`,
   }));
 
-  const infoGeneralCompleta = clienteId && fechaEntrega && horaEntrega;
+  const infoGeneralCompleta = clienteId && fechaEntrega;
 
   useEffect(() => {
     if (infoGeneralCompleta) {
@@ -328,7 +326,6 @@ export function CrearOrdenCopiado() {
                   <span className="text-sm text-gray-600">
                     {clienteSeleccionado.nombre_fantasia}
                     {fechaEntrega && ` • ${new Date(fechaEntrega).toLocaleDateString()}`}
-                    {fechaEntrega && horaEntrega && ` a las ${horaEntrega}`}
                   </span>
                 )}
               </div>
@@ -360,40 +357,14 @@ export function CrearOrdenCopiado() {
                     )}
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <DatePicker
-                        label="Fecha Entrega Estimada"
-                        value={fechaEntrega}
-                        onChange={(date) => setFechaEntrega(date || '')}
-                        minDate={new Date()}
-                        placeholder="Seleccionar fecha"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Hora Entrega
-                      </label>
-                      <input
-                        type="time"
-                        value={horaEntrega}
-                        onChange={(e) => setHoraEntrega(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer"
-                        style={{
-                          colorScheme: 'light',
-                          WebkitAppearance: 'none',
-                          MozAppearance: 'none'
-                        }}
-                        onFocus={(e) => {
-                          try {
-                            e.target.showPicker?.();
-                          } catch (err) {
-                            // Fallback para navegadores que no soportan showPicker
-                          }
-                        }}
-                      />
-                    </div>
+                  <div>
+                    <DatePicker
+                      label="Fecha Entrega Estimada"
+                      value={fechaEntrega}
+                      onChange={(date) => setFechaEntrega(date || '')}
+                      minDate={new Date()}
+                      placeholder="Seleccionar fecha"
+                    />
                   </div>
                 </div>
 
