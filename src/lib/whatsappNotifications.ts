@@ -168,13 +168,19 @@ function formatItemCopiadoParaNuevaOrden(item: any, index: number): string {
 
   const hojas = item.cantidad_hojas || 0;
   const tamanio = item.tamanio_papel?.nombre || 'N/A';
-  const papel = item.papel?.variante_nombre || item.papel?.nombre || 'N/A';
+
+  const materialNombre = item.papel?.material?.nombre || '';
+  const varianteNombre = item.papel?.variante_nombre || '';
+  const papelCompleto = materialNombre && varianteNombre
+    ? `${materialNombre} ${varianteNombre}`
+    : (varianteNombre || materialNombre || 'N/A');
+
   const tinta = item.tipo_tinta === 'CMYK' ? 'Color' : 'Blanco y Negro';
   const caras = item.cara_impresa === 'frente_y_dorso' ? 'Doble faz' : 'Simple faz';
 
   detalle += `🖨️ *Impresión ${tinta}*\n`;
   detalle += `   ${cantidad}x ${hojas} hojas ${caras}\n`;
-  detalle += `   ${tamanio} - ${papel}\n`;
+  detalle += `   ${tamanio} - ${papelCompleto}\n`;
   detalle += `   $${precio} c/u = $${subtotal}`;
 
   if (item.tipo_anillado) {
@@ -389,7 +395,10 @@ export async function enviarNotificacion(
           items:centro_copiado_ordenes_items(
             *,
             tamanio_papel:centro_copiado_tamanios_papel(nombre),
-            papel:centro_copiado_papeles(nombre, variante_nombre)
+            papel:centro_copiado_papeles(
+              variante_nombre,
+              material:material_id(nombre)
+            )
           ),
           pagos:centro_copiado_ordenes_pagos(monto)
         `)
