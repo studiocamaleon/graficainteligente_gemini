@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Plus, Trash2, FileText, Calendar, X } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
@@ -94,6 +94,17 @@ export function AsociarOrdenCopiadoModal({
     setItems((prev) => prev.filter((item) => item.id !== id));
     setErrorValidacion('');
   }, [items.length]);
+
+  // Sistema de callbacks memoizados para evitar loops infinitos
+  const priceCalculatedCallbacks = useMemo(() => {
+    const callbacks: Record<string, (precio: number) => void> = {};
+    items.forEach((item) => {
+      callbacks[item.id] = (precio: number) => {
+        actualizarPrecioItem(item.id, precio);
+      };
+    });
+    return callbacks;
+  }, [items.map(i => i.id).join(','), actualizarPrecioItem]);
 
   const validarYGuardar = () => {
     // Validar que hay al menos un item completo
@@ -202,7 +213,7 @@ export function AsociarOrdenCopiadoModal({
                 value={item.config}
                 onChange={(config) => actualizarItem(item.id, config)}
                 onRemove={() => eliminarItem(item.id)}
-                onPriceCalculated={(precio) => actualizarPrecioItem(item.id, precio)}
+                onPriceCalculated={priceCalculatedCallbacks[item.id]}
                 isCollapsed={false}
               />
             ))}
