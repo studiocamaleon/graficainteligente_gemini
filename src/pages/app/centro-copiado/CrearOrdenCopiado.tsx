@@ -11,6 +11,7 @@ import { CentroCopiadoItemForm, ItemCopiadoConfig } from '../../../components/ce
 import { CentroCopiadoResumenOrden } from '../../../components/centro-copiado/CentroCopiadoResumenOrden';
 import { CentroCopiadoArchivosSection } from '../../../components/centro-copiado/CentroCopiadoArchivosSection';
 import { OrdenPagosTab } from '../../../components/orders/OrdenPagosTab';
+import { PagoFormModal } from '../../../components/orders/PagoFormModal';
 import { usePageHeader } from '../../../hooks/usePageHeader';
 import { useClients } from '../../../hooks/useClients';
 import { useCentroCopiadoOrdenes } from '../../../hooks/useCentroCopiadoOrdenes';
@@ -35,6 +36,7 @@ interface ItemWithId {
 
 interface PagoTemporal {
   id: string;
+  fecha_pago: string;
   monto: number;
   medio_cobro_id: string;
   referencia_pago?: string;
@@ -172,13 +174,17 @@ export function CrearOrdenCopiado() {
   const totales = useMemo(() => {
     const subtotal = items.reduce((sum, item) => sum + (item.precio || 0), 0);
     const descuentoMonto = (subtotal * descuento) / 100;
-    const total = subtotal - descuentoMonto;
+    const subtotalConDescuento = subtotal - descuentoMonto;
+    const iva = 0; // Centro de copiado no tiene IVA
+    const total = subtotalConDescuento;
     const totalPagos = pagos.reduce((sum, pago) => sum + pago.monto, 0);
     const saldoPendiente = total - totalPagos;
 
     return {
       subtotal,
-      descuentoMonto,
+      descuentoAplicado: descuentoMonto,
+      subtotalConDescuento,
+      iva,
       total,
       totalPagos,
       saldoPendiente,
@@ -186,33 +192,39 @@ export function CrearOrdenCopiado() {
   }, [items, descuento, pagos]);
 
   // Manejo de pagos
-  const handleAddPago = (pago: Omit<PagoTemporal, 'id'>) => {
-    const nuevoPago: PagoTemporal = {
-      ...pago,
-      id: crypto.randomUUID(),
-    };
-    setPagos((prev) => [...prev, nuevoPago]);
-    setShowPagoForm(false);
+  const handleAgregarPago = () => {
+    setEditingPago(undefined);
+    setShowPagoForm(true);
   };
 
-  const handleEditPago = (pago: PagoTemporal) => {
-    setPagos((prev) => prev.map((p) => (p.id === pago.id ? pago : p)));
+  const handleGuardarPago = (data: Omit<PagoTemporal, 'id' | 'fecha_pago'>) => {
+    if (editingPago) {
+      // Editar pago existente
+      setPagos(prev => prev.map(p =>
+        p.id === editingPago.id
+          ? { ...data, id: editingPago.id, fecha_pago: editingPago.fecha_pago }
+          : p
+      ));
+    } else {
+      // Agregar nuevo pago
+      const nuevoPago: PagoTemporal = {
+        ...data,
+        id: crypto.randomUUID(),
+        fecha_pago: new Date().toISOString(),
+      };
+      setPagos(prev => [...prev, nuevoPago]);
+    }
     setShowPagoForm(false);
     setEditingPago(undefined);
   };
 
-  const handleDeletePago = (pagoId: string) => {
-    setPagos((prev) => prev.filter((p) => p.id !== pagoId));
-  };
-
-  const handleOpenPagoForm = (pago?: PagoTemporal) => {
+  const handleEditarPago = (pago: PagoTemporal) => {
     setEditingPago(pago);
     setShowPagoForm(true);
   };
 
-  const handleClosePagoForm = () => {
-    setShowPagoForm(false);
-    setEditingPago(undefined);
+  const handleEliminarPago = (id: string) => {
+    setPagos(prev => prev.filter(p => p.id !== id));
   };
 
   const validarFormulario = (): boolean => {
@@ -527,13 +539,10 @@ export function CrearOrdenCopiado() {
             <OrdenPagosTab
               totales={totales}
               pagos={pagos}
-              showPagoForm={showPagoForm}
-              editingPago={editingPago}
-              onAddPago={handleAddPago}
-              onEditPago={handleEditPago}
-              onDeletePago={handleDeletePago}
-              onOpenPagoForm={handleOpenPagoForm}
-              onClosePagoForm={handleClosePagoForm}
+              onAgregarPago={handleAgregarPago}
+              onEditarPago={handleEditarPago}
+              onEliminarPago={handleEliminarPago}
+              readOnly={false}
             />
           </div>
         </div>
@@ -550,6 +559,17 @@ export function CrearOrdenCopiado() {
           />
         </div>
       </div>
+
+      <PagoFormModal
+        isOpen={showPagoForm}
+        onClose={() => {
+          setShowPagoForm(false);
+          setEditingPago(undefined);
+        }}
+        onSubmit={handleGuardarPago}
+        maxMonto={totales.saldoPendiente}
+        editingPago={editingPago}
+      />
 
       <InfoDialog
         isOpen={dialogState.isOpen}
