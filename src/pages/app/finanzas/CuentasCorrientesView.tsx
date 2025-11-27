@@ -3,6 +3,7 @@ import { Search, Filter, Users } from 'lucide-react';
 import { useCuentasCorrientes } from '../../../hooks/useCuentasCorrientes';
 import { ClienteCard } from '../../../components/finanzas/ClienteCard';
 import { EstadoCuentaModal } from '../../../components/finanzas/EstadoCuentaModal';
+import { NuevaLiquidacionModal } from '../../../components/finanzas/NuevaLiquidacionModal';
 import { Input } from '../../../components/ui/Input';
 import { Select } from '../../../components/ui/Select';
 import { EmptyState } from '../../../components/ui/EmptyState';
@@ -13,6 +14,7 @@ export default function CuentasCorrientesView() {
   const [estadoFilter, setEstadoFilter] = useState<'al_dia' | 'proximo_vencer' | 'vencido' | null>(null);
   const [selectedCliente, setSelectedCliente] = useState<Client | null>(null);
   const [isEstadoCuentaOpen, setIsEstadoCuentaOpen] = useState(false);
+  const [isNuevaLiquidacionOpen, setIsNuevaLiquidacionOpen] = useState(false);
 
   const { clientes, loading } = useCuentasCorrientes({
     searchTerm,
@@ -25,7 +27,13 @@ export default function CuentasCorrientesView() {
   };
 
   const handleNuevaLiquidacion = (cliente: any) => {
-    console.log('Nueva liquidación para:', cliente);
+    setSelectedCliente(cliente);
+    setIsNuevaLiquidacionOpen(true);
+  };
+
+  const handleLiquidacionCreada = () => {
+    setIsNuevaLiquidacionOpen(false);
+    // Podríamos refrescar la lista de clientes si es necesario
   };
 
   return (
@@ -101,6 +109,13 @@ export default function CuentasCorrientesView() {
         isOpen={isEstadoCuentaOpen}
         onClose={() => setIsEstadoCuentaOpen(false)}
         cliente={selectedCliente}
+      />
+
+      <NuevaLiquidacionModal
+        isOpen={isNuevaLiquidacionOpen}
+        onClose={() => setIsNuevaLiquidacionOpen(false)}
+        cliente={selectedCliente}
+        onSuccess={handleLiquidacionCreada}
       />
     </div>
   );

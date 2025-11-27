@@ -264,9 +264,44 @@ export function useLiquidacionMutations() {
     }
   };
 
+  const exportarLiquidacionPDF = async (liquidacionId: string) => {
+    if (!company) return null;
+
+    try {
+      const { data: liqData, error: liqError } = await supabase
+        .from('liquidaciones')
+        .select(`
+          *,
+          clients!liquidaciones_cliente_id_fkey(*)
+        `)
+        .eq('id', liquidacionId)
+        .single();
+
+      if (liqError) throw liqError;
+
+      const { data: itemsData, error: itemsError } = await supabase
+        .from('liquidaciones_items')
+        .select('*')
+        .eq('liquidacion_id', liquidacionId)
+        .order('fecha_orden', { ascending: true });
+
+      if (itemsError) throw itemsError;
+
+      return {
+        liquidacion: liqData as any,
+        cliente: (liqData as any).clients,
+        items: itemsData || [],
+      };
+    } catch (error) {
+      console.error('Error fetching liquidacion for PDF:', error);
+      return null;
+    }
+  };
+
   return {
     crearLiquidacion,
     anularLiquidacion,
+    exportarLiquidacionPDF,
     loading,
   };
 }

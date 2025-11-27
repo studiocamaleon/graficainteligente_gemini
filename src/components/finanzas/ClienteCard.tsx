@@ -1,8 +1,9 @@
-import { AlertCircle, CheckCircle, Clock, DollarSign } from 'lucide-react';
+import { AlertCircle, CheckCircle, Clock, DollarSign, Calendar } from 'lucide-react';
 import { Card } from '../ui/Card';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import type { ClienteConSaldo } from '../../types/database';
+import { calcularProximoCierre, getDescripcionAcuerdo } from '../../utils/liquidacionHelpers';
 
 interface ClienteCardProps {
   cliente: ClienteConSaldo;
@@ -78,7 +79,23 @@ export function ClienteCard({ cliente, onVerEstadoCuenta, onNuevaLiquidacion }: 
         )}
       </div>
 
-      <div className="flex gap-2">
+      {cliente.acuerdo_pago && (
+        <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+          <div className="flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-blue-600" />
+            <div className="flex-1">
+              <p className="text-xs text-blue-600 font-medium">
+                Próximo cierre: {calcularProximoCierre(cliente as any)}
+              </p>
+              <p className="text-xs text-blue-500">
+                {getDescripcionAcuerdo(cliente as any)}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="flex gap-2 mt-4">
         <Button
           variant="outline"
           size="sm"

@@ -1,23 +1,50 @@
 import { useState } from 'react';
-import { Search, Filter, Eye, FileText } from 'lucide-react';
-import { useLiquidaciones } from '../../../hooks/useLiquidaciones';
+import { Search, Filter, Eye, FileText, Download } from 'lucide-react';
+import { useLiquidaciones, useLiquidacionMutations } from '../../../hooks/useLiquidaciones';
+import { useAuth } from '../../../hooks/useAuth';
 import { Input } from '../../../components/ui/Input';
 import { Select } from '../../../components/ui/Select';
 import { Badge } from '../../../components/ui/Badge';
 import { Button } from '../../../components/ui/Button';
 import { EmptyState } from '../../../components/ui/EmptyState';
+import { generateLiquidacionPDF } from '../../../utils/pdfGenerators/liquidacionPDF';
 import type { EstadoLiquidacion } from '../../../types/database';
 import dayjs from 'dayjs';
 
 export default function LiquidacionesView() {
+  const { company } = useAuth();
   const [estadoFilter, setEstadoFilter] = useState<EstadoLiquidacion | ''>('');
   const [page, setPage] = useState(1);
+  const [exportingId, setExportingId] = useState<string | null>(null);
 
   const { liquidaciones, totalCount, loading } = useLiquidaciones({
     estado: estadoFilter || undefined,
     page,
     itemsPerPage: 25,
   });
+
+  const { exportarLiquidacionPDF } = useLiquidacionMutations();
+
+  const handleExportPDF = async (liquidacionId: string) => {
+    if (!company) return;
+
+    setExportingId(liquidacionId);
+    try {
+      const data = await exportarLiquidacionPDF(liquidacionId);
+      if (data) {
+        await generateLiquidacionPDF({
+          liquidacion: data.liquidacion,
+          cliente: data.cliente,
+          company,
+          items: data.items,
+        });
+      }
+    } catch (error) {
+      console.error('Error exporting PDF:', error);
+    } finally {
+      setExportingId(null);
+    }
+  };
 
   const getEstadoBadge = (estado: EstadoLiquidacion) => {
     const badges: Record<EstadoLiquidacion, { color: string; text: string }> = {
@@ -141,9 +168,29 @@ export default function LiquidacionesView() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">{getEstadoBadge(liq.estado)}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-right">
-                      <Button variant="ghost" size="sm" onClick={() => console.log('Ver detalle:', liq.id)}>
-                        <Eye className="w-4 h-4" />
-                      </Button>
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleExportPDF(liq.id)}
+                          disabled={exportingId === liq.id}
+                          title="Exportar PDF"
+                        >
+                          {exportingId === liq.id ? (
+                            <div className="w-4 h-4 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin" />
+                          ) : (
+                            <Download className="w-4 h-4" />
+                          )}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => console.log('Ver detalle:', liq.id)}
+                          title="Ver detalle"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}

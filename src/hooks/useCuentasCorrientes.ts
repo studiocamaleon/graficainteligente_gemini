@@ -56,9 +56,14 @@ export function useCuentasCorrientes(params: UseCuentasCorrientesParams = {}) {
             razon_social: cliente.razon_social,
             numero_documento: cliente.numero_documento,
             acuerdo_pago: cliente.acuerdo_pago,
+            dia_cierre_semanal: cliente.dia_cierre_semanal,
+            dia_cierre_mensual: cliente.dia_cierre_mensual,
+            usa_ultimo_dia_mes: cliente.usa_ultimo_dia_mes,
+            dias_vencimiento_config: cliente.dias_vencimiento,
             saldo_actual: saldo,
             dias_vencimiento: diasVencimiento,
             estado_cc: estadoCC,
+            tiene_cuenta_corriente: cliente.tiene_cuenta_corriente,
           };
         })
       );

@@ -2045,9 +2045,14 @@ export interface ClienteConSaldo {
   razon_social: string;
   numero_documento: string;
   acuerdo_pago: string | null;
+  dia_cierre_semanal: number | null;
+  dia_cierre_mensual: number | null;
+  usa_ultimo_dia_mes: boolean;
+  dias_vencimiento_config: number;
   saldo_actual: number;
   dias_vencimiento: number | null;
   estado_cc: 'al_dia' | 'proximo_vencer' | 'vencido';
+  tiene_cuenta_corriente: boolean;
 }
 
 export interface PeriodoLiquidacion {
