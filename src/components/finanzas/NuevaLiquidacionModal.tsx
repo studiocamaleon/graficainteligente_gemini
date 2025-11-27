@@ -139,6 +139,8 @@ export function NuevaLiquidacionModal({
       const subtotalOrdenes = ordenes.reduce((sum, orden) => sum + orden.total, 0);
       const totalGeneral = subtotalOrdenes;
 
+      // Los campos company_id, numero_liquidacion y created_by se auto-completan
+      // mediante el trigger trigger_auto_complete_liquidacion en la base de datos
       const { data: liquidacionData, error: liquidacionError } = await supabase
         .from('liquidaciones')
         .insert({
@@ -162,7 +164,14 @@ export function NuevaLiquidacionModal({
         .select()
         .single();
 
-      if (liquidacionError) throw liquidacionError;
+      if (liquidacionError) {
+        console.error('Error al generar liquidacion:', {
+          url: liquidacionError.message,
+          status: liquidacionError.code,
+          body: liquidacionError,
+        });
+        throw liquidacionError;
+      }
 
       const itemsData = ordenes.map((orden) => ({
         liquidacion_id: liquidacionData.id,
@@ -181,9 +190,10 @@ export function NuevaLiquidacionModal({
 
       onSuccess();
       onClose();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error al crear liquidación:', err);
-      setError('Error al crear la liquidación. Por favor, intente nuevamente.');
+      const errorMessage = err?.message || 'Error desconocido';
+      setError(`Error al crear la liquidación: ${errorMessage}`);
     } finally {
       setCreatingLiquidacion(false);
     }
