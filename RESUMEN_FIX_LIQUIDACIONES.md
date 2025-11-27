@@ -48,7 +48,20 @@ CREATE POLICY "Users can insert own company liquidaciones"
 
 ---
 
-### **3. Componente Actualizado** 💻
+### **3. Políticas RLS para Tablas Relacionadas** 🔐
+
+**Archivo:** `fix_liquidaciones_items_pagos_rls_policies.sql`
+
+Se agregaron políticas completas (INSERT, UPDATE, DELETE) para:
+- ✅ `liquidaciones_items` - Items de liquidación
+- ✅ `liquidaciones_pagos` - Pagos asociados
+
+**Patrón de seguridad:**
+Todas las operaciones verifican acceso a través de la liquidación padre, asegurando que solo se puedan manipular items de liquidaciones de la misma company.
+
+---
+
+### **4. Componente Actualizado** 💻
 
 **Archivo:** `src/components/finanzas/NuevaLiquidacionModal.tsx`
 
@@ -97,16 +110,17 @@ LIMIT 1;
 
 ## 📄 Archivos Creados/Modificados
 
-### **Migración:**
-1. ✅ `fix_liquidaciones_auto_complete_fields.sql`
+### **Migraciones:**
+1. ✅ `fix_liquidaciones_auto_complete_fields.sql` - Trigger y política para tabla principal
+2. ✅ `fix_liquidaciones_items_pagos_rls_policies.sql` - Políticas para tablas relacionadas
 
 ### **Frontend:**
-2. ✅ `src/components/finanzas/NuevaLiquidacionModal.tsx`
+3. ✅ `src/components/finanzas/NuevaLiquidacionModal.tsx`
 
 ### **Documentación:**
-3. ✅ `FIX_LIQUIDACIONES_RLS_COMPLETO.md` (detallado)
-4. ✅ `VERIFICACION_FIX_LIQUIDACIONES.sql` (queries de test)
-5. ✅ `RESUMEN_FIX_LIQUIDACIONES.md` (este archivo)
+4. ✅ `FIX_LIQUIDACIONES_RLS_COMPLETO.md` (detallado)
+5. ✅ `VERIFICACION_FIX_LIQUIDACIONES.sql` (queries de test)
+6. ✅ `RESUMEN_FIX_LIQUIDACIONES.md` (este archivo)
 
 ---
 
@@ -131,7 +145,7 @@ LIMIT 1;
 ```
 Usuario crea liquidación
          ↓
-Frontend envía INSERT
+Frontend envía INSERT liquidaciones
          ↓
 TRIGGER se activa (BEFORE INSERT)
          ↓
@@ -143,9 +157,15 @@ Auto-completa created_by
          ↓
 POLÍTICA RLS valida company_id
          ↓
-INSERT exitoso ✅
+INSERT liquidación exitoso ✅
          ↓
-Liquidación creada
+Frontend envía INSERT liquidaciones_items
+         ↓
+POLÍTICA RLS verifica acceso a liquidación padre
+         ↓
+INSERT items exitoso ✅
+         ↓
+Liquidación con items creada completamente ✅
 ```
 
 ---
