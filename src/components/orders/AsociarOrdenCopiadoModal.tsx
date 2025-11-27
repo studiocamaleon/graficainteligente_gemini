@@ -40,12 +40,19 @@ export function AsociarOrdenCopiadoModal({
   const [fechaEntrega, setFechaEntrega] = useState('');
   const [observaciones, setObservaciones] = useState('');
   const [items, setItems] = useState<ItemCopiadoWithId[]>([]);
+  const [itemsCollapsed, setItemsCollapsed] = useState<Record<string, boolean>>({});
   const [errorValidacion, setErrorValidacion] = useState('');
 
   // Inicializar con datos de edición si existen
   useEffect(() => {
     if (ordenEditando) {
       setItems(ordenEditando.items);
+      // Colapsar todos los items al cargar orden existente
+      const collapsed: Record<string, boolean> = {};
+      ordenEditando.items.forEach(item => {
+        collapsed[item.id] = true;
+      });
+      setItemsCollapsed(collapsed);
       setFechaEntrega(ordenEditando.fecha_entrega_estimada || '');
       setObservaciones(ordenEditando.observaciones || '');
     } else {
@@ -54,6 +61,7 @@ export function AsociarOrdenCopiadoModal({
         id: `item-${Date.now()}`,
         config: { cantidad_copias: 1 },
       }]);
+      setItemsCollapsed({});
       setFechaEntrega('');
       setObservaciones('');
     }
@@ -65,8 +73,18 @@ export function AsociarOrdenCopiadoModal({
       id: `item-${Date.now()}-${Math.random()}`,
       config: { cantidad_copias: 1 },
     };
+
+    // Colapsar todos los items existentes
+    setItemsCollapsed((prev) => {
+      const newCollapsed: Record<string, boolean> = { ...prev };
+      items.forEach(item => {
+        newCollapsed[item.id] = true;
+      });
+      return newCollapsed;
+    });
+
     setItems((prev) => [...prev, nuevoItem]);
-  }, []);
+  }, [items]);
 
   const actualizarItem = useCallback((id: string, config: Partial<ItemCopiadoConfig>) => {
     setItems((prev) =>
@@ -92,8 +110,20 @@ export function AsociarOrdenCopiadoModal({
       return;
     }
     setItems((prev) => prev.filter((item) => item.id !== id));
+    setItemsCollapsed((prev) => {
+      const newCollapsed = { ...prev };
+      delete newCollapsed[id];
+      return newCollapsed;
+    });
     setErrorValidacion('');
   }, [items.length]);
+
+  const toggleItemCollapse = useCallback((id: string) => {
+    setItemsCollapsed(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }));
+  }, []);
 
   // Sistema de callbacks memoizados para evitar loops infinitos
   const priceCalculatedCallbacks = useMemo(() => {
@@ -214,7 +244,8 @@ export function AsociarOrdenCopiadoModal({
                 onChange={(config) => actualizarItem(item.id, config)}
                 onRemove={() => eliminarItem(item.id)}
                 onPriceCalculated={priceCalculatedCallbacks[item.id]}
-                isCollapsed={false}
+                isCollapsed={itemsCollapsed[item.id] || false}
+                onToggleCollapse={() => toggleItemCollapse(item.id)}
               />
             ))}
           </div>

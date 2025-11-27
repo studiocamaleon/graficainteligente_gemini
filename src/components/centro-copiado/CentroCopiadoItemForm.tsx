@@ -265,34 +265,34 @@ export function CentroCopiadoItemForm({
                 <button
                   type="button"
                   onClick={() => handleFieldChange('tipo_tinta', 'CMYK')}
-                  className={`p-3 border-2 rounded-lg transition-all ${
+                  className={`p-2 border-2 rounded-lg transition-all ${
                     value.tipo_tinta === 'CMYK'
                       ? 'border-blue-500 bg-blue-50 text-blue-700'
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
-                  <div className="flex items-center justify-center gap-2">
-                    <div className="flex gap-1">
-                      <div className="w-3 h-3 rounded-full bg-cyan-500"></div>
-                      <div className="w-3 h-3 rounded-full bg-fuchsia-500"></div>
-                      <div className="w-3 h-3 rounded-full bg-yellow-400"></div>
-                      <div className="w-3 h-3 rounded-full bg-black"></div>
+                  <div className="flex items-center justify-center gap-1.5">
+                    <div className="flex gap-0.5">
+                      <div className="w-2.5 h-2.5 rounded-full bg-cyan-500"></div>
+                      <div className="w-2.5 h-2.5 rounded-full bg-fuchsia-500"></div>
+                      <div className="w-2.5 h-2.5 rounded-full bg-yellow-400"></div>
+                      <div className="w-2.5 h-2.5 rounded-full bg-black"></div>
                     </div>
-                    <span className="font-medium text-sm">Color</span>
+                    <span className="font-medium text-xs">Color</span>
                   </div>
                 </button>
                 <button
                   type="button"
                   onClick={() => handleFieldChange('tipo_tinta', 'K')}
-                  className={`p-3 border-2 rounded-lg transition-all ${
+                  className={`p-2 border-2 rounded-lg transition-all ${
                     value.tipo_tinta === 'K'
                       ? 'border-gray-700 bg-gray-50 text-gray-900'
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
-                  <div className="flex items-center justify-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-gray-900"></div>
-                    <span className="font-medium text-sm">B/N</span>
+                  <div className="flex items-center justify-center gap-1.5">
+                    <div className="w-2.5 h-2.5 rounded-full bg-gray-900"></div>
+                    <span className="font-medium text-xs">B/N</span>
                   </div>
                 </button>
               </div>
@@ -306,24 +306,24 @@ export function CentroCopiadoItemForm({
                 <button
                   type="button"
                   onClick={() => handleFieldChange('cara_impresa', 'frente')}
-                  className={`p-3 border-2 rounded-lg transition-all ${
+                  className={`p-2 border-2 rounded-lg transition-all ${
                     value.cara_impresa === 'frente'
                       ? 'border-blue-500 bg-blue-50 text-blue-700'
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
-                  <span className="font-medium text-sm">Frente</span>
+                  <span className="font-medium text-xs">Frente</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => handleFieldChange('cara_impresa', 'frente_y_dorso')}
-                  className={`p-3 border-2 rounded-lg transition-all ${
+                  className={`p-2 border-2 rounded-lg transition-all ${
                     value.cara_impresa === 'frente_y_dorso'
                       ? 'border-blue-500 bg-blue-50 text-blue-700'
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
-                  <span className="font-medium text-sm">Frente y Dorso</span>
+                  <span className="font-medium text-xs">F/D</span>
                 </button>
               </div>
             </div>

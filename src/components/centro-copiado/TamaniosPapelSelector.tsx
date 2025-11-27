@@ -33,10 +33,10 @@ export function TamaniosPapelSelector({
 }: TamaniosPapelSelectorProps) {
   if (loading) {
     return (
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-        {[1, 2, 3, 4].map((i) => (
+      <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
+        {[1, 2, 3, 4, 5].map((i) => (
           <div key={i} className="animate-pulse">
-            <div className="h-14 bg-gray-200 rounded-lg"></div>
+            <div className="h-12 bg-gray-200 rounded-lg"></div>
           </div>
         ))}
       </div>
@@ -53,7 +53,7 @@ export function TamaniosPapelSelector({
 
   return (
     <div className="space-y-2">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+      <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
         {sortedTamanios.map((tamanio) => {
           const isSelected = selectedId === tamanio.id;
           const isCommon = isCommonSize(tamanio.nombre);
@@ -64,7 +64,7 @@ export function TamaniosPapelSelector({
               type="button"
               onClick={() => onSelect(tamanio.id)}
               className={`
-                relative px-3 py-2.5 rounded-lg border-2 transition-all duration-200 text-left
+                relative px-2 py-1.5 rounded-lg border-2 transition-all duration-200 text-left
                 hover:shadow-sm
                 ${
                   isSelected
@@ -73,36 +73,36 @@ export function TamaniosPapelSelector({
                 }
               `}
             >
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <FileText
-                  className={`w-5 h-6 flex-shrink-0 ${
+                  className={`w-4 h-5 flex-shrink-0 ${
                     isSelected ? 'text-blue-600' : 'text-gray-400'
                   }`}
                 />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-1">
                     <span
-                      className={`font-bold text-sm truncate ${
+                      className={`font-bold text-xs truncate ${
                         isSelected ? 'text-blue-700' : 'text-gray-900'
                       }`}
                     >
                       {tamanio.nombre}
                     </span>
                     {isSelected && (
-                      <CheckCircle2 className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                      <CheckCircle2 className="w-3 h-3 text-blue-600 flex-shrink-0" />
                     )}
                   </div>
-                  <div className="flex items-center gap-1.5 mt-0.5">
+                  <div className="flex items-center gap-1 mt-0.5">
                     <span
-                      className={`text-[10px] ${
+                      className={`text-[9px] ${
                         isSelected ? 'text-blue-600' : 'text-gray-500'
                       }`}
                     >
-                      {tamanio.ancho_mm} × {tamanio.alto_mm} mm
+                      {tamanio.ancho_mm} × {tamanio.alto_mm}
                     </span>
                     {isCommon && (
-                      <span className="text-[9px] font-medium text-green-600 bg-green-50 px-1 py-0.5 rounded">
-                        Común
+                      <span className="text-[8px] font-medium text-green-600 bg-green-50 px-1 py-0.5 rounded">
+                        ✓
                       </span>
                     )}
                   </div>

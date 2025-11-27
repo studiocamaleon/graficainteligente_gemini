@@ -70,9 +70,9 @@ export function TiposPapelSelector({
     return (
       <div className="space-y-3">
         <div className="animate-pulse h-10 bg-gray-200 rounded-lg"></div>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i} className="animate-pulse h-14 bg-gray-200 rounded-lg"></div>
+        <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+            <div key={i} className="animate-pulse h-12 bg-gray-200 rounded-lg"></div>
           ))}
         </div>
       </div>
@@ -107,7 +107,7 @@ export function TiposPapelSelector({
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-[400px] overflow-y-auto pr-1">
+          <div className="grid grid-cols-3 md:grid-cols-4 gap-2 max-h-[400px] overflow-y-auto pr-1">
             {displayedPapeles.map((papel) => {
               const isSelected = selectedId === papel.id;
               const colorClass = getMaterialColor(papel.material?.nombre);
@@ -118,7 +118,7 @@ export function TiposPapelSelector({
                   type="button"
                   onClick={() => onSelect(papel.id)}
                   className={`
-                    relative px-2.5 py-2 rounded-lg border-2 transition-all duration-200 text-left
+                    relative px-2 py-1.5 rounded-lg border-2 transition-all duration-200 text-left
                     hover:shadow-sm
                     ${
                       isSelected
@@ -127,32 +127,32 @@ export function TiposPapelSelector({
                     }
                   `}
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-1 mb-0.5">
                         <span
-                          className={`font-bold text-sm truncate ${
+                          className={`font-bold text-xs truncate ${
                             isSelected ? 'text-blue-700' : 'text-gray-900'
                           }`}
                         >
                           {papel.variante_nombre}
                         </span>
                         {isSelected && (
-                          <CheckCircle2 className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                          <CheckCircle2 className="w-3 h-3 text-blue-600 flex-shrink-0" />
                         )}
                       </div>
 
-                      <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center justify-between gap-1.5">
                         {papel.material && (
                           <span
-                            className={`text-[9px] font-medium px-1.5 py-0.5 rounded border truncate ${colorClass}`}
+                            className={`text-[8px] font-medium px-1 py-0.5 rounded border truncate ${colorClass}`}
                           >
                             {papel.material.nombre}
                           </span>
                         )}
                         {papel.espesor && (
                           <span
-                            className={`text-base font-bold flex-shrink-0 ${
+                            className={`text-xs font-bold flex-shrink-0 ${
                               isSelected
                                 ? 'text-blue-700'
                                 : 'text-gray-800'
