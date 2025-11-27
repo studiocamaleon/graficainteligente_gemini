@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Filter, Users } from 'lucide-react';
+import { Search, Filter, Users, FileText } from 'lucide-react';
 import { useCuentasCorrientes } from '../../../hooks/useCuentasCorrientes';
 import { ClienteCard } from '../../../components/finanzas/ClienteCard';
 import { EstadoCuentaModal } from '../../../components/finanzas/EstadoCuentaModal';
@@ -7,9 +7,12 @@ import { NuevaLiquidacionModal } from '../../../components/finanzas/NuevaLiquida
 import { Input } from '../../../components/ui/Input';
 import { Select } from '../../../components/ui/Select';
 import { EmptyState } from '../../../components/ui/EmptyState';
+import { Tabs } from '../../../components/ui/Tabs';
+import LiquidacionesView from './LiquidacionesView';
 import type { Client } from '../../../types/database';
 
 export default function CuentasCorrientesView() {
+  const [activeTab, setActiveTab] = useState('cuentas');
   const [searchTerm, setSearchTerm] = useState('');
   const [estadoFilter, setEstadoFilter] = useState<'al_dia' | 'proximo_vencer' | 'vencido' | null>(null);
   const [selectedCliente, setSelectedCliente] = useState<Client | null>(null);
@@ -36,8 +39,21 @@ export default function CuentasCorrientesView() {
     // Podríamos refrescar la lista de clientes si es necesario
   };
 
+  const tabs = [
+    { id: 'cuentas', label: 'Cuentas Corrientes', icon: Users },
+    { id: 'liquidaciones', label: 'Liquidaciones', icon: FileText },
+  ];
+
   return (
     <div className="space-y-6">
+      <Tabs
+        tabs={tabs}
+        activeTab={activeTab}
+        onChange={setActiveTab}
+      />
+
+      {activeTab === 'cuentas' ? (
+        <div className="space-y-6">
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="flex-1 relative">
           <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
@@ -105,18 +121,22 @@ export default function CuentasCorrientesView() {
         </>
       )}
 
-      <EstadoCuentaModal
-        isOpen={isEstadoCuentaOpen}
-        onClose={() => setIsEstadoCuentaOpen(false)}
-        cliente={selectedCliente}
-      />
+        <EstadoCuentaModal
+          isOpen={isEstadoCuentaOpen}
+          onClose={() => setIsEstadoCuentaOpen(false)}
+          cliente={selectedCliente}
+        />
 
-      <NuevaLiquidacionModal
-        isOpen={isNuevaLiquidacionOpen}
-        onClose={() => setIsNuevaLiquidacionOpen(false)}
-        cliente={selectedCliente}
-        onSuccess={handleLiquidacionCreada}
-      />
+        <NuevaLiquidacionModal
+          isOpen={isNuevaLiquidacionOpen}
+          onClose={() => setIsNuevaLiquidacionOpen(false)}
+          cliente={selectedCliente}
+          onSuccess={handleLiquidacionCreada}
+        />
+        </div>
+      ) : (
+        <LiquidacionesView />
+      )}
     </div>
   );
 }
