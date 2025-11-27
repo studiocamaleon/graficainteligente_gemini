@@ -6,10 +6,12 @@ import { Input } from '../../../components/ui/Input';
 import { Badge } from '../../../components/ui/Badge';
 import { Modal } from '../../../components/ui/Modal';
 import { Tabs } from '../../../components/ui/Tabs';
+import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
 import { usePageHeader } from '../../../hooks/usePageHeader';
 import { useAuth } from '../../../hooks/useAuth';
 import { useToast } from '../../../contexts/ToastContext';
-import { connectWhatsApp, getConnectionStatus, sendMessage } from '../../../lib/whatsappApi';
+import { useConfirmDialog } from '../../../hooks/useConfirmDialog';
+import { connectWhatsApp, getConnectionStatus, sendMessage, disconnectWhatsApp } from '../../../lib/whatsappApi';
 import { HistorialNotificaciones } from '../../../components/whatsapp/HistorialNotificaciones';
 
 const MAX_POLLING_TIME = 120; // 120 segundos
@@ -19,6 +21,13 @@ export function WhatsAppIntegration() {
   usePageHeader('Integración con WhatsApp');
   const { profile } = useAuth();
   const { showSuccess, showError } = useToast();
+  const {
+    dialogState,
+    isLoading: isConfirmLoading,
+    closeDialog,
+    handleConfirm,
+    confirmAction,
+  } = useConfirmDialog();
 
   // Estado de conexión
   const [isConnected, setIsConnected] = useState(false);
@@ -37,6 +46,9 @@ export function WhatsAppIntegration() {
   const [testPhone, setTestPhone] = useState('');
   const [testMessage, setTestMessage] = useState('');
   const [isSendingTest, setIsSendingTest] = useState(false);
+
+  // Estado de desconexión
+  const [isDisconnecting, setIsDisconnecting] = useState(false);
 
   // Referencias para polling
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -198,6 +210,45 @@ export function WhatsAppIntegration() {
     }
   };
 
+  const handleDisconnectRequest = () => {
+    if (!companyId) {
+      showError('No se pudo obtener el ID de la empresa');
+      return;
+    }
+
+    confirmAction({
+      title: 'Desconectar WhatsApp',
+      message: '¿Estás seguro que querés desconectar este WhatsApp? Tendrás que escanear un nuevo código QR para volver a conectarlo.',
+      confirmText: 'Desconectar',
+      cancelText: 'Cancelar',
+      variant: 'warning',
+      onConfirm: handleConfirmDisconnect,
+    });
+  };
+
+  const handleConfirmDisconnect = async () => {
+    if (!companyId) return;
+
+    try {
+      setIsDisconnecting(true);
+      const response = await disconnectWhatsApp(companyId);
+
+      stopPolling();
+      setIsConnected(false);
+      setConnectedNumber(null);
+      setQrCode(null);
+      setShowQRModal(false);
+
+      showSuccess(response.message || 'WhatsApp desconectado correctamente');
+    } catch (error) {
+      console.error('Error al desconectar WhatsApp:', error);
+      const errorMessage = error instanceof Error ? error.message : 'No se pudo desconectar el WhatsApp. Intentalo de nuevo.';
+      showError(errorMessage);
+    } finally {
+      setIsDisconnecting(false);
+    }
+  };
+
   const getConnectionBadge = () => {
     if (isCheckingStatus) {
       return (
@@ -297,40 +348,74 @@ export function WhatsAppIntegration() {
             </div>
           )}
 
-          {/* Botón de conexión */}
-          {!isConnected && (
-            <div className="flex gap-3">
-              <Button
-                onClick={handleConnectWhatsApp}
-                disabled={isGeneratingQR || !companyId}
-                variant="primary"
-                className="flex-1"
-              >
-                {isGeneratingQR ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Generando código QR...
-                  </>
-                ) : (
-                  <>
-                    <QrCode className="w-4 h-4 mr-2" />
-                    Conectar WhatsApp
-                  </>
-                )}
-              </Button>
-              <Button
-                onClick={checkStatus}
-                disabled={isCheckingStatus}
-                variant="outline"
-              >
-                {isCheckingStatus ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  '🔄'
-                )}
-              </Button>
-            </div>
-          )}
+          {/* Botones de acción */}
+          <div className="flex gap-3">
+            {!isConnected ? (
+              <>
+                <Button
+                  onClick={handleConnectWhatsApp}
+                  disabled={isGeneratingQR || !companyId}
+                  variant="primary"
+                  className="flex-1"
+                >
+                  {isGeneratingQR ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Generando código QR...
+                    </>
+                  ) : (
+                    <>
+                      <QrCode className="w-4 h-4 mr-2" />
+                      Conectar WhatsApp
+                    </>
+                  )}
+                </Button>
+                <Button
+                  onClick={checkStatus}
+                  disabled={isCheckingStatus}
+                  variant="outline"
+                >
+                  {isCheckingStatus ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    '🔄'
+                  )}
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  onClick={checkStatus}
+                  disabled={isCheckingStatus}
+                  variant="outline"
+                >
+                  {isCheckingStatus ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    '🔄'
+                  )}
+                </Button>
+                <Button
+                  onClick={handleDisconnectRequest}
+                  disabled={isDisconnecting || isGeneratingQR || pollingActive || !companyId}
+                  variant="danger"
+                  className="flex-1"
+                >
+                  {isDisconnecting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Desconectando...
+                    </>
+                  ) : (
+                    <>
+                      <XCircle className="w-4 h-4 mr-2" />
+                      Desconectar WhatsApp
+                    </>
+                  )}
+                </Button>
+              </>
+            )}
+          </div>
         </div>
       </Card>
 
@@ -502,6 +587,19 @@ export function WhatsAppIntegration() {
           )}
         </div>
       </Modal>
+
+      {/* Dialog de confirmación de desconexión */}
+      <ConfirmDialog
+        isOpen={dialogState.isOpen}
+        onClose={closeDialog}
+        onConfirm={handleConfirm}
+        title={dialogState.title}
+        message={dialogState.message}
+        confirmText={dialogState.confirmText}
+        cancelText={dialogState.cancelText}
+        variant={dialogState.variant}
+        isLoading={isDisconnecting || isConfirmLoading}
+      />
         </div>
       )}
 

@@ -15,6 +15,11 @@ export interface SendMessageResponse {
   success?: boolean;
 }
 
+export interface DisconnectResponse {
+  success: boolean;
+  message: string;
+}
+
 export async function connectWhatsApp(companyId: string): Promise<ConnectResponse> {
   const response = await fetch(`${WHATSAPP_BACKEND_BASE_URL}/connect`, {
     method: 'POST',
@@ -61,4 +66,26 @@ export async function sendMessage(
   }
 
   return response.json();
+}
+
+export async function disconnectWhatsApp(companyId: string): Promise<DisconnectResponse> {
+  const response = await fetch(`${WHATSAPP_BACKEND_BASE_URL}/disconnect`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ companyId }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Error al desconectar WhatsApp: ${response.statusText}`);
+  }
+
+  const data = await response.json();
+
+  if (!data.success) {
+    throw new Error(data.message || 'Error al desconectar WhatsApp');
+  }
+
+  return data;
 }
