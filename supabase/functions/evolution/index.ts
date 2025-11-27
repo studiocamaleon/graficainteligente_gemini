@@ -56,9 +56,12 @@ async function makeEvolutionRequest(url: string, apiKey: string, method: string 
       method,
       headers: {
         'apikey': apiKey,
-        'Content-Type': 'application/json',
       },
     });
+
+    // Log status y headers
+    console.log(`[Evolution API] Response status: ${response.status}`);
+    console.log(`[Evolution API] Content-Type: ${response.headers.get('content-type')}`);
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -66,16 +69,9 @@ async function makeEvolutionRequest(url: string, apiKey: string, method: string 
       throw new Error(`Evolution API error (${response.status}): ${errorText}`);
     }
 
-    // Verificar que la respuesta sea JSON válido
-    const contentType = response.headers.get('content-type');
-    if (!contentType || !contentType.includes('application/json')) {
-      const text = await response.text();
-      console.error(`[Evolution API] ⚠️ Non-JSON response received:`, text.substring(0, 200));
-      throw new Error(`Evolution API returned non-JSON response (Content-Type: ${contentType})`);
-    }
-
-    // Leer el texto de la respuesta
+    // Leer el body UNA SOLA VEZ
     const text = await response.text();
+    console.log(`[Evolution API] Response body:`, text);
 
     // Verificar que no esté vacío
     if (!text || text.trim() === '') {
@@ -86,11 +82,11 @@ async function makeEvolutionRequest(url: string, apiKey: string, method: string 
     // Intentar parsear JSON
     try {
       const data = JSON.parse(text);
-      console.log(`[Evolution API] Success: ${JSON.stringify(data).substring(0, 100)}...`);
+      console.log(`[Evolution API] ✅ Parsed data:`, JSON.stringify(data));
       return data;
     } catch (parseError: any) {
-      console.error(`[Evolution API] ⚠️ JSON parse error:`, parseError.message);
-      console.error(`[Evolution API] Response text:`, text.substring(0, 200));
+      console.error(`[Evolution API] ❌ JSON parse error:`, parseError.message);
+      console.error(`[Evolution API] Response text:`, text.substring(0, 500));
       throw new Error(`Invalid JSON from Evolution API: ${parseError.message}`);
     }
   } catch (error: any) {
