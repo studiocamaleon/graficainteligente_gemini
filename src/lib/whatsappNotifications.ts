@@ -33,7 +33,7 @@ export function sanitizeMessage(message: string): string {
   if (!message) return '';
 
   let sanitized = message
-    .replace(/[\u0000-\u001F\u007F-\u009F]/g, '')
+    .replace(/[\u0000-\u0009\u000B-\u001F\u007F-\u009F]/g, '')
     .replace(/\r\n/g, '\n')
     .replace(/\r/g, '\n')
     .trim();
