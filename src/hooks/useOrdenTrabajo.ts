@@ -180,7 +180,7 @@ export function useOrdenTrabajo() {
             papel:centro_copiado_papeles(
               id,
               variante_nombre,
-              material:materials(nombre)
+              material:materiales(nombre)
             )
           `)
           .eq('orden_copiado_id', ordenCopiadoRes.data.id);
