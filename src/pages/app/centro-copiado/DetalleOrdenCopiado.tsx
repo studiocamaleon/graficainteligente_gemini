@@ -20,10 +20,13 @@ import { useCentroCopiadoOrdenArchivos } from '../../../hooks/useCentroCopiadoOr
 import { OrdenPagosTab } from '../../../components/orders/OrdenPagosTab';
 import { PagoFormModal } from '../../../components/orders/PagoFormModal';
 import type { EstadoOrdenCopiado, TipoItemCopiado } from '../../../types/database';
+import { enviarNotificacion } from '../../../lib/whatsappNotifications';
+import { useAuth } from '../../../hooks/useAuth';
 
 export function DetalleOrdenCopiado() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { profile } = useAuth();
   const [showCancelarModal, setShowCancelarModal] = useState(false);
   const [motivoCancelacion, setMotivoCancelacion] = useState('');
   const [activeTab, setActiveTab] = useState('detalles');
@@ -72,6 +75,26 @@ export function DetalleOrdenCopiado() {
       if (success) {
         openInfoDialog('Estado Actualizado', `La orden ha sido marcada como ${nuevoEstado}`);
         await refetch();
+
+        // Enviar notificación si cambia a finalizada
+        if (nuevoEstado === 'finalizada' && profile?.company_id && orden?.cliente_id && id) {
+          const totales = calcularTotales();
+          const saldoPendiente = totales.saldo_pendiente;
+
+          enviarNotificacion({
+            companyId: profile.company_id,
+            clienteId: orden.cliente_id,
+            ordenId: id,
+            tipo: 'orden_finalizada',
+            ordenTipo: 'copiado'
+          }).then((resultado) => {
+            if (resultado.success) {
+              console.log('Notificación enviada exitosamente');
+            }
+          }).catch((err) => {
+            console.error('Error al enviar notificación:', err);
+          });
+        }
       } else {
         openInfoDialog('Error', 'No se pudo actualizar el estado de la orden');
       }

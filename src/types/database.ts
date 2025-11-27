@@ -186,6 +186,8 @@ export interface CompanyFormData {
   contact_phone: string;
   contact_email: string;
   website: string;
+  business_hours?: string;
+  google_review_url?: string;
   address: string;
   country_id: string;
   province_id: string;

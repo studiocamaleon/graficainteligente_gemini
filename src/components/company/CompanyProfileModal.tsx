@@ -144,6 +144,8 @@ export function CompanyProfileModal({ isOpen, onClose }: CompanyProfileModalProp
         contact_phone: formData.contact_phone.trim() || '',
         contact_email: formData.contact_email.trim() || '',
         website: formData.website.trim() || '',
+        business_hours: formData.business_hours?.trim() || '',
+        google_review_url: formData.google_review_url?.trim() || '',
         address: formData.address.trim() || '',
         country_id: formData.country_id || '',
         province_id: formData.province_id || '',
@@ -434,6 +436,41 @@ export function CompanyProfileModal({ isOpen, onClose }: CompanyProfileModalProp
                     placeholder="https://www.empresa.com"
                     disabled={isSaving}
                   />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <Clock className="w-4 h-4 inline mr-1" />
+                    Horarios de Atención
+                  </label>
+                  <textarea
+                    value={formData.business_hours || ''}
+                    onChange={(e) => handleInputChange('business_hours', e.target.value)}
+                    placeholder="Lunes a Viernes: 9:00 - 18:00&#10;Sábados: 9:00 - 13:00"
+                    disabled={isSaving}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Este horario se incluirá en notificaciones de WhatsApp de órdenes finalizadas
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <Globe className="w-4 h-4 inline mr-1" />
+                    Link de Reseñas de Google
+                  </label>
+                  <Input
+                    type="url"
+                    value={formData.google_review_url || ''}
+                    onChange={(e) => handleInputChange('google_review_url', e.target.value)}
+                    placeholder="https://g.page/r/CXmfpqhdwyC4EAE/review"
+                    disabled={isSaving}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Este link se enviará en notificaciones de WhatsApp para solicitar reseñas
+                  </p>
                 </div>
               </motion.div>
             )}

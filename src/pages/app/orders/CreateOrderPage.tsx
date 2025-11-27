@@ -25,6 +25,7 @@ import { useOrdenArchivos } from '../../../hooks/useOrdenArchivos';
 import { useOrdenLinks } from '../../../hooks/useOrdenLinks';
 import { useCentroCopiadoOrdenes } from '../../../hooks/useCentroCopiadoOrdenes';
 import type { CanalVenta } from '../../../types/database';
+import { enviarNotificacion } from '../../../lib/whatsappNotifications';
 
 interface PagoTemporal {
   id: string;
@@ -469,6 +470,23 @@ export function CreateOrderPage() {
         }
 
         showSuccess(mensajeExito);
+
+        // Enviar notificación de WhatsApp de forma asíncrona (no bloqueante)
+        if (profile?.company_id && clienteId && result.id) {
+          enviarNotificacion({
+            companyId: profile.company_id,
+            clienteId: clienteId,
+            ordenId: result.id,
+            tipo: 'nueva_orden_trabajo',
+            ordenTipo: 'trabajo'
+          }).then((resultado) => {
+            if (resultado.success) {
+              showSuccess('Notificación de WhatsApp enviada al cliente');
+            }
+          }).catch((err) => {
+            console.error('[CreateOrderPage] Error al enviar notificación:', err);
+          });
+        }
 
         // Navegar
         setTimeout(() => {

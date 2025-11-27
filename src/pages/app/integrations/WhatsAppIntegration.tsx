@@ -1,14 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
-import { MessageSquare, QrCode, CheckCircle2, XCircle, Loader2, AlertCircle, Send } from 'lucide-react';
+import { MessageSquare, QrCode, CheckCircle2, XCircle, Loader2, AlertCircle, Send, History } from 'lucide-react';
 import { Card } from '../../../components/ui/Card';
 import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
 import { Badge } from '../../../components/ui/Badge';
 import { Modal } from '../../../components/ui/Modal';
+import { Tabs } from '../../../components/ui/Tabs';
 import { usePageHeader } from '../../../hooks/usePageHeader';
 import { useAuth } from '../../../hooks/useAuth';
 import { useToast } from '../../../contexts/ToastContext';
 import { connectWhatsApp, getConnectionStatus, sendMessage } from '../../../lib/whatsappApi';
+import { HistorialNotificaciones } from '../../../components/whatsapp/HistorialNotificaciones';
 
 const MAX_POLLING_TIME = 120; // 120 segundos
 const POLLING_INTERVAL = 2000; // 2 segundos
@@ -28,6 +30,7 @@ export function WhatsAppIntegration() {
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [isGeneratingQR, setIsGeneratingQR] = useState(false);
   const [timeLeft, setTimeLeft] = useState(MAX_POLLING_TIME);
+  const [activeTab, setActiveTab] = useState('conexion');
   const [pollingActive, setPollingActive] = useState(false);
 
   // Estado de envío de prueba
@@ -222,10 +225,31 @@ export function WhatsAppIntegration() {
     );
   };
 
+  const tabs = [
+    {
+      id: 'conexion',
+      label: 'Conexión',
+      icon: MessageSquare
+    },
+    {
+      id: 'historial',
+      label: 'Historial',
+      icon: History
+    }
+  ];
+
   return (
     <div className="space-y-6">
-      {/* Card de Estado de Conexión */}
-      <Card
+      <Tabs
+        tabs={tabs}
+        activeTab={activeTab}
+        onChange={setActiveTab}
+      />
+
+      {activeTab === 'conexion' && (
+        <div className="space-y-6">
+          {/* Card de Estado de Conexión */}
+          <Card
         title="Estado de Conexión"
         icon={MessageSquare}
         description="Estado actual de tu conexión con WhatsApp"
@@ -478,6 +502,12 @@ export function WhatsAppIntegration() {
           )}
         </div>
       </Modal>
+        </div>
+      )}
+
+      {activeTab === 'historial' && (
+        <HistorialNotificaciones />
+      )}
     </div>
   );
 }

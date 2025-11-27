@@ -41,6 +41,7 @@ import { OrdenCopiadoAsociadaCard } from '../../../components/orders/OrdenCopiad
 import { useToast } from '../../../contexts/ToastContext';
 import { calcularTotalesConsolidados } from '../../../utils/ordenesConsolidadas';
 import type { EstadoOrdenTrabajo } from '../../../types/database';
+import { enviarNotificacion } from '../../../lib/whatsappNotifications';
 
 type TabKey = 'items' | 'ruta' | 'adjuntos' | 'pagos' | 'historial';
 
@@ -224,6 +225,25 @@ export function OrderDetailPage() {
         const success = await changeEstado(id, nuevoEstado);
         if (success) {
           await loadOrden();
+
+          // Enviar notificación si cambia a finalizada
+          if (nuevoEstado === 'finalizada' && profile?.company_id && orden?.cliente_id) {
+            const saldoPendiente = totalesConsolidados.total - totalPagado;
+
+            enviarNotificacion({
+              companyId: profile.company_id,
+              clienteId: orden.cliente_id,
+              ordenId: id,
+              tipo: 'orden_finalizada',
+              ordenTipo: 'trabajo'
+            }).then((resultado) => {
+              if (resultado.success) {
+                showSuccess('Notificación de WhatsApp enviada al cliente');
+              }
+            }).catch((err) => {
+              console.error('Error al enviar notificación:', err);
+            });
+          }
         }
       },
     });

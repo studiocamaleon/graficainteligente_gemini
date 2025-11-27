@@ -17,6 +17,8 @@ import { useCentroCopiadoArchivos } from '../../../hooks/useCentroCopiadoArchivo
 import { useInfoDialog } from '../../../hooks/useInfoDialog';
 import { InfoDialog } from '../../../components/ui/InfoDialog';
 import { supabase } from '../../../lib/supabase';
+import { enviarNotificacion } from '../../../lib/whatsappNotifications';
+import { useAuth } from '../../../hooks/useAuth';
 
 interface ItemWithId {
   id: string;
@@ -30,6 +32,7 @@ interface ItemWithId {
 
 export function CrearOrdenCopiado() {
   const navigate = useNavigate();
+  const { profile } = useAuth();
   const [searchParams] = useSearchParams();
   const clienteIdParam = searchParams.get('cliente_id');
   const ordenTrabajoIdParam = searchParams.get('orden_trabajo_id');
@@ -257,6 +260,23 @@ export function CrearOrdenCopiado() {
         .select('numero_orden')
         .eq('id', ordenIdFinal)
         .single();
+
+      // Enviar notificación solo si es orden independiente (no asociada a orden de trabajo)
+      if (profile?.company_id && clienteId && !ordenTrabajoIdParam) {
+        enviarNotificacion({
+          companyId: profile.company_id,
+          clienteId: clienteId,
+          ordenId: ordenIdFinal,
+          tipo: 'nueva_orden_copiado',
+          ordenTipo: 'copiado'
+        }).then((resultado) => {
+          if (resultado.success) {
+            console.log('Notificación enviada exitosamente');
+          }
+        }).catch((err) => {
+          console.error('Error al enviar notificación:', err);
+        });
+      }
 
       openDialog(
         'Orden Creada',

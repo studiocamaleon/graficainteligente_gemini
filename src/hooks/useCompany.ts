@@ -18,6 +18,8 @@ export function useCompany() {
       contact_phone: company?.contact_phone || '',
       contact_email: company?.contact_email || '',
       website: company?.website || '',
+      business_hours: company?.business_hours || '',
+      google_review_url: company?.google_review_url || '',
       address: company?.address || '',
       country_id: company?.country_id || '',
       province_id: company?.province_id || '',
