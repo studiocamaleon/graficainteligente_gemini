@@ -318,11 +318,11 @@ export function OrdenItemsTab({
           </Button>
           {clienteNombre && onOrdenesCopiadoAsociadasChange && (
             <Button
-              variant="secondary"
               onClick={() => {
                 setOrdenCopiadoEditando(undefined);
                 setShowAsociarOCModal(true);
               }}
+              className="bg-gradient-to-r from-yellow-600 to-amber-700 hover:from-yellow-700 hover:to-amber-800 text-white shadow-md hover:shadow-lg transition-all"
             >
               <Printer className="w-4 h-4" />
               Asociar OC
