@@ -332,6 +332,7 @@ export function CrearOrdenCopiado() {
       for (const pago of pagos) {
         await createPago({
           orden_copiado_id: ordenIdFinal,
+          fecha_pago: pago.fecha_pago,
           monto: pago.monto,
           medio_cobro_id: pago.medio_cobro_id,
           referencia_pago: pago.referencia_pago,
