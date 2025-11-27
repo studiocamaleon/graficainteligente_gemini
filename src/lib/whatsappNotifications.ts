@@ -179,9 +179,16 @@ function formatItemCopiadoParaNuevaOrden(item: any, index: number): string {
   const caras = item.cara_impresa === 'frente_y_dorso' ? 'Doble faz' : 'Simple faz';
 
   detalle += `🖨️ *Impresión ${tinta}*\n`;
-  detalle += `   ${cantidad}x ${hojas} hojas ${caras}\n`;
+  detalle += `   ${cantidad} ${cantidad === 1 ? 'copia' : 'copias'} × ${hojas} hojas ${caras}\n`;
   detalle += `   ${tamanio} - ${papelCompleto}\n`;
-  detalle += `   $${precio} c/u = $${subtotal}`;
+  detalle += `   Subtotal: $${subtotal}`;
+
+  const tieneTerminaciones = item.tipo_anillado || item.tipo_plastificado;
+  if (!tieneTerminaciones && hojas > 0 && cantidad > 0) {
+    const totalHojas = hojas * cantidad;
+    const precioPorHoja = parseFloat(subtotal) / totalHojas;
+    detalle += `\n   Precio por hoja: $${precioPorHoja.toFixed(2)}`;
+  }
 
   if (item.tipo_anillado) {
     const tipo = item.tipo_anillado === 'ring_wire' ? 'Ring Wire' : 'Plástico';
@@ -420,7 +427,7 @@ export async function enviarNotificacion(
 
       if (tipo === 'nueva_orden_copiado') {
         const { data: archivos } = await supabase
-          .from('centro_copiado_archivos')
+          .from('centro_copiado_ordenes_archivos')
           .select('nombre_archivo, item_generado_id')
           .eq('orden_copiado_id', ordenId);
 

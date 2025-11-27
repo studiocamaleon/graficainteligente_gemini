@@ -239,7 +239,7 @@ export function CrearOrdenCopiado() {
           cantidad_plastificado: config.plastificado?.todas_hojas
             ? config.cantidad_hojas
             : config.plastificado?.cantidad_especifica,
-          precio_unitario: item.precio || 0,
+          precio_unitario: (item.precio || 0) / (config.cantidad_copias || 1),
           subtotal: item.precio || 0,
           descripcion: item.descripcion || undefined,
         };
