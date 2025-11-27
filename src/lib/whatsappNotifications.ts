@@ -72,7 +72,7 @@ export function formatPhoneNumber(phone: string): string {
 
 export function buildTrackingUrl(trackingToken: string): string {
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
-  return `${origin}/tracking/${trackingToken}`;
+  return `${origin}/track/${trackingToken}`;
 }
 
 export function generateNuevaOrdenTrabajoMessage(

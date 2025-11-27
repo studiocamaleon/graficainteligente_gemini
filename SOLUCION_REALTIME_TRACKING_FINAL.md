@@ -412,7 +412,7 @@ useEffect(() => {
 
 1. **Abrir tracking en navegador:**
    ```
-   https://tu-app.com/tracking/TOKEN_AQUI
+   https://tu-app.com/track/TOKEN_AQUI
    ```
 
 2. **Abrir DevTools → Console**
