@@ -141,7 +141,10 @@ export function OrdenCopiadoAsociadaCard({
                           </div>
                           {item.tipo_item === 'impresion' && (
                             <p className="text-xs text-gray-600">
-                              {item.tamanio_papel?.nombre || 'N/A'} - {item.papel?.variante_nombre || 'N/A'}
+                              {item.tamanio_papel?.nombre || 'N/A'}
+                              {' - '}
+                              {item.papel?.material?.nombre || item.papel?.variante_nombre || 'N/A'}
+                              {item.papel?.variante_nombre && item.papel?.material?.nombre && ` ${item.papel.variante_nombre}`}
                               {' • '}
                               {item.cantidad_hojas} hojas × {item.cantidad_unidades} copias
                             </p>

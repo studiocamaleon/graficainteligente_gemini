@@ -169,12 +169,20 @@ export function useOrdenTrabajo() {
       if (historialRes.error) throw historialRes.error;
       if (ordenCopiadoRes.error) throw ordenCopiadoRes.error;
 
-      // Si hay orden de copiado, cargar sus items
+      // Si hay orden de copiado, cargar sus items con sus relaciones
       let ordenCopiadoCompleta: CentroCopiadoOrdenResumida | null = null;
       if (ordenCopiadoRes.data) {
         const { data: itemsOC, error: itemsOCError } = await supabase
           .from('centro_copiado_ordenes_items')
-          .select('*')
+          .select(`
+            *,
+            tamanio_papel:centro_copiado_tamanios_papel(id, nombre),
+            papel:centro_copiado_papeles(
+              id,
+              variante_nombre,
+              material:materials(nombre)
+            )
+          `)
           .eq('orden_copiado_id', ordenCopiadoRes.data.id);
 
         if (itemsOCError) throw itemsOCError;
