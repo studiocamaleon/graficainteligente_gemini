@@ -6,11 +6,10 @@ import { Badge } from '../../../components/ui/Badge';
 import { usePageHeader } from '../../../hooks/usePageHeader';
 import { useEvolutionIntegration } from '../../../hooks/useEvolutionIntegration';
 import { useToast } from '../../../contexts/ToastContext';
-import { useEffect } from 'react';
 
 export function WhatsAppIntegration() {
   usePageHeader('Integración con WhatsApp');
-  const { showToast } = useToast();
+  const { showSuccess, showError } = useToast();
   const {
     config,
     formData,
@@ -26,17 +25,12 @@ export function WhatsAppIntegration() {
     setError,
   } = useEvolutionIntegration();
 
-  // Mostrar toast de error cuando cambie
-  useEffect(() => {
-    if (error) {
-      showToast(error, 'error');
-    }
-  }, [error]);
-
   const handleSaveConfig = async () => {
     const success = await saveConfig();
     if (success) {
-      showToast('Configuración guardada correctamente', 'success');
+      showSuccess('Configuración guardada correctamente');
+    } else if (error) {
+      showError(error);
     }
   };
 
@@ -44,7 +38,9 @@ export function WhatsAppIntegration() {
     setError(null);
     const success = await generateQR();
     if (success) {
-      showToast('QR generado. Escanéalo con WhatsApp.', 'success');
+      showSuccess('QR generado. Escanéalo con WhatsApp.');
+    } else if (error) {
+      showError(error);
     }
   };
 
