@@ -6,6 +6,28 @@ import type {
   EtapaPaso,
 } from '../types/database';
 
+// Normalizar valores de etapa legacy a los valores correctos
+const normalizeEtapa = (etapa: string): EtapaPaso => {
+  const mapping: Record<string, EtapaPaso> = {
+    'pre_prensa': 'Pre-prensa',
+    'principal': 'Produccion',
+    'produccion': 'Produccion',
+    'post_prensa': 'Terminacion',
+    'terminacion': 'Terminacion',
+    'instalacion': 'Instalacion',
+    'entrega': 'Entrega',
+  };
+
+  const normalized = mapping[etapa.toLowerCase()];
+  if (normalized) {
+    console.log(`[useRutaPasos] Normalizing etapa: "${etapa}" -> "${normalized}"`);
+    return normalized;
+  }
+
+  // Si ya está en el formato correcto, retornarlo
+  return etapa as EtapaPaso;
+};
+
 interface UseRutaPasosParams {
   rutaId: string | null;
   etapa?: EtapaPaso | null;
@@ -92,7 +114,10 @@ export function useRutaPasos({
       const enrichedData = await Promise.all(
         (data || []).map(async (paso) => {
           const config = paso.configuracion_condicion as any;
-          const enrichedPaso: RutaProduccionPaso = { ...paso };
+          const enrichedPaso: RutaProduccionPaso = {
+            ...paso,
+            etapa: normalizeEtapa(paso.etapa) // Normalizar valores legacy
+          };
 
           // Obtener servicio si existe en la configuración
           if (config?.servicio_id) {
