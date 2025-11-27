@@ -1575,6 +1575,26 @@ export interface CentroCopiadoOrdenPago {
   updated_at: string;
 }
 
+// Extended types for consolidated orders
+export interface CentroCopiadoOrdenResumida {
+  id: string;
+  numero_orden: string;
+  estado: EstadoOrdenCopiado;
+  total: number;
+  items: CentroCopiadoOrdenItem[];
+  orden_trabajo_numero?: string;
+}
+
+export interface TotalesConsolidadosOrden {
+  subtotalItems: number;
+  subtotalOrdenesCopiado: number;
+  subtotalTotal: number;
+  descuentos: number;
+  subtotalConDescuentos: number;
+  iva: number;
+  totalFinal: number;
+}
+
 // Form Data Types
 export interface CentroCopiadoTamanioPapelFormData {
   nombre: string;

@@ -10,12 +10,16 @@ import type {
   EstadoOrdenTrabajo,
   ItemConfiguracion,
   TipoEventoHistorial,
+  CentroCopiadoOrdenResumida,
+  CentroCopiadoOrdenItem,
+  EstadoOrdenCopiado,
 } from '../types/database';
 
 export interface OrdenTrabajoFull extends OrdenTrabajo {
   items?: OrdenTrabajoItemFull[];
   pagos?: OrdenTrabajoPago[];
   historial?: OrdenTrabajoHistorial[];
+  ordenCopiado?: CentroCopiadoOrdenResumida | null;
   cliente?: {
     id: string;
     nombre_fantasia: string;
@@ -137,7 +141,7 @@ export function useOrdenTrabajo() {
 
       if (ordenError) throw ordenError;
 
-      const [itemsRes, pagosRes, historialRes] = await Promise.all([
+      const [itemsRes, pagosRes, historialRes, ordenCopiadoRes] = await Promise.all([
         supabase
           .from('ordenes_trabajo_items')
           .select('*')
@@ -153,17 +157,40 @@ export function useOrdenTrabajo() {
           .select('*')
           .eq('orden_id', id)
           .order('created_at', { ascending: false }),
+        supabase
+          .from('centro_copiado_ordenes')
+          .select('id, numero_orden, estado, total')
+          .eq('orden_trabajo_id', id)
+          .maybeSingle(),
       ]);
 
       if (itemsRes.error) throw itemsRes.error;
       if (pagosRes.error) throw pagosRes.error;
       if (historialRes.error) throw historialRes.error;
+      if (ordenCopiadoRes.error) throw ordenCopiadoRes.error;
+
+      // Si hay orden de copiado, cargar sus items
+      let ordenCopiadoCompleta: CentroCopiadoOrdenResumida | null = null;
+      if (ordenCopiadoRes.data) {
+        const { data: itemsOC, error: itemsOCError } = await supabase
+          .from('centro_copiado_ordenes_items')
+          .select('*')
+          .eq('orden_copiado_id', ordenCopiadoRes.data.id);
+
+        if (itemsOCError) throw itemsOCError;
+
+        ordenCopiadoCompleta = {
+          ...ordenCopiadoRes.data,
+          items: itemsOC as CentroCopiadoOrdenItem[],
+        };
+      }
 
       return {
         ...orden,
         items: itemsRes.data as OrdenTrabajoItemFull[],
         pagos: pagosRes.data,
         historial: historialRes.data,
+        ordenCopiado: ordenCopiadoCompleta,
       } as OrdenTrabajoFull;
     } catch (err) {
       console.error('Error fetching orden:', err);
@@ -683,6 +710,42 @@ export function useOrdenTrabajo() {
     }
   };
 
+  const desvincularOrdenCopiado = async (ordenTrabajoId: string): Promise<boolean> => {
+    if (!profile?.company_id) {
+      setError('No hay empresa asociada');
+      return false;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Desvincular la orden de copiado (setear orden_trabajo_id a null)
+      const { error: updateError } = await supabase
+        .from('centro_copiado_ordenes')
+        .update({ orden_trabajo_id: null })
+        .eq('orden_trabajo_id', ordenTrabajoId)
+        .eq('company_id', profile.company_id);
+
+      if (updateError) throw updateError;
+
+      // Registrar en historial
+      await addHistorialEvent(
+        ordenTrabajoId,
+        'nota_agregada',
+        'Orden de copiado desvinculada de esta orden de trabajo'
+      );
+
+      return true;
+    } catch (err) {
+      console.error('Error desvinculando orden de copiado:', err);
+      setError(err instanceof Error ? err.message : 'Error al desvincular orden de copiado');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     loading,
     error,
@@ -698,5 +761,6 @@ export function useOrdenTrabajo() {
     updatePago,
     deletePago,
     changeEstado,
+    desvincularOrdenCopiado,
   };
 }
