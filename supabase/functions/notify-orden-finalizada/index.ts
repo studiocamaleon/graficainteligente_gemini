@@ -32,30 +32,59 @@ function sanitizeMessage(message: string): string {
 function formatPhoneNumber(phone: string): string {
   if (!phone) return '';
 
-  // Limpiar el número de cualquier caracter no numérico
   let cleaned = phone.replace(/\D/g, '');
 
-  // Quitar el 0 inicial si lo tiene (formato local argentino)
   if (cleaned.startsWith('0')) {
     cleaned = cleaned.substring(1);
   }
 
-  // Quitar el 9 después del código de área si lo tiene
   if (cleaned.startsWith('9')) {
     cleaned = cleaned.substring(1);
   }
 
-  // Asegurar que tenga el código de país de Argentina (54)
   if (!cleaned.startsWith('54')) {
     cleaned = '54' + cleaned;
   }
 
-  // El backend de Render espera el número sin @s.whatsapp.net
-  // Solo retornamos el número limpio con código de país
   return cleaned;
 }
 
-function generateOrdenFinalizadaMessage(
+function formatItemCopiado(item: any): string {
+  const cantidad = item.cantidad_unidades;
+  const precio = parseFloat(item.precio_unitario || 0).toFixed(2);
+  const subtotal = parseFloat(item.subtotal || 0).toFixed(2);
+
+  let detalle = '';
+
+  if (item.tipo_item === 'impresion') {
+    const hojas = item.cantidad_hojas || 0;
+    const tamanio = item.tamanio?.nombre || 'N/A';
+    const papel = item.papel?.nombre || 'N/A';
+    const tinta = item.tipo_tinta === 'CMYK' ? 'Color' : 'Blanco y Negro';
+    const caras = item.cara_impresa === 'frente_y_dorso' ? 'Doble faz' : 'Simple faz';
+
+    detalle = `🖨️ *Impresión ${tinta}*\n`;
+    detalle += `   ${cantidad}x ${hojas} hojas ${caras}\n`;
+    detalle += `   ${tamanio} - ${papel}\n`;
+    detalle += `   $${precio} c/u = $${subtotal}`;
+
+  } else if (item.tipo_item === 'anillado') {
+    const tipo = item.tipo_anillado === 'ring_wire' ? 'Ring Wire' : 'Plástico';
+    detalle = `📚 *Anillado ${tipo}*\n`;
+    detalle += `   ${cantidad} unidades\n`;
+    detalle += `   $${precio} c/u = $${subtotal}`;
+
+  } else if (item.tipo_item === 'plastificado') {
+    const tipo = item.tipo_plastificado || 'N/A';
+    detalle = `🎴 *Plastificado ${tipo}*\n`;
+    detalle += `   ${cantidad} unidades\n`;
+    detalle += `   $${precio} c/u = $${subtotal}`;
+  }
+
+  return detalle;
+}
+
+function generateOrdenTrabajoFinalizadaMessage(
   orden: any,
   cliente: any,
   company: any,
@@ -69,6 +98,67 @@ function generateOrdenFinalizadaMessage(
   mensaje += `✅ Tu orden *${orden.numero_orden}* está lista para retirar!\n\n`;
   mensaje += `💰 *Total:* $${total}\n`;
   mensaje += `💳 *Saldo pendiente:* $${saldo}\n\n`;
+  mensaje += `📍 *Podés retirarla en:*\n`;
+
+  if (company.address) {
+    mensaje += `${company.address}\n\n`;
+  }
+
+  if (company.business_hours) {
+    mensaje += `🕐 *Horarios de atención:*\n`;
+    mensaje += `${company.business_hours}\n\n`;
+  }
+
+  if (company.contact_phone) {
+    mensaje += `📞 *Contacto:* ${company.contact_phone}\n\n`;
+  }
+
+  if (company.google_review_url) {
+    mensaje += `⭐ *Nos ayudarías mucho dejando tu opinión:*\n`;
+    mensaje += `${company.google_review_url}\n\n`;
+  }
+
+  mensaje += `Gracias por confiar en nosotros!\n\n`;
+  mensaje += `_Tecnología desarrollada por CamaleonStudio - Agencia de desarrollo de Gráfica Corporearte_`;
+
+  return mensaje;
+}
+
+function generateOrdenCopiadoFinalizadaMessage(
+  orden: any,
+  cliente: any,
+  company: any,
+  saldoPendiente: number
+): string {
+  const nombreCliente = cliente.nombre_fantasia || cliente.razon_social;
+  const total = parseFloat(orden.total || 0).toFixed(2);
+  const saldo = saldoPendiente.toFixed(2);
+
+  let mensaje = `Hola ${nombreCliente}!\n\n`;
+  mensaje += `✅ Tu orden de copiado *${orden.numero_orden}* está lista para retirar!\n\n`;
+
+  if (orden.fecha_entrega_estimada) {
+    const fecha = new Date(orden.fecha_entrega_estimada);
+    const fechaFormateada = fecha.toLocaleDateString('es-AR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+    mensaje += `📅 *Fecha de entrega:* ${fechaFormateada}\n\n`;
+  } else {
+    mensaje += `📅 *Fecha de entrega:* A confirmar\n\n`;
+  }
+
+  if (orden.items && orden.items.length > 0) {
+    mensaje += `📋 *Detalle de la orden:*\n\n`;
+    orden.items.forEach((item: any) => {
+      mensaje += formatItemCopiado(item) + '\n\n';
+    });
+  }
+
+  mensaje += `💰 *Total:* $${total}\n`;
+  mensaje += `💳 *Saldo pendiente:* $${saldo}\n\n`;
+
   mensaje += `📍 *Podés retirarla en:*\n`;
 
   if (company.address) {
@@ -216,7 +306,6 @@ Deno.serve(async (req: Request) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Verificar que no se haya enviado ya una notificación para esta orden
     const { data: yaEnviado } = await supabase
       .from('whatsapp_notificaciones')
       .select('id')
@@ -235,7 +324,6 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Obtener datos de la orden según el tipo
     let orden: any;
     let cliente: any;
     let pagosTotal = 0;
@@ -268,14 +356,26 @@ Deno.serve(async (req: Request) => {
         .from('centro_copiado_ordenes')
         .select(`
           *,
-          cliente:cliente_id(*)
+          cliente:cliente_id(*),
+          items:centro_copiado_ordenes_items(
+            *,
+            tamanio:tamanio_papel_id(nombre),
+            papel:papel_id(nombre)
+          )
         `)
         .eq('id', orden_id)
         .single();
 
       if (ordenError || !ordenData) {
+        console.error('[Notify] Error obteniendo orden de copiado:', ordenError);
         throw new Error('No se pudo obtener información de la orden de copiado');
       }
+
+      console.log('[Notify] Orden de copiado obtenida:', {
+        numero_orden: ordenData.numero_orden,
+        items_count: ordenData.items?.length || 0,
+        fecha_entrega: ordenData.fecha_entrega_estimada
+      });
 
       const { data: pagos } = await supabase
         .from('centro_copiado_ordenes_pagos')
@@ -303,7 +403,6 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Obtener información de la empresa
     const { data: company, error: companyError } = await supabase
       .from('companies')
       .select('*')
@@ -314,7 +413,6 @@ Deno.serve(async (req: Request) => {
       throw new Error('No se encontró información de la empresa');
     }
 
-    // Verificar que WhatsApp esté conectado para esta empresa
     const isConnected = await checkWhatsAppConnection(company_id);
 
     if (!isConnected) {
@@ -330,16 +428,21 @@ Deno.serve(async (req: Request) => {
 
     console.log('[Notify] ✅ WhatsApp conectado, procediendo a enviar mensaje');
 
-    // Generar y enviar el mensaje
     const saldoPendiente = parseFloat(orden.total || 0) - pagosTotal;
-    const mensaje = generateOrdenFinalizadaMessage(orden, cliente, company, saldoPendiente);
+
+    const mensaje = tipo_orden === 'trabajo'
+      ? generateOrdenTrabajoFinalizadaMessage(orden, cliente, company, saldoPendiente)
+      : generateOrdenCopiadoFinalizadaMessage(orden, cliente, company, saldoPendiente);
+
     const mensajeSanitizado = sanitizeMessage(mensaje);
     const telefonoFormateado = formatPhoneNumber(cliente.whatsapp);
 
     console.log('[Notify] Enviando mensaje de orden finalizada:', {
+      tipo_orden,
       numeroOrden: orden.numero_orden,
       clienteNombre: cliente.nombre_fantasia || cliente.razon_social,
-      telefono: telefonoFormateado
+      telefono: telefonoFormateado,
+      messageLength: mensajeSanitizado.length
     });
 
     let respuestaBackend: any;
@@ -355,7 +458,6 @@ Deno.serve(async (req: Request) => {
       respuestaBackend = { error: error.message };
     }
 
-    // Registrar la notificación en la base de datos
     const notificacionData: any = {
       company_id: company_id,
       tipo_notificacion: 'orden_finalizada',
