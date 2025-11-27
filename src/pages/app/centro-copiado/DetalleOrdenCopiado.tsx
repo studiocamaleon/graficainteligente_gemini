@@ -451,6 +451,7 @@ export function DetalleOrdenCopiado() {
                   },
                 ]}
                 data={orden.items}
+                keyExtractor={(item) => item.id}
               />
             )}
           </div>
