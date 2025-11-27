@@ -23,6 +23,7 @@ import { OrdenFooterTotales } from '../../../components/orders/OrdenFooterTotale
 import { PagoFormModal } from '../../../components/orders/PagoFormModal';
 import { useOrdenArchivos } from '../../../hooks/useOrdenArchivos';
 import { useOrdenLinks } from '../../../hooks/useOrdenLinks';
+import { useCentroCopiadoOrdenes } from '../../../hooks/useCentroCopiadoOrdenes';
 import type { CanalVenta } from '../../../types/database';
 
 interface PagoTemporal {
@@ -39,6 +40,7 @@ export function CreateOrderPage() {
   const { profile } = useAuth();
   const { createOrdenConItems, loading, error } = useOrdenTrabajo();
   const { showSuccess, showError } = useToast();
+  const { createOrden: createOrdenCopiado } = useCentroCopiadoOrdenes({});
 
   usePageHeader('Crear nueva orden de trabajo');
 
@@ -383,35 +385,37 @@ export function CreateOrderPage() {
 
           for (const oc of ordenesCopiadoAsociadas) {
             try {
-              // Crear orden de copiado
-              const { data: nuevaOrdenCopiado, error: errorOC } = await supabase
-                .from('centro_copiado_ordenes')
-                .insert({
-                  company_id: profile.company_id,
-                  cliente_id: clienteId,
-                  orden_trabajo_id: result.id,
-                  estado: 'pendiente',
-                  fecha_solicitud: new Date().toISOString(),
-                  fecha_entrega_estimada: oc.fecha_entrega_estimada
-                    ? `${oc.fecha_entrega_estimada}T00:00:00`
-                    : null,
-                  observaciones: oc.observaciones || null,
-                  total: oc.total,
-                  created_by: profile.id,
-                })
-                .select()
-                .single();
+              // Crear orden de copiado usando el hook (genera numero_orden automáticamente)
+              const nuevaOrdenCopiado = await createOrdenCopiado({
+                cliente_id: clienteId,
+                orden_trabajo_id: result.id,
+                fecha_entrega_estimada: oc.fecha_entrega_estimada
+                  ? `${oc.fecha_entrega_estimada}T00:00:00`
+                  : undefined,
+                observaciones: oc.observaciones || undefined,
+              });
 
-              if (errorOC || !nuevaOrdenCopiado) {
-                console.error('[CreateOrderPage] Error creando orden de copiado:', errorOC);
-                showError(`Error al crear orden de copiado: ${errorOC?.message}`);
+              if (!nuevaOrdenCopiado) {
+                console.error('[CreateOrderPage] Error creando orden de copiado');
+                showError('Error al crear orden de copiado');
                 continue;
+              }
+
+              // Actualizar el total de la orden de copiado
+              const { error: errorUpdateTotal } = await supabase
+                .from('centro_copiado_ordenes')
+                .update({ total: oc.total })
+                .eq('id', nuevaOrdenCopiado.id);
+
+              if (errorUpdateTotal) {
+                console.error('[CreateOrderPage] Error actualizando total de orden de copiado:', errorUpdateTotal);
               }
 
               // Crear items de la orden de copiado
               for (const item of oc.items) {
                 const itemData = {
                   orden_copiado_id: nuevaOrdenCopiado.id,
+                  tipo_item: 'impresion',
                   tamanio_papel_id: item.config.tamanio_papel_id,
                   papel_id: item.config.papel_id,
                   tipo_tinta: item.config.tipo_tinta,
