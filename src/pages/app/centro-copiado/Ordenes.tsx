@@ -1,6 +1,7 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, FileText, Eye, Calendar, DollarSign } from 'lucide-react';
+import { Plus, FileText, Eye, Calendar, DollarSign, CheckCircle, AlertCircle, Clock } from 'lucide-react';
+import { supabase } from '../../../lib/supabase';
 import { Card } from '../../../components/ui/Card';
 import { Button } from '../../../components/ui/Button';
 import { Table } from '../../../components/ui/Table';
@@ -19,6 +20,7 @@ export function Ordenes() {
   const [estadoFiltro, setEstadoFiltro] = useState<EstadoOrdenCopiado | ''>('');
   const [page, setPage] = useState(1);
   const itemsPerPage = 25;
+  const [pagosPorOrden, setPagosPorOrden] = useState<Record<string, { totalPagado: number }>>({});
 
   const { ordenes, totalCount, loading } = useCentroCopiadoOrdenes({
     searchTerm,
@@ -26,6 +28,33 @@ export function Ordenes() {
     page,
     itemsPerPage,
   });
+
+  useEffect(() => {
+    const fetchPagos = async () => {
+      if (!ordenes || ordenes.length === 0) return;
+
+      const ordenesIndependientes = ordenes.filter(o => !o.orden_trabajo_id);
+      if (ordenesIndependientes.length === 0) return;
+
+      const { data: pagos } = await supabase
+        .from('centro_copiado_ordenes_pagos')
+        .select('orden_copiado_id, monto')
+        .in('orden_copiado_id', ordenesIndependientes.map(o => o.id));
+
+      if (pagos) {
+        const pagosMap: Record<string, { totalPagado: number }> = {};
+        pagos.forEach(pago => {
+          if (!pagosMap[pago.orden_copiado_id]) {
+            pagosMap[pago.orden_copiado_id] = { totalPagado: 0 };
+          }
+          pagosMap[pago.orden_copiado_id].totalPagado += Number(pago.monto);
+        });
+        setPagosPorOrden(pagosMap);
+      }
+    };
+
+    fetchPagos();
+  }, [ordenes]);
 
   const headerAction = useMemo(
     () => (
@@ -41,6 +70,39 @@ export function Ordenes() {
   );
 
   usePageHeader('Gestiona las órdenes de copiado independientes o vinculadas a órdenes de trabajo', headerAction);
+
+  const getEstadoPagoBadge = (orden: any) => {
+    if (orden.orden_trabajo_id) {
+      return <span className="text-xs text-gray-500">Ver OT</span>;
+    }
+
+    const pagosInfo = pagosPorOrden[orden.id];
+    const totalPagado = pagosInfo?.totalPagado || 0;
+    const total = Number(orden.total);
+
+    if (totalPagado >= total) {
+      return (
+        <Badge variant="success" className="flex items-center gap-1">
+          <CheckCircle className="w-3 h-3" />
+          Pagado
+        </Badge>
+      );
+    } else if (totalPagado > 0) {
+      return (
+        <Badge variant="warning" className="flex items-center gap-1">
+          <AlertCircle className="w-3 h-3" />
+          Parcial
+        </Badge>
+      );
+    } else {
+      return (
+        <Badge variant="secondary" className="flex items-center gap-1">
+          <Clock className="w-3 h-3" />
+          Pendiente
+        </Badge>
+      );
+    }
+  };
 
   const getEstadoBadge = (estado: EstadoOrdenCopiado) => {
     const estilos = {
@@ -174,6 +236,11 @@ export function Ordenes() {
                       {Number(orden.total).toFixed(2)}
                     </div>
                   ),
+                },
+                {
+                  key: 'estado_pago',
+                  header: 'Estado Pago',
+                  render: (orden) => getEstadoPagoBadge(orden),
                 },
                 {
                   key: 'acciones',

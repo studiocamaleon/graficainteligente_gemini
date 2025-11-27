@@ -1560,6 +1560,21 @@ export interface CentroCopiadoOrdenArchivo {
   updated_at: string;
 }
 
+export interface CentroCopiadoOrdenPago {
+  id: string;
+  orden_copiado_id: string;
+  fecha_pago: string;
+  monto: number;
+  medio_cobro_id: string;
+  referencia_pago: string | null;
+  comision_aplicada: number;
+  fecha_liberacion_estimada: string | null;
+  notas: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 // Form Data Types
 export interface CentroCopiadoTamanioPapelFormData {
   nombre: string;

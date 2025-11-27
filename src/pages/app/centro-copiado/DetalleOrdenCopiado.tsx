@@ -1,20 +1,24 @@
 import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Calendar, User, FileText, DollarSign, AlertCircle, Download } from 'lucide-react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { ArrowLeft, Calendar, User, FileText, DollarSign, AlertCircle, Download, ExternalLink } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
 import { Badge } from '../../../components/ui/Badge';
 import { Table } from '../../../components/ui/Table';
 import { Modal } from '../../../components/ui/Modal';
 import { EmptyState } from '../../../components/ui/EmptyState';
+import { Tabs } from '../../../components/ui/Tabs';
 import { usePageHeader } from '../../../hooks/usePageHeader';
 import { useCentroCopiadoOrden } from '../../../hooks/useCentroCopiadoOrden';
 import { useCentroCopiadoOrdenes } from '../../../hooks/useCentroCopiadoOrdenes';
+import { useCentroCopiadoOrdenPagos } from '../../../hooks/useCentroCopiadoOrdenPagos';
 import { useConfirmDialog } from '../../../hooks/useConfirmDialog';
 import { useInfoDialog } from '../../../hooks/useInfoDialog';
 import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
 import { InfoDialog } from '../../../components/ui/InfoDialog';
 import { useCentroCopiadoOrdenArchivos } from '../../../hooks/useCentroCopiadoOrdenArchivos';
+import { OrdenPagosTab } from '../../../components/orders/OrdenPagosTab';
+import { PagoFormModal } from '../../../components/orders/PagoFormModal';
 import type { EstadoOrdenCopiado, TipoItemCopiado } from '../../../types/database';
 
 export function DetalleOrdenCopiado() {
@@ -22,16 +26,22 @@ export function DetalleOrdenCopiado() {
   const navigate = useNavigate();
   const [showCancelarModal, setShowCancelarModal] = useState(false);
   const [motivoCancelacion, setMotivoCancelacion] = useState('');
+  const [activeTab, setActiveTab] = useState('detalles');
+  const [showPagoModal, setShowPagoModal] = useState(false);
+  const [pagoEditando, setPagoEditando] = useState<any>(null);
 
   const { orden, loading, error, refetch } = useCentroCopiadoOrden(id);
   const { updateEstado } = useCentroCopiadoOrdenes();
   const { archivos, descargarArchivo, descargarTodosArchivos } = useCentroCopiadoOrdenArchivos(id);
+  const { pagos, createPago, updatePago, deletePago, calcularTotales } = useCentroCopiadoOrdenPagos(id);
   const { dialogState: confirmDialogState, closeDialog: closeConfirmDialog, handleConfirm, openConfirm } = useConfirmDialog();
   const { dialogState: infoDialogState, closeDialog: closeInfoDialog, openDialog: openInfoDialog } = useInfoDialog();
   const [descargandoId, setDescargandoId] = useState<string | null>(null);
   const [descargandoTodos, setDescargandoTodos] = useState(false);
 
   usePageHeader(`Detalle de Orden ${orden?.numero_orden || ''}`);
+
+  const esOrdenIndependiente = !orden?.orden_trabajo_id;
 
   const getEstadoBadge = (estado: EstadoOrdenCopiado) => {
     const estilos = {
@@ -98,72 +108,115 @@ export function DetalleOrdenCopiado() {
     return archivos.find(archivo => archivo.item_generado_id === itemId);
   };
 
-  const handleDescargarArchivo = async (itemId: string) => {
-    const archivo = getArchivoParaItem(itemId);
-    if (!archivo) return;
-
-    setDescargandoId(itemId);
-    await descargarArchivo(archivo);
+  const handleDescargarArchivo = async (archivoId: string) => {
+    setDescargandoId(archivoId);
+    await descargarArchivo(archivoId);
     setDescargandoId(null);
+  };
+
+  const handleAgregarPago = () => {
+    setPagoEditando(null);
+    setShowPagoModal(true);
+  };
+
+  const handleEditarPago = (pago: any) => {
+    setPagoEditando(pago);
+    setShowPagoModal(true);
+  };
+
+  const handleSubmitPago = async (data: any) => {
+    if (!orden) return;
+
+    try {
+      let success = false;
+
+      if (pagoEditando) {
+        success = await updatePago(pagoEditando.id, data);
+      } else {
+        const result = await createPago({
+          orden_copiado_id: orden.id,
+          ...data,
+        });
+        success = !!result;
+      }
+
+      if (success) {
+        setShowPagoModal(false);
+        setPagoEditando(null);
+        openInfoDialog('Éxito', pagoEditando ? 'Pago actualizado correctamente' : 'Pago registrado correctamente');
+      } else {
+        openInfoDialog('Error', 'No se pudo guardar el pago');
+      }
+    } catch (error) {
+      openInfoDialog('Error', error instanceof Error ? error.message : 'Error al guardar pago');
+    }
+  };
+
+  const handleEliminarPago = async (pagoId: string) => {
+    const success = await deletePago(pagoId);
+    if (success) {
+      openInfoDialog('Éxito', 'Pago eliminado correctamente');
+    } else {
+      openInfoDialog('Error', 'No se pudo eliminar el pago');
+    }
   };
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <Button variant="secondary" onClick={() => navigate('/app/centro-copiado/ordenes')}>
-          <ArrowLeft className="w-4 h-4" />
-          Volver
-        </Button>
-        <Card>
-          <div className="p-12 text-center">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-            <p className="text-gray-600">Cargando orden...</p>
-          </div>
-        </Card>
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Cargando orden...</p>
+        </div>
       </div>
     );
   }
 
   if (error || !orden) {
     return (
-      <div className="space-y-6">
-        <Button variant="secondary" onClick={() => navigate('/app/centro-copiado/ordenes')}>
-          <ArrowLeft className="w-4 h-4" />
-          Volver
-        </Button>
-        <Card>
-          <div className="p-12">
-            <EmptyState
-              icon={AlertCircle}
-              title="Orden no encontrada"
-              description={error || 'No se pudo cargar la información de la orden'}
-              action={
-                <Button variant="primary" onClick={() => navigate('/app/centro-copiado/ordenes')}>
-                  Volver al Listado
-                </Button>
-              }
-            />
-          </div>
-        </Card>
+      <div className="flex items-center justify-center h-64">
+        <EmptyState
+          icon={AlertCircle}
+          title="Error al cargar"
+          description={error || 'No se pudo cargar la información de la orden'}
+          action={{
+            label: 'Volver al listado',
+            onClick: () => navigate('/app/centro-copiado/ordenes'),
+          }}
+        />
       </div>
     );
   }
 
-  const puedeIniciarProceso = orden.estado === 'pendiente';
+  const puedeCancelar = orden.estado !== 'cancelada' && orden.estado !== 'entregada';
+  const puedeIniciar = orden.estado === 'pendiente';
   const puedeFinalizar = orden.estado === 'en_proceso';
   const puedeEntregar = orden.estado === 'finalizada';
-  const puedeCancelar = orden.estado === 'pendiente' || orden.estado === 'en_proceso';
+
+  const totales = {
+    subtotal: orden.total,
+    descuentoAplicado: 0,
+    subtotalConDescuento: orden.total,
+    iva: 0,
+    total: orden.total,
+  };
+
+  const tabs = [
+    { id: 'detalles', label: 'Detalles e Items' },
+    ...(esOrdenIndependiente ? [{ id: 'pagos', label: 'Pagos' }] : []),
+    { id: 'archivos', label: `Archivos (${archivos.length})` },
+  ];
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <Button variant="secondary" onClick={() => navigate('/app/centro-copiado/ordenes')}>
-          <ArrowLeft className="w-4 h-4" />
+        <Button variant="secondary" size="sm" onClick={() => navigate('/app/centro-copiado/ordenes')}>
+          <ArrowLeft className="w-4 h-4 mr-2" />
           Volver
         </Button>
 
-        <div className="flex items-center gap-2">
-          {puedeIniciarProceso && (
+        <div className="flex gap-2">
+          {puedeIniciar && (
             <Button
               variant="primary"
               onClick={() => {
@@ -225,6 +278,15 @@ export function DetalleOrdenCopiado() {
             <div>
               <h1 className="text-2xl font-bold text-gray-900">{orden.numero_orden}</h1>
               <p className="text-sm text-gray-500 mt-1">ID: {orden.id}</p>
+              {orden.orden_trabajo_id && (
+                <Link
+                  to={`/app/orders/${orden.orden_trabajo_id}`}
+                  className="text-sm text-blue-600 hover:text-blue-700 inline-flex items-center gap-1 mt-1"
+                >
+                  Ver Orden de Trabajo Principal
+                  <ExternalLink className="w-3 h-3" />
+                </Link>
+              )}
             </div>
             {getEstadoBadge(orden.estado)}
           </div>
@@ -297,211 +359,217 @@ export function DetalleOrdenCopiado() {
             <div className="mt-4 pt-4 border-t">
               <p className="text-xs text-gray-500">
                 Creada por: <span className="font-medium">{orden.created_by_profile.full_name}</span>
+                {' el '}
+                {formatearFecha(orden.created_at)}
               </p>
             </div>
           )}
         </div>
       </Card>
 
-      <Card>
-        <div className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-gray-900">Items de la Orden</h2>
-            {archivos.length > 0 && (
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={async () => {
-                  setDescargandoTodos(true);
-                  await descargarTodosArchivos();
-                  setDescargandoTodos(false);
-                }}
-                disabled={descargandoTodos}
-              >
-                {descargandoTodos ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Descargando...
-                  </>
-                ) : (
-                  <>
-                    <Download className="w-4 h-4 mr-2" />
-                    Descargar Todos
-                  </>
-                )}
-              </Button>
-            )}
-          </div>
+      <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
 
-          {orden.items.length === 0 ? (
-            <EmptyState
-              icon={FileText}
-              title="No hay items"
-              description="Esta orden no tiene items configurados"
-            />
-          ) : (
-            <Table
-              columns={[
-                {
-                  key: 'numero',
-                  header: '#',
-                  render: (item, index) => <Badge variant="secondary">{index + 1}</Badge>,
-                },
-                {
-                  key: 'tipo',
-                  header: 'Tipo',
-                  render: (item) => <span className="font-medium">{getTipoItemLabel(item.tipo_item)}</span>,
-                },
-                {
-                  key: 'descripcion',
-                  header: 'Descripción',
-                  render: (item) => {
-                    if (item.tipo_item === 'impresion') {
-                      return (
-                        <div className="text-sm">
-                          <div>
-                            {item.tamanio_papel?.nombre} - {item.papel?.variante_nombre}
-                            {item.papel?.espesor && ` ${item.papel.espesor}${item.papel.unidad_espesor}`}
-                          </div>
-                          <div className="text-gray-500">
-                            {item.tipo_tinta === 'CMYK' ? 'Color' : 'B/N'} -{' '}
-                            {item.cara_impresa === 'frente' ? 'Frente' : 'Frente y Dorso'}
-                          </div>
-                        </div>
-                      );
-                    }
-                    return <span className="text-sm text-gray-600">{item.descripcion || '-'}</span>;
-                  },
-                },
-                {
-                  key: 'cantidad',
-                  header: 'Cantidad',
-                  render: (item) => (
-                    <div className="text-sm">
-                      {item.cantidad_hojas && <div>{item.cantidad_hojas} hojas</div>}
-                      <div className="text-gray-500">{item.cantidad_unidades} copias</div>
-                    </div>
-                  ),
-                },
-                {
-                  key: 'terminaciones',
-                  header: 'Terminaciones',
-                  render: (item) => (
-                    <div className="space-y-1">
-                      {item.tipo_anillado && (
-                        <Badge variant="primary">
-                          {item.tipo_anillado === 'ring_wire' ? 'Ring Wire' : 'Plástico'}
-                        </Badge>
-                      )}
-                      {item.tipo_plastificado && <Badge variant="primary">{item.tipo_plastificado}</Badge>}
-                      {!item.tipo_anillado && !item.tipo_plastificado && (
-                        <span className="text-sm text-gray-400">-</span>
-                      )}
-                    </div>
-                  ),
-                },
-                {
-                  key: 'archivo',
-                  header: 'Archivo',
-                  render: (item) => {
-                    const archivo = getArchivoParaItem(item.id);
-                    if (!archivo) {
-                      return <span className="text-sm text-gray-400">Sin archivo</span>;
-                    }
-                    return (
-                      <div className="flex flex-col gap-1">
-                        <span className="text-xs text-gray-600 truncate max-w-[150px]" title={archivo.nombre_archivo}>
-                          {archivo.nombre_archivo}
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDescargarArchivo(item.id)}
-                          disabled={descargandoId === item.id}
-                          className="w-fit"
-                        >
-                          {descargandoId === item.id ? (
-                            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
-                          ) : (
-                            <>
-                              <Download className="w-3 h-3 mr-1" />
-                              Descargar
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    );
-                  },
-                },
-                {
-                  key: 'subtotal',
-                  header: 'Subtotal',
-                  render: (item) => (
-                    <span className="font-semibold text-green-600">
-                      ${Number(item.subtotal).toFixed(2)}
-                    </span>
-                  ),
-                },
-              ]}
-              data={orden.items}
-              keyExtractor={(item) => item.id}
-            />
-          )}
-        </div>
-      </Card>
-
-      {/* Archivos sin asignar */}
-      {archivos.some(archivo => !archivo.item_generado_id) && (
+      {activeTab === 'detalles' && (
         <Card>
           <div className="p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <AlertCircle className="w-5 h-5 text-amber-600" />
-              <h2 className="text-xl font-bold text-gray-900">Archivos sin Asignar</h2>
-            </div>
-            <p className="text-sm text-gray-600 mb-4">
-              Los siguientes archivos fueron cargados pero no tienen un item asociado:
-            </p>
-            <div className="space-y-2">
-              {archivos
-                .filter(archivo => !archivo.item_generado_id)
-                .map(archivo => (
-                  <div
-                    key={archivo.id}
-                    className="flex items-center justify-between p-3 bg-amber-50 border border-amber-200 rounded-lg"
-                  >
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <FileText className="w-5 h-5 text-amber-600 flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">
-                          {archivo.nombre_archivo}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {(archivo.tamano_bytes / 1048576).toFixed(2)} MB
-                        </p>
+            <h2 className="text-xl font-bold text-gray-900 mb-4">Items de la Orden</h2>
+
+            {orden.items.length === 0 ? (
+              <EmptyState
+                icon={FileText}
+                title="No hay items"
+                description="Esta orden no tiene items configurados"
+              />
+            ) : (
+              <Table
+                columns={[
+                  {
+                    key: 'numero',
+                    header: '#',
+                    render: (item, index) => <Badge variant="secondary">{index + 1}</Badge>,
+                  },
+                  {
+                    key: 'tipo',
+                    header: 'Tipo',
+                    render: (item) => <span className="font-medium">{getTipoItemLabel(item.tipo_item)}</span>,
+                  },
+                  {
+                    key: 'descripcion',
+                    header: 'Descripción',
+                    render: (item) => {
+                      if (item.tipo_item === 'impresion') {
+                        return (
+                          <div className="text-sm">
+                            <div>
+                              {item.tamanio_papel?.nombre} - {item.papel?.variante_nombre}
+                              {item.papel?.espesor && ` ${item.papel.espesor}${item.papel.unidad_espesor}`}
+                            </div>
+                            <div className="text-gray-500">
+                              {item.tipo_tinta === 'CMYK' ? 'Color' : 'B/N'} -{' '}
+                              {item.cara_impresa === 'frente' ? 'Frente' : 'Frente y Dorso'}
+                            </div>
+                          </div>
+                        );
+                      }
+                      return <span className="text-sm text-gray-600">{item.descripcion || '-'}</span>;
+                    },
+                  },
+                  {
+                    key: 'cantidad',
+                    header: 'Cantidad',
+                    render: (item) => (
+                      <div className="text-sm">
+                        {item.cantidad_hojas && <div>{item.cantidad_hojas} hojas</div>}
+                        <div className="text-gray-500">{item.cantidad_unidades} copias</div>
                       </div>
+                    ),
+                  },
+                  {
+                    key: 'terminaciones',
+                    header: 'Terminaciones',
+                    render: (item) => (
+                      <div className="space-y-1">
+                        {item.tipo_anillado && (
+                          <Badge variant="primary">
+                            {item.tipo_anillado === 'ring_wire' ? 'Ring Wire' : 'Plástico'}
+                          </Badge>
+                        )}
+                        {item.tipo_plastificado && <Badge variant="primary">{item.tipo_plastificado}</Badge>}
+                        {!item.tipo_anillado && !item.tipo_plastificado && (
+                          <span className="text-sm text-gray-400">-</span>
+                        )}
+                      </div>
+                    ),
+                  },
+                  {
+                    key: 'subtotal',
+                    header: 'Subtotal',
+                    render: (item) => (
+                      <span className="font-semibold text-gray-900">${Number(item.subtotal).toFixed(2)}</span>
+                    ),
+                  },
+                ]}
+                data={orden.items}
+              />
+            )}
+          </div>
+        </Card>
+      )}
+
+      {activeTab === 'pagos' && esOrdenIndependiente && (
+        <Card>
+          <div className="p-6">
+            <OrdenPagosTab
+              totales={totales}
+              pagos={pagos}
+              onAgregarPago={handleAgregarPago}
+              onEditarPago={handleEditarPago}
+              onEliminarPago={handleEliminarPago}
+              readOnly={orden.estado === 'cancelada'}
+            />
+          </div>
+        </Card>
+      )}
+
+      {activeTab === 'pagos' && !esOrdenIndependiente && (
+        <Card>
+          <div className="p-6">
+            <div className="text-center py-12">
+              <AlertCircle className="w-16 h-16 text-blue-500 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Pagos gestionados desde la Orden de Trabajo
+              </h3>
+              <p className="text-gray-600 mb-4">
+                Esta orden está asociada a una orden de trabajo principal. Los pagos se registran desde allí.
+              </p>
+              {orden.orden_trabajo_id && (
+                <Link to={`/app/orders/${orden.orden_trabajo_id}`}>
+                  <Button variant="primary">
+                    Ver Orden de Trabajo Principal
+                  </Button>
+                </Link>
+              )}
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {activeTab === 'archivos' && (
+        <Card>
+          <div className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-gray-900">Archivos Adjuntos</h2>
+              {archivos.length > 0 && (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={async () => {
+                    setDescargandoTodos(true);
+                    await descargarTodosArchivos();
+                    setDescargandoTodos(false);
+                  }}
+                  disabled={descargandoTodos}
+                >
+                  {descargandoTodos ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Descargando...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-4 h-4 mr-2" />
+                      Descargar Todos
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
+
+            {archivos.length === 0 ? (
+              <EmptyState
+                icon={FileText}
+                title="No hay archivos"
+                description="No se han adjuntado archivos a esta orden"
+              />
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {archivos.map((archivo) => (
+                  <div key={archivo.id} className="border rounded-lg p-4 hover:border-blue-300 transition-colors">
+                    <div className="flex items-start justify-between mb-2">
+                      <FileText className="w-8 h-8 text-blue-600" />
+                      {archivo.paginas_detectadas && (
+                        <Badge variant="primary">{archivo.paginas_detectadas} págs</Badge>
+                      )}
                     </div>
+                    <h3 className="font-medium text-gray-900 mb-1 truncate" title={archivo.nombre_archivo}>
+                      {archivo.nombre_archivo}
+                    </h3>
+                    <p className="text-sm text-gray-500 mb-3">
+                      {(archivo.tamano_bytes / 1024).toFixed(2)} KB
+                    </p>
                     <Button
                       variant="secondary"
                       size="sm"
-                      onClick={async () => {
-                        setDescargandoId(archivo.id);
-                        await descargarArchivo(archivo.id);
-                        setDescargandoId(null);
-                      }}
+                      onClick={() => handleDescargarArchivo(archivo.id)}
                       disabled={descargandoId === archivo.id}
+                      className="w-full"
                     >
                       {descargandoId === archivo.id ? (
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2"></div>
+                          Descargando...
+                        </>
                       ) : (
                         <>
-                          <Download className="w-4 h-4 mr-1" />
+                          <Download className="w-4 h-4 mr-2" />
                           Descargar
                         </>
                       )}
                     </Button>
                   </div>
                 ))}
-            </div>
+              </div>
+            )}
           </div>
         </Card>
       )}
@@ -532,6 +600,19 @@ export function DetalleOrdenCopiado() {
           </div>
         </div>
       </Modal>
+
+      {showPagoModal && (
+        <PagoFormModal
+          isOpen={showPagoModal}
+          onClose={() => {
+            setShowPagoModal(false);
+            setPagoEditando(null);
+          }}
+          onSubmit={handleSubmitPago}
+          saldoPendiente={calcularTotales(orden.total).saldoPendiente}
+          pago={pagoEditando}
+        />
+      )}
 
       <ConfirmDialog
         isOpen={confirmDialogState.isOpen}
