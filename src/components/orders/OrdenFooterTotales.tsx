@@ -8,6 +8,8 @@ interface OrdenFooterTotalesProps {
   requiereFactura: boolean;
   totalPagado?: number;
   mostrarSaldo?: boolean;
+  subtotalItems?: number;
+  subtotalOrdenesCopiado?: number;
 }
 
 export function OrdenFooterTotales({
@@ -18,6 +20,8 @@ export function OrdenFooterTotales({
   requiereFactura,
   totalPagado = 0,
   mostrarSaldo = false,
+  subtotalItems,
+  subtotalOrdenesCopiado,
 }: OrdenFooterTotalesProps) {
   const saldoPendiente = total - totalPagado;
   const tienePagos = totalPagado > 0;
@@ -32,12 +36,37 @@ export function OrdenFooterTotales({
           </div>
 
           <div className="flex items-center space-x-8">
-            <div className="text-right">
-              <div className="text-xs text-gray-500">Subtotal</div>
-              <div className="text-sm font-medium text-gray-900">
-                ${subtotal.toFixed(2)}
+            {subtotalItems !== undefined && subtotalOrdenesCopiado !== undefined ? (
+              <>
+                <div className="text-right">
+                  <div className="text-xs text-gray-500">Items Producción</div>
+                  <div className="text-sm font-medium text-gray-900">
+                    ${subtotalItems.toFixed(2)}
+                  </div>
+                </div>
+                {subtotalOrdenesCopiado > 0 && (
+                  <div className="text-right">
+                    <div className="text-xs text-blue-500">Órdenes Copiado</div>
+                    <div className="text-sm font-medium text-blue-600">
+                      ${subtotalOrdenesCopiado.toFixed(2)}
+                    </div>
+                  </div>
+                )}
+                <div className="text-right border-l border-gray-200 pl-4">
+                  <div className="text-xs text-gray-500">Subtotal</div>
+                  <div className="text-sm font-medium text-gray-900">
+                    ${subtotal.toFixed(2)}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="text-right">
+                <div className="text-xs text-gray-500">Subtotal</div>
+                <div className="text-sm font-medium text-gray-900">
+                  ${subtotal.toFixed(2)}
+                </div>
               </div>
-            </div>
+            )}
 
             {descuentoAplicado > 0 && (
               <div className="text-right">

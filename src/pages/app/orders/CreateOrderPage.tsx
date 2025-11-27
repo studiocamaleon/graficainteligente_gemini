@@ -12,6 +12,7 @@ import { useOrdenTrabajo } from '../../../hooks/useOrdenTrabajo';
 import { usePrompt } from '../../../hooks/usePrompt';
 import { useItemRoutesComments } from '../../../hooks/useItemRoutesComments';
 import { useToast } from '../../../contexts/ToastContext';
+import { useClients } from '../../../hooks/useClients';
 import { OrdenGeneralSection } from '../../../components/orders/OrdenGeneralSection';
 import { OrdenItemsTab } from '../../../components/orders/OrdenItemsTab';
 import { OrdenPagosTab } from '../../../components/orders/OrdenPagosTab';
@@ -72,6 +73,9 @@ export function CreateOrderPage() {
   const [showPagoForm, setShowPagoForm] = useState(false);
   const [editingPago, setEditingPago] = useState<PagoTemporal | undefined>();
 
+  // Estado para órdenes de copiado asociadas
+  const [ordenesCopiadoAsociadas, setOrdenesCopiadoAsociadas] = useState<any[]>([]);
+
   const { updateStepComment, countAllComments } = useItemRoutesComments({
     items,
     setItems,
@@ -80,6 +84,10 @@ export function CreateOrderPage() {
   // Hooks para adjuntos temporales
   const archivosTemp = useOrdenArchivos({ ordenTemporalId });
   const linksTemp = useOrdenLinks({ ordenTemporalId });
+
+  // Hook para obtener clientes
+  const { clients } = useClients({ page: 1, itemsPerPage: 1000 });
+  const clienteSeleccionado = clients.find((c) => c.id === clienteId);
 
   const resetFormulario = () => {
     setActiveTab('items');
@@ -95,6 +103,7 @@ export function CreateOrderPage() {
     setPagos([]);
     setShowPagoForm(false);
     setEditingPago(undefined);
+    setOrdenesCopiadoAsociadas([]);
   };
 
   useEffect(() => {
@@ -152,7 +161,7 @@ export function CreateOrderPage() {
   }, []);
 
   const formularioTieneDatos = () => {
-    return clienteId !== '' || items.length > 0 || notasInternas !== '' || fechaEntrega !== '';
+    return clienteId !== '' || items.length > 0 || notasInternas !== '' || fechaEntrega !== '' || ordenesCopiadoAsociadas.length > 0;
   };
 
   const { showPrompt, isPromptOpen, closePrompt, confirmPrompt } = usePrompt(
@@ -181,7 +190,9 @@ export function CreateOrderPage() {
   };
 
   const calcularTotales = () => {
-    const subtotal = items.reduce((sum, item) => sum + item.precio_total, 0);
+    const subtotalItems = items.reduce((sum, item) => sum + item.precio_total, 0);
+    const subtotalOrdenesCopiad = ordenesCopiadoAsociadas.reduce((sum, oc) => sum + oc.total, 0);
+    const subtotal = subtotalItems + subtotalOrdenesCopiad;
     const descuentoAplicado = subtotal * (descuentoTotal / 100);
     const subtotalConDescuento = subtotal - descuentoAplicado;
     const iva = requiereFactura ? subtotalConDescuento * 0.21 : 0;
@@ -247,8 +258,8 @@ export function CreateOrderPage() {
       errores.cliente = 'Debe seleccionar un cliente';
     }
 
-    if (items.length === 0) {
-      errores.items = 'Debe agregar al menos un item a la orden';
+    if (items.length === 0 && ordenesCopiadoAsociadas.length === 0) {
+      errores.items = 'Debe agregar al menos un item o una orden de copiado a la orden';
     }
 
     if (fechaEntrega) {
@@ -363,6 +374,73 @@ export function CreateOrderPage() {
             showError('Orden creada pero hubo un error al registrar los pagos');
           } else {
             console.log('[CreateOrderPage] Pagos insertados exitosamente');
+          }
+        }
+
+        // Crear órdenes de copiado asociadas
+        if (ordenesCopiadoAsociadas.length > 0) {
+          console.log('[CreateOrderPage] Creando órdenes de copiado asociadas:', ordenesCopiadoAsociadas.length);
+
+          for (const oc of ordenesCopiadoAsociadas) {
+            try {
+              // Crear orden de copiado
+              const { data: nuevaOrdenCopiado, error: errorOC } = await supabase
+                .from('centro_copiado_ordenes')
+                .insert({
+                  company_id: profile.company_id,
+                  cliente_id: clienteId,
+                  orden_trabajo_id: result.id,
+                  estado: 'pendiente',
+                  fecha_solicitud: new Date().toISOString(),
+                  fecha_entrega_estimada: oc.fecha_entrega_estimada
+                    ? `${oc.fecha_entrega_estimada}T00:00:00`
+                    : null,
+                  observaciones: oc.observaciones || null,
+                  total: oc.total,
+                  created_by: profile.id,
+                })
+                .select()
+                .single();
+
+              if (errorOC || !nuevaOrdenCopiado) {
+                console.error('[CreateOrderPage] Error creando orden de copiado:', errorOC);
+                showError(`Error al crear orden de copiado: ${errorOC?.message}`);
+                continue;
+              }
+
+              // Crear items de la orden de copiado
+              for (const item of oc.items) {
+                const itemData = {
+                  orden_copiado_id: nuevaOrdenCopiado.id,
+                  tamanio_papel_id: item.config.tamanio_papel_id,
+                  papel_id: item.config.papel_id,
+                  tipo_tinta: item.config.tipo_tinta,
+                  cara_impresa: item.config.cara_impresa,
+                  cantidad_hojas: item.config.cantidad_hojas,
+                  cantidad_unidades: item.config.cantidad_copias,
+                  tipo_anillado: item.config.anillado?.tipo || null,
+                  tipo_plastificado: item.config.plastificado?.tipo || null,
+                  cantidad_plastificado: item.config.plastificado?.todas_hojas
+                    ? item.config.cantidad_hojas
+                    : (item.config.plastificado?.cantidad_especifica || null),
+                  precio_unitario: item.precio || 0,
+                  subtotal: item.precio || 0,
+                  descripcion: item.descripcion || null,
+                };
+
+                const { error: errorItem } = await supabase
+                  .from('centro_copiado_ordenes_items')
+                  .insert(itemData);
+
+                if (errorItem) {
+                  console.error('[CreateOrderPage] Error creando item de orden de copiado:', errorItem);
+                }
+              }
+
+              console.log('[CreateOrderPage] Orden de copiado creada exitosamente:', nuevaOrdenCopiado.numero_orden);
+            } catch (err) {
+              console.error('[CreateOrderPage] Error procesando orden de copiado:', err);
+            }
           }
         }
 
@@ -506,6 +584,9 @@ export function CreateOrderPage() {
               setDescuentoTotal={setDescuentoTotal}
               requiereFactura={requiereFactura}
               setRequiereFactura={setRequiereFactura}
+              clienteNombre={clienteSeleccionado?.nombre_fantasia || ''}
+              ordenesCopiadoAsociadas={ordenesCopiadoAsociadas}
+              onOrdenesCopiadoAsociadasChange={setOrdenesCopiadoAsociadas}
             />
           </div>
 
@@ -550,6 +631,8 @@ export function CreateOrderPage() {
           requiereFactura={requiereFactura}
           totalPagado={pagos.reduce((sum, p) => sum + p.monto, 0)}
           mostrarSaldo={pagos.length > 0}
+          subtotalItems={items.reduce((sum, item) => sum + item.precio_total, 0)}
+          subtotalOrdenesCopiado={ordenesCopiadoAsociadas.reduce((sum, oc) => sum + oc.total, 0)}
         />
       </div>
 

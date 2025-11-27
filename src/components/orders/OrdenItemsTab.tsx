@@ -1,12 +1,14 @@
 import { useState } from 'react';
-import { Plus, Trash2, Package } from 'lucide-react';
+import { Plus, Trash2, Package, FileText, Printer, ChevronDown, ChevronUp, Calendar, Edit2 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Switch } from '../ui/Switch';
 import { Badge } from '../ui/Badge';
 import { Table } from '../ui/Table';
 import { EmptyState } from '../ui/EmptyState';
+import { Card } from '../ui/Card';
 import { UniversalAddItemWizard } from '../wizard/UniversalAddItemWizard';
+import { AsociarOrdenCopiadoModal } from './AsociarOrdenCopiadoModal';
 
 interface OrdenItem {
   id?: string;
@@ -30,6 +32,9 @@ interface OrdenItemsTabProps {
   setDescuentoTotal: (descuento: number) => void;
   requiereFactura?: boolean;
   setRequiereFactura?: (requiere: boolean) => void;
+  clienteNombre?: string;
+  ordenesCopiadoAsociadas?: any[];
+  onOrdenesCopiadoAsociadasChange?: (ordenes: any[]) => void;
 }
 
 export function OrdenItemsTab({
@@ -39,8 +44,14 @@ export function OrdenItemsTab({
   setDescuentoTotal,
   requiereFactura = false,
   setRequiereFactura,
+  clienteNombre = '',
+  ordenesCopiadoAsociadas = [],
+  onOrdenesCopiadoAsociadasChange,
 }: OrdenItemsTabProps) {
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showAsociarOCModal, setShowAsociarOCModal] = useState(false);
+  const [ordenCopiadoEditando, setOrdenCopiadoEditando] = useState<any>(undefined);
+  const [ordenesExpanded, setOrdenesExpanded] = useState<Record<string, boolean>>({});
 
   const handleAgregarItem = async (itemData: any) => {
     const nuevoItem: OrdenItem = {
@@ -305,6 +316,23 @@ export function OrdenItemsTab({
             <Plus className="w-4 h-4" />
             Agregar Item
           </Button>
+          {clienteNombre && onOrdenesCopiadoAsociadasChange && (
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setOrdenCopiadoEditando(undefined);
+                setShowAsociarOCModal(true);
+              }}
+            >
+              <Printer className="w-4 h-4" />
+              Asociar OC
+              {ordenesCopiadoAsociadas.length > 0 && (
+                <Badge variant="primary" className="ml-2">
+                  {ordenesCopiadoAsociadas.length}
+                </Badge>
+              )}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -347,11 +375,148 @@ export function OrdenItemsTab({
         </>
       )}
 
+      {/* Órdenes de Copiado Asociadas */}
+      {onOrdenesCopiadoAsociadasChange && ordenesCopiadoAsociadas.length > 0 && (
+        <div className="mt-8">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            Órdenes de Copiado Asociadas
+          </h3>
+          <div className="space-y-3">
+            {ordenesCopiadoAsociadas.map((oc) => (
+              <Card key={oc.id} className="border-blue-200 bg-blue-50">
+                <div className="p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <Printer className="w-5 h-5 text-blue-600" />
+                        <span className="font-semibold text-gray-900">
+                          Orden de Copiado
+                        </span>
+                        <Badge variant="primary">{oc.items.length} items</Badge>
+                        {oc.fecha_entrega_estimada && (
+                          <div className="flex items-center gap-1 text-sm text-gray-600">
+                            <Calendar className="w-4 h-4" />
+                            {new Date(oc.fecha_entrega_estimada).toLocaleDateString()}
+                          </div>
+                        )}
+                      </div>
+
+                      {ordenesExpanded[oc.id] && (
+                        <div className="mt-3 pl-8 space-y-2">
+                          {oc.items.map((item: any, idx: number) => (
+                            <div
+                              key={item.id}
+                              className="text-sm text-gray-700 flex items-center gap-2"
+                            >
+                              <Badge variant="secondary" size="sm">
+                                {idx + 1}
+                              </Badge>
+                              <span>
+                                {item.config.cantidad_copias} copias •{' '}
+                                {item.config.cantidad_hojas} hojas •{' '}
+                                {item.config.tipo_tinta === 'CMYK' ? 'Color' : 'B/N'}
+                                {item.descripcion && ` • ${item.descripcion}`}
+                              </span>
+                              <span className="ml-auto font-medium text-green-600">
+                                ${(item.precio || 0).toFixed(2)}
+                              </span>
+                            </div>
+                          ))}
+                          {oc.observaciones && (
+                            <div className="mt-2 p-2 bg-white rounded text-sm text-gray-600">
+                              <strong>Observaciones:</strong> {oc.observaciones}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2 ml-4">
+                      <span className="text-lg font-bold text-green-600">
+                        ${oc.total.toFixed(2)}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setOrdenesExpanded((prev) => ({
+                            ...prev,
+                            [oc.id]: !prev[oc.id],
+                          }));
+                        }}
+                      >
+                        {ordenesExpanded[oc.id] ? (
+                          <ChevronUp className="w-4 h-4" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4" />
+                        )}
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => {
+                          setOrdenCopiadoEditando(oc);
+                          setShowAsociarOCModal(true);
+                        }}
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={() => {
+                          if (confirm('¿Eliminar esta orden de copiado asociada?')) {
+                            onOrdenesCopiadoAsociadasChange(
+                              ordenesCopiadoAsociadas.filter((o) => o.id !== oc.id)
+                            );
+                          }
+                        }}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
       <UniversalAddItemWizard
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
         onAgregar={handleAgregarItem}
       />
+
+      {clienteNombre && onOrdenesCopiadoAsociadasChange && (
+        <AsociarOrdenCopiadoModal
+          isOpen={showAsociarOCModal}
+          onClose={() => {
+            setShowAsociarOCModal(false);
+            setOrdenCopiadoEditando(undefined);
+          }}
+          onGuardar={(nuevaOrden) => {
+            if (ordenCopiadoEditando) {
+              // Editar orden existente
+              onOrdenesCopiadoAsociadasChange(
+                ordenesCopiadoAsociadas.map((o) =>
+                  o.id === ordenCopiadoEditando.id ? nuevaOrden : o
+                )
+              );
+            } else {
+              // Agregar nueva orden
+              onOrdenesCopiadoAsociadasChange([
+                ...ordenesCopiadoAsociadas,
+                nuevaOrden,
+              ]);
+            }
+            setOrdenCopiadoEditando(undefined);
+          }}
+          clienteNombre={clienteNombre}
+          ordenEditando={ordenCopiadoEditando}
+        />
+      )}
     </div>
   );
 }
