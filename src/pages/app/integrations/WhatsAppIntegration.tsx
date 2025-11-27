@@ -25,6 +25,7 @@ export function WhatsAppIntegration() {
     updateFormData,
     setError,
     checkConnectionState,
+    resetState,
   } = useEvolutionIntegration();
 
   const handleSaveConfig = async () => {
@@ -54,6 +55,16 @@ export function WhatsAppIntegration() {
       showSuccess('¡WhatsApp conectado correctamente!');
     } else {
       showError(`Estado actual: ${state}`);
+    }
+  };
+
+  const handleResetState = async () => {
+    console.log('[Manual Reset] 🔄 User triggered state reset');
+    const success = await resetState();
+    if (success) {
+      showSuccess('Estado restablecido correctamente');
+    } else {
+      showError('Error al restablecer el estado');
     }
   };
 
@@ -220,6 +231,29 @@ export function WhatsAppIntegration() {
                   Tu WhatsApp está listo para enviar y recibir mensajes.
                 </p>
               </div>
+            </div>
+          )}
+
+          {/* Alerta de estado bloqueado */}
+          {config.connectionState === 'connecting' && !qrData && (
+            <div className="flex items-start gap-3 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+              <AlertCircle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-orange-900">
+                  Estado de conexión bloqueado
+                </p>
+                <p className="text-xs text-orange-700 mt-1">
+                  El sistema detectó un estado "conectando" sin QR activo. Esto puede ocurrir si la sesión anterior expiró. Haz click en el botón para restablecer.
+                </p>
+              </div>
+              <Button
+                onClick={handleResetState}
+                variant="outline"
+                size="sm"
+                className="flex-shrink-0"
+              >
+                🔄 Restablecer
+              </Button>
             </div>
           )}
 

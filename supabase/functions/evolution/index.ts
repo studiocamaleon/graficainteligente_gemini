@@ -437,12 +437,72 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    // ============================================
+    // POST /reset-state - Resetear estado a disconnected
+    // ============================================
+    if (method === 'POST' && path === '/reset-state') {
+      const config = await getEvolutionConfig(supabase, companyId);
+
+      if (!config) {
+        return new Response(
+          JSON.stringify({ error: 'No hay configuración' }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      }
+
+      try {
+        console.log(`[ResetState] 🔄 Resetting connection state to disconnected for company: ${companyId}`);
+
+        // Actualizar estado a "disconnected"
+        const { error: updateError } = await supabase
+          .from('evolution_integrations')
+          .update({
+            connection_state: 'disconnected',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('company_id', companyId);
+
+        if (updateError) {
+          console.error('[ResetState] ❌ Error updating database:', updateError);
+          throw updateError;
+        }
+
+        console.log('[ResetState] ✅ State reset successfully to disconnected');
+
+        return new Response(
+          JSON.stringify({
+            state: 'disconnected',
+            message: 'Estado restablecido correctamente'
+          }),
+          {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      } catch (error: any) {
+        console.error('[ResetState] ❌ Error resetting state:', error);
+        return new Response(
+          JSON.stringify({
+            error: 'Error al restablecer estado',
+            details: error.message
+          }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      }
+    }
+
     // Endpoint no encontrado
     return new Response(
       JSON.stringify({ error: 'Endpoint no encontrado' }),
-      { 
-        status: 404, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
 

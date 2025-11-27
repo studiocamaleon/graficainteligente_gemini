@@ -231,10 +231,17 @@ export function useEvolutionIntegration() {
     countdownIntervalRef.current = window.setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
+          console.log('[Countdown] ⏰ QR expired, resetting state...');
           stopCountdown();
           stopPolling();
           setQrData(null);
           setError('El QR ha expirado. Genera uno nuevo.');
+
+          // Resetear estado en BD
+          resetState().catch(err =>
+            console.error('[Countdown] ❌ Error resetting state on expiration:', err)
+          );
+
           return 0;
         }
         return prev - 1;
@@ -247,6 +254,26 @@ export function useEvolutionIntegration() {
     if (countdownIntervalRef.current) {
       clearInterval(countdownIntervalRef.current);
       countdownIntervalRef.current = null;
+    }
+  };
+
+  // Resetear estado a disconnected
+  const resetState = async () => {
+    try {
+      console.log('[ResetState] 🔄 Resetting state to disconnected...');
+      const data = await callEdgeFunction('/reset-state', 'POST');
+      console.log('[ResetState] ✅ State reset successful:', data);
+
+      // Actualizar config local
+      setConfig((prev) => ({
+        ...prev,
+        connectionState: 'disconnected' as ConnectionState,
+      }));
+
+      return true;
+    } catch (err) {
+      console.error('[ResetState] ❌ Error resetting state:', err);
+      return false;
     }
   };
 
@@ -268,6 +295,27 @@ export function useEvolutionIntegration() {
   useEffect(() => {
     fetchConfig();
   }, []);
+
+  // Verificar y corregir estado "connecting" huérfano
+  useEffect(() => {
+    const verifyStaleConnecting = async () => {
+      if (config.connectionState === 'connecting' && !qrData) {
+        console.log('[Init] ⚠️ Detected stale "connecting" state without active QR');
+        console.log('[Init] 🔍 Verifying actual connection state...');
+
+        const state = await checkConnectionState();
+
+        if (state !== 'open') {
+          console.log('[Init] 🔄 State is not "open", resetting to disconnected...');
+          await resetState();
+        }
+      }
+    };
+
+    if (config.hasConfig && config.connectionState === 'connecting' && !qrData) {
+      verifyStaleConnecting();
+    }
+  }, [config.hasConfig, config.connectionState]);
 
   // Cleanup al desmontar
   useEffect(() => {
@@ -293,5 +341,6 @@ export function useEvolutionIntegration() {
     updateFormData,
     setError,
     checkConnectionState,
+    resetState,
   };
 }
