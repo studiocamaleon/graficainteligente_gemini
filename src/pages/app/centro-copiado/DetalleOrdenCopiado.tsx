@@ -179,10 +179,11 @@ export function DetalleOrdenCopiado() {
           icon={AlertCircle}
           title="Error al cargar"
           description={error || 'No se pudo cargar la información de la orden'}
-          action={{
-            label: 'Volver al listado',
-            onClick: () => navigate('/app/centro-copiado/ordenes'),
-          }}
+          action={
+            <Button onClick={() => navigate('/app/centro-copiado/ordenes')}>
+              Volver al listado
+            </Button>
+          }
         />
       </div>
     );
