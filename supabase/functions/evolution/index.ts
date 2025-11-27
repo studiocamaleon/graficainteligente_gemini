@@ -49,20 +49,34 @@ async function getEvolutionConfig(supabase: any, companyId: string): Promise<Evo
 
 // Hacer request a Evolution API
 async function makeEvolutionRequest(url: string, apiKey: string, method: string = 'GET'): Promise<any> {
-  const response = await fetch(url, {
-    method,
-    headers: {
-      'apikey': apiKey,
-      'Content-Type': 'application/json',
-    },
-  });
+  console.log(`[Evolution API] ${method} ${url}`);
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Evolution API error (${response.status}): ${errorText}`);
+  try {
+    const response = await fetch(url, {
+      method,
+      headers: {
+        'apikey': apiKey,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[Evolution API] Error ${response.status}: ${errorText}`);
+      throw new Error(`Evolution API error (${response.status}): ${errorText}`);
+    }
+
+    const data = await response.json();
+    console.log(`[Evolution API] Success: ${JSON.stringify(data).substring(0, 100)}...`);
+    return data;
+  } catch (error: any) {
+    // Capturar errores de red
+    if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      console.error(`[Evolution API] Network error: ${error.message}`);
+      throw new Error(`Network error: No se pudo conectar con Evolution API en ${url}`);
+    }
+    throw error;
   }
-
-  return response.json();
 }
 
 Deno.serve(async (req: Request) => {
@@ -240,9 +254,9 @@ Deno.serve(async (req: Request) => {
       if (!config) {
         return new Response(
           JSON.stringify({ error: 'No hay configuración. Primero configura tu integración.' }),
-          { 
-            status: 400, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
           }
         );
       }
@@ -250,9 +264,30 @@ Deno.serve(async (req: Request) => {
       if (!config.api_key) {
         return new Response(
           JSON.stringify({ error: 'API Key no configurada' }),
-          { 
-            status: 400, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      }
+
+      // Validar configuración antes de llamar a Evolution API
+      if (!config.base_url.startsWith('http')) {
+        return new Response(
+          JSON.stringify({ error: 'URL base inválida. Debe comenzar con http:// o https://' }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      }
+
+      if (!config.instance_id || config.instance_id.trim() === '') {
+        return new Response(
+          JSON.stringify({ error: 'Instance ID vacío' }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
           }
         );
       }
@@ -260,6 +295,7 @@ Deno.serve(async (req: Request) => {
       try {
         // Llamar a Evolution API para obtener QR
         const evolutionUrl = `${config.base_url}/instance/connect/${config.instance_id}`;
+        console.log(`[Connect] Requesting QR for instance: ${config.instance_id}`);
         const qrData = await makeEvolutionRequest(evolutionUrl, config.api_key, 'GET');
 
         // Actualizar estado a "connecting"
@@ -283,7 +319,12 @@ Deno.serve(async (req: Request) => {
         );
       } catch (error: any) {
         console.error('Error calling Evolution API:', error);
-        
+        console.error('Config used:', {
+          base_url: config.base_url,
+          instance_id: config.instance_id,
+          has_api_key: !!config.api_key
+        });
+
         // Actualizar estado a "error"
         await supabase
           .from('evolution_integrations')
@@ -294,17 +335,32 @@ Deno.serve(async (req: Request) => {
           .eq('company_id', companyId);
 
         let errorMessage = 'Error conectando con Evolution API';
-        if (error.message.includes('401')) {
-          errorMessage = 'API Key inválida';
+        let statusCode = 500;
+
+        if (error.message.includes('Network error')) {
+          errorMessage = 'No se pudo conectar con Evolution API. Verifica la URL base.';
+          statusCode = 503;
+        } else if (error.message.includes('401')) {
+          errorMessage = 'API Key inválida. Verifica tu configuración.';
+          statusCode = 401;
         } else if (error.message.includes('404')) {
-          errorMessage = 'Instancia no encontrada';
+          errorMessage = 'Instancia no encontrada. Verifica tu Instance ID.';
+          statusCode = 404;
+        } else if (error.message.includes('500')) {
+          errorMessage = 'Error interno de Evolution API. Intenta de nuevo más tarde.';
+        } else if (error.message.includes('timeout')) {
+          errorMessage = 'Timeout conectando con Evolution API. Intenta de nuevo.';
+          statusCode = 504;
         }
 
         return new Response(
-          JSON.stringify({ error: errorMessage }),
-          { 
-            status: 500, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          JSON.stringify({
+            error: errorMessage,
+            details: error.message
+          }),
+          {
+            status: statusCode,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
           }
         );
       }
