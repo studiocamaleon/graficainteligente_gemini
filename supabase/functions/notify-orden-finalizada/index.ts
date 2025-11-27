@@ -9,7 +9,7 @@ const corsHeaders = {
 interface WebhookPayload {
   orden_id: string;
   company_id: string;
-  tipo_orden: 'trabajo' | 'copiado';
+  tipo_orden?: 'trabajo' | 'copiado'; // Opcional, se puede detectar automáticamente
 }
 
 function sanitizeMessage(message: string): string {
@@ -284,17 +284,18 @@ Deno.serve(async (req: Request) => {
     }
 
     const payload: WebhookPayload = await req.json();
-    const { orden_id, company_id, tipo_orden } = payload;
+    const { orden_id, company_id } = payload;
+    let tipo_orden = payload.tipo_orden;
 
-    console.log('[Notify] Procesando notificación:', {
+    console.log('[Notify] Payload recibido:', {
       orden_id,
       company_id,
-      tipo_orden
+      tipo_orden_from_payload: tipo_orden
     });
 
-    if (!orden_id || !company_id || !tipo_orden) {
+    if (!orden_id || !company_id) {
       return new Response(
-        JSON.stringify({ error: 'Parámetros inválidos' }),
+        JSON.stringify({ error: 'Parámetros inválidos: orden_id y company_id son requeridos' }),
         {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -305,6 +306,27 @@ Deno.serve(async (req: Request) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // DETECCIÓN AUTOMÁTICA DEL TIPO DE ORDEN (si no viene en payload o viene mal)
+    if (!tipo_orden || (tipo_orden !== 'trabajo' && tipo_orden !== 'copiado')) {
+      console.log('[Notify] ⚠️ tipo_orden no válido o faltante, detectando automáticamente...');
+
+      // Intentar como orden de trabajo
+      const { data: ordenTrabajo } = await supabase
+        .from('ordenes_trabajo')
+        .select('id')
+        .eq('id', orden_id)
+        .maybeSingle();
+
+      tipo_orden = ordenTrabajo ? 'trabajo' : 'copiado';
+      console.log('[Notify] ✅ Tipo detectado automáticamente:', tipo_orden);
+    }
+
+    console.log('[Notify] Procesando notificación:', {
+      orden_id,
+      company_id,
+      tipo_orden
+    });
 
     const { data: yaEnviado } = await supabase
       .from('whatsapp_notificaciones')
@@ -329,6 +351,8 @@ Deno.serve(async (req: Request) => {
     let pagosTotal = 0;
 
     if (tipo_orden === 'trabajo') {
+      console.log('[Notify] ✅ Usando lógica de ORDEN DE TRABAJO');
+
       const { data: ordenData, error: ordenError } = await supabase
         .from('ordenes_trabajo')
         .select(`
@@ -352,6 +376,7 @@ Deno.serve(async (req: Request) => {
       orden = ordenData;
       cliente = ordenData.cliente;
     } else {
+      console.log('[Notify] ✅ Usando lógica de ORDEN DE COPIADO');
       const { data: ordenData, error: ordenError } = await supabase
         .from('centro_copiado_ordenes')
         .select(`
@@ -430,9 +455,13 @@ Deno.serve(async (req: Request) => {
 
     const saldoPendiente = parseFloat(orden.total || 0) - pagosTotal;
 
+    console.log('[Notify] 📝 Generando mensaje para tipo:', tipo_orden);
+
     const mensaje = tipo_orden === 'trabajo'
       ? generateOrdenTrabajoFinalizadaMessage(orden, cliente, company, saldoPendiente)
       : generateOrdenCopiadoFinalizadaMessage(orden, cliente, company, saldoPendiente);
+
+    console.log('[Notify] ✅ Mensaje generado, longitud:', mensaje.length);
 
     const mensajeSanitizado = sanitizeMessage(mensaje);
     const telefonoFormateado = formatPhoneNumber(cliente.whatsapp);
