@@ -385,13 +385,18 @@ Deno.serve(async (req: Request) => {
       try {
         // Llamar a Evolution API para verificar estado
         const evolutionUrl = `${config.base_url}/instance/connectionState/${config.instance_id}`;
+        console.log(`[ConnectionState] 🔍 Calling: ${evolutionUrl}`);
         const stateData = await makeEvolutionRequest(evolutionUrl, config.api_key, 'GET');
 
+        console.log(`[ConnectionState] 📦 Full response from Evolution API:`, JSON.stringify(stateData));
+
         const state = stateData.instance?.state || 'disconnected';
+        console.log(`[ConnectionState] 🎯 Extracted state: "${state}"`);
 
         // Si está conectado, actualizar BD
         if (state === 'open') {
-          await supabase
+          console.log(`[ConnectionState] ✅ State is OPEN! Updating database...`);
+          const { error: updateError } = await supabase
             .from('evolution_integrations')
             .update({
               connection_state: 'open',
@@ -399,22 +404,34 @@ Deno.serve(async (req: Request) => {
               updated_at: new Date().toISOString(),
             })
             .eq('company_id', companyId);
+
+          if (updateError) {
+            console.error('[ConnectionState] ❌ Error updating database:', updateError);
+          } else {
+            console.log('[ConnectionState] ✅ Database updated successfully');
+          }
         }
 
+        console.log(`[ConnectionState] 📤 Returning state to frontend: "${state}"`);
         return new Response(
           JSON.stringify({ state }),
-          { 
-            status: 200, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
           }
         );
       } catch (error: any) {
-        console.error('Error checking connection state:', error);
+        console.error('[ConnectionState] ❌ Error checking connection state:', error);
+        console.error('[ConnectionState] Error details:', {
+          message: error.message,
+          name: error.name,
+          stack: error.stack
+        });
         return new Response(
-          JSON.stringify({ state: 'error' }),
-          { 
-            status: 200, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          JSON.stringify({ state: 'error', errorMessage: error.message }),
+          {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
           }
         );
       }

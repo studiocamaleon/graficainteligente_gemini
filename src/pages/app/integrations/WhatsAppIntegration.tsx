@@ -18,11 +18,13 @@ export function WhatsAppIntegration() {
     isSaving,
     error,
     timeLeft,
+    pollingAttempts,
     saveConfig,
     generateQR,
     clearQR,
     updateFormData,
     setError,
+    checkConnectionState,
   } = useEvolutionIntegration();
 
   const handleSaveConfig = async () => {
@@ -41,6 +43,17 @@ export function WhatsAppIntegration() {
       showSuccess('QR generado. Escanéalo con WhatsApp.');
     } else if (error) {
       showError(error);
+    }
+  };
+
+  const handleManualCheck = async () => {
+    console.log('[Manual Check] 🕵️ User triggered manual connection check');
+    showSuccess('Verificando conexión...');
+    const state = await checkConnectionState();
+    if (state === 'open') {
+      showSuccess('¡WhatsApp conectado correctamente!');
+    } else {
+      showError(`Estado actual: ${state}`);
     }
   };
 
@@ -276,11 +289,16 @@ export function WhatsAppIntegration() {
 
               {/* Contador */}
               <div className="flex items-center justify-between p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
-                  <span className="text-sm text-blue-900">
-                    Esperando conexión...
-                  </span>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
+                    <span className="text-sm text-blue-900">
+                      Esperando conexión...
+                    </span>
+                  </div>
+                  <p className="text-xs text-blue-600">
+                    Intentos de verificación: {pollingAttempts}
+                  </p>
                 </div>
                 <div className="text-right">
                   <p className="text-xs text-blue-700">Tiempo restante</p>
@@ -296,14 +314,23 @@ export function WhatsAppIntegration() {
                 />
               </div>
 
-              {/* Botón cancelar */}
-              <Button
-                onClick={clearQR}
-                variant="outline"
-                className="w-full"
-              >
-                Cancelar
-              </Button>
+              {/* Botones de acción */}
+              <div className="flex gap-3">
+                <Button
+                  onClick={handleManualCheck}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  🔄 Verificar manualmente
+                </Button>
+                <Button
+                  onClick={clearQR}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  Cancelar
+                </Button>
+              </div>
             </div>
           )}
 

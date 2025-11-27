@@ -22,6 +22,7 @@ export function useEvolutionIntegration() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState(120);
+  const [pollingAttempts, setPollingAttempts] = useState(0);
   const pollingIntervalRef = useRef<number | null>(null);
   const countdownIntervalRef = useRef<number | null>(null);
 
@@ -159,10 +160,13 @@ export function useEvolutionIntegration() {
   // Verificar estado de conexión
   const checkConnectionState = async () => {
     try {
+      console.log('[Polling] Checking connection state...');
       const data = await callEdgeFunction('/connection-state', 'GET');
+      console.log('[Polling] Response received:', JSON.stringify(data));
 
       if (data.state === 'open') {
         // Conexión exitosa
+        console.log('[Polling] ✅ Connection detected as OPEN! Stopping polling...');
         stopPolling();
         stopCountdown();
         setQrData(null);
@@ -174,32 +178,44 @@ export function useEvolutionIntegration() {
         return 'open';
       }
 
+      console.log('[Polling] Current state:', data.state);
       return data.state;
     } catch (err) {
-      console.error('Error checking connection state:', err);
+      console.error('[Polling] ❌ Error checking connection state:', err);
       return 'error';
     }
   };
 
   // Iniciar polling
   const startPolling = () => {
+    console.log('[Polling] 🚀 Starting polling (checking every 3 seconds)...');
     // Limpiar polling anterior si existe
     if (pollingIntervalRef.current) {
       clearInterval(pollingIntervalRef.current);
     }
 
+    setPollingAttempts(0);
+
     pollingIntervalRef.current = window.setInterval(async () => {
+      setPollingAttempts(prev => {
+        const newAttempts = prev + 1;
+        console.log(`[Polling] 🔄 Interval tick #${newAttempts}`);
+        return newAttempts;
+      });
+
       const state = await checkConnectionState();
 
       if (state === 'open' || state === 'error') {
+        console.log('[Polling] ⛔ Stopping polling. Final state:', state);
         stopPolling();
       }
-    }, 1000); // Cada 1 segundo
+    }, 3000); // Cada 3 segundos
   };
 
   // Detener polling
   const stopPolling = () => {
     if (pollingIntervalRef.current) {
+      console.log('[Polling] 🛑 Polling stopped');
       clearInterval(pollingIntervalRef.current);
       pollingIntervalRef.current = null;
     }
@@ -269,11 +285,13 @@ export function useEvolutionIntegration() {
     isSaving,
     error,
     timeLeft,
+    pollingAttempts,
     fetchConfig,
     saveConfig,
     generateQR,
     clearQR,
     updateFormData,
     setError,
+    checkConnectionState,
   };
 }
