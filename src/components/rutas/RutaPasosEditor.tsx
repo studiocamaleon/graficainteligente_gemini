@@ -27,7 +27,7 @@ const ETAPA_COLORS: Record<EtapaPaso, { bg: string; text: string; border: string
 };
 
 export function RutaPasosEditor({ rutaId, rutaNombre, onClose }: RutaPasosEditorProps) {
-  const { pasos, loading, addPaso, updatePaso, deletePaso, reorderPasos, refetch } = useRutaPasos({
+  const { pasos, loading, error, addPaso, updatePaso, deletePaso, reorderPasos, refetch } = useRutaPasos({
     rutaId,
     etapa: null,
   });
@@ -227,6 +227,16 @@ export function RutaPasosEditor({ rutaId, rutaNombre, onClose }: RutaPasosEditor
           {loading ? (
             <div className="text-center py-12">
               <p className="text-gray-500">Cargando pasos...</p>
+              <p className="text-xs text-gray-400 mt-2">Ruta ID: {rutaId.slice(0, 8)}...</p>
+            </div>
+          ) : error ? (
+            <div className="text-center py-12 bg-red-50 rounded-lg border-2 border-red-300">
+              <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-3" />
+              <p className="text-red-700 font-medium mb-1">Error al cargar pasos</p>
+              <p className="text-sm text-red-600 mb-4">{error}</p>
+              <Button variant="primary" onClick={() => refetch()}>
+                Reintentar
+              </Button>
             </div>
           ) : pasosPorEtapa.length === 0 ? (
             <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">

@@ -32,20 +32,33 @@ export function useRutaPasos({
 
   const fetchPasos = async () => {
     if (!rutaId) {
+      console.log('[useRutaPasos] No rutaId provided, skipping fetch');
       setPasos([]);
       setLoading(false);
       return;
     }
 
+    console.log('[useRutaPasos] Fetching pasos for:', { rutaId, etapa });
+
     try {
       setLoading(true);
       setError(null);
+
+      // Verificar sesión activa
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        console.error('[useRutaPasos] No active session');
+        setError('No hay sesión activa');
+        setPasos([]);
+        setLoading(false);
+        return;
+      }
 
       let query = supabase
         .from('rutas_produccion_pasos')
         .select(`
           *,
-          paso:pasos!left(
+          paso:pasos(
             id,
             nombre,
             estacion_id
@@ -59,11 +72,23 @@ export function useRutaPasos({
 
       query = query.order('etapa').order('orden');
 
+      console.log('[useRutaPasos] Executing query...');
       const { data, error: fetchError } = await query;
 
-      if (fetchError) throw fetchError;
+      console.log('[useRutaPasos] Query result:', {
+        recordCount: data?.length || 0,
+        hasError: !!fetchError,
+        errorMessage: fetchError?.message,
+        firstRecord: data?.[0]
+      });
+
+      if (fetchError) {
+        console.error('[useRutaPasos] Supabase query error:', fetchError);
+        throw fetchError;
+      }
 
       // Enriquecer con datos de servicios, acabados y tecnologías
+      console.log('[useRutaPasos] Enriching data with related entities...');
       const enrichedData = await Promise.all(
         (data || []).map(async (paso) => {
           const config = paso.configuracion_condicion as any;
@@ -103,9 +128,23 @@ export function useRutaPasos({
         })
       );
 
+      console.log('[useRutaPasos] Enriched data ready:', {
+        total: enrichedData.length,
+        porEtapa: enrichedData.reduce((acc, paso) => {
+          acc[paso.etapa] = (acc[paso.etapa] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>)
+      });
+
       setPasos(enrichedData);
     } catch (err) {
-      console.error('Error fetching pasos de ruta:', err);
+      console.error('[useRutaPasos] Error fetching pasos:', {
+        error: err,
+        rutaId,
+        etapa,
+        message: err instanceof Error ? err.message : 'Unknown error',
+        details: err
+      });
       setError(err instanceof Error ? err.message : 'Error desconocido');
       setPasos([]);
     } finally {
