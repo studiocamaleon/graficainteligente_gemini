@@ -171,9 +171,18 @@ function formatItemCopiadoParaNuevaOrden(item: any, index: number): string {
 
   const materialNombre = item.papel?.material?.nombre || '';
   const varianteNombre = item.papel?.variante_nombre || '';
-  const papelCompleto = materialNombre && varianteNombre
-    ? `${materialNombre} ${varianteNombre}`
-    : (varianteNombre || materialNombre || 'N/A');
+  const espesor = item.papel?.espesor;
+  const unidadEspesor = item.papel?.unidad_espesor || 'gr';
+
+  let papelCompleto = '';
+  if (materialNombre && varianteNombre) {
+    papelCompleto = `${materialNombre} ${varianteNombre}`;
+    if (espesor) {
+      papelCompleto += ` ${espesor}${unidadEspesor}`;
+    }
+  } else {
+    papelCompleto = varianteNombre || materialNombre || 'N/A';
+  }
 
   const tinta = item.tipo_tinta === 'CMYK' ? 'Color' : 'Blanco y Negro';
   const caras = item.cara_impresa === 'frente_y_dorso' ? 'Doble faz' : 'Simple faz';
@@ -404,6 +413,8 @@ export async function enviarNotificacion(
             tamanio_papel:centro_copiado_tamanios_papel(nombre),
             papel:centro_copiado_papeles(
               variante_nombre,
+              espesor,
+              unidad_espesor,
               material:material_id(nombre)
             )
           ),

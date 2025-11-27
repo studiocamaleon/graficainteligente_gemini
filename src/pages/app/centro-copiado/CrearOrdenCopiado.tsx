@@ -6,14 +6,17 @@ import { Card } from '../../../components/ui/Card';
 import { Input } from '../../../components/ui/Input';
 import { SearchableSelect } from '../../../components/ui/SearchableSelect';
 import { DatePicker } from '../../../components/ui/DatePicker';
+import { Tabs } from '../../../components/ui/Tabs';
 import { CentroCopiadoItemForm, ItemCopiadoConfig } from '../../../components/centro-copiado/CentroCopiadoItemForm';
 import { CentroCopiadoResumenOrden } from '../../../components/centro-copiado/CentroCopiadoResumenOrden';
 import { CentroCopiadoArchivosSection } from '../../../components/centro-copiado/CentroCopiadoArchivosSection';
+import { OrdenPagosTab } from '../../../components/orders/OrdenPagosTab';
 import { usePageHeader } from '../../../hooks/usePageHeader';
 import { useClients } from '../../../hooks/useClients';
 import { useCentroCopiadoOrdenes } from '../../../hooks/useCentroCopiadoOrdenes';
 import { useCentroCopiadoOrdenItems } from '../../../hooks/useCentroCopiadoOrdenItems';
 import { useCentroCopiadoArchivos } from '../../../hooks/useCentroCopiadoArchivos';
+import { useCentroCopiadoOrdenPagos } from '../../../hooks/useCentroCopiadoOrdenPagos';
 import { useInfoDialog } from '../../../hooks/useInfoDialog';
 import { InfoDialog } from '../../../components/ui/InfoDialog';
 import { supabase } from '../../../lib/supabase';
@@ -30,6 +33,14 @@ interface ItemWithId {
   descripcion?: string;
 }
 
+interface PagoTemporal {
+  id: string;
+  monto: number;
+  medio_cobro_id: string;
+  referencia_pago?: string;
+  notas?: string;
+}
+
 export function CrearOrdenCopiado() {
   const navigate = useNavigate();
   const { profile } = useAuth();
@@ -42,11 +53,15 @@ export function CrearOrdenCopiado() {
     `temp_${Date.now()}_${Math.random().toString(36).substring(7)}`
   );
 
+  const [activeTab, setActiveTab] = useState('items');
   const [clienteId, setClienteId] = useState<string>(clienteIdParam || '');
   const [fechaEntrega, setFechaEntrega] = useState('');
   const [observaciones, setObservaciones] = useState('');
   const [items, setItems] = useState<ItemWithId[]>([]);
   const [descuento, setDescuento] = useState(0);
+  const [pagos, setPagos] = useState<PagoTemporal[]>([]);
+  const [showPagoForm, setShowPagoForm] = useState(false);
+  const [editingPago, setEditingPago] = useState<PagoTemporal | undefined>();
   const [guardando, setGuardando] = useState(false);
   const [infoGeneralCollapsed, setInfoGeneralCollapsed] = useState(false);
   const [initialized, setInitialized] = useState(false);
@@ -56,6 +71,7 @@ export function CrearOrdenCopiado() {
   const { createOrden } = useCentroCopiadoOrdenes();
   const { createItemImpresion } = useCentroCopiadoOrdenItems();
   const { asociarConOrden, limpiarTemporales, updateArchivo } = useCentroCopiadoArchivos({ ordenTemporalId });
+  const { createPago } = useCentroCopiadoOrdenPagos();
   const { dialogState, openDialog, closeDialog } = useInfoDialog();
 
   usePageHeader('Crea una nueva orden de copiado con items personalizados');
@@ -150,6 +166,53 @@ export function CrearOrdenCopiado() {
           : item
       )
     );
+  };
+
+  // Cálculo de totales
+  const totales = useMemo(() => {
+    const subtotal = items.reduce((sum, item) => sum + (item.precio || 0), 0);
+    const descuentoMonto = (subtotal * descuento) / 100;
+    const total = subtotal - descuentoMonto;
+    const totalPagos = pagos.reduce((sum, pago) => sum + pago.monto, 0);
+    const saldoPendiente = total - totalPagos;
+
+    return {
+      subtotal,
+      descuentoMonto,
+      total,
+      totalPagos,
+      saldoPendiente,
+    };
+  }, [items, descuento, pagos]);
+
+  // Manejo de pagos
+  const handleAddPago = (pago: Omit<PagoTemporal, 'id'>) => {
+    const nuevoPago: PagoTemporal = {
+      ...pago,
+      id: crypto.randomUUID(),
+    };
+    setPagos((prev) => [...prev, nuevoPago]);
+    setShowPagoForm(false);
+  };
+
+  const handleEditPago = (pago: PagoTemporal) => {
+    setPagos((prev) => prev.map((p) => (p.id === pago.id ? pago : p)));
+    setShowPagoForm(false);
+    setEditingPago(undefined);
+  };
+
+  const handleDeletePago = (pagoId: string) => {
+    setPagos((prev) => prev.filter((p) => p.id !== pagoId));
+  };
+
+  const handleOpenPagoForm = (pago?: PagoTemporal) => {
+    setEditingPago(pago);
+    setShowPagoForm(true);
+  };
+
+  const handleClosePagoForm = () => {
+    setShowPagoForm(false);
+    setEditingPago(undefined);
   };
 
   const validarFormulario = (): boolean => {
@@ -254,7 +317,18 @@ export function CrearOrdenCopiado() {
         }
       }
 
-      // 4. Obtener información de la orden para mostrar en el diálogo
+      // 4. Crear pagos
+      for (const pago of pagos) {
+        await createPago({
+          orden_copiado_id: ordenIdFinal,
+          monto: pago.monto,
+          medio_cobro_id: pago.medio_cobro_id,
+          referencia_pago: pago.referencia_pago,
+          notas: pago.notas,
+        });
+      }
+
+      // 5. Obtener información de la orden para mostrar en el diálogo
       const { data: ordenFinal } = await supabase
         .from('centro_copiado_ordenes')
         .select('numero_orden')
@@ -410,32 +484,57 @@ export function CrearOrdenCopiado() {
             disabled={false}
           />
 
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-gray-900">Items de la Orden</h2>
-            <Button variant="primary" onClick={agregarItem}>
-              <Plus className="w-4 h-4" />
-              Agregar Item
-            </Button>
+          <Tabs
+            tabs={[
+              { id: 'items', label: 'Items' },
+              { id: 'pagos', label: 'Pagos' },
+            ]}
+            activeTab={activeTab}
+            onChange={setActiveTab}
+          />
+
+          <div className={activeTab === 'items' ? 'block' : 'hidden'}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-gray-900">Items de la Orden</h2>
+              <Button variant="primary" onClick={agregarItem}>
+                <Plus className="w-4 h-4" />
+                Agregar Item
+              </Button>
+            </div>
+
+            <div className="space-y-3">
+              {items.map((item, index) => (
+                <CentroCopiadoItemForm
+                  key={item.id}
+                  itemNumber={index + 1}
+                  nombreArchivo={item.nombreArchivo}
+                  descripcion={item.descripcion}
+                  onDescripcionChange={(desc) => {
+                    setItems(prev => prev.map(i => i.id === item.id ? { ...i, descripcion: desc } : i));
+                  }}
+                  value={item.config}
+                  onChange={(config) => actualizarItem(item.id, config)}
+                  onRemove={() => eliminarItem(item.id)}
+                  onPriceCalculated={priceCalculatedCallbacks[item.id]}
+                  isCollapsed={item.isCollapsed}
+                  onToggleCollapse={() => toggleItemCollapse(item.id)}
+                />
+              ))}
+            </div>
           </div>
 
-          <div className="space-y-3">
-            {items.map((item, index) => (
-              <CentroCopiadoItemForm
-                key={item.id}
-                itemNumber={index + 1}
-                nombreArchivo={item.nombreArchivo}
-                descripcion={item.descripcion}
-                onDescripcionChange={(desc) => {
-                  setItems(prev => prev.map(i => i.id === item.id ? { ...i, descripcion: desc } : i));
-                }}
-                value={item.config}
-                onChange={(config) => actualizarItem(item.id, config)}
-                onRemove={() => eliminarItem(item.id)}
-                onPriceCalculated={priceCalculatedCallbacks[item.id]}
-                isCollapsed={item.isCollapsed}
-                onToggleCollapse={() => toggleItemCollapse(item.id)}
-              />
-            ))}
+          <div className={activeTab === 'pagos' ? 'block' : 'hidden'}>
+            <OrdenPagosTab
+              totales={totales}
+              pagos={pagos}
+              showPagoForm={showPagoForm}
+              editingPago={editingPago}
+              onAddPago={handleAddPago}
+              onEditPago={handleEditPago}
+              onDeletePago={handleDeletePago}
+              onOpenPagoForm={handleOpenPagoForm}
+              onClosePagoForm={handleClosePagoForm}
+            />
           </div>
         </div>
 
