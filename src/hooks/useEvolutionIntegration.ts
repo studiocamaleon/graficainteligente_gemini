@@ -1,0 +1,279 @@
+import { useState, useEffect, useRef } from 'react';
+import { supabase } from '../lib/supabase';
+import type {
+  EvolutionConfig,
+  EvolutionConfigForm,
+  EvolutionQRData,
+  ConnectionState,
+} from '../types/evolution';
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+export function useEvolutionIntegration() {
+  const [config, setConfig] = useState<EvolutionConfig>({ hasConfig: false });
+  const [formData, setFormData] = useState<EvolutionConfigForm>({
+    instanceId: '',
+    apiKey: '',
+    baseUrl: 'https://api.evoapicloud.com',
+  });
+  const [qrData, setQrData] = useState<EvolutionQRData | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [timeLeft, setTimeLeft] = useState(120);
+  const pollingIntervalRef = useRef<number | null>(null);
+  const countdownIntervalRef = useRef<number | null>(null);
+
+  // Obtener token de sesión
+  const getAuthToken = async (): Promise<string | null> => {
+    const { data } = await supabase.auth.getSession();
+    return data.session?.access_token || null;
+  };
+
+  // Hacer request a Edge Function
+  const callEdgeFunction = async (
+    endpoint: string,
+    method: string = 'GET',
+    body?: any
+  ): Promise<any> => {
+    const token = await getAuthToken();
+    if (!token) {
+      throw new Error('No estás autenticado');
+    }
+
+    const url = `${SUPABASE_URL}/functions/v1/evolution${endpoint}`;
+
+    const response = await fetch(url, {
+      method,
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+      },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Error en la petición');
+    }
+
+    return data;
+  };
+
+  // Cargar configuración
+  const fetchConfig = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const data = await callEdgeFunction('/config', 'GET');
+      setConfig(data);
+
+      if (data.hasConfig && data.instanceId) {
+        setFormData((prev) => ({
+          ...prev,
+          instanceId: data.instanceId,
+          baseUrl: data.baseUrl || 'https://api.evoapicloud.com',
+        }));
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Error al cargar configuración';
+      setError(errorMessage);
+      console.error('Error fetching config:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Guardar configuración
+  const saveConfig = async () => {
+    try {
+      setIsSaving(true);
+      setError(null);
+
+      if (!formData.instanceId.trim()) {
+        throw new Error('Instance ID es requerido');
+      }
+
+      const body: EvolutionConfigForm = {
+        instanceId: formData.instanceId.trim(),
+        baseUrl: formData.baseUrl || 'https://api.evoapicloud.com',
+      };
+
+      // Solo incluir apiKey si el usuario escribió algo
+      if (formData.apiKey && formData.apiKey.trim()) {
+        body.apiKey = formData.apiKey.trim();
+      }
+
+      const data = await callEdgeFunction('/config', 'POST', body);
+
+      setConfig({
+        hasConfig: true,
+        ...data,
+      });
+
+      // Limpiar el campo de API Key después de guardar
+      setFormData((prev) => ({ ...prev, apiKey: '' }));
+
+      return true;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Error al guardar configuración';
+      setError(errorMessage);
+      console.error('Error saving config:', err);
+      return false;
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Generar QR
+  const generateQR = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const data = await callEdgeFunction('/connect', 'POST');
+
+      setQrData(data);
+      setTimeLeft(120);
+
+      // Iniciar countdown
+      startCountdown();
+
+      // Iniciar polling
+      startPolling();
+
+      return true;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Error al generar QR';
+      setError(errorMessage);
+      console.error('Error generating QR:', err);
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Verificar estado de conexión
+  const checkConnectionState = async () => {
+    try {
+      const data = await callEdgeFunction('/connection-state', 'GET');
+
+      if (data.state === 'open') {
+        // Conexión exitosa
+        stopPolling();
+        stopCountdown();
+        setQrData(null);
+        setConfig((prev) => ({
+          ...prev,
+          connectionState: 'open' as ConnectionState,
+          lastConnectedAt: new Date().toISOString(),
+        }));
+        return 'open';
+      }
+
+      return data.state;
+    } catch (err) {
+      console.error('Error checking connection state:', err);
+      return 'error';
+    }
+  };
+
+  // Iniciar polling
+  const startPolling = () => {
+    // Limpiar polling anterior si existe
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+    }
+
+    pollingIntervalRef.current = window.setInterval(async () => {
+      const state = await checkConnectionState();
+
+      if (state === 'open' || state === 'error') {
+        stopPolling();
+      }
+    }, 1000); // Cada 1 segundo
+  };
+
+  // Detener polling
+  const stopPolling = () => {
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
+  };
+
+  // Iniciar countdown
+  const startCountdown = () => {
+    // Limpiar countdown anterior si existe
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current);
+    }
+
+    countdownIntervalRef.current = window.setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          stopCountdown();
+          stopPolling();
+          setQrData(null);
+          setError('El QR ha expirado. Genera uno nuevo.');
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000); // Cada 1 segundo
+  };
+
+  // Detener countdown
+  const stopCountdown = () => {
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current);
+      countdownIntervalRef.current = null;
+    }
+  };
+
+  // Limpiar QR manualmente
+  const clearQR = () => {
+    stopPolling();
+    stopCountdown();
+    setQrData(null);
+    setTimeLeft(120);
+    setError(null);
+  };
+
+  // Actualizar form data
+  const updateFormData = (field: keyof EvolutionConfigForm, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  // Cargar configuración al montar
+  useEffect(() => {
+    fetchConfig();
+  }, []);
+
+  // Cleanup al desmontar
+  useEffect(() => {
+    return () => {
+      stopPolling();
+      stopCountdown();
+    };
+  }, []);
+
+  return {
+    config,
+    formData,
+    qrData,
+    isLoading,
+    isSaving,
+    error,
+    timeLeft,
+    fetchConfig,
+    saveConfig,
+    generateQR,
+    clearQR,
+    updateFormData,
+    setError,
+  };
+}

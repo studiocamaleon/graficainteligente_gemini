@@ -36,6 +36,7 @@ import {
   CreditCard,
   BarChart3,
   Wallet,
+  MessageSquare,
 } from 'lucide-react';
 
 export interface SubModule {
@@ -336,6 +337,15 @@ export const MODULES: Module[] = [
     icon: Puzzle,
     path: '/app/integrations',
     color: 'text-indigo-600',
+    children: [
+      {
+        id: 'integrations-whatsapp',
+        name: 'WhatsApp',
+        description: 'Conecta tu WhatsApp con Evolution API',
+        path: '/app/integrations/whatsapp',
+        icon: MessageSquare,
+      },
+    ],
   },
   {
     id: 'settings',

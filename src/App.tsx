@@ -19,6 +19,7 @@ import { ProductionPage } from './pages/app/production/ProductionPage';
 import Finanzas from './pages/app/Finanzas';
 import { Team } from './pages/app/Team';
 import { Integrations } from './pages/app/Integrations';
+import { WhatsAppIntegration } from './pages/app/integrations/WhatsAppIntegration';
 import { SystemSettings } from './pages/app/SystemSettings';
 import { Locations } from './pages/app/settings/Locations';
 import MediosCobro from './pages/app/settings/MediosCobro';
@@ -126,6 +127,7 @@ function AppRoutes() {
                   }
                 />
                 <Route path="integrations" element={<Integrations />} />
+                <Route path="integrations/whatsapp" element={<WhatsAppIntegration />} />
                 <Route path="settings" element={<SystemSettings />} />
                 <Route path="settings/locations" element={<Locations />} />
                 <Route path="settings/medios-cobro" element={<MediosCobro />} />
