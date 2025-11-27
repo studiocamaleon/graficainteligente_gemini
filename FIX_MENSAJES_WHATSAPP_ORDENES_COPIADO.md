@@ -1,4 +1,4 @@
-# ✅ Mensajes WhatsApp de Órdenes de Copiado - CORREGIDO
+# ✅ Mensajes WhatsApp de Órdenes de Copiado - CORREGIDO v2
 
 ## Problema Reportado
 
@@ -8,7 +8,33 @@ Al enviar notificaciones de WhatsApp de órdenes de copiado:
 
 ---
 
-## ✅ Solución Implementada
+## ⚠️ Problema con Primera Implementación
+
+Después de la primera implementación, seguía sin funcionar. Al revisar, encontré que la consulta PostgREST tenía **sintaxis incorrecta**:
+
+**❌ Sintaxis Incorrecta (v1):**
+```typescript
+items:centro_copiado_ordenes_items(
+  *,
+  tamanio:tamanio_papel_id(nombre),  // ❌ Usa nombre de columna FK
+  papel:papel_id(nombre)              // ❌ Usa nombre de columna FK
+)
+```
+
+**✅ Sintaxis Correcta (v2):**
+```typescript
+items:centro_copiado_ordenes_items(
+  *,
+  tamanio_papel:centro_copiado_tamanios_papel(nombre),  // ✅ Usa nombre de tabla
+  papel:centro_copiado_papeles(variante_nombre)          // ✅ Usa nombre de tabla
+)
+```
+
+**Causa del error:** PostgREST requiere especificar el **nombre de la tabla de destino**, no el nombre de la columna de la Foreign Key.
+
+---
+
+## ✅ Solución Implementada (v2 - DEFINITIVA)
 
 He actualizado la Edge Function `notify-orden-finalizada` con las siguientes mejoras:
 
@@ -19,9 +45,9 @@ Antes había una sola función genérica. Ahora hay dos funciones específicas:
 - `generateOrdenTrabajoFinalizadaMessage()` - Para órdenes de trabajo
 - `generateOrdenCopiadoFinalizadaMessage()` - Para órdenes de copiado ✨ **NUEVA**
 
-### 2. **Consulta de items con JOIN**
+### 2. **Consulta de items con JOIN (CORREGIDA)**
 
-La consulta de orden de copiado ahora trae los items relacionados:
+La consulta de orden de copiado ahora trae los items relacionados con la sintaxis correcta:
 
 ```typescript
 const { data: ordenData } = await supabase
@@ -31,13 +57,15 @@ const { data: ordenData } = await supabase
     cliente:cliente_id(*),
     items:centro_copiado_ordenes_items(
       *,
-      tamanio:tamanio_papel_id(nombre),
-      papel:papel_id(nombre)
+      tamanio_papel:centro_copiado_tamanios_papel(nombre),
+      papel:centro_copiado_papeles(variante_nombre)
     )
   `)
   .eq('id', orden_id)
   .single();
 ```
+
+**Cambio clave:** Ahora usa los nombres de las tablas (`centro_copiado_tamanios_papel`, `centro_copiado_papeles`) en lugar de los nombres de las columnas FK.
 
 ### 3. **Nueva función `formatItemCopiado()`**
 
@@ -203,18 +231,43 @@ LIMIT 1;
 
 ---
 
-## 🎯 Estado: LISTO PARA PROBAR
+## 🎯 Estado: LISTO PARA PROBAR (v2 - CON CORRECCIÓN)
 
-- ✅ Edge Function actualizada
+- ✅ Edge Function actualizada (v2)
+- ✅ Sintaxis PostgREST corregida
 - ✅ Desplegada en Supabase
 - ✅ Build del proyecto exitoso
 - ✅ Logs mejorados para debugging
 
-**Próximo paso:** Probar con una orden de copiado real y verificar que:
-1. La fecha se muestre correctamente
-2. Los items aparezcan con todos sus detalles
-3. El formato sea legible y profesional
+### 🔧 Corrección Aplicada
+
+**Problema identificado:** La sintaxis de JOIN de PostgREST estaba incorrecta.
+
+**Solución:** Cambié de usar nombres de columnas FK a nombres de tablas:
+- ❌ `tamanio:tamanio_papel_id(nombre)`
+- ✅ `tamanio_papel:centro_copiado_tamanios_papel(nombre)`
+
+También actualicé `formatItemCopiado()` para usar `item.tamanio_papel?.nombre` en lugar de `item.tamanio?.nombre`.
 
 ---
 
-¡Probalo con una orden nueva y avisame si ahora funciona correctamente! 🚀
+## 🧪 Cómo Probar AHORA
+
+1. **Crear una NUEVA orden de copiado** (no reutilizar la anterior):
+   - Fecha de entrega estimada configurada
+   - Al menos 1 item (impresión, anillado o plastificado)
+   - Cliente con WhatsApp configurado
+
+2. **Finalizar la orden:**
+   - Marcar como "finalizada"
+
+3. **Verificar el mensaje recibido:**
+   - ✅ Debe mostrar la fecha correcta
+   - ✅ Debe listar todos los items con sus detalles completos
+   - ✅ Formato debe ser claro y legible
+
+**IMPORTANTE:** Si seguía llegando el mensaje sin fecha/items con la orden anterior, probá con una orden NUEVA porque la notificación anterior ya quedó registrada en la base de datos.
+
+---
+
+¡Esta vez debería funcionar correctamente! 🚀

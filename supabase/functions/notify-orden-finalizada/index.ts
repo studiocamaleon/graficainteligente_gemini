@@ -58,8 +58,8 @@ function formatItemCopiado(item: any): string {
 
   if (item.tipo_item === 'impresion') {
     const hojas = item.cantidad_hojas || 0;
-    const tamanio = item.tamanio?.nombre || 'N/A';
-    const papel = item.papel?.nombre || 'N/A';
+    const tamanio = item.tamanio_papel?.nombre || 'N/A';
+    const papel = item.papel?.variante_nombre || item.papel?.nombre || 'N/A';
     const tinta = item.tipo_tinta === 'CMYK' ? 'Color' : 'Blanco y Negro';
     const caras = item.cara_impresa === 'frente_y_dorso' ? 'Doble faz' : 'Simple faz';
 
@@ -359,8 +359,8 @@ Deno.serve(async (req: Request) => {
           cliente:cliente_id(*),
           items:centro_copiado_ordenes_items(
             *,
-            tamanio:tamanio_papel_id(nombre),
-            papel:papel_id(nombre)
+            tamanio_papel:centro_copiado_tamanios_papel(nombre),
+            papel:centro_copiado_papeles(variante_nombre)
           )
         `)
         .eq('id', orden_id)
