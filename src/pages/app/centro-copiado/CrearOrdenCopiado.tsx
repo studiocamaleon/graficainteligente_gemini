@@ -197,12 +197,12 @@ export function CrearOrdenCopiado() {
     setShowPagoForm(true);
   };
 
-  const handleGuardarPago = (data: Omit<PagoTemporal, 'id' | 'fecha_pago'>) => {
+  const handleGuardarPago = (data: Omit<PagoTemporal, 'id'>) => {
     if (editingPago) {
       // Editar pago existente
       setPagos(prev => prev.map(p =>
         p.id === editingPago.id
-          ? { ...data, id: editingPago.id, fecha_pago: editingPago.fecha_pago }
+          ? { ...data, id: editingPago.id }
           : p
       ));
     } else {
@@ -210,7 +210,6 @@ export function CrearOrdenCopiado() {
       const nuevoPago: PagoTemporal = {
         ...data,
         id: crypto.randomUUID(),
-        fecha_pago: new Date().toISOString(),
       };
       setPagos(prev => [...prev, nuevoPago]);
     }
@@ -567,8 +566,8 @@ export function CrearOrdenCopiado() {
           setEditingPago(undefined);
         }}
         onSubmit={handleGuardarPago}
-        maxMonto={totales.saldoPendiente}
-        editingPago={editingPago}
+        saldoPendiente={totales.saldoPendiente}
+        pago={editingPago}
       />
 
       <InfoDialog
