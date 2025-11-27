@@ -180,15 +180,16 @@ export function WhatsAppIntegration() {
       setIsSendingTest(true);
       const response = await sendMessage(companyId, testPhone, testMessage);
 
-      if (response.success) {
+      if (response.status === 'sent' || response.success === true) {
         showSuccess('Mensaje enviado correctamente');
-        setTestMessage(''); // Limpiar solo el mensaje
+        setTestMessage('');
       } else {
         showError('Error al enviar el mensaje');
       }
     } catch (error) {
       console.error('Error al enviar mensaje:', error);
-      showError('Error al enviar el mensaje de prueba');
+      const errorMessage = error instanceof Error ? error.message : 'Error al enviar el mensaje de prueba';
+      showError(errorMessage);
     } finally {
       setIsSendingTest(false);
     }

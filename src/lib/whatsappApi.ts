@@ -11,7 +11,8 @@ export interface ConnectResponse {
 }
 
 export interface SendMessageResponse {
-  success: boolean;
+  status?: string;
+  success?: boolean;
 }
 
 export async function connectWhatsApp(companyId: string): Promise<ConnectResponse> {
@@ -54,7 +55,9 @@ export async function sendMessage(
   });
 
   if (!response.ok) {
-    throw new Error(`Error al enviar mensaje: ${response.statusText}`);
+    const errorData = await response.json().catch(() => ({}));
+    const errorMessage = errorData.error || errorData.message || response.statusText;
+    throw new Error(errorMessage);
   }
 
   return response.json();
