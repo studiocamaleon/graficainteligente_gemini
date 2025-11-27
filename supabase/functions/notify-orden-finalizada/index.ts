@@ -32,21 +32,27 @@ function sanitizeMessage(message: string): string {
 function formatPhoneNumber(phone: string): string {
   if (!phone) return '';
 
+  // Limpiar el número de cualquier caracter no numérico
   let cleaned = phone.replace(/\D/g, '');
 
+  // Quitar el 0 inicial si lo tiene (formato local argentino)
   if (cleaned.startsWith('0')) {
     cleaned = cleaned.substring(1);
   }
 
+  // Quitar el 9 después del código de área si lo tiene
   if (cleaned.startsWith('9')) {
     cleaned = cleaned.substring(1);
   }
 
+  // Asegurar que tenga el código de país de Argentina (54)
   if (!cleaned.startsWith('54')) {
     cleaned = '54' + cleaned;
   }
 
-  return cleaned + '@s.whatsapp.net';
+  // El backend de Render espera el número sin @s.whatsapp.net
+  // Solo retornamos el número limpio con código de país
+  return cleaned;
 }
 
 function generateOrdenFinalizadaMessage(
@@ -94,53 +100,64 @@ async function sendWhatsAppMessage(
   phoneNumber: string,
   message: string
 ): Promise<any> {
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-  const supabase = createClient(supabaseUrl, supabaseKey);
+  const whatsappBackendUrl = Deno.env.get('WHATSAPP_BACKEND_URL') || 'https://whatsapp-backend-w6ot.onrender.com';
 
-  const { data: evolutionConfig, error: evolutionError } = await supabase
-    .from('evolution_integrations')
-    .select('*')
-    .eq('company_id', companyId)
-    .single();
-
-  if (evolutionError || !evolutionConfig) {
-    throw new Error('No se encontró configuración de Evolution API');
-  }
-
-  if (!evolutionConfig.api_key || !evolutionConfig.instance_id) {
-    throw new Error('Configuración de Evolution API incompleta');
-  }
-
-  const evolutionUrl = `${evolutionConfig.base_url}/message/sendText/${evolutionConfig.instance_id}`;
-
-  console.log('[WhatsApp] Enviando mensaje:', {
-    url: evolutionUrl,
+  console.log('[WhatsApp] Enviando mensaje a backend de Render:', {
+    backend: whatsappBackendUrl,
+    companyId,
     phoneNumber,
     messageLength: message.length
   });
 
-  const response = await fetch(evolutionUrl, {
+  const response = await fetch(`${whatsappBackendUrl}/send`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'apikey': evolutionConfig.api_key,
     },
     body: JSON.stringify({
-      number: phoneNumber,
-      text: message,
+      companyId,
+      to: phoneNumber,
+      message: message,
     }),
   });
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`Error de Evolution API (${response.status}): ${errorText}`);
+    throw new Error(`Error del backend de WhatsApp (${response.status}): ${errorText}`);
   }
 
   const responseData = await response.json();
   console.log('[WhatsApp] Mensaje enviado exitosamente:', responseData);
 
   return responseData;
+}
+
+async function checkWhatsAppConnection(companyId: string): Promise<boolean> {
+  const whatsappBackendUrl = Deno.env.get('WHATSAPP_BACKEND_URL') || 'https://whatsapp-backend-w6ot.onrender.com';
+
+  try {
+    console.log(`[WhatsApp] Verificando conexión para company: ${companyId}`);
+
+    const statusResponse = await fetch(`${whatsappBackendUrl}/status/${companyId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!statusResponse.ok) {
+      console.log('[WhatsApp] ⚠️ No se pudo verificar estado de WhatsApp');
+      return false;
+    }
+
+    const statusData = await statusResponse.json();
+    console.log('[WhatsApp] Estado de conexión:', statusData);
+
+    return statusData.connected === true;
+  } catch (error: any) {
+    console.error('[WhatsApp] ⚠️ Error verificando estado de WhatsApp:', error);
+    return false;
+  }
 }
 
 Deno.serve(async (req: Request) => {
@@ -199,6 +216,7 @@ Deno.serve(async (req: Request) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Verificar que no se haya enviado ya una notificación para esta orden
     const { data: yaEnviado } = await supabase
       .from('whatsapp_notificaciones')
       .select('id')
@@ -217,6 +235,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // Obtener datos de la orden según el tipo
     let orden: any;
     let cliente: any;
     let pagosTotal = 0;
@@ -284,6 +303,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // Obtener información de la empresa
     const { data: company, error: companyError } = await supabase
       .from('companies')
       .select('*')
@@ -294,14 +314,11 @@ Deno.serve(async (req: Request) => {
       throw new Error('No se encontró información de la empresa');
     }
 
-    const { data: evolutionConfig } = await supabase
-      .from('evolution_integrations')
-      .select('connection_state')
-      .eq('company_id', company_id)
-      .single();
+    // Verificar que WhatsApp esté conectado para esta empresa
+    const isConnected = await checkWhatsAppConnection(company_id);
 
-    if (!evolutionConfig || evolutionConfig.connection_state !== 'open') {
-      console.log('[Notify] ⚠️ WhatsApp no está conectado. Skipping.');
+    if (!isConnected) {
+      console.log('[Notify] ⚠️ WhatsApp no está conectado para esta empresa. Skipping.');
       return new Response(
         JSON.stringify({ success: true, message: 'WhatsApp no está conectado' }),
         {
@@ -311,6 +328,9 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    console.log('[Notify] ✅ WhatsApp conectado, procediendo a enviar mensaje');
+
+    // Generar y enviar el mensaje
     const saldoPendiente = parseFloat(orden.total || 0) - pagosTotal;
     const mensaje = generateOrdenFinalizadaMessage(orden, cliente, company, saldoPendiente);
     const mensajeSanitizado = sanitizeMessage(mensaje);
@@ -335,6 +355,7 @@ Deno.serve(async (req: Request) => {
       respuestaBackend = { error: error.message };
     }
 
+    // Registrar la notificación en la base de datos
     const notificacionData: any = {
       company_id: company_id,
       tipo_notificacion: 'orden_finalizada',
