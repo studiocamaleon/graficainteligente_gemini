@@ -121,21 +121,24 @@ export function IngresosPanel() {
             </div>
           </div>
 
-          {/* Card de totales más sutil */}
+          {/* Card de totales */}
           <div className="flex gap-3">
-            <div className="bg-white border border-green-200 rounded-lg px-4 py-2 shadow-sm">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-green-600" />
+            <div className="bg-white border border-green-200 rounded-lg px-6 py-3 shadow-sm min-w-[280px]">
+              <div className="flex items-center gap-3">
+                <div className="bg-green-100 p-2 rounded-lg">
+                  <TrendingUp className="w-5 h-5 text-green-600" />
+                </div>
                 <div>
-                  <p className="text-xs text-gray-600">Ingresos del Período</p>
-                  <p className="text-lg font-bold text-green-700">
+                  <p className="text-xs font-medium text-gray-600">Ingresos del Período</p>
+                  <p className="text-2xl font-bold text-green-700">
                     ${totalIngresos.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                   </p>
                   {totalComisiones > 0 && (
-                    <p className="text-xs text-red-600 mt-0.5">
+                    <p className="text-xs text-red-600 mt-1">
                       Comisiones: -${totalComisiones.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                     </p>
                   )}
+                  <p className="text-xs text-gray-500 mt-0.5">{ingresos.length} movimientos</p>
                 </div>
               </div>
             </div>
