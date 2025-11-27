@@ -29,6 +29,23 @@ export interface EnviarNotificacionResult {
   error?: string;
 }
 
+export function sanitizeMessage(message: string): string {
+  if (!message) return '';
+
+  let sanitized = message
+    .replace(/[\u0000-\u001F\u007F-\u009F]/g, '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    .trim();
+
+  const maxLength = 4096;
+  if (sanitized.length > maxLength) {
+    sanitized = sanitized.substring(0, maxLength - 20) + '\n\n...mensaje truncado';
+  }
+
+  return sanitized;
+}
+
 export function formatPhoneNumber(phone: string): string {
   if (!phone) return '';
 
@@ -397,15 +414,25 @@ export async function enviarNotificacion(
       };
     }
 
+    const mensajeSanitizado = sanitizeMessage(mensaje);
+
+    console.log('[WhatsApp] Preparando envío:', {
+      tipo,
+      telefonoDestino: cliente.whatsapp,
+      longitudMensaje: mensajeSanitizado.length
+    });
+
     const telefonoFormateado = formatPhoneNumber(cliente.whatsapp);
 
-    const respuesta = await sendMessage(companyId, telefonoFormateado, mensaje);
+    const respuesta = await sendMessage(companyId, telefonoFormateado, mensajeSanitizado);
+
+    console.log('[WhatsApp] Respuesta del backend:', respuesta);
 
     const notificacionData: any = {
       company_id: companyId,
       tipo_notificacion: tipo,
       telefono_destino: telefonoFormateado,
-      mensaje_enviado: mensaje,
+      mensaje_enviado: mensajeSanitizado,
       estado_envio: 'enviado',
       respuesta_backend: respuesta
     };
@@ -432,16 +459,33 @@ export async function enviarNotificacion(
     };
 
   } catch (error: any) {
-    console.error('Error al enviar notificación:', error);
+    const errorMessage = error?.message || error?.toString() || 'Error desconocido';
+    const errorDetails = {
+      message: errorMessage,
+      stack: error?.stack,
+      response: error?.response,
+      status: error?.status
+    };
+
+    console.error('[WhatsApp] Error al enviar notificación:', errorDetails);
 
     try {
+      const cliente = await supabase
+        .from('clients')
+        .select('whatsapp')
+        .eq('id', params.clienteId)
+        .single();
+
+      const telefonoCliente = cliente?.data?.whatsapp || 'Sin teléfono';
+
       const notificacionData: any = {
         company_id: params.companyId,
         tipo_notificacion: params.tipo,
-        telefono_destino: 'Error',
-        mensaje_enviado: 'Error al generar mensaje',
+        telefono_destino: telefonoCliente,
+        mensaje_enviado: 'Error al generar o enviar mensaje',
         estado_envio: 'fallido',
-        error_mensaje: error.message || 'Error desconocido'
+        error_mensaje: errorMessage.substring(0, 500),
+        respuesta_backend: errorDetails
       };
 
       if (params.ordenTipo === 'trabajo') {
@@ -453,13 +497,15 @@ export async function enviarNotificacion(
       await supabase
         .from('whatsapp_notificaciones')
         .insert(notificacionData);
+
+      console.log('[WhatsApp] Error registrado en base de datos');
     } catch (logError) {
-      console.error('Error al registrar fallo:', logError);
+      console.error('[WhatsApp] Error al registrar fallo en BD:', logError);
     }
 
     return {
       success: false,
-      error: error.message || 'Error desconocido al enviar notificación'
+      error: errorMessage
     };
   }
 }

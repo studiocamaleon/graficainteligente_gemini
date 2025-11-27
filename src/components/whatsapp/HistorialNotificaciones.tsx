@@ -387,7 +387,8 @@ export function HistorialNotificaciones() {
           <Table
             columns={columns}
             data={notificaciones}
-            loading={loading}
+            keyExtractor={(notif) => notif.id}
+            isLoading={loading}
             emptyMessage="No hay notificaciones registradas"
           />
         </div>
