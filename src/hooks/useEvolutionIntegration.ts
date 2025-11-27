@@ -23,8 +23,10 @@ export function useEvolutionIntegration() {
   const [error, setError] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState(120);
   const [pollingAttempts, setPollingAttempts] = useState(0);
+  const [consecutiveErrors, setConsecutiveErrors] = useState(0);
   const pollingIntervalRef = useRef<number | null>(null);
   const countdownIntervalRef = useRef<number | null>(null);
+  const MAX_CONSECUTIVE_ERRORS = 5;
 
   // Obtener token de sesión
   const getAuthToken = async (): Promise<string | null> => {
@@ -167,6 +169,7 @@ export function useEvolutionIntegration() {
       if (data.state === 'open') {
         // Conexión exitosa
         console.log('[Polling] ✅ Connection detected as OPEN! Stopping polling...');
+        setConsecutiveErrors(0);
         stopPolling();
         stopCountdown();
         setQrData(null);
@@ -175,14 +178,20 @@ export function useEvolutionIntegration() {
           connectionState: 'open' as ConnectionState,
           lastConnectedAt: new Date().toISOString(),
         }));
-        return 'open';
+        return { state: 'open', errorType: null };
+      }
+
+      // Si el estado es válido (close, connecting, etc.), resetear contador de errores
+      if (data.state === 'close' || data.state === 'connecting') {
+        setConsecutiveErrors(0);
       }
 
       console.log('[Polling] Current state:', data.state);
-      return data.state;
+      return { state: data.state, errorType: data.errorType || null };
     } catch (err) {
       console.error('[Polling] ❌ Error checking connection state:', err);
-      return 'error';
+      setConsecutiveErrors(prev => prev + 1);
+      return { state: 'error', errorType: 'temporary' };
     }
   };
 
@@ -195,19 +204,46 @@ export function useEvolutionIntegration() {
     }
 
     setPollingAttempts(0);
+    setConsecutiveErrors(0);
 
     pollingIntervalRef.current = window.setInterval(async () => {
       setPollingAttempts(prev => {
         const newAttempts = prev + 1;
         console.log(`[Polling] 🔄 Interval tick #${newAttempts}`);
+
+        // Detener después de 40 intentos (120 segundos)
+        if (newAttempts >= 40) {
+          console.log('[Polling] ⏱️ Max attempts reached (120s). Stopping polling...');
+          stopPolling();
+          return newAttempts;
+        }
+
         return newAttempts;
       });
 
-      const state = await checkConnectionState();
+      const result = await checkConnectionState();
 
-      if (state === 'open' || state === 'error') {
-        console.log('[Polling] ⛔ Stopping polling. Final state:', state);
+      if (result.state === 'open') {
+        console.log('[Polling] ✅ Connection established! Stopping polling...');
         stopPolling();
+        stopCountdown();
+      } else if (result.state === 'error' && result.errorType === 'critical') {
+        console.log('[Polling] ⛔ Critical error detected. Stopping polling and countdown...');
+        stopPolling();
+        stopCountdown();
+        setError('Error crítico. Verifica tu configuración.');
+        setQrData(null);
+      } else if (result.state === 'error' && result.errorType === 'temporary') {
+        // Error temporal - el contador ya se incrementó en checkConnectionState
+        console.log(`[Polling] ⚠️ Temporary error detected. Continuing polling...`);
+        // Verificar si ya alcanzó el máximo de errores consecutivos
+        if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+          console.log('[Polling] ⛔ Too many consecutive errors. Stopping polling and countdown...');
+          stopPolling();
+          stopCountdown();
+          setError('No se pudo verificar la conexión. Por favor, verifica tu configuración e inténtalo de nuevo.');
+          setQrData(null);
+        }
       }
     }, 3000); // Cada 3 segundos
   };

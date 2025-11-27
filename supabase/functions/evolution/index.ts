@@ -66,9 +66,33 @@ async function makeEvolutionRequest(url: string, apiKey: string, method: string 
       throw new Error(`Evolution API error (${response.status}): ${errorText}`);
     }
 
-    const data = await response.json();
-    console.log(`[Evolution API] Success: ${JSON.stringify(data).substring(0, 100)}...`);
-    return data;
+    // Verificar que la respuesta sea JSON válido
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      const text = await response.text();
+      console.error(`[Evolution API] ⚠️ Non-JSON response received:`, text.substring(0, 200));
+      throw new Error(`Evolution API returned non-JSON response (Content-Type: ${contentType})`);
+    }
+
+    // Leer el texto de la respuesta
+    const text = await response.text();
+
+    // Verificar que no esté vacío
+    if (!text || text.trim() === '') {
+      console.error(`[Evolution API] ⚠️ Empty response received`);
+      throw new Error('Evolution API returned empty response');
+    }
+
+    // Intentar parsear JSON
+    try {
+      const data = JSON.parse(text);
+      console.log(`[Evolution API] Success: ${JSON.stringify(data).substring(0, 100)}...`);
+      return data;
+    } catch (parseError: any) {
+      console.error(`[Evolution API] ⚠️ JSON parse error:`, parseError.message);
+      console.error(`[Evolution API] Response text:`, text.substring(0, 200));
+      throw new Error(`Invalid JSON from Evolution API: ${parseError.message}`);
+    }
   } catch (error: any) {
     // Capturar errores de red
     if (error.name === 'TypeError' && error.message.includes('fetch')) {
@@ -374,10 +398,31 @@ Deno.serve(async (req: Request) => {
 
       if (!config) {
         return new Response(
-          JSON.stringify({ error: 'No hay configuración' }),
-          { 
-            status: 400, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          JSON.stringify({ state: 'error', errorType: 'config', errorMessage: 'No hay configuración' }),
+          {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      }
+
+      // Validar configuración antes de llamar
+      if (!config.api_key || config.api_key.trim() === '') {
+        return new Response(
+          JSON.stringify({ state: 'error', errorType: 'critical', errorMessage: 'API Key no configurada' }),
+          {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      }
+
+      if (!config.instance_id || config.instance_id.trim() === '') {
+        return new Response(
+          JSON.stringify({ state: 'error', errorType: 'critical', errorMessage: 'Instance ID no configurado' }),
+          {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
           }
         );
       }
@@ -427,8 +472,23 @@ Deno.serve(async (req: Request) => {
           name: error.name,
           stack: error.stack
         });
+
+        // Clasificar tipo de error
+        let errorType = 'temporary';
+        if (error.message.includes('401') || error.message.includes('API Key')) {
+          errorType = 'critical';
+        } else if (error.message.includes('404') || error.message.includes('not found')) {
+          errorType = 'critical';
+        } else if (error.message.includes('Network error')) {
+          errorType = 'critical';
+        }
+
         return new Response(
-          JSON.stringify({ state: 'error', errorMessage: error.message }),
+          JSON.stringify({
+            state: 'error',
+            errorType,
+            errorMessage: error.message
+          }),
           {
             status: 200,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
