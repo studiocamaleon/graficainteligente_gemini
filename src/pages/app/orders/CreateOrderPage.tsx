@@ -424,9 +424,6 @@ export function CreateOrderPage() {
                   cantidad_unidades: item.config.cantidad_copias,
                   tipo_anillado: item.config.anillado?.tipo || null,
                   tipo_plastificado: item.config.plastificado?.tipo || null,
-                  cantidad_plastificado: item.config.plastificado?.todas_hojas
-                    ? item.config.cantidad_hojas
-                    : (item.config.plastificado?.cantidad_especifica || null),
                   precio_unitario: item.precio || 0,
                   subtotal: item.precio || 0,
                   descripcion: item.descripcion || null,
