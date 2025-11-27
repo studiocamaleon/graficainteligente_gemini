@@ -151,6 +151,44 @@ export function generateNuevaOrdenTrabajoMessage(
   return mensaje;
 }
 
+function formatItemCopiadoParaNuevaOrden(item: any, index: number): string {
+  const cantidad = item.cantidad_unidades || 0;
+  const precio = parseFloat(item.precio_unitario || 0).toFixed(2);
+  const subtotal = parseFloat(item.subtotal || 0).toFixed(2);
+
+  let detalle = `${index + 1}. `;
+
+  if (item.nombre_archivo) {
+    detalle += `📄 *${item.nombre_archivo}*\n   `;
+  }
+
+  if (item.descripcion) {
+    detalle += `${item.descripcion}\n   `;
+  }
+
+  const hojas = item.cantidad_hojas || 0;
+  const tamanio = item.tamanio_papel?.nombre || 'N/A';
+  const papel = item.papel?.variante_nombre || item.papel?.nombre || 'N/A';
+  const tinta = item.tipo_tinta === 'CMYK' ? 'Color' : 'Blanco y Negro';
+  const caras = item.cara_impresa === 'frente_y_dorso' ? 'Doble faz' : 'Simple faz';
+
+  detalle += `🖨️ *Impresión ${tinta}*\n`;
+  detalle += `   ${cantidad}x ${hojas} hojas ${caras}\n`;
+  detalle += `   ${tamanio} - ${papel}\n`;
+  detalle += `   $${precio} c/u = $${subtotal}`;
+
+  if (item.tipo_anillado) {
+    const tipo = item.tipo_anillado === 'ring_wire' ? 'Ring Wire' : 'Plástico';
+    detalle += `\n   + Anillado ${tipo}`;
+  }
+
+  if (item.tipo_plastificado) {
+    detalle += `\n   + Plastificado ${item.tipo_plastificado}`;
+  }
+
+  return detalle;
+}
+
 export function generateNuevaOrdenCopiadoMessage(
   orden: any,
   cliente: any,
@@ -159,64 +197,32 @@ export function generateNuevaOrdenCopiadoMessage(
 ): string {
   const nombreCliente = cliente.nombre_fantasia || cliente.razon_social;
 
-  const itemsDetalle = items.map((item, index) => {
-    let detalle = `${index + 1}. `;
-
-    if (item.nombre_archivo) {
-      detalle += `*${item.nombre_archivo}*\n`;
-    }
-
-    if (item.descripcion) {
-      detalle += `   ${item.descripcion}\n`;
-    }
-
-    const config = item.configuracion || {};
-
-    if (config.cantidad_copias) {
-      detalle += `   Copias: ${config.cantidad_copias}`;
-    }
-
-    if (config.tipo_impresion) {
-      detalle += ` - ${config.tipo_impresion}`;
-    }
-
-    if (config.tamanio_papel) {
-      detalle += ` - ${config.tamanio_papel}`;
-    }
-
-    if (config.tipo_papel) {
-      detalle += ` - ${config.tipo_papel}`;
-    }
-
-    if (config.anillado) {
-      detalle += `\n   Anillado: ${config.anillado}`;
-    }
-
-    if (config.plastificado) {
-      detalle += `\n   Plastificado: ${config.plastificado}`;
-    }
-
-    if (item.precio) {
-      detalle += `\n   Subtotal: $${parseFloat(item.precio).toFixed(2)}`;
-    }
-
-    return detalle;
-  }).join('\n\n');
+  const itemsDetalle = items
+    .map((item, index) => formatItemCopiadoParaNuevaOrden(item, index))
+    .join('\n\n');
 
   const total = parseFloat(orden.total || 0).toFixed(2);
   const pagosRealizados = orden.pagos_totales || 0;
   const saldoPendiente = (parseFloat(orden.total || 0) - parseFloat(pagosRealizados)).toFixed(2);
 
-  const fechaEntrega = orden.fecha_entrega
-    ? new Date(orden.fecha_entrega).toLocaleDateString('es-AR')
+  const fechaEntrega = orden.fecha_entrega_estimada
+    ? new Date(orden.fecha_entrega_estimada).toLocaleDateString('es-AR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      })
     : 'A confirmar';
 
   let mensaje = `Hola ${nombreCliente}!\n\n`;
   mensaje += `Tu orden de copiado ha sido registrada.\n\n`;
   mensaje += `📋 *Orden Nº:* ${orden.numero_orden}\n`;
   mensaje += `📅 *Fecha de entrega:* ${fechaEntrega}\n\n`;
-  mensaje += `*Detalle de tu pedido:*\n\n`;
-  mensaje += `${itemsDetalle}\n\n`;
+
+  if (items.length > 0) {
+    mensaje += `*Detalle de tu pedido:*\n\n`;
+    mensaje += `${itemsDetalle}\n\n`;
+  }
+
   mensaje += `💰 *Total:* $${total}\n`;
   mensaje += `💳 *Saldo pendiente:* $${saldoPendiente}\n\n`;
 
@@ -380,7 +386,11 @@ export async function enviarNotificacion(
         .from('centro_copiado_ordenes')
         .select(`
           *,
-          items:centro_copiado_ordenes_items(*),
+          items:centro_copiado_ordenes_items(
+            *,
+            tamanio_papel:centro_copiado_tamanios_papel(nombre),
+            papel:centro_copiado_papeles(nombre, variante_nombre)
+          ),
           pagos:centro_copiado_ordenes_pagos(monto)
         `)
         .eq('id', ordenId)
@@ -400,6 +410,25 @@ export async function enviarNotificacion(
       orden.pagos_totales = pagosTotal;
 
       if (tipo === 'nueva_orden_copiado') {
+        const { data: archivos } = await supabase
+          .from('centro_copiado_archivos')
+          .select('nombre_archivo, item_generado_id')
+          .eq('orden_copiado_id', ordenId);
+
+        const archivosPorItem = new Map();
+        archivos?.forEach(archivo => {
+          if (archivo.item_generado_id) {
+            archivosPorItem.set(archivo.item_generado_id, archivo.nombre_archivo);
+          }
+        });
+
+        items.forEach(item => {
+          const nombreArchivo = archivosPorItem.get(item.id);
+          if (nombreArchivo) {
+            item.nombre_archivo = nombreArchivo;
+          }
+        });
+
         mensaje = generateNuevaOrdenCopiadoMessage(orden, cliente, items, company);
       } else if (tipo === 'orden_finalizada') {
         const saldoPendiente = parseFloat(orden.total || 0) - pagosTotal;
