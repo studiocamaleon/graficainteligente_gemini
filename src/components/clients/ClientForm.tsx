@@ -1,4 +1,5 @@
 import { useState, useEffect, FormEvent } from 'react';
+import { Calendar, Info } from 'lucide-react';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import { Switch } from '../ui/Switch';
@@ -26,11 +27,30 @@ export interface ClientFormData {
   codigo_postal: string;
   tiene_cuenta_corriente: boolean;
   acuerdo_pago: PaymentTerm | null;
+  dia_cierre_semanal: number | null;
+  dia_cierre_mensual: number | null;
+  usa_ultimo_dia_mes: boolean;
+  dias_vencimiento: number;
   is_active: boolean;
 }
 
 const DOCUMENT_TYPES: DocumentType[] = ['DNI', 'CUIT', 'CUIL'];
 const PAYMENT_TERMS: PaymentTerm[] = ['Semanal', 'Quincenal', 'Mensual'];
+const DIAS_SEMANA = [
+  { value: 1, label: 'Lunes' },
+  { value: 2, label: 'Martes' },
+  { value: 3, label: 'Miércoles' },
+  { value: 4, label: 'Jueves' },
+  { value: 5, label: 'Viernes' },
+  { value: 6, label: 'Sábado' },
+  { value: 7, label: 'Domingo' },
+];
+
+const getNombreDia = (dia: number | null): string => {
+  if (!dia) return '';
+  const diaInfo = DIAS_SEMANA.find(d => d.value === dia);
+  return diaInfo?.label || '';
+};
 
 export function ClientForm({ client, onSubmit, onCancel }: ClientFormProps) {
   const { countries, provinces, cities, fetchProvinces, fetchCities } = useLocations();
@@ -51,6 +71,10 @@ export function ClientForm({ client, onSubmit, onCancel }: ClientFormProps) {
     codigo_postal: client?.codigo_postal || '',
     tiene_cuenta_corriente: client?.tiene_cuenta_corriente || false,
     acuerdo_pago: client?.acuerdo_pago || null,
+    dia_cierre_semanal: client?.dia_cierre_semanal || null,
+    dia_cierre_mensual: client?.dia_cierre_mensual || null,
+    usa_ultimo_dia_mes: client?.usa_ultimo_dia_mes || false,
+    dias_vencimiento: client?.dias_vencimiento || 7,
     is_active: client?.is_active ?? true,
   });
 
@@ -122,6 +146,19 @@ export function ClientForm({ client, onSubmit, onCancel }: ClientFormProps) {
 
     if (formData.tiene_cuenta_corriente && !formData.acuerdo_pago) {
       newErrors.acuerdo_pago = 'Debe seleccionar un acuerdo de pago';
+    }
+
+    if (formData.tiene_cuenta_corriente && formData.acuerdo_pago === 'Semanal' && !formData.dia_cierre_semanal) {
+      newErrors.dia_cierre_semanal = 'Debe seleccionar el día de cierre semanal';
+    }
+
+    if (formData.tiene_cuenta_corriente && formData.acuerdo_pago === 'Mensual') {
+      if (!formData.usa_ultimo_dia_mes && !formData.dia_cierre_mensual) {
+        newErrors.dia_cierre_mensual = 'Debe configurar el día de cierre o seleccionar último día del mes';
+      }
+      if (formData.dia_cierre_mensual && (formData.dia_cierre_mensual < 1 || formData.dia_cierre_mensual > 28)) {
+        newErrors.dia_cierre_mensual = 'El día debe estar entre 1 y 28';
+      }
     }
 
     setErrors(newErrors);
@@ -264,21 +301,131 @@ export function ClientForm({ client, onSubmit, onCancel }: ClientFormProps) {
               handleChange('tiene_cuenta_corriente', checked);
               if (!checked) {
                 handleChange('acuerdo_pago', null);
+                handleChange('dia_cierre_semanal', null);
+                handleChange('dia_cierre_mensual', null);
+                handleChange('usa_ultimo_dia_mes', false);
               }
             }}
             label="¿Tiene cuenta corriente?"
           />
 
           {formData.tiene_cuenta_corriente && (
-            <Select
-              label="Acuerdo de Pago"
-              value={formData.acuerdo_pago || ''}
-              onChange={(value) => handleChange('acuerdo_pago', value as PaymentTerm)}
-              options={PAYMENT_TERMS.map(term => ({ value: term, label: term }))}
-              placeholder="Seleccione un acuerdo"
-              error={errors.acuerdo_pago}
-              required
-            />
+            <div className="space-y-4 ml-0">
+              <Select
+                label="Acuerdo de Pago"
+                value={formData.acuerdo_pago || ''}
+                onChange={(value) => {
+                  handleChange('acuerdo_pago', value as PaymentTerm);
+                  handleChange('dia_cierre_semanal', null);
+                  handleChange('dia_cierre_mensual', null);
+                  handleChange('usa_ultimo_dia_mes', false);
+                }}
+                options={PAYMENT_TERMS.map(term => ({ value: term, label: term }))}
+                placeholder="Seleccione un acuerdo"
+                error={errors.acuerdo_pago}
+                required
+              />
+
+              {formData.acuerdo_pago === 'Semanal' && (
+                <div className="space-y-3 bg-white p-4 rounded-lg border border-gray-200">
+                  <Select
+                    label="Día de cierre semanal"
+                    value={formData.dia_cierre_semanal?.toString() || ''}
+                    onChange={(value) => handleChange('dia_cierre_semanal', parseInt(value))}
+                    options={DIAS_SEMANA}
+                    placeholder="Seleccione el día"
+                    error={errors.dia_cierre_semanal}
+                    required
+                  />
+                  {formData.dia_cierre_semanal && (
+                    <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
+                      <Calendar className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="font-medium">Se generará una liquidación cada semana</p>
+                        <p className="text-blue-600 mt-1">
+                          Todas las órdenes completadas hasta el {getNombreDia(formData.dia_cierre_semanal)} serán incluidas en la liquidación.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {formData.acuerdo_pago === 'Quincenal' && (
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                    <div className="text-sm text-blue-700">
+                      <p className="font-semibold mb-2">Períodos de liquidación automáticos:</p>
+                      <ul className="space-y-1 ml-4 list-disc">
+                        <li>Del 1 al 15 de cada mes</li>
+                        <li>Del 16 al último día del mes</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {formData.acuerdo_pago === 'Mensual' && (
+                <div className="space-y-3 bg-white p-4 rounded-lg border border-gray-200">
+                  <div className="flex items-center gap-3">
+                    <Switch
+                      checked={formData.usa_ultimo_dia_mes}
+                      onChange={(checked) => {
+                        handleChange('usa_ultimo_dia_mes', checked);
+                        if (checked) {
+                          handleChange('dia_cierre_mensual', null);
+                        }
+                      }}
+                      label="Cierre el último día del mes"
+                    />
+                  </div>
+
+                  {!formData.usa_ultimo_dia_mes && (
+                    <Input
+                      type="number"
+                      min="1"
+                      max="28"
+                      label="Día de cierre mensual"
+                      value={formData.dia_cierre_mensual?.toString() || ''}
+                      onChange={(e) => {
+                        const value = e.target.value ? parseInt(e.target.value) : null;
+                        handleChange('dia_cierre_mensual', value);
+                      }}
+                      helperText="Del 1 al 28 (para evitar problemas con febrero)"
+                      error={errors.dia_cierre_mensual}
+                      required
+                    />
+                  )}
+
+                  {(formData.usa_ultimo_dia_mes || formData.dia_cierre_mensual) && (
+                    <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
+                      <Calendar className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="font-medium">Liquidación mensual</p>
+                        <p className="text-blue-600 mt-1">
+                          {formData.usa_ultimo_dia_mes
+                            ? 'Se liquidará el último día de cada mes (28, 29, 30 o 31 según el mes)'
+                            : `Se liquidará el día ${formData.dia_cierre_mensual} de cada mes`}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {formData.acuerdo_pago && (
+                <Input
+                  type="number"
+                  min="0"
+                  max="90"
+                  label="Días de vencimiento"
+                  value={formData.dias_vencimiento.toString()}
+                  onChange={(e) => handleChange('dias_vencimiento', parseInt(e.target.value) || 7)}
+                  helperText="Días después del cierre en que vence la liquidación"
+                />
+              )}
+            </div>
           )}
         </div>
       </div>

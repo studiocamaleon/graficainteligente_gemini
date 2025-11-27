@@ -146,6 +146,10 @@ export interface Client {
   codigo_postal: string | null;
   tiene_cuenta_corriente: boolean;
   acuerdo_pago: PaymentTerm | null;
+  dia_cierre_semanal: number | null;
+  dia_cierre_mensual: number | null;
+  usa_ultimo_dia_mes: boolean;
+  dias_vencimiento: number;
   is_active: boolean;
   created_by: string | null;
   updated_by: string | null;
@@ -2044,4 +2048,21 @@ export interface ClienteConSaldo {
   saldo_actual: number;
   dias_vencimiento: number | null;
   estado_cc: 'al_dia' | 'proximo_vencer' | 'vencido';
+}
+
+export interface PeriodoLiquidacion {
+  tipo_acuerdo: PaymentTerm;
+  periodo_desde: string;
+  periodo_hasta: string;
+  fecha_vencimiento: string;
+  descripcion_periodo: string;
+  dias_vencimiento: number;
+}
+
+export interface OrdenParaLiquidar {
+  orden_id: string;
+  numero_orden: string;
+  fecha_completado: string;
+  total: number;
+  descripcion: string;
 }
