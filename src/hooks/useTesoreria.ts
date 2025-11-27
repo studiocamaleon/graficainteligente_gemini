@@ -90,6 +90,7 @@ export function useIngresosPeriodo(fechaDesde?: string, fechaHasta?: string) {
   const { profile } = useAuth();
   const [ingresos, setIngresos] = useState<any[]>([]);
   const [totalIngresos, setTotalIngresos] = useState(0);
+  const [totalComisiones, setTotalComisiones] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const fetchIngresos = useCallback(async () => {
@@ -138,9 +139,12 @@ export function useIngresosPeriodo(fechaDesde?: string, fechaHasta?: string) {
 
       setIngresos(data || []);
 
-      // Calcular total
+      // Calcular totales
       const total = (data || []).reduce((sum, ing) => sum + Number(ing.monto), 0);
+      const comisiones = (data || []).reduce((sum, ing) => sum + Number(ing.comision_aplicada || 0), 0);
+
       setTotalIngresos(total);
+      setTotalComisiones(comisiones);
     } catch (error) {
       console.error('Error fetching ingresos:', error);
     } finally {
@@ -155,6 +159,7 @@ export function useIngresosPeriodo(fechaDesde?: string, fechaHasta?: string) {
   return {
     ingresos,
     totalIngresos,
+    totalComisiones,
     loading,
     refetch: fetchIngresos,
   };
