@@ -116,13 +116,7 @@ export default function MediosCobro() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Medios de Cobro</h1>
-          <p className="text-gray-600 mt-1">
-            Gestiona las formas de pago disponibles para tus clientes
-          </p>
-        </div>
+      <div className="flex justify-end">
         <Button onClick={handleCreate}>
           <Plus className="w-4 h-4 mr-2" />
           Crear Medio de Cobro

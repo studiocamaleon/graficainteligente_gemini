@@ -26,14 +26,8 @@ export default function TesoreriaView() {
 
   return (
     <div className="space-y-6">
-      {/* Header con refresh */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Tesorería y Flujo de Efectivo</h2>
-          <p className="text-sm text-gray-600 mt-1">
-            Control de cajas, ingresos y saldos pendientes de cobro
-          </p>
-        </div>
+      {/* Action Button */}
+      <div className="flex justify-end">
         <Button
           variant="secondary"
           onClick={handleRefresh}

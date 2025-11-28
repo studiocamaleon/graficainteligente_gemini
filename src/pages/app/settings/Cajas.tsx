@@ -141,14 +141,8 @@ export default function Cajas() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Gestión de Cajas</h1>
-          <p className="text-sm text-gray-600 mt-1">
-            Administra tus cajas de efectivo, cuentas bancarias y billeteras virtuales
-          </p>
-        </div>
+      {/* Action Button */}
+      <div className="flex justify-end">
         <Button variant="primary" onClick={handleHeaderAction}>
           <Plus className="w-5 h-5" />
           Nueva Caja
