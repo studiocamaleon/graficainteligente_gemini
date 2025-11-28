@@ -40,6 +40,25 @@ export function useMeasurementLinesPricing(
         cantidadLineas: lines.length
       });
 
+      // PASO 1.5: Determinar si se debe aplicar cantidad_minima y calcular factor de ajuste
+      // El mínimo se aplica al TOTAL ACUMULADO, no a cada línea individual
+      let factorAjusteMT2 = 1;
+      let factorAjusteMetrosLineales = 1;
+
+      if (cantidadMinima) {
+        if (tipoVentaReal === 'mt2' && totalMT2Acumulado > 0 && totalMT2Acumulado < cantidadMinima) {
+          // Total acumulado es menor al mínimo → Aplicar ajuste proporcional
+          factorAjusteMT2 = cantidadMinima / totalMT2Acumulado;
+          console.log(`📊 Cantidad mínima aplicada al total: ${totalMT2Acumulado.toFixed(2)} MT2 → ${cantidadMinima} MT2 (factor: ${factorAjusteMT2.toFixed(4)})`);
+        } else if (tipoVentaReal === 'mt_lineal' && totalMetrosLinealesAcumulado > 0 && totalMetrosLinealesAcumulado < cantidadMinima) {
+          // Total acumulado es menor al mínimo → Aplicar ajuste proporcional
+          factorAjusteMetrosLineales = cantidadMinima / totalMetrosLinealesAcumulado;
+          console.log(`📊 Cantidad mínima aplicada al total: ${totalMetrosLinealesAcumulado.toFixed(2)} ML → ${cantidadMinima} ML (factor: ${factorAjusteMetrosLineales.toFixed(4)})`);
+        } else {
+          console.log(`✅ Total acumulado (${tipoVentaReal === 'mt2' ? totalMT2Acumulado.toFixed(2) + ' MT2' : totalMetrosLinealesAcumulado.toFixed(2) + ' ML'}) supera el mínimo de ${cantidadMinima}. No se aplica ajuste.`);
+        }
+      }
+
       // PASO 2: Determinar precio por unidad del rango correcto basado en totales
       // Solo para categorías que usan rangos de precio (Gran Formato, Materiales Rígidos, Plotter)
       let precioPorUnidadRango: number | null = null;
@@ -70,7 +89,7 @@ export function useMeasurementLinesPricing(
           line.acabados || [],   // Acabados de la línea
           tipoVentaReal,
           precioPorUnidadRango || undefined,  // Pasar el precio del rango
-          cantidadMinima  // Pasar cantidad_minima para aplicarla en cálculo de precio
+          tipoVentaReal === 'mt2' ? factorAjusteMT2 : factorAjusteMetrosLineales  // Factor de ajuste (aplica mínimo al total)
         );
 
         if (precio) {

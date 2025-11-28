@@ -321,10 +321,12 @@ export function AddLineModal({
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-start gap-2">
                       <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
                       <div className="text-sm text-blue-700">
-                        <p className="font-medium">Mínimo de venta</p>
+                        <p className="font-medium">Mínimo de venta: {config.cantidad_minima} MT2</p>
                         <p>
-                          Se producirá en las medidas indicadas ({mt2Calculado.toFixed(2)} MT2),
-                          pero se facturará el mínimo de {config.cantidad_minima} MT2.
+                          Esta línea tiene {mt2Calculado.toFixed(2)} MT2.
+                          El mínimo de {config.cantidad_minima} MT2 se aplica sobre el{' '}
+                          <strong>total de todas las líneas</strong>. Si el total supera el mínimo,
+                          se facturará el valor real de cada línea.
                         </p>
                       </div>
                     </div>
@@ -378,10 +380,12 @@ export function AddLineModal({
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-start gap-2">
                   <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
                   <div className="text-sm text-blue-700">
-                    <p className="font-medium">Mínimo de venta</p>
+                    <p className="font-medium">Mínimo de venta: {config.cantidad_minima} ML</p>
                     <p>
-                      Se producirá en la medida indicada ({metrosLineales.toFixed(2)} ML),
-                      pero se facturará el mínimo de {config.cantidad_minima} ML.
+                      Esta línea tiene {metrosLineales.toFixed(2)} ML.
+                      El mínimo de {config.cantidad_minima} ML se aplica sobre el{' '}
+                      <strong>total de todas las líneas</strong>. Si el total supera el mínimo,
+                      se facturará el valor real de cada línea.
                     </p>
                   </div>
                 </div>
