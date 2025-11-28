@@ -31,7 +31,7 @@ export function RutaSelector({
     if (value && rutas.length > 0) {
       const ruta = rutas.find((r) => r.id === value);
       setSelectedRuta(ruta || null);
-    } else {
+    } else if (!value) {
       setSelectedRuta(null);
     }
   }, [value, rutas]);

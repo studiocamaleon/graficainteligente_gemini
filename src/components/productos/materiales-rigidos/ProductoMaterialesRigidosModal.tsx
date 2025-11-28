@@ -62,6 +62,7 @@ export function ProductoMaterialesRigidosModal({
         )}
 
         <ProductoMaterialesRigidosForm
+          key={producto?.id || 'new'}
           producto={producto}
           onSubmit={handleSubmit}
           onCancel={handleClose}

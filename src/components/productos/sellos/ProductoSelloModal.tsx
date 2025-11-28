@@ -25,6 +25,7 @@ export function ProductoSelloModal({
       size="lg"
     >
       <ProductoSelloForm
+        key={producto?.id || 'new'}
         producto={producto}
         onSubmit={onSubmit}
         onCancel={onClose}

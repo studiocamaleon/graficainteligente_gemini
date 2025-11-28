@@ -79,6 +79,7 @@ export function ProductoGranFormatoModal({
       >
         <div className="max-h-[calc(100vh-200px)] overflow-y-auto px-6 py-4">
           <ProductoGranFormatoForm
+            key={producto?.id || 'new'}
             producto={producto}
             onSubmit={handleSubmit}
             onCancel={handleClose}

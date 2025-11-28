@@ -59,6 +59,7 @@ export function ProductoPlotterCorteModal({
     >
       <div className="max-h-[calc(100vh-200px)] overflow-y-auto">
         <ProductoPlotterCorteForm
+          key={producto?.id || 'new'}
           producto={producto}
           onSubmit={handleSubmit}
           onCancel={handleClose}
