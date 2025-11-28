@@ -17,8 +17,8 @@ interface EstadoCuentaModalProps {
 
 export function EstadoCuentaModal({ isOpen, onClose, cliente }: EstadoCuentaModalProps) {
   const { company } = useAuth();
-  const [fechaDesde, setFechaDesde] = useState<Date | null>(dayjs().subtract(30, 'days').toDate());
-  const [fechaHasta, setFechaHasta] = useState<Date | null>(dayjs().toDate());
+  const [fechaDesde, setFechaDesde] = useState<string | null>(dayjs().subtract(30, 'days').format('YYYY-MM-DD'));
+  const [fechaHasta, setFechaHasta] = useState<string | null>(dayjs().format('YYYY-MM-DD'));
   const [isExporting, setIsExporting] = useState(false);
 
   const { movimientos, loading, saldoInicial, saldoFinal, fetchEstadoCuenta } = useEstadoCuenta(
@@ -29,8 +29,8 @@ export function EstadoCuentaModal({ isOpen, onClose, cliente }: EstadoCuentaModa
     if (!cliente) return;
 
     fetchEstadoCuenta(
-      fechaDesde ? dayjs(fechaDesde).format('YYYY-MM-DD') : undefined,
-      fechaHasta ? dayjs(fechaHasta).format('YYYY-MM-DD') : undefined
+      fechaDesde || undefined,
+      fechaHasta || undefined
     );
   };
 
@@ -60,10 +60,21 @@ export function EstadoCuentaModal({ isOpen, onClose, cliente }: EstadoCuentaModa
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Estado de Cuenta" size="xl">
       <div className="space-y-6">
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h3 className="font-semibold text-blue-900 mb-2">{cliente.nombre_fantasia}</h3>
-          <p className="text-sm text-blue-700">{cliente.razon_social}</p>
-          <p className="text-sm text-blue-700">{cliente.numero_documento}</p>
+        <div className="border border-gray-200 rounded-lg p-4 bg-gradient-to-br from-gray-50 to-white">
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Cliente</p>
+              <p className="text-sm font-semibold text-gray-900">{cliente.nombre_fantasia}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Razón Social</p>
+              <p className="text-sm text-gray-700">{cliente.razon_social}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Documento</p>
+              <p className="text-sm text-gray-700">{cliente.numero_documento}</p>
+            </div>
+          </div>
         </div>
 
         <div className="flex gap-4 items-end">
@@ -73,7 +84,7 @@ export function EstadoCuentaModal({ isOpen, onClose, cliente }: EstadoCuentaModa
               Desde
             </label>
             <DatePicker
-              selected={fechaDesde}
+              value={fechaDesde}
               onChange={setFechaDesde}
               placeholder="Fecha desde"
             />
@@ -85,7 +96,7 @@ export function EstadoCuentaModal({ isOpen, onClose, cliente }: EstadoCuentaModa
               Hasta
             </label>
             <DatePicker
-              selected={fechaHasta}
+              value={fechaHasta}
               onChange={setFechaHasta}
               placeholder="Fecha hasta"
             />
