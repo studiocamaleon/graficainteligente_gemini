@@ -33,13 +33,6 @@ export function UniversalProductSearchStep({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Buscar Producto</h2>
-        <p className="text-gray-600">
-          Busca el producto que deseas agregar a la orden
-        </p>
-      </div>
-
       <div className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
         <Input

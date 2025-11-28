@@ -495,29 +495,43 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
     const currentIndex = steps.indexOf(currentStep);
 
     return (
-      <div className="flex items-center justify-center gap-2 mb-6">
-        {steps.map((step, index) => (
-          <div key={step} className="flex items-center">
-            <div
-              className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium transition-colors ${
-                index === currentIndex
-                  ? 'bg-blue-600 text-white'
-                  : index < currentIndex
-                  ? 'bg-green-500 text-white'
-                  : 'bg-gray-200 text-gray-600'
-              }`}
-            >
-              {index + 1}
-            </div>
-            {index < steps.length - 1 && (
+      <div className="mb-6">
+        {/* Step indicators */}
+        <div className="flex items-center justify-center gap-2 mb-3">
+          {steps.map((step, index) => (
+            <div key={step} className="flex items-center">
               <div
-                className={`w-12 h-0.5 mx-1 ${
-                  index < currentIndex ? 'bg-green-500' : 'bg-gray-200'
+                className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium transition-colors ${
+                  index === currentIndex
+                    ? 'bg-blue-600 text-white'
+                    : index < currentIndex
+                    ? 'bg-green-500 text-white'
+                    : 'bg-gray-200 text-gray-600'
                 }`}
-              />
-            )}
-          </div>
-        ))}
+              >
+                {index + 1}
+              </div>
+              {index < steps.length - 1 && (
+                <div
+                  className={`w-12 h-0.5 mx-1 ${
+                    index < currentIndex ? 'bg-green-500' : 'bg-gray-200'
+                  }`}
+                />
+              )}
+            </div>
+          ))}
+        </div>
+        {/* Step title */}
+        <div className="text-center">
+          <h3 className="text-lg font-semibold text-gray-900">
+            {stepTitles[currentStep]}
+          </h3>
+          {selectedProduct && currentStep !== 'search' && (
+            <p className="text-sm text-gray-600 mt-1">
+              {selectedProduct.nombre} · {selectedProduct.categoria}
+            </p>
+          )}
+        </div>
       </div>
     );
   };
@@ -526,35 +540,17 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title={stepTitles[currentStep]}
+      title="Agregar Producto"
       size="xl"
     >
       <div className="flex flex-col h-full">
-        {/* Header */}
-        <div className="px-6 pt-4 pb-2 border-b">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900">
-                {stepTitles[currentStep]}
-              </h2>
-              {selectedProduct && currentStep !== 'search' && (
-                <p className="text-sm text-gray-600 mt-1">
-                  {selectedProduct.nombre} - {selectedProduct.categoria}
-                </p>
-              )}
-            </div>
-            <button
-              onClick={handleClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              <X className="w-6 h-6" />
-            </button>
-          </div>
+        {/* Step Indicator */}
+        <div className="mb-6">
           {renderStepIndicator()}
         </div>
 
         {/* Content */}
-        <div className="flex-1 px-6 py-6 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto">
           {currentStep === 'search' && (
             <UniversalProductSearchStep
               searchTerm={searchTerm}

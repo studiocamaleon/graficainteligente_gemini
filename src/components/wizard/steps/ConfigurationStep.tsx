@@ -263,13 +263,6 @@ export function ConfigurationStep({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Configuración del Producto</h2>
-        <p className="text-gray-600">
-          Completa los detalles del producto que deseas agregar
-        </p>
-      </div>
-
       {/* Cantidad - Solo para productos sin múltiples líneas */}
       {!config.permite_multiples_lineas && (
         <Card className="p-6">
