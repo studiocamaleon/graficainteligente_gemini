@@ -35,6 +35,14 @@ export function ProductosLaserTab({ triggerCreate = 0 }: ProductosLaserTabProps)
   const { productos, isLoading, refetch } = useProductosImpresionLaser(filters);
   const { toggleStatus, deleteProducto, producto: productoCompleto } = useProductoImpresionLaser(selectedProductoId);
 
+  console.log('📄 ProductosLaserTab estado:', {
+    selectedProductoId,
+    productoCompletoExists: !!productoCompleto,
+    productoCompletoId: productoCompleto?.id,
+    productoCompletoRutaId: productoCompleto?.ruta_produccion_id,
+    isEditModalOpen
+  });
+
   useEffect(() => {
     if (triggerCreate && triggerCreate > 0 && triggerCreate !== lastTriggerRef.current) {
       lastTriggerRef.current = triggerCreate;

@@ -59,14 +59,31 @@ export function ProductoLaserForm({
   const [errors, setErrors] = useState<FormErrors>({});
 
   useEffect(() => {
+    console.log('🔄 ProductoLaserForm useEffect ejecutado', {
+      productoExists: !!producto,
+      productoId: producto?.id,
+      rutaProduccionId: producto?.ruta_produccion_id,
+      rutaProduccionIdType: typeof producto?.ruta_produccion_id
+    });
+
     if (producto) {
+      console.log('✅ Inicializando formulario con producto:', {
+        nombre: producto.nombre,
+        ruta_produccion_id: producto.ruta_produccion_id,
+        tecnologias: producto.tecnologias,
+        materiales: producto.materiales
+      });
+
       setNombre(producto.nombre);
       setMedidas(producto.medidas_disponibles);
       setCarasImpresas(producto.caras_impresas);
       setTipoVenta(producto.tipo_venta);
       setCantidadesFijas(producto.cantidades_fijas);
       setImpuesto(producto.impuesto_iva);
-      setRutaProduccionId(producto.ruta_produccion_id || '');
+
+      const rutaId = producto.ruta_produccion_id || '';
+      console.log('📍 Estableciendo rutaProduccionId:', rutaId);
+      setRutaProduccionId(rutaId);
 
       if (producto.tecnologias.length > 0) {
         setTecnologiaId(producto.tecnologias[0].tecnologia_id);

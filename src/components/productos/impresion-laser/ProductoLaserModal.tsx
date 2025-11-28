@@ -18,6 +18,13 @@ export function ProductoLaserModal({
   producto,
   onSuccess,
 }: ProductoLaserModalProps) {
+  console.log('🎭 ProductoLaserModal renderizado', {
+    isOpen,
+    productoExists: !!producto,
+    productoId: producto?.id,
+    productoRutaId: producto?.ruta_produccion_id
+  });
+
   const { createProducto, updateProducto, isLoading } = useProductoImpresionLaser(producto?.id);
   const [hasChanges, setHasChanges] = useState(false);
   const {

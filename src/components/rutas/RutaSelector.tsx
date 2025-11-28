@@ -20,21 +20,44 @@ export function RutaSelector({
   disabled = false,
   showDescription = false,
 }: RutaSelectorProps) {
+  console.log('🎯 RutaSelector renderizado con value:', value);
+
   const { rutas, loading } = useRutasProduccion({
     isActive: true,
     itemsPerPage: 1000,
   });
 
+  console.log('📋 Estado de rutas:', {
+    loading,
+    rutasCount: rutas.length,
+    rutasIds: rutas.map(r => ({ id: r.id, nombre: r.nombre }))
+  });
+
   const [selectedRuta, setSelectedRuta] = useState<RutaProduccion | null>(null);
 
   useEffect(() => {
+    console.log('🔄 RutaSelector useEffect ejecutado', {
+      value,
+      valueType: typeof value,
+      rutasLength: rutas.length,
+      loading
+    });
+
     if (value && rutas.length > 0) {
       const ruta = rutas.find((r) => r.id === value);
+      console.log('🔍 Buscando ruta:', {
+        valueToFind: value,
+        rutaFound: !!ruta,
+        rutaNombre: ruta?.nombre
+      });
       setSelectedRuta(ruta || null);
     } else if (!value) {
+      console.log('⚠️ No hay value, reseteando selectedRuta');
       setSelectedRuta(null);
+    } else {
+      console.log('⏳ Esperando rutas... value existe pero rutas.length = 0');
     }
-  }, [value, rutas]);
+  }, [value, rutas, loading]);
 
   const handleChange = (rutaId: string) => {
     onChange(rutaId);

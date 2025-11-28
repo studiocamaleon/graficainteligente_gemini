@@ -49,6 +49,15 @@ export function SearchableSelect({
   const selectedOption = options.find((opt) => opt.value === value);
   const displayValue = selectedOption?.label || '';
 
+  console.log('🔘 SearchableSelect renderizado', {
+    value,
+    valueType: typeof value,
+    optionsCount: options.length,
+    selectedOption,
+    displayValue,
+    loading
+  });
+
   const filteredOptions = options.filter((option) =>
     option.label.toLowerCase().includes(searchTerm.toLowerCase())
   );
