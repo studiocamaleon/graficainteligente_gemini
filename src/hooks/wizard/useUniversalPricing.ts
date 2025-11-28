@@ -605,7 +605,8 @@ export async function calculateLinePrice(
   allServicios: SelectedService[],
   allAcabados: SelectedFinishing[],
   tipoVentaReal?: 'mt2' | 'mt_lineal' | 'unidad' | 'cantidades_fijas',
-  precioPorUnidadRango?: number
+  precioPorUnidadRango?: number,
+  cantidadMinima?: number
 ): Promise<{
   precio_base_unitario: number;
   precio_servicios_unitario: number;
@@ -629,13 +630,13 @@ export async function calculateLinePrice(
 
     switch (categoria) {
       case 'Impresion Gran Formato':
-        precioBaseUnitario = await getPrecioGranFormatoLine(productId, lineConfig, line, tipoVentaReal, precioPorUnidadRango);
+        precioBaseUnitario = await getPrecioGranFormatoLine(productId, lineConfig, line, tipoVentaReal, precioPorUnidadRango, cantidadMinima);
         break;
       case 'Materiales Rigidos':
-        precioBaseUnitario = await getPrecioMaterialesRigidosLine(productId, lineConfig, line, precioPorUnidadRango);
+        precioBaseUnitario = await getPrecioMaterialesRigidosLine(productId, lineConfig, line, precioPorUnidadRango, cantidadMinima);
         break;
       case 'Plotter de Corte':
-        precioBaseUnitario = await getPrecioPlotterCorteLine(productId, lineConfig, line, precioPorUnidadRango);
+        precioBaseUnitario = await getPrecioPlotterCorteLine(productId, lineConfig, line, precioPorUnidadRango, cantidadMinima);
         break;
       default:
         // Para otras categorías, usar el método tradicional
@@ -725,16 +726,23 @@ async function getPrecioGranFormatoLine(
   config: SelectedConfiguration,
   line: MeasurementLine,
   tipoVentaReal?: string,
-  precioPorUnidadRango?: number
+  precioPorUnidadRango?: number,
+  cantidadMinima?: number
 ): Promise<number | null> {
   if (!config.tinta) return null;
 
   // Si se proporciona precio del rango correcto (calculado con totales acumulados), usarlo
   if (precioPorUnidadRango !== undefined && precioPorUnidadRango !== null) {
     if (tipoVentaReal === 'mt2') {
-      return precioPorUnidadRango * (line.mt2_calculado || 0);
+      const mt2Real = line.mt2_calculado || 0;
+      // Aplicar cantidad_minima SOLO para cálculo de precio (no para medidas de producción)
+      const mt2ParaPrecio = cantidadMinima ? Math.max(mt2Real, cantidadMinima) : mt2Real;
+      return precioPorUnidadRango * mt2ParaPrecio;
     } else {
-      return precioPorUnidadRango * (line.metros_lineales || 0);
+      const metrosReales = line.metros_lineales || 0;
+      // Aplicar cantidad_minima SOLO para cálculo de precio (no para medidas de producción)
+      const metrosParaPrecio = cantidadMinima ? Math.max(metrosReales, cantidadMinima) : metrosReales;
+      return precioPorUnidadRango * metrosParaPrecio;
     }
   }
 
@@ -757,11 +765,15 @@ async function getPrecioGranFormatoLine(
 
   // Determinar si es MT2 o Metro Lineal
   if (tipoVentaReal === 'mt2') {
-    // Precio por MT2 * MT2 de la línea
-    return precioRango.precio * (line.mt2_calculado || 0);
+    const mt2Real = line.mt2_calculado || 0;
+    // Aplicar cantidad_minima SOLO para cálculo de precio
+    const mt2ParaPrecio = cantidadMinima ? Math.max(mt2Real, cantidadMinima) : mt2Real;
+    return precioRango.precio * mt2ParaPrecio;
   } else {
-    // Precio por metro lineal * metros lineales de la línea
-    return precioRango.precio * (line.metros_lineales || 0);
+    const metrosReales = line.metros_lineales || 0;
+    // Aplicar cantidad_minima SOLO para cálculo de precio
+    const metrosParaPrecio = cantidadMinima ? Math.max(metrosReales, cantidadMinima) : metrosReales;
+    return precioRango.precio * metrosParaPrecio;
   }
 }
 
@@ -769,13 +781,17 @@ async function getPrecioMaterialesRigidosLine(
   productId: string,
   config: SelectedConfiguration,
   line: MeasurementLine,
-  precioPorUnidadRango?: number
+  precioPorUnidadRango?: number,
+  cantidadMinima?: number
 ): Promise<number | null> {
   if (!config.material_id || !config.espesor) return null;
 
   // Si se proporciona precio del rango correcto (calculado con totales acumulados), usarlo
   if (precioPorUnidadRango !== undefined && precioPorUnidadRango !== null) {
-    return precioPorUnidadRango * (line.mt2_calculado || 0);
+    const mt2Real = line.mt2_calculado || 0;
+    // Aplicar cantidad_minima SOLO para cálculo de precio
+    const mt2ParaPrecio = cantidadMinima ? Math.max(mt2Real, cantidadMinima) : mt2Real;
+    return precioPorUnidadRango * mt2ParaPrecio;
   }
 
   // Fallback: lógica original (para compatibilidad con código que no usa múltiples líneas)
@@ -792,20 +808,27 @@ async function getPrecioMaterialesRigidosLine(
 
   // MR tiene precio único, no rangos
   // Precio es por MT2
-  return data.precio_mt2 * (line.mt2_calculado || 0);
+  const mt2Real = line.mt2_calculado || 0;
+  // Aplicar cantidad_minima SOLO para cálculo de precio
+  const mt2ParaPrecio = cantidadMinima ? Math.max(mt2Real, cantidadMinima) : mt2Real;
+  return data.precio_mt2 * mt2ParaPrecio;
 }
 
 async function getPrecioPlotterCorteLine(
   productId: string,
   config: SelectedConfiguration,
   line: MeasurementLine,
-  precioPorUnidadRango?: number
+  precioPorUnidadRango?: number,
+  cantidadMinima?: number
 ): Promise<number | null> {
   if (!config.medida_ancho) return null;
 
   // Si se proporciona precio del rango correcto (calculado con totales acumulados), usarlo
   if (precioPorUnidadRango !== undefined && precioPorUnidadRango !== null) {
-    return precioPorUnidadRango * (line.metros_lineales || 0);
+    const metrosReales = line.metros_lineales || 0;
+    // Aplicar cantidad_minima SOLO para cálculo de precio
+    const metrosParaPrecio = cantidadMinima ? Math.max(metrosReales, cantidadMinima) : metrosReales;
+    return precioPorUnidadRango * metrosParaPrecio;
   }
 
   // Fallback: lógica original (para compatibilidad con código que no usa múltiples líneas)
@@ -826,5 +849,8 @@ async function getPrecioPlotterCorteLine(
   if (!precioRango) return null;
 
   // Precio es por metro lineal
-  return precioRango.precio * (line.metros_lineales || 0);
+  const metrosReales = line.metros_lineales || 0;
+  // Aplicar cantidad_minima SOLO para cálculo de precio
+  const metrosParaPrecio = cantidadMinima ? Math.max(metrosReales, cantidadMinima) : metrosReales;
+  return precioRango.precio * metrosParaPrecio;
 }

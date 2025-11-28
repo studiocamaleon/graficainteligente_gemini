@@ -39,6 +39,7 @@ export function MeasurementLinesTable({
     selectedServicios,
     selectedAcabados,
     config.tipo_venta_real,
+    config.cantidad_minima,  // Pasar cantidad_minima del producto
     onChange
   );
 

@@ -15,6 +15,7 @@ export function useMeasurementLinesPricing(
   allServicios: SelectedService[],
   allAcabados: SelectedFinishing[],
   tipoVentaReal?: 'mt2' | 'mt_lineal' | 'unidad' | 'cantidades_fijas',
+  cantidadMinima?: number,
   onLinesUpdate?: (updatedLines: MeasurementLine[]) => void
 ) {
   useEffect(() => {
@@ -68,7 +69,8 @@ export function useMeasurementLinesPricing(
           line.servicios || [],  // Servicios de la línea
           line.acabados || [],   // Acabados de la línea
           tipoVentaReal,
-          precioPorUnidadRango || undefined  // Pasar el precio del rango
+          precioPorUnidadRango || undefined,  // Pasar el precio del rango
+          cantidadMinima  // Pasar cantidad_minima para aplicarla en cálculo de precio
         );
 
         if (precio) {

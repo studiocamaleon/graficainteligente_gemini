@@ -103,9 +103,9 @@ export function AddLineModal({
       if (!alto || alto <= 0) {
         newErrors.alto = 'El alto debe ser mayor a 0';
       }
-      if (config.cantidad_minima && mt2Calculado < config.cantidad_minima) {
-        newErrors.mt2 = `Los MT2 deben ser al menos ${config.cantidad_minima}`;
-      }
+      // NOTA: NO validamos cantidad_minima aquí - se aplica solo en cálculo de precio
+      // Esto permite ingresar medidas reales de producción (ej: 120x80cm = 0.96 MT2)
+      // mientras se cobra el mínimo (1 MT2) automáticamente en el pricing
     } else if (config.tipo_venta_real === 'mt_lineal') {
       if (!anchoSeleccionado) {
         newErrors.ancho = 'Debes seleccionar un ancho';
@@ -113,9 +113,8 @@ export function AddLineModal({
       if (!metrosLineales || metrosLineales <= 0) {
         newErrors.metros = 'Los metros lineales deben ser mayor a 0';
       }
-      if (config.cantidad_minima && metrosLineales < config.cantidad_minima) {
-        newErrors.metros = `Debe ser al menos ${config.cantidad_minima} metros`;
-      }
+      // NOTA: NO validamos cantidad_minima aquí - se aplica solo en cálculo de precio
+      // Esto permite ingresar metros reales de producción mientras se cobra el mínimo
     }
 
     if (!cantidad || cantidad <= 0) {
@@ -306,15 +305,31 @@ export function AddLineModal({
               </div>
 
               {mt2Calculado > 0 && (
-                <div className="bg-blue-50 p-3 rounded-lg">
-                  <p className="text-sm text-gray-700">
-                    <span className="font-semibold">Metros Cuadrados:</span>{' '}
-                    <Badge variant="info">{mt2Calculado.toFixed(2)} MT2</Badge>
-                  </p>
-                  {errors.mt2 && (
-                    <p className="mt-1 text-sm text-red-600">{errors.mt2}</p>
+                <>
+                  <div className="bg-blue-50 p-3 rounded-lg">
+                    <p className="text-sm text-gray-700">
+                      <span className="font-semibold">Metros Cuadrados:</span>{' '}
+                      <Badge variant="info">{mt2Calculado.toFixed(2)} MT2</Badge>
+                    </p>
+                    {errors.mt2 && (
+                      <p className="mt-1 text-sm text-red-600">{errors.mt2}</p>
+                    )}
+                  </div>
+
+                  {/* Indicador de cantidad mínima */}
+                  {config.cantidad_minima && mt2Calculado < config.cantidad_minima && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-start gap-2">
+                      <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                      <div className="text-sm text-blue-700">
+                        <p className="font-medium">Mínimo de venta</p>
+                        <p>
+                          Se producirá en las medidas indicadas ({mt2Calculado.toFixed(2)} MT2),
+                          pero se facturará el mínimo de {config.cantidad_minima} MT2.
+                        </p>
+                      </div>
+                    </div>
                   )}
-                </div>
+                </>
               )}
             </div>
           ) : (
@@ -357,6 +372,20 @@ export function AddLineModal({
                   <p className="mt-1 text-sm text-red-600">{errors.metros}</p>
                 )}
               </div>
+
+              {/* Indicador de cantidad mínima para metros lineales */}
+              {config.cantidad_minima && metrosLineales > 0 && metrosLineales < config.cantidad_minima && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-start gap-2">
+                  <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <div className="text-sm text-blue-700">
+                    <p className="font-medium">Mínimo de venta</p>
+                    <p>
+                      Se producirá en la medida indicada ({metrosLineales.toFixed(2)} ML),
+                      pero se facturará el mínimo de {config.cantidad_minima} ML.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </Card>
