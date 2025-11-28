@@ -832,3 +832,47 @@ Error: column tecnologias.codigo does not exist
 ✓ built in 25.01s
 Sin errores
 ```
+
+---
+
+### Error: Columna `codigo` no existe en tabla `pasos`
+
+**Fecha:** 2025-11-28 (segunda corrección)
+
+**Problema detectado:**
+```
+Error: column pasos_1.codigo does not exist
+```
+
+**Causa:**
+- El hook intentaba seleccionar `paso:pasos(id, nombre, codigo, etapa)`
+- La tabla `pasos` solo tiene columnas: `id`, `company_id`, `nombre`, `etapa`, `estacion_id`, `is_active`
+- **NO tiene columna `codigo`**
+- El componente intentaba mostrar `tinta.paso.codigo` en la UI
+
+**Archivos corregidos:**
+
+1. **`src/hooks/useTodasTecnologiasTintas.ts`**
+   - ❌ Query: `paso:pasos(id, nombre, codigo, etapa)`
+   - ✅ Query: `paso:pasos(id, nombre, etapa)`
+   - ❌ Interface con `codigo: string | null` en `paso`
+   - ✅ Interface sin campo `codigo` en `paso`
+
+2. **`src/components/rutas/TodasTecnologiasTintasPreview.tsx`**
+   - ❌ Mostraba: `{tinta.paso.codigo && `${tinta.paso.codigo} • `}Etapa: ...`
+   - ✅ Muestra: `Etapa: {tinta.paso.etapa}`
+   - Simplificado diseño del paso
+
+**Status:** ✅ Corregido y verificado con build exitoso
+
+**Build después de segunda corrección:**
+```
+✓ 2795 modules transformed
+✓ built in 18.40s
+Sin errores
+```
+
+**Lección aprendida:**
+- ✅ Siempre verificar estructura real de tablas antes de implementar queries
+- ✅ No asumir existencia de columnas "comunes" como `codigo`
+- ✅ Testear con datos reales antes de dar por completada una feature

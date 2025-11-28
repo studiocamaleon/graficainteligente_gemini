@@ -216,7 +216,7 @@ function TecnologiaAccordionItem({ tecnologia, isExpanded, onToggle }: Tecnologi
                               {tinta.paso.nombre}
                             </p>
                             <p className="text-xs text-gray-500 mt-0.5">
-                              {tinta.paso.codigo && `${tinta.paso.codigo} • `}Etapa: {tinta.paso.etapa}
+                              Etapa: {tinta.paso.etapa}
                             </p>
                           </div>
                         </div>

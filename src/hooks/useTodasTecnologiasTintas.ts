@@ -9,7 +9,6 @@ interface TintaPasoInfo {
   paso: {
     id: string;
     nombre: string;
-    codigo: string | null;
     etapa: string;
   } | null;
 }
@@ -59,7 +58,7 @@ export function useTodasTecnologiasTintas() {
               id,
               tinta,
               paso_id,
-              paso:pasos(id, nombre, codigo, etapa)
+              paso:pasos(id, nombre, etapa)
             `)
             .eq('tecnologia_id', tecnologia.id)
             .order('tinta', { ascending: true });
