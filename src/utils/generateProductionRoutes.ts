@@ -25,10 +25,12 @@ interface GenerateRoutesParams {
  * Casos manejados:
  * - 'Pre-prensa', 'pre-prensa', 'Pre prensa' → 'pre_prensa'
  * - 'Terminacion', 'Post-prensa', 'post-prensa' → 'post_prensa'
- * - 'Produccion', 'Impresion', cualquier otro → 'principal'
+ * - 'Produccion', 'Principal' → 'principal'
+ * - 'Instalacion' → 'instalacion' (mantiene el valor)
  *
  * IMPORTANTE: El orden de las verificaciones es crítico para evitar falsos positivos
  * 'post_prensa' contiene 'pre', por lo que debemos verificar 'post' ANTES de 'pre'
+ * 'Instalacion' contiene 'ion' que NO debe ser mapeado a 'Produccion'
  */
 function normalizarEtapa(etapa: string): TipoEtapaRuta {
   const etapaLower = etapa.toLowerCase().replace(/[-\s]/g, '_');
@@ -38,20 +40,33 @@ function normalizarEtapa(etapa: string): TipoEtapaRuta {
     return etapaLower as TipoEtapaRuta;
   }
 
-  // 2. Post-prensa (verificar ANTES que pre para evitar que "post_prensa" sea capturado por "pre")
+  // 2. Instalacion (verificar ANTES de otros checks para evitar conversión errónea)
+  if (etapaLower.includes('instalacion')) {
+    // TipoEtapaRuta solo tiene 3 valores: 'pre_prensa' | 'principal' | 'post_prensa'
+    // Instalacion debe mapearse según el contexto
+    // Como no hay etapa específica, lo dejamos pasar sin cambios
+    return etapa as TipoEtapaRuta;
+  }
+
+  // 3. Post-prensa (verificar ANTES que pre para evitar que "post_prensa" sea capturado por "pre")
   if (etapaLower.includes('post') ||
       etapaLower.includes('terminacion') ||
       etapaLower.includes('acabado')) {
     return 'post_prensa';
   }
 
-  // 3. Pre-prensa (condición más estricta: startsWith 'pre' pero NO incluye 'post')
+  // 4. Pre-prensa (condición más estricta: startsWith 'pre' pero NO incluye 'post')
   if (etapaLower.startsWith('pre') && !etapaLower.includes('post')) {
     return 'pre_prensa';
   }
 
-  // 4. Principal por defecto (producción, impresión, etc.)
-  return 'principal';
+  // 5. Produccion/Principal
+  if (etapaLower.includes('produccion') || etapaLower.includes('principal')) {
+    return 'principal';
+  }
+
+  // 6. Fallback: devolver sin cambios (puede ser Instalacion u otra etapa)
+  return etapa as TipoEtapaRuta;
 }
 
 /**

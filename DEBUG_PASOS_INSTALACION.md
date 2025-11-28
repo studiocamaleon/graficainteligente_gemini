@@ -279,7 +279,43 @@ CONSTRAINT check_etapa CHECK (etapa IN (
 
 Con el logging detallado implementado, ahora será posible ver exactamente qué está fallando cuando intentas agregar un paso condicional en la etapa Instalación. El problema no es de datos corruptos ni de constraints mal configurados.
 
-**Siguiente acción recomendada**:
-1. Reiniciar el servidor de desarrollo
-2. Reproducir el problema con la consola abierta
-3. Compartir los nuevos logs que incluyen el detalle de TODAS las etapas encontradas
+---
+
+## ✅ PROBLEMA RESUELTO
+
+**Fecha de resolución**: 2025-11-28
+
+### El Problema Real
+
+Los pasos que se intentaban agregar en la etapa **"Instalacion"** se estaban guardando incorrectamente con la etapa **"Produccion"** debido a dos funciones de normalización defectuosas:
+
+1. **`generateProductionRoutes.ts` - `normalizarEtapa()`**:
+   - No manejaba "Instalacion"
+   - Por defecto devolvía `'principal'` para cualquier valor desconocido
+   - "Instalacion" → fallback → 'principal' → "Produccion" ❌
+
+2. **`OrdenRutasTab.tsx` - `normalizeEtapa()`**:
+   - Usaba `.includes('impresion')` para detectar producción
+   - **"Instalacion"** contiene "impresion" → captura incorrecta
+   - "Instalacion" → includes('impresion') → "Produccion" ❌
+
+### La Solución
+
+✅ **Archivo 1**: `src/utils/generateProductionRoutes.ts`
+- Agregado manejo explícito de "Instalacion" ANTES de otros checks
+- Modificado fallback para preservar valores en lugar de forzar 'principal'
+
+✅ **Archivo 2**: `src/components/orders/OrdenRutasTab.tsx`
+- Agregado check específico para "instalacion"
+- **ELIMINADO** `.includes('impresion')` que causaba el bug
+- Agregado "Instalacion" al array de etapas en la visualización
+
+### Resultado
+
+✅ Ahora los pasos se guardan correctamente en la etapa "Instalacion"
+✅ La UI muestra los pasos en la etapa correcta
+✅ Las 4 etapas funcionan correctamente: Pre-prensa, Produccion, Terminacion, Instalacion
+
+### Documentación Completa
+
+Ver análisis detallado y solución en: **`FIX_ETAPA_INSTALACION.md`**

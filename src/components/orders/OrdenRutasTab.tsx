@@ -61,6 +61,7 @@ interface ItemRoutePreviewProps {
 // Mapeo de etapas para compatibilidad entre diferentes formatos
 // IMPORTANTE: El orden de verificaciones es crítico para evitar capturas incorrectas
 // 'post_prensa' contiene 'pre', por lo que debemos verificar 'post' ANTES de 'pre'
+// 'Instalacion' contiene 'ion' pero NO debe mapearse a 'Produccion'
 function normalizeEtapa(etapa: string): string {
   const etapaLower = etapa.toLowerCase().replace(/[-\s]/g, '_');
 
@@ -68,27 +69,31 @@ function normalizeEtapa(etapa: string): string {
   if (etapaLower === 'pre_prensa') return 'Pre-prensa';
   if (etapaLower === 'post_prensa') return 'Terminacion';
   if (etapaLower === 'principal') return 'Produccion';
+  if (etapaLower === 'instalacion') return 'Instalacion';
 
-  // 2. Verificar POST antes de PRE (crítico para evitar capturar 'post_prensa' como 'pre')
+  // 2. Instalacion (verificar ANTES para evitar conversión errónea)
+  if (etapaLower.includes('instalacion')) {
+    return 'Instalacion';
+  }
+
+  // 3. Verificar POST antes de PRE (crítico para evitar capturar 'post_prensa' como 'pre')
   if (etapaLower.includes('post') ||
       etapaLower.includes('terminacion') ||
       etapaLower.includes('acabado')) {
     return 'Terminacion';
   }
 
-  // 3. Verificar PRE con condiciones estrictas (no captura 'post_prensa')
+  // 4. Verificar PRE con condiciones estrictas (no captura 'post_prensa')
   if (etapaLower.startsWith('pre') && !etapaLower.includes('post')) {
     return 'Pre-prensa';
   }
 
-  // 4. Principal/Producción
-  if (etapaLower.includes('produccion') ||
-      etapaLower.includes('principal') ||
-      etapaLower.includes('impresion')) {
+  // 5. Principal/Producción (sin 'impresion' para evitar capturar 'Instalacion')
+  if (etapaLower.includes('produccion') || etapaLower.includes('principal')) {
     return 'Produccion';
   }
 
-  // 5. Fallback sin cambios
+  // 6. Fallback sin cambios
   return etapa;
 }
 
@@ -116,7 +121,7 @@ function ItemRoutePreview({ item, index, onUpdateStepComment, readOnly = false }
     return acc;
   }, {} as Record<string, any[]>);
 
-  const etapas = ['Pre-prensa', 'Produccion', 'Terminacion'];
+  const etapas = ['Pre-prensa', 'Produccion', 'Terminacion', 'Instalacion'];
   const totalPasos = stepsWithComments.length;
 
   return (
