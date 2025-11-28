@@ -567,6 +567,93 @@ productos_impresion_uv_rigidos_precios_impresion
 
 ---
 
+### Fase 5: Generación de PDF ✅
+
+#### 5.1 Template PDF
+**Archivo**: `src/components/pdf/templates/ImpresionUVRigidosPDFTemplate.tsx`
+
+Template de React para visualización en HTML antes de exportar:
+- Layout profesional con colores rosa (pink) para categoría UV
+- Secciones claramente separadas por producto
+- Tablas de materiales disponibles con precios/m²
+- Tablas de precios de impresión por tinta y rango
+- Notas informativas sobre cálculo de precios
+- Responsive y compatible con impresión
+
+#### 5.2 Generador PDF
+**Archivo**: `src/utils/pdfGenerators/impresionUVRigidosPDF.ts`
+
+Utiliza jsPDF y autoTable para generar PDF profesional:
+
+```typescript
+export const generateImpresionUVRigidosPDF = (productos: ProductoUVPDF[]) => {
+  // Inicializar documento
+  const doc = new jsPDF();
+
+  // Por cada producto:
+  // 1. Encabezado con badge de modalidad
+  // 2. Información general (límites, modalidad)
+  // 3. Tabla de materiales disponibles
+  // 4. Tabla de precios de impresión UV
+  // 5. Nota informativa
+
+  // Exportar con nombre descriptivo y fecha
+  doc.save(`Lista_Precios_Impresion_UV_Rigidos_${fecha}.pdf`);
+}
+```
+
+**Características**:
+- Header y footer automáticos
+- Paginación inteligente (evita cortes de tablas)
+- Números de página automáticos
+- Colores corporativos de categoría UV (rosa/pink)
+- Formato profesional y legible
+- Cálculo automático de espacios
+
+#### 5.3 Hook de Datos para PDF
+**Archivo**: `src/hooks/useAllProductosImpresionUVRigidosPrecios.ts`
+
+```typescript
+export function useAllProductosImpresionUVRigidosPrecios() {
+  // Cargar todos los productos UV activos
+  // Para cada producto:
+  //   - Cargar materiales con join a tabla materiales
+  //   - Cargar precios de impresión
+  // Retornar estructura completa para PDF
+
+  return {
+    productos: ProductoImpresionUVParaPrecios[],
+    isLoading: boolean,
+    error: string | null,
+    refetch: () => void
+  };
+}
+```
+
+#### 5.4 Integración en UI
+**Archivo**: `src/pages/app/productos/ImpresionUVRigidos.tsx`
+
+Botón de exportación agregado en header:
+```tsx
+<Button
+  variant="outline"
+  onClick={handleExportPDF}
+  disabled={isExporting || isLoading || productos.length === 0}
+>
+  <FileDown className="w-4 h-4 mr-2" />
+  {isExporting ? 'Exportando...' : 'Exportar PDF'}
+</Button>
+```
+
+**Flujo de Exportación**:
+1. Usuario hace clic en "Exportar PDF"
+2. Hook carga todos los productos con materiales y precios
+3. Generador crea PDF con jsPDF
+4. Navegador descarga automáticamente el archivo
+5. Nombre: `Lista_Precios_Impresion_UV_Rigidos_YYYY-MM-DD.pdf`
+
+---
+
 ## Próximos Pasos (Opcionales)
 
 ### Mejoras Futuras
@@ -591,17 +678,59 @@ productos_impresion_uv_rigidos_precios_impresion
 
 ## Conclusión
 
-El sistema de **Impresión UV sobre Rígidos** está completamente implementado y funcional. Incluye:
+El sistema de **Impresión UV sobre Rígidos** está **100% completamente implementado** y funcional. Incluye:
 
-✅ Base de datos con 3 tablas principales y triggers automáticos
-✅ Hooks de React para todas las operaciones CRUD
-✅ Interfaz de administración completa con formularios y editores
-✅ Integración completa con wizard universal
+✅ **Fase 1 - Base de datos**: 3 tablas principales con triggers automáticos y RLS completo
+✅ **Fase 2 - Backend**: Hooks de React para todas las operaciones CRUD
+✅ **Fase 3 - UI/ABM**: Interfaz de administración completa con formularios y editores
+✅ **Fase 4 - Wizard**: Integración completa con wizard universal
+✅ **Fase 5 - PDF**: Generador de PDF profesional con exportación completa
+
+### Características Completas
+
 ✅ Cálculo de precios dinámico (material + impresión)
 ✅ Soporte para múltiples líneas de medida
 ✅ Dos modalidades: material de catálogo o material del cliente
-✅ Validaciones robustas
-✅ Políticas RLS completas
-✅ Build exitoso sin errores
+✅ Validaciones robustas en wizard
+✅ Políticas RLS completas y seguras
+✅ Exportación PDF con diseño profesional
+✅ Build exitoso sin errores de compilación
+✅ TypeScript sin errores de tipo
 
-El sistema está listo para ser utilizado en producción.
+### Archivos Creados/Modificados
+
+**Base de Datos (Migraciones)**:
+- `create_categoria_impresion_uv_rigidos.sql`
+- `create_productos_impresion_uv_rigidos_materiales.sql`
+- `create_productos_impresion_uv_rigidos_precios_impresion.sql`
+
+**Hooks**:
+- `useProductosImpresionUVRigidos.ts`
+- `useProductosUVMateriales.ts`
+- `useProductosUVPreciosImpresion.ts`
+- `useAllProductosImpresionUVRigidosPrecios.ts`
+
+**Componentes UI**:
+- `ProductoUVForm.tsx`
+- `ProductoUVModal.tsx`
+- `ProductoUVDetalle.tsx`
+- `MaterialesUVEditor.tsx`
+- `PreciosUVMatrizEditor.tsx`
+- `ImpresionUVRigidosPDFTemplate.tsx`
+
+**Páginas**:
+- `ImpresionUVRigidos.tsx`
+- `ProductosUVTab.tsx`
+
+**Wizard Integration**:
+- `useProductConfiguration.ts` (actualizado)
+- `useUniversalPricing.ts` (actualizado)
+- `useUniversalProductSearch.ts` (actualizado)
+- `ConfigurationStep.tsx` (actualizado)
+- `UniversalAddItemWizard.tsx` (actualizado)
+
+**PDF**:
+- `impresionUVRigidosPDF.ts`
+- `ImpresionUVRigidosPDFTemplate.tsx`
+
+**El sistema está 100% listo para ser utilizado en producción.**
