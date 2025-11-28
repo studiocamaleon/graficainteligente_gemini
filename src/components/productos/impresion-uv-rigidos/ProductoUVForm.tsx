@@ -200,8 +200,8 @@ export function ProductoUVForm({
           <Select
             label="Tecnología UV"
             value={tecnologiaId}
-            onChange={(e) => {
-              setTecnologiaId(e.target.value);
+            onChange={(value) => {
+              setTecnologiaId(value);
               setSelectedTintas([]);
             }}
             error={errors.tecnologia_id}
