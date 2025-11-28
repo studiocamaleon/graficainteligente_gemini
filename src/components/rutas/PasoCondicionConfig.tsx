@@ -12,6 +12,7 @@ import { useAcabadoNiveles } from '../../hooks/useAcabadoNiveles';
 import { useTecnologiaTintas } from '../../hooks/useTecnologiaTintas';
 import { NivelesPreviewList } from './NivelesPreviewList';
 import { TintasPasosPreview } from './TintasPasosPreview';
+import { TodasTecnologiasTintasPreview } from './TodasTecnologiasTintasPreview';
 import type {
   TipoCondicionRuta,
   ConfiguracionCondicion,
@@ -149,7 +150,7 @@ export function PasoCondicionConfig({
           <option value="servicio_con_nivel">Servicio Con Niveles de Precio</option>
           <option value="acabado_sin_nivel">Acabado Sin Nivel de Precio</option>
           <option value="acabado_con_nivel">Acabado Con Niveles de Precio</option>
-          <option value="tecnologia_tinta">Tecnología + Tinta</option>
+          <option value="tecnologia_tinta">Tecnología + Tinta (Evaluación Automática)</option>
         </Select>
       </div>
 
@@ -255,32 +256,25 @@ export function PasoCondicionConfig({
 
       {tipoCondicion === 'tecnologia_tinta' && (
         <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Tecnología *
-            </label>
-            <SearchableSelect
-              options={tecnologiasOptions}
-              value={'tecnologia_id' in configuracion ? configuracion.tecnologia_id : ''}
-              onChange={(value) => {
-                onConfigChange({
-                  tecnologia_id: value,
-                });
-              }}
-              placeholder="Seleccionar tecnología..."
-            />
-            <p className="mt-2 text-sm text-gray-500">
-              Los pasos configurados en Tecnologías Tintas Pasos se ejecutarán según el tipo de tinta que use el producto.
-            </p>
+          <div className="p-4 bg-blue-50 border-2 border-blue-200 rounded-lg">
+            <div className="flex items-start gap-3">
+              <svg className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div>
+                <p className="text-sm font-medium text-blue-900 mb-1">
+                  Evaluación automática de tecnología y tinta
+                </p>
+                <p className="text-xs text-blue-700">
+                  Esta condición evaluará automáticamente la tecnología y el tipo de tinta del producto
+                  seleccionado por el cliente. A continuación se muestran todas las combinaciones
+                  configuradas en el sistema.
+                </p>
+              </div>
+            </div>
           </div>
 
-          {tecnologiaIdTinta && (
-            <TintasPasosPreview
-              tintas={tintasTecnologia}
-              loading={loadingTintas}
-              error={errorTintas}
-            />
-          )}
+          <TodasTecnologiasTintasPreview />
         </div>
       )}
 
