@@ -173,6 +173,13 @@ export function ConfigurationStep({
       autoSelections.tecnologia_nombre = tecnologia.tecnologia_nombre;
     }
 
+    // Auto-seleccionar tecnología única para UV (siempre es una sola)
+    if (config.categoria === 'Impresión UV sobre Rígidos' && config.tecnologias && config.tecnologias.length === 1) {
+      const tecnologia = config.tecnologias[0];
+      autoSelections.tecnologia_id = tecnologia.tecnologia_id;
+      autoSelections.tecnologia_nombre = tecnologia.tecnologia_nombre;
+    }
+
     if (Object.keys(autoSelections).length > 0) {
       handleChange(autoSelections);
     }
@@ -251,6 +258,7 @@ export function ConfigurationStep({
   };
 
   const isImpresionLaser = config.categoria === 'Impresion Laser';
+  const isImpresionUV = config.categoria === 'Impresión UV sobre Rígidos';
 
   // Función helper para nombres de tintas
   const getNombreTinta = (tinta: string): string => {
@@ -361,6 +369,77 @@ export function ConfigurationStep({
               </div>
             </div>
           )}
+        </Card>
+      )}
+
+      {/* Selector de tipo de material UV - Solo para Impresión UV sobre Rígidos */}
+      {isImpresionUV && config.material_cliente_permitido && (
+        <Card className="p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Layers className="w-5 h-5 text-blue-600" />
+            <h3 className="text-lg font-semibold text-gray-900">Origen del Material</h3>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-3">
+              ¿De dónde proviene el material a imprimir?
+            </label>
+            <div className="grid grid-cols-2 gap-4">
+              <Card
+                className={`p-4 cursor-pointer transition-all ${
+                  localConfig.usa_material_catalogo === true
+                    ? 'ring-2 ring-blue-600 bg-blue-50 border-blue-600'
+                    : 'hover:border-blue-300 hover:shadow-md'
+                }`}
+                onClick={() => handleChange({
+                  usa_material_catalogo: true,
+                  material_id: null,
+                  material_nombre: null
+                })}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-medium text-gray-900">Material del Catálogo</h4>
+                    <p className="text-sm text-gray-600 mt-1">Elegir material de nuestro catálogo</p>
+                  </div>
+                  {localConfig.usa_material_catalogo === true && (
+                    <Check className="w-5 h-5 text-blue-600 flex-shrink-0 ml-2" />
+                  )}
+                </div>
+              </Card>
+
+              <Card
+                className={`p-4 cursor-pointer transition-all ${
+                  localConfig.usa_material_catalogo === false
+                    ? 'ring-2 ring-blue-600 bg-blue-50 border-blue-600'
+                    : 'hover:border-blue-300 hover:shadow-md'
+                }`}
+                onClick={() => handleChange({
+                  usa_material_catalogo: false,
+                  material_id: null,
+                  material_nombre: null
+                })}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-medium text-gray-900">Material del Cliente</h4>
+                    <p className="text-sm text-gray-600 mt-1">Cliente provee el material</p>
+                  </div>
+                  {localConfig.usa_material_catalogo === false && (
+                    <Check className="w-5 h-5 text-blue-600 flex-shrink-0 ml-2" />
+                  )}
+                </div>
+              </Card>
+            </div>
+
+            {localConfig.usa_material_catalogo === false && (
+              <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <p className="text-sm text-yellow-800">
+                  El cliente proporcionará el material. Solo se cobrará la impresión UV.
+                </p>
+              </div>
+            )}
+          </div>
         </Card>
       )}
 
@@ -526,8 +605,71 @@ export function ConfigurationStep({
         </>
       )}
 
+      {/* Material UV - Solo si se eligió usar material de catálogo */}
+      {isImpresionUV && localConfig.usa_material_catalogo === true && config.materiales && config.materiales.length > 0 && (
+        <Card className="p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Layers className="w-5 h-5 text-blue-600" />
+            <h3 className="text-lg font-semibold text-gray-900">Material UV</h3>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-3">
+              Selecciona el material del catálogo
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              {config.materiales.map((material) => {
+                const isSelected = localConfig.material_id === material.material_id;
+                return (
+                  <Card
+                    key={material.id}
+                    className={`p-4 cursor-pointer transition-all ${
+                      isSelected
+                        ? 'ring-2 ring-blue-600 bg-blue-50 border-blue-600'
+                        : 'hover:border-blue-300 hover:shadow-md'
+                    }`}
+                    onClick={() => {
+                      handleChange({
+                        material_id: material.material_id,
+                        material_nombre: material.material_nombre,
+                        variante_id: material.variante_id,
+                        variante_nombre: material.variante_nombre,
+                        espesor: material.espesor || null,
+                        unidad_espesor: material.unidad_espesor || null
+                      });
+                    }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="font-semibold text-gray-900">{material.material_nombre}</div>
+                        {material.variante_nombre && (
+                          <div className="text-sm text-gray-600">{material.variante_nombre}</div>
+                        )}
+                        {material.espesor && (
+                          <div className="text-sm text-gray-500">
+                            {material.espesor} {material.unidad_espesor}
+                          </div>
+                        )}
+                        {material.precio_por_m2 && (
+                          <div className="text-sm font-medium text-blue-600 mt-1">
+                            ${material.precio_por_m2}/m²
+                          </div>
+                        )}
+                      </div>
+                      {isSelected && (
+                        <Check className="w-5 h-5 text-blue-600 flex-shrink-0 ml-2" />
+                      )}
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        </Card>
+      )}
+
       {/* Material - Selector tradicional para otras categorías */}
-      {config.categoria !== 'Materiales Rigidos' && !isImpresionLaser && config.materiales && config.materiales.length > 1 && !config.permite_multiples_lineas && (
+      {config.categoria !== 'Materiales Rigidos' && !isImpresionLaser && !isImpresionUV && config.materiales && config.materiales.length > 1 && !config.permite_multiples_lineas && (
         <Card className="p-6">
           <div className="flex items-center gap-2 mb-4">
             <Layers className="w-5 h-5 text-blue-600" />
@@ -581,19 +723,19 @@ export function ConfigurationStep({
         </Card>
       )}
 
-      {/* Tecnología y Tintas - NO mostrar tecnología para Impresión Láser */}
-      {config.tecnologias && config.tecnologias.length > 0 && (
+      {/* Tecnología y Tintas - NO mostrar tecnología para Impresión Láser, mostrar solo tintas para UV */}
+      {config.tecnologias && config.tecnologias.length > 0 && (isImpresionUV || !isImpresionLaser) && (
         <Card className="p-6">
           <div className="flex items-center gap-2 mb-4">
             <Palette className="w-5 h-5 text-blue-600" />
             <h3 className="text-lg font-semibold text-gray-900">
-              {isImpresionLaser ? 'Tipo de Impresión' : 'Tecnología e Impresión'}
+              {isImpresionLaser ? 'Tipo de Impresión' : isImpresionUV ? 'Tipo de Tinta UV' : 'Tecnología e Impresión'}
             </h3>
           </div>
 
           <div className="space-y-4">
-            {/* Solo mostrar selector de tecnología si NO es Impresión Láser */}
-            {!isImpresionLaser && (
+            {/* Solo mostrar selector de tecnología si NO es Impresión Láser ni UV */}
+            {!isImpresionLaser && !isImpresionUV && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-3">
                   Tecnología
@@ -632,8 +774,12 @@ export function ConfigurationStep({
             )}
 
             {/* Selector de tintas - Cards */}
-            {localConfig.tecnologia_id && (() => {
-              const tecnologia = config.tecnologias?.find(t => t.tecnologia_id === localConfig.tecnologia_id);
+            {(localConfig.tecnologia_id || isImpresionUV) && (() => {
+              // Para UV, usar la primera tecnología (solo hay una)
+              const tecnologia = isImpresionUV && config.tecnologias && config.tecnologias.length > 0
+                ? config.tecnologias[0]
+                : config.tecnologias?.find(t => t.tecnologia_id === localConfig.tecnologia_id);
+
               return tecnologia && tecnologia.tintas && tecnologia.tintas.length > 0 && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-3">
