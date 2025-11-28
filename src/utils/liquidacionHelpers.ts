@@ -131,21 +131,24 @@ export const calcularUltimoCierre = (cliente: Client): dayjs.Dayjs | null => {
 
     case 'Mensual': {
       if (cliente.usa_ultimo_dia_mes) {
-        const diaDelMes = hoy.date();
-        const ultimoDiaMesActual = hoy.endOf('month').date();
+        const fechaCierreEsteMes = hoy.endOf('month');
 
-        if (diaDelMes > ultimoDiaMesActual) {
-          return hoy.endOf('month');
+        if (hoy.isAfter(fechaCierreEsteMes)) {
+          return fechaCierreEsteMes;
         } else {
           return hoy.subtract(1, 'month').endOf('month');
         }
       } else if (cliente.dia_cierre_mensual) {
-        const diaDelMes = hoy.date();
+        const diasEnEsteMes = hoy.daysInMonth();
+        const diaCierreAjustado = Math.min(cliente.dia_cierre_mensual, diasEnEsteMes);
+        const fechaCierreEsteMes = hoy.date(diaCierreAjustado);
 
-        if (diaDelMes > cliente.dia_cierre_mensual) {
-          return hoy.date(cliente.dia_cierre_mensual);
+        if (hoy.isAfter(fechaCierreEsteMes)) {
+          return fechaCierreEsteMes;
         } else {
-          return hoy.subtract(1, 'month').date(cliente.dia_cierre_mensual);
+          const diasEnMesAnterior = hoy.subtract(1, 'month').daysInMonth();
+          const diaCierreAnteriorAjustado = Math.min(cliente.dia_cierre_mensual, diasEnMesAnterior);
+          return hoy.subtract(1, 'month').date(diaCierreAnteriorAjustado);
         }
       }
       return null;
