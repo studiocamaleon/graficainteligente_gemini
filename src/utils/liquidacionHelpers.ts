@@ -109,7 +109,8 @@ export const calcularUltimoCierre = (cliente: Client): dayjs.Dayjs | null => {
       const diaCierre = cliente.dia_cierre_semanal;
 
       let diasDesdeUltimoCierre = diaActual - diaCierre;
-      if (diasDesdeUltimoCierre < 0) {
+
+      if (diasDesdeUltimoCierre <= 0) {
         diasDesdeUltimoCierre += 7;
       }
 
@@ -119,10 +120,12 @@ export const calcularUltimoCierre = (cliente: Client): dayjs.Dayjs | null => {
     case 'Quincenal': {
       const diaDelMes = hoy.date();
 
-      if (diaDelMes >= 15) {
+      if (diaDelMes > 15) {
         return hoy.date(15);
+      } else if (diaDelMes > 1) {
+        return hoy.date(1);
       } else {
-        return hoy.subtract(1, 'month').endOf('month');
+        return hoy.subtract(1, 'month').date(15);
       }
     }
 
@@ -131,7 +134,7 @@ export const calcularUltimoCierre = (cliente: Client): dayjs.Dayjs | null => {
         const diaDelMes = hoy.date();
         const ultimoDiaMesActual = hoy.endOf('month').date();
 
-        if (diaDelMes >= ultimoDiaMesActual) {
+        if (diaDelMes > ultimoDiaMesActual) {
           return hoy.endOf('month');
         } else {
           return hoy.subtract(1, 'month').endOf('month');
@@ -139,7 +142,7 @@ export const calcularUltimoCierre = (cliente: Client): dayjs.Dayjs | null => {
       } else if (cliente.dia_cierre_mensual) {
         const diaDelMes = hoy.date();
 
-        if (diaDelMes >= cliente.dia_cierre_mensual) {
+        if (diaDelMes > cliente.dia_cierre_mensual) {
           return hoy.date(cliente.dia_cierre_mensual);
         } else {
           return hoy.subtract(1, 'month').date(cliente.dia_cierre_mensual);
