@@ -123,12 +123,11 @@ export function ProductosUVTab({ triggerCreate }: ProductosUVTabProps) {
               : 'Comienza creando tu primer producto de Impresión UV'
           }
           action={
-            !searchTerm
-              ? {
-                  label: 'Crear Primer Producto',
-                  onClick: handleOpenCreateModal,
-                }
-              : undefined
+            !searchTerm ? (
+              <Button onClick={handleOpenCreateModal}>
+                Crear Primer Producto
+              </Button>
+            ) : undefined
           }
         />
       ) : (
