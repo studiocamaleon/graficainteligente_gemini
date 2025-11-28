@@ -15,12 +15,14 @@ const etapaLabels: Record<string, string> = {
   pre_prensa: 'Pre-Prensa',
   principal: 'Producción',
   post_prensa: 'Post-Prensa',
+  instalacion: 'Instalación',
 };
 
 const etapaColors: Record<string, string> = {
   pre_prensa: 'bg-purple-50 border-purple-200',
   principal: 'bg-blue-50 border-blue-200',
   post_prensa: 'bg-green-50 border-green-200',
+  instalacion: 'bg-orange-50 border-orange-200',
 };
 
 export function RouteDetailModal({
@@ -37,7 +39,7 @@ export function RouteDetailModal({
     return acc;
   }, {} as Record<string, OrdenItemRuta[]>);
 
-  const ordenEtapas = ['pre_prensa', 'principal', 'post_prensa'];
+  const ordenEtapas = ['pre_prensa', 'principal', 'post_prensa', 'instalacion'];
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={`Ruta de Producción: ${productoNombre}`} size="2xl">

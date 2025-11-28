@@ -4,6 +4,7 @@ export const ORDEN_ETAPAS: Record<TipoEtapaRuta, number> = {
   pre_prensa: 1,
   principal: 2,
   post_prensa: 3,
+  instalacion: 4,
 };
 
 export interface RutaOrdenable {

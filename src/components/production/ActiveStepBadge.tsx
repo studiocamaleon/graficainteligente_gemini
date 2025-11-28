@@ -30,6 +30,11 @@ const etapaColors: Record<
     text: 'text-green-700',
     border: 'border-green-300',
   },
+  instalacion: {
+    bg: 'bg-orange-100',
+    text: 'text-orange-700',
+    border: 'border-orange-300',
+  },
 };
 
 const sizeClasses = {

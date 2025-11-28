@@ -23,12 +23,14 @@ const etapaLabels: Record<string, string> = {
   pre_prensa: 'Pre-Prensa',
   principal: 'Producción',
   post_prensa: 'Post-Prensa',
+  instalacion: 'Instalación',
 };
 
 const etapaColors: Record<string, string> = {
   pre_prensa: 'bg-purple-100 text-purple-800 border-purple-300',
   principal: 'bg-blue-100 text-blue-800 border-blue-300',
   post_prensa: 'bg-green-100 text-green-800 border-green-300',
+  instalacion: 'bg-orange-100 text-orange-800 border-orange-300',
 };
 
 export function JobExecutionModal({ isOpen, onClose, job, onJobUpdated }: JobExecutionModalProps) {
@@ -133,7 +135,7 @@ export function JobExecutionModal({ isOpen, onClose, job, onJobUpdated }: JobExe
     rutasPorEtapa[etapa].sort((a, b) => a.orden - b.orden);
   });
 
-  const ordenEtapas = ['pre_prensa', 'principal', 'post_prensa'];
+  const ordenEtapas = ['pre_prensa', 'principal', 'post_prensa', 'instalacion'];
 
   return (
     <>

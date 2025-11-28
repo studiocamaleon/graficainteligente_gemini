@@ -1066,7 +1066,7 @@ export interface RangoPrecio {
   updated_at: string;
 }
 
-export type TipoEtapaRuta = 'pre_prensa' | 'principal' | 'post_prensa';
+export type TipoEtapaRuta = 'pre_prensa' | 'principal' | 'post_prensa' | 'instalacion';
 
 export type TipoCondicion =
   | 'condicional_servicio_nivel'

@@ -372,3 +372,25 @@ CHECK ((etapa = ANY (ARRAY['pre_prensa', 'principal', 'post_prensa'])))
 CHECK ((etapa = ANY (ARRAY['pre_prensa', 'principal', 'post_prensa', 'instalacion'])))
 ```
 ✅ 4 valores completos, incluye 'instalacion'
+
+---
+
+## 📎 Fix Relacionado: Orden de Etapas
+
+Después de solucionar el problema del constraint, se identificó que varios archivos no incluían `'instalacion'` en sus arrays de ordenamiento y colores. Este problema se resolvió en:
+
+📄 **Ver**: `FIX_ORDEN_ETAPAS_INSTALACION.md`
+
+**Archivos adicionales actualizados:**
+- `productionUtils.ts` - Agregado `instalacion: 4` al objeto ORDEN_ETAPAS
+- `database.ts` - Actualizado tipo TipoEtapaRuta
+- `RouteDetailModal.tsx` - Agregado instalacion al array ordenEtapas
+- `JobExecutionModal.tsx` - Agregado instalacion al array ordenEtapas
+- `ActiveStepBadge.tsx` - Agregado colores de instalacion
+- `StepCard.tsx` - Agregado colores de instalacion
+- `StageDistributionChart.tsx` - Agregado instalacion y reordenado colores
+
+**Resultado**: El sistema ahora respeta el orden completo en TODOS los componentes:
+```
+Pre-prensa (1) → Producción (2) → Terminación (3) → Instalación (4)
+```

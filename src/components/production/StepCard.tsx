@@ -13,6 +13,7 @@ const etapaColors: Record<string, string> = {
   pre_prensa: 'border-purple-300 bg-purple-50',
   principal: 'border-blue-300 bg-blue-50',
   post_prensa: 'border-green-300 bg-green-50',
+  instalacion: 'border-orange-300 bg-orange-50',
 };
 
 const estadoStyles = {

@@ -8,19 +8,24 @@ interface StageDistributionChartProps {
 
 const etapaColors = {
   pre_prensa: {
-    bg: 'bg-blue-500',
-    text: 'text-blue-600',
+    bg: 'bg-purple-500',
+    text: 'text-purple-600',
     label: 'Pre-prensa',
   },
   principal: {
-    bg: 'bg-green-500',
-    text: 'text-green-600',
+    bg: 'bg-blue-500',
+    text: 'text-blue-600',
     label: 'Principal',
   },
   post_prensa: {
+    bg: 'bg-green-500',
+    text: 'text-green-600',
+    label: 'Post-prensa',
+  },
+  instalacion: {
     bg: 'bg-orange-500',
     text: 'text-orange-600',
-    label: 'Post-prensa',
+    label: 'Instalación',
   },
 };
 
