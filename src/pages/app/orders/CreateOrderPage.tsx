@@ -266,11 +266,12 @@ export function CreateOrderPage() {
     }
 
     if (fechaEntrega) {
-      const fecha = new Date(fechaEntrega);
+      // Comparar fechas como strings en formato YYYY-MM-DD
+      // Esto evita problemas de zona horaria y es lexicográficamente correcto
       const hoy = new Date();
-      hoy.setHours(0, 0, 0, 0);
+      const hoyStr = hoy.toISOString().split('T')[0];
 
-      if (fecha < hoy) {
+      if (fechaEntrega < hoyStr) {
         errores.fechaEntrega = 'La fecha de entrega no puede ser anterior a hoy';
       }
     }
