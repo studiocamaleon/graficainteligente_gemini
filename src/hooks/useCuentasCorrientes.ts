@@ -7,7 +7,6 @@ import type {
   CuentaCorrienteMovimiento
 } from '../types/database';
 import dayjs from 'dayjs';
-import { calcularDiasHastaVencimiento } from '../utils/liquidacionHelpers';
 
 interface UseCuentasCorrientesParams {
   searchTerm?: string;
@@ -37,6 +36,13 @@ export function useCuentasCorrientes(params: UseCuentasCorrientesParams = {}) {
 
       const clientesConSaldo: ClienteConSaldo[] = await Promise.all(
         (clientesData || []).map(async (cliente) => {
+          const { data: liquidaciones } = await supabase
+            .from('liquidaciones')
+            .select('id, fecha_vencimiento, saldo_pendiente, estado')
+            .eq('cliente_id', cliente.id)
+            .neq('estado', 'cancelada')
+            .gt('saldo_pendiente', 0);
+
           const { data: saldoData } = await supabase
             .rpc('fn_calcular_saldo_cuenta_corriente', {
               p_cliente_id: cliente.id,
@@ -45,9 +51,7 @@ export function useCuentasCorrientes(params: UseCuentasCorrientesParams = {}) {
 
           const saldo = saldoData || 0;
 
-          const diasVencimiento = calcularDiasVencimiento(cliente);
-
-          const estadoCC = determinarEstadoCC(saldo, diasVencimiento);
+          const { estadoCC, diasVencimiento } = determinarEstadoCCDesdeLiquidaciones(liquidaciones || []);
 
           return {
             id: cliente.id,
@@ -102,23 +106,50 @@ export function useCuentasCorrientes(params: UseCuentasCorrientesParams = {}) {
   };
 }
 
-function calcularDiasVencimiento(cliente: any): number | null {
-  return calcularDiasHastaVencimiento(cliente);
+interface Liquidacion {
+  id: string;
+  fecha_vencimiento: string | null;
+  saldo_pendiente: number;
+  estado: string;
 }
 
-function determinarEstadoCC(
-  saldo: number,
-  diasHastaVencimiento: number | null
-): 'al_dia' | 'proximo_vencer' | 'vencido' {
-  if (saldo === 0) return 'al_dia';
+function determinarEstadoCCDesdeLiquidaciones(
+  liquidaciones: Liquidacion[]
+): { estadoCC: 'al_dia' | 'proximo_vencer' | 'vencido'; diasVencimiento: number | null } {
+  if (!liquidaciones || liquidaciones.length === 0) {
+    return { estadoCC: 'al_dia', diasVencimiento: null };
+  }
 
-  if (diasHastaVencimiento === null) return 'vencido';
+  const hoy = dayjs();
+  let liquidacionMasProxima: Liquidacion | null = null;
+  let menorDiasVencimiento: number | null = null;
+  let hayVencidas = false;
 
-  if (diasHastaVencimiento < 0) return 'vencido';
+  for (const liq of liquidaciones) {
+    if (!liq.fecha_vencimiento) continue;
 
-  if (diasHastaVencimiento <= 3) return 'proximo_vencer';
+    const fechaVenc = dayjs(liq.fecha_vencimiento);
+    const diasHastaVencer = fechaVenc.diff(hoy, 'day');
 
-  return 'al_dia';
+    if (diasHastaVencer < 0) {
+      hayVencidas = true;
+    }
+
+    if (menorDiasVencimiento === null || diasHastaVencer < menorDiasVencimiento) {
+      menorDiasVencimiento = diasHastaVencer;
+      liquidacionMasProxima = liq;
+    }
+  }
+
+  if (hayVencidas) {
+    return { estadoCC: 'vencido', diasVencimiento: menorDiasVencimiento };
+  }
+
+  if (menorDiasVencimiento !== null && menorDiasVencimiento <= 3) {
+    return { estadoCC: 'proximo_vencer', diasVencimiento: menorDiasVencimiento };
+  }
+
+  return { estadoCC: 'al_dia', diasVencimiento: menorDiasVencimiento };
 }
 
 export function useEstadoCuenta(clienteId: string) {
