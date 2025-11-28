@@ -205,6 +205,13 @@ export const MODULES: Module[] = [
         path: '/app/productos/portabanners',
         icon: Frame,
       },
+      {
+        id: 'productos-impresion-uv-rigidos',
+        name: 'Impresión UV sobre Rígidos',
+        description: 'Impresión UV sobre materiales rígidos',
+        path: '/app/productos/impresion-uv-rigidos',
+        icon: Zap,
+      },
     ],
   },
   {

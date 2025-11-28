@@ -39,6 +39,7 @@ import { MaterialesRigidos } from './pages/app/productos/MaterialesRigidos';
 import { PlotterCorte } from './pages/app/productos/PlotterCorte';
 import { Sellos } from './pages/app/productos/Sellos';
 import { Portabanners } from './pages/app/productos/Portabanners';
+import { ImpresionUVRigidos } from './pages/app/productos/ImpresionUVRigidos';
 import { Configuracion as CentroCopiadoConfiguracion } from './pages/app/centro-copiado/Configuracion';
 import { Terminaciones as CentroCopiadoTerminaciones } from './pages/app/centro-copiado/Terminaciones';
 import { RangosPrecio as CentroCopiadoRangosPrecio } from './pages/app/centro-copiado/RangosPrecio';
@@ -105,6 +106,7 @@ function AppRoutes() {
                 <Route path="productos/plotter-corte" element={<PlotterCorte />} />
                 <Route path="productos/sellos" element={<Sellos />} />
                 <Route path="productos/portabanners" element={<Portabanners />} />
+                <Route path="productos/impresion-uv-rigidos" element={<ImpresionUVRigidos />} />
                 <Route path="centro-copiado/configuracion" element={<CentroCopiadoConfiguracion />} />
                 <Route path="centro-copiado/terminaciones" element={<CentroCopiadoTerminaciones />} />
                 <Route path="centro-copiado/rangos-precio" element={<CentroCopiadoRangosPrecio />} />
