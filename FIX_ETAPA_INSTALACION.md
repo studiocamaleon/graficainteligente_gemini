@@ -249,14 +249,20 @@ function normalizeEtapa(etapa: string): string {
 
 ## 📋 Archivos Modificados
 
-### Base de Datos (CORRECCIÓN PRINCIPAL)
+### Base de Datos (CORRECCIONES PRINCIPALES)
 
-1. **`supabase/migrations/20251128160000_fix_trigger_validar_etapa_instalacion.sql`** ⭐
-   - Reemplaza la función `validar_etapa_paso()`
-   - Agrega manejo explícito de "Instalacion"
-   - Cambia valores de snake_case a capitalizados
-   - Elimina fallback silencioso, ahora lanza error descriptivo
-   - **ESTA ES LA CORRECCIÓN CRÍTICA QUE RESUELVE EL PROBLEMA**
+1. **`supabase/migrations/20251128171434_fix_trigger_validar_etapa_instalacion.sql`**
+   - Primera corrección del trigger (intentó usar valores capitalizados)
+   - No funcionó porque el constraint esperaba snake_case
+   - ⚠️ INCOMPLETO - necesitó segunda migración
+
+2. **`supabase/migrations/20251128172000_fix_constraint_etapa_add_instalacion.sql`** ⭐
+   - **CORRECCIÓN DEFINITIVA QUE RESUELVE EL PROBLEMA**
+   - Actualiza el constraint `check_etapa` de 3 a 4 valores
+   - Constraint nuevo: `('pre_prensa', 'principal', 'post_prensa', 'instalacion')`
+   - Actualiza el trigger para normalizar a snake_case consistente
+   - Migra datos existentes que usen formato capitalizado
+   - Incluye verificación y logging de migración
 
 ### Frontend (Correcciones Complementarias)
 
@@ -284,14 +290,15 @@ function normalizeEtapa(etapa: string): string {
 
 ## ✅ Verificación
 
-- ✅ Migración aplicada exitosamente en Supabase
+- ✅ Ambas migraciones aplicadas exitosamente en Supabase
 - ✅ El proyecto compila sin errores: `npm run build`
-- ✅ Trigger de base de datos actualizado
+- ✅ Constraint `check_etapa` actualizado: ahora incluye `'instalacion'`
+- ✅ Trigger `validar_etapa_paso()` normaliza correctamente a snake_case
 - ✅ Todas las etapas están correctamente mapeadas:
-  - Pre-prensa ✓
-  - Produccion ✓
-  - Terminacion ✓
-  - **Instalacion ✓** (ahora funciona correctamente)
+  - pre_prensa (DB) → Pre-prensa (UI) ✓
+  - principal (DB) → Produccion (UI) ✓
+  - post_prensa (DB) → Terminacion (UI) ✓
+  - **instalacion (DB) → Instalacion (UI) ✓** (ahora funciona correctamente)
 
 ## 🧪 Cómo Probar
 
@@ -330,7 +337,38 @@ Para evitar bugs similares en el futuro:
 
 ## 📝 Notas Adicionales
 
-- Las 4 etapas válidas son: `Pre-prensa`, `Produccion`, `Terminacion`, `Instalacion`
-- La base de datos ya soportaba "Instalacion" (constraint verificado)
-- El problema era solo en las funciones de normalización del frontend
-- Los logs de debugging agregados anteriormente ayudarán a identificar problemas similares
+### Formato de Valores
+
+**Base de Datos (snake_case):**
+- `pre_prensa`
+- `principal`
+- `post_prensa`
+- `instalacion`
+
+**Frontend Display (Capitalizado):**
+- Pre-prensa
+- Produccion
+- Terminacion
+- Instalacion
+
+### Lecciones Aprendidas
+
+1. **El constraint era el problema principal**: El constraint solo aceptaba 3 valores, no incluía `'instalacion'`
+2. **El trigger necesitaba adaptarse**: Debía normalizar al mismo formato que acepta el constraint
+3. **Separación de responsabilidades**: DB usa snake_case, UI capitaliza para display
+4. **Debugging fue crucial**: Los logs revelaron que el problema estaba en DB, no en frontend
+5. **Verificar siempre los constraints**: Antes de modificar triggers, verificar qué valores acepta la tabla
+
+### Problema Original vs Solución
+
+**Constraint ANTES:**
+```sql
+CHECK ((etapa = ANY (ARRAY['pre_prensa', 'principal', 'post_prensa'])))
+```
+❌ Solo 3 valores, faltaba 'instalacion'
+
+**Constraint DESPUÉS:**
+```sql
+CHECK ((etapa = ANY (ARRAY['pre_prensa', 'principal', 'post_prensa', 'instalacion'])))
+```
+✅ 4 valores completos, incluye 'instalacion'
