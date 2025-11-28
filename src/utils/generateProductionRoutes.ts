@@ -92,7 +92,7 @@ export async function generateProductionRoutes({
         rutaId = data?.ruta_produccion_id || null;
         break;
       }
-      case 'Gran Formato': {
+      case 'Impresion Gran Formato': {
         const { data } = await supabase
           .from('productos_gran_formato')
           .select('ruta_produccion_id')
@@ -131,6 +131,15 @@ export async function generateProductionRoutes({
       case 'Sellos': {
         const { data } = await supabase
           .from('productos_sellos')
+          .select('ruta_produccion_id')
+          .eq('id', productoId)
+          .maybeSingle();
+        rutaId = data?.ruta_produccion_id || null;
+        break;
+      }
+      case 'Talonarios': {
+        const { data } = await supabase
+          .from('productos_talonarios')
           .select('ruta_produccion_id')
           .eq('id', productoId)
           .maybeSingle();
