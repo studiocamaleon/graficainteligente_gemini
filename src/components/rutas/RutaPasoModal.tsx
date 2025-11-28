@@ -49,35 +49,55 @@ export function RutaPasoModal({ rutaId, etapa, paso, onClose, onSuccess }: RutaP
   };
 
   const validateForm = (): boolean => {
+    console.log('[RutaPasoModal] Validando formulario...');
     const esObligatorio = tipoPaso === 'obligatorio';
+    console.log('[RutaPasoModal] ¿Es obligatorio?:', esObligatorio);
 
     if (tipoPaso === 'condicional' && !tipoCondicion) {
+      console.log('[RutaPasoModal] ❌ Error: Paso condicional sin tipo de condición');
       setError('Los pasos condicionales requieren un tipo de condición');
       return false;
     }
 
     if (tipoPaso === 'condicional' && tipoCondicion) {
+      console.log('[RutaPasoModal] Validando tipo de condición:', tipoCondicion);
+
       if (tipoCondicion === 'servicio_sin_nivel' && !('servicio_id' in configuracionCondicion)) {
+        console.log('[RutaPasoModal] ❌ Error: Servicio sin nivel sin servicio_id');
         setError('Debes seleccionar un servicio');
         return false;
       }
       if (tipoCondicion === 'servicio_con_nivel' && !('servicio_id' in configuracionCondicion)) {
+        console.log('[RutaPasoModal] ❌ Error: Servicio con nivel sin servicio_id');
         setError('Debes seleccionar un servicio con niveles');
         return false;
       }
+      if (tipoCondicion === 'servicio_con_nivel' && 'servicio_id' in configuracionCondicion) {
+        const servicioId = configuracionCondicion.servicio_id;
+        if (!servicioId || servicioId.trim() === '') {
+          console.log('[RutaPasoModal] ❌ Error: servicio_id está vacío');
+          setError('Debes seleccionar un servicio con niveles válido');
+          return false;
+        }
+        console.log('[RutaPasoModal] ✅ Servicio con nivel válido:', servicioId);
+      }
       if (tipoCondicion === 'acabado_sin_nivel' && !('acabado_id' in configuracionCondicion)) {
+        console.log('[RutaPasoModal] ❌ Error: Acabado sin nivel sin acabado_id');
         setError('Debes seleccionar un acabado');
         return false;
       }
       if (tipoCondicion === 'acabado_con_nivel' && !('acabado_id' in configuracionCondicion)) {
+        console.log('[RutaPasoModal] ❌ Error: Acabado con nivel sin acabado_id');
         setError('Debes seleccionar un acabado con niveles');
         return false;
       }
       if (tipoCondicion === 'tecnologia_tinta') {
         if (!('tecnologia_id' in configuracionCondicion)) {
+          console.log('[RutaPasoModal] ❌ Error: Tecnología tinta sin tecnologia_id');
           setError('Debes seleccionar una tecnología');
           return false;
         }
+        console.log('[RutaPasoModal] ✅ Tecnología tinta válida');
       }
     }
 
@@ -85,11 +105,15 @@ export function RutaPasoModal({ rutaId, etapa, paso, onClose, onSuccess }: RutaP
       tipoCondicion === 'servicio_sin_nivel' ||
       tipoCondicion === 'acabado_sin_nivel';
 
+    console.log('[RutaPasoModal] ¿Requiere paso único?:', requierePasoUnico);
+
     if (requierePasoUnico && !pasoId) {
+      console.log('[RutaPasoModal] ❌ Error: Requiere paso único pero no hay pasoId');
       setError('Debes seleccionar un paso');
       return false;
     }
 
+    console.log('[RutaPasoModal] ✅ Todas las validaciones pasaron');
     setError(null);
     return true;
   };
@@ -97,8 +121,20 @@ export function RutaPasoModal({ rutaId, etapa, paso, onClose, onSuccess }: RutaP
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validateForm()) return;
+    console.log('[RutaPasoModal] ===== INICIO DE SUBMIT =====');
+    console.log('[RutaPasoModal] Etapa seleccionada:', etapa);
+    console.log('[RutaPasoModal] Tipo de paso:', tipoPaso);
+    console.log('[RutaPasoModal] Tipo de condición:', tipoCondicion);
+    console.log('[RutaPasoModal] Paso ID seleccionado:', pasoId);
+    console.log('[RutaPasoModal] Configuración condición:', configuracionCondicion);
+    console.log('[RutaPasoModal] ¿Es edición?:', !!paso);
 
+    if (!validateForm()) {
+      console.log('[RutaPasoModal] ❌ Validación fallida');
+      return;
+    }
+
+    console.log('[RutaPasoModal] ✅ Validación exitosa');
     setIsSubmitting(true);
 
     try {
@@ -108,33 +144,48 @@ export function RutaPasoModal({ rutaId, etapa, paso, onClose, onSuccess }: RutaP
         tipoCondicion === 'acabado_con_nivel' ||
         tipoCondicion === 'tecnologia_tinta';
 
+      const ordenCalculado = paso ? paso.orden : getNextOrden();
+      console.log('[RutaPasoModal] Orden calculado:', ordenCalculado);
+      console.log('[RutaPasoModal] Pasos actuales en esta etapa:', pasosRuta.filter((p) => p.etapa === etapa).length);
+
       const formData: RutaProduccionPasoFormData = {
         etapa,
         paso_id: usaMapeoMultiple ? null : pasoId,
-        orden: paso ? paso.orden : getNextOrden(),
+        orden: ordenCalculado,
         es_obligatorio: esObligatorio,
         tipo_condicion: esObligatorio ? 'sin_condicion' : tipoCondicion,
         configuracion_condicion: esObligatorio ? {} : configuracionCondicion,
       };
 
+      console.log('[RutaPasoModal] FormData preparado:', JSON.stringify(formData, null, 2));
+
       let success = false;
 
       if (paso) {
+        console.log('[RutaPasoModal] Actualizando paso existente:', paso.id);
         success = await updatePaso(paso.id, formData);
       } else {
+        console.log('[RutaPasoModal] Agregando nuevo paso...');
         success = await addPaso(formData);
       }
 
+      console.log('[RutaPasoModal] Resultado de operación:', success ? '✅ ÉXITO' : '❌ FALLO');
+
       if (success) {
+        console.log('[RutaPasoModal] Llamando onSuccess()');
         onSuccess();
       } else {
-        setError('Error al guardar el paso. Intenta nuevamente.');
+        const errorMsg = 'Error al guardar el paso. Revisa los detalles en la consola.';
+        console.error('[RutaPasoModal]', errorMsg);
+        setError(errorMsg);
       }
     } catch (err) {
-      console.error('Error saving paso:', err);
-      setError('Error inesperado al guardar el paso');
+      console.error('[RutaPasoModal] ❌ ERROR INESPERADO:', err);
+      console.error('[RutaPasoModal] Stack trace:', err instanceof Error ? err.stack : 'N/A');
+      setError(`Error inesperado: ${err instanceof Error ? err.message : 'Desconocido'}`);
     } finally {
       setIsSubmitting(false);
+      console.log('[RutaPasoModal] ===== FIN DE SUBMIT =====');
     }
   };
 

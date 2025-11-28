@@ -182,7 +182,12 @@ export function useRutaPasos({
   }, [rutaId, etapa]);
 
   const addPaso = async (data: RutaProduccionPasoFormData): Promise<boolean> => {
+    console.log('[useRutaPasos.addPaso] ===== INICIO =====');
+    console.log('[useRutaPasos.addPaso] rutaId:', rutaId);
+    console.log('[useRutaPasos.addPaso] data recibida:', JSON.stringify(data, null, 2));
+
     if (!rutaId) {
+      console.error('[useRutaPasos.addPaso] ❌ Error: No hay rutaId');
       setError('No se ha seleccionado una ruta');
       return false;
     }
@@ -202,22 +207,59 @@ export function useRutaPasos({
 
       if (data.paso_id !== null) {
         insertData.paso_id = data.paso_id;
+        console.log('[useRutaPasos.addPaso] paso_id incluido:', data.paso_id);
+      } else {
+        console.log('[useRutaPasos.addPaso] paso_id es NULL (mapeo múltiple)');
       }
 
-      const { error: insertError } = await supabase
+      console.log('[useRutaPasos.addPaso] insertData preparado:', JSON.stringify(insertData, null, 2));
+      console.log('[useRutaPasos.addPaso] Ejecutando INSERT en Supabase...');
+
+      const { data: insertedData, error: insertError } = await supabase
         .from('rutas_produccion_pasos')
-        .insert(insertData);
+        .insert(insertData)
+        .select();
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        console.error('[useRutaPasos.addPaso] ❌ ERROR de Supabase:', {
+          message: insertError.message,
+          code: insertError.code,
+          details: insertError.details,
+          hint: insertError.hint,
+          fullError: insertError
+        });
+        throw insertError;
+      }
 
+      console.log('[useRutaPasos.addPaso] ✅ INSERT exitoso. Registro creado:', insertedData);
+      console.log('[useRutaPasos.addPaso] Recargando pasos...');
       await fetchPasos();
+      console.log('[useRutaPasos.addPaso] ✅ Pasos recargados exitosamente');
       return true;
     } catch (err) {
-      console.error('Error adding paso to ruta:', err);
-      setError(err instanceof Error ? err.message : 'Error desconocido');
+      console.error('[useRutaPasos.addPaso] ❌ EXCEPCIÓN CAPTURADA:');
+      console.error('[useRutaPasos.addPaso] Error object:', err);
+      console.error('[useRutaPasos.addPaso] Error type:', typeof err);
+      console.error('[useRutaPasos.addPaso] Error constructor:', err?.constructor?.name);
+
+      if (err && typeof err === 'object') {
+        const errorObj = err as any;
+        console.error('[useRutaPasos.addPaso] Error properties:', {
+          message: errorObj.message,
+          code: errorObj.code,
+          details: errorObj.details,
+          hint: errorObj.hint,
+          stack: errorObj.stack
+        });
+      }
+
+      const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
+      console.error('[useRutaPasos.addPaso] Mensaje de error:', errorMessage);
+      setError(errorMessage);
       return false;
     } finally {
       setLoading(false);
+      console.log('[useRutaPasos.addPaso] ===== FIN =====');
     }
   };
 
