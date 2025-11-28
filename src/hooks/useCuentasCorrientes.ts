@@ -7,6 +7,7 @@ import type {
   CuentaCorrienteMovimiento
 } from '../types/database';
 import dayjs from 'dayjs';
+import { calcularDiasHastaVencimiento } from '../utils/liquidacionHelpers';
 
 interface UseCuentasCorrientesParams {
   searchTerm?: string;
@@ -44,9 +45,7 @@ export function useCuentasCorrientes(params: UseCuentasCorrientesParams = {}) {
 
           const saldo = saldoData || 0;
 
-          const diasVencimiento = cliente.acuerdo_pago
-            ? calcularDiasVencimiento(cliente.id, cliente.acuerdo_pago)
-            : null;
+          const diasVencimiento = calcularDiasVencimiento(cliente);
 
           const estadoCC = determinarEstadoCC(saldo, diasVencimiento);
 
@@ -103,19 +102,23 @@ export function useCuentasCorrientes(params: UseCuentasCorrientesParams = {}) {
   };
 }
 
-function calcularDiasVencimiento(clienteId: string, acuerdoPago: string): number {
-  const diasAcuerdo = acuerdoPago === 'Semanal' ? 7 : acuerdoPago === 'Quincenal' ? 15 : 30;
-  return diasAcuerdo;
+function calcularDiasVencimiento(cliente: any): number | null {
+  return calcularDiasHastaVencimiento(cliente);
 }
 
 function determinarEstadoCC(
   saldo: number,
-  diasVencimiento: number | null
+  diasHastaVencimiento: number | null
 ): 'al_dia' | 'proximo_vencer' | 'vencido' {
   if (saldo === 0) return 'al_dia';
-  if (!diasVencimiento) return 'vencido';
-  if (diasVencimiento <= 3) return 'proximo_vencer';
-  return 'vencido';
+
+  if (diasHastaVencimiento === null) return 'vencido';
+
+  if (diasHastaVencimiento < 0) return 'vencido';
+
+  if (diasHastaVencimiento <= 3) return 'proximo_vencer';
+
+  return 'al_dia';
 }
 
 export function useEstadoCuenta(clienteId: string) {

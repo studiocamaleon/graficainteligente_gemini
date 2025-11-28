@@ -94,3 +94,77 @@ export const getDescripcionAcuerdo = (cliente: Client): string => {
       return cliente.acuerdo_pago;
   }
 };
+
+export const calcularUltimoCierre = (cliente: Client): dayjs.Dayjs | null => {
+  if (!cliente.tiene_cuenta_corriente || !cliente.acuerdo_pago) {
+    return null;
+  }
+
+  const hoy = dayjs();
+
+  switch (cliente.acuerdo_pago) {
+    case 'Semanal': {
+      if (!cliente.dia_cierre_semanal) return null;
+      const diaActual = hoy.isoWeekday();
+      const diaCierre = cliente.dia_cierre_semanal;
+
+      let diasDesdeUltimoCierre = diaActual - diaCierre;
+      if (diasDesdeUltimoCierre < 0) {
+        diasDesdeUltimoCierre += 7;
+      }
+
+      return hoy.subtract(diasDesdeUltimoCierre, 'day');
+    }
+
+    case 'Quincenal': {
+      const diaDelMes = hoy.date();
+
+      if (diaDelMes >= 15) {
+        return hoy.date(15);
+      } else {
+        return hoy.subtract(1, 'month').endOf('month');
+      }
+    }
+
+    case 'Mensual': {
+      if (cliente.usa_ultimo_dia_mes) {
+        const diaDelMes = hoy.date();
+        const ultimoDiaMesActual = hoy.endOf('month').date();
+
+        if (diaDelMes >= ultimoDiaMesActual) {
+          return hoy.endOf('month');
+        } else {
+          return hoy.subtract(1, 'month').endOf('month');
+        }
+      } else if (cliente.dia_cierre_mensual) {
+        const diaDelMes = hoy.date();
+
+        if (diaDelMes >= cliente.dia_cierre_mensual) {
+          return hoy.date(cliente.dia_cierre_mensual);
+        } else {
+          return hoy.subtract(1, 'month').date(cliente.dia_cierre_mensual);
+        }
+      }
+      return null;
+    }
+
+    default:
+      return null;
+  }
+};
+
+export const calcularFechaVencimiento = (cliente: Client): dayjs.Dayjs | null => {
+  const fechaUltimoCierre = calcularUltimoCierre(cliente);
+  if (!fechaUltimoCierre) return null;
+
+  const diasGracia = cliente.dias_vencimiento || 0;
+  return fechaUltimoCierre.add(diasGracia, 'day');
+};
+
+export const calcularDiasHastaVencimiento = (cliente: Client): number | null => {
+  const fechaVencimiento = calcularFechaVencimiento(cliente);
+  if (!fechaVencimiento) return null;
+
+  const hoy = dayjs();
+  return fechaVencimiento.diff(hoy, 'day');
+};
