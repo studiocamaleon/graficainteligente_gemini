@@ -353,6 +353,7 @@ export function useProductoTalonario(id?: string) {
           tipo_venta: data.tipo_venta,
           cantidades_fijas: data.cantidades_fijas,
           impuesto_iva: data.impuesto_iva,
+          ruta_produccion_id: data.ruta_produccion_id || null,
         })
         .eq('id', id)
         .eq('company_id', profile?.company_id);
