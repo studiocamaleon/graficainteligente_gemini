@@ -18,7 +18,6 @@ export interface TecnologiaConTintas {
   tecnologia: {
     id: string;
     nombre: string;
-    codigo: string | null;
   };
   tintas: TintaPasoInfo[];
   tieneTodasTintasConfiguradas: boolean;
@@ -39,8 +38,8 @@ export function useTodasTecnologiasTintas() {
       try {
         const { data: tecnologiasData, error: tecnologiasError } = await supabase
           .from('tecnologias')
-          .select('id, nombre, codigo')
-          .eq('activo', true)
+          .select('id, nombre')
+          .eq('is_active', true)
           .order('nombre', { ascending: true });
 
         if (tecnologiasError) throw tecnologiasError;
@@ -78,7 +77,6 @@ export function useTodasTecnologiasTintas() {
             tecnologia: {
               id: tecnologia.id,
               nombre: tecnologia.nombre,
-              codigo: tecnologia.codigo,
             },
             tintas: tintas as TintaPasoInfo[],
             tieneTodasTintasConfiguradas: tintasTotal > 0 && tintasConfiguradas === tintasTotal,

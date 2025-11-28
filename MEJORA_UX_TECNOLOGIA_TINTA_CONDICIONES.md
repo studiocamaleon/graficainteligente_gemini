@@ -789,3 +789,46 @@ La mejora implementada transforma completamente la experiencia de configuración
 **Versión:** Post-mejora UX Tecnología + Tinta
 **Status:** ✅ Completado y listo para producción
 **Build:** ✅ Exitoso sin errores
+
+---
+
+## 🔧 Correcciones Post-Implementación
+
+### Error: Columna `codigo` no existe en tabla `tecnologias`
+
+**Fecha:** 2025-11-28 (inmediatamente después de implementación inicial)
+
+**Problema detectado:**
+```
+Error: column tecnologias.codigo does not exist
+```
+
+**Causa:**
+- El hook `useTodasTecnologiasTintas.ts` intentaba seleccionar columna `codigo`
+- El componente mostraba `tech.codigo` en UI
+- La tabla `tecnologias` solo tiene columnas: `id`, `company_id`, `nombre`, `tintas`, `is_active`
+- La columna usada era `activo` pero el nombre correcto es `is_active`
+
+**Archivos corregidos:**
+
+1. **`src/hooks/useTodasTecnologiasTintas.ts`**
+   - ❌ Query: `.select('id, nombre, codigo')`
+   - ✅ Query: `.select('id, nombre')`
+   - ❌ Filtro: `.eq('activo', true)`
+   - ✅ Filtro: `.eq('is_active', true)`
+   - ❌ Interface con `codigo: string | null`
+   - ✅ Interface sin campo `codigo`
+
+2. **`src/components/rutas/TodasTecnologiasTintasPreview.tsx`**
+   - ❌ Mostraba: `{tech.codigo && <span>({tech.codigo})</span>}`
+   - ✅ Removido: Ya no muestra código
+   - Simplificado diseño del nombre de tecnología
+
+**Status:** ✅ Corregido y verificado con build exitoso
+
+**Build después de corrección:**
+```
+✓ 2795 modules transformed
+✓ built in 25.01s
+Sin errores
+```
