@@ -14,8 +14,10 @@ export default defineConfig({
   build: {
     target: 'esnext',
     minify: 'esbuild',
+    // Eliminar console.logs y debugger solo en builds de producción
+    esbuildOptions: {
+      drop: ['console', 'debugger'],
+    },
   },
-  esbuild: {
-    drop: ['console', 'debugger'],
-  },
+  // No eliminar console.logs en desarrollo para permitir debugging
 });

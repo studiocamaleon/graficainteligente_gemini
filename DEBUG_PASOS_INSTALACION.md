@@ -177,12 +177,28 @@ Una vez que se reproduzca el problema y se tengan los logs:
 3. `/scripts/verify-instalacion-etapa.ts` (NUEVO)
    - Script de verificación de datos en etapa Instalación
 
+4. `/vite.config.ts`
+   - **IMPORTANTE**: Movido `drop: ['console', 'debugger']` de configuración global a configuración de build
+   - Ahora los console.logs funcionan en desarrollo pero se eliminan en producción
+
 ## Notas Importantes
 
 - ✅ El build del proyecto compila correctamente sin errores
 - ✅ No hay datos corruptos en la base de datos
 - ✅ Los constraints de base de datos están correctamente configurados
+- ✅ Los console.logs ahora funcionan en desarrollo (corregido en vite.config.ts)
 - ⚠️ El problema debe estar ocurriendo durante la inserción, y ahora tenemos logging para identificarlo
+
+## ⚠️ IMPORTANTE: Reiniciar el servidor de desarrollo
+
+Después de estos cambios, **DEBES REINICIAR** el servidor de desarrollo para que la nueva configuración de Vite surta efecto:
+
+1. Detén el servidor actual (Ctrl+C)
+2. Inicia nuevamente con `npm run dev`
+3. Abre la consola del navegador (F12 → Console)
+4. Reproduce el problema
+
+Sin reiniciar, los console.logs seguirán sin aparecer porque la configuración anterior de esbuild sigue activa en memoria.
 
 ## Conclusión
 
