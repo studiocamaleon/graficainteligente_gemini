@@ -360,7 +360,7 @@ export type TintaType = 'K' | 'CMYK' | 'CMYK+W' | 'CMYK+V' | 'CMYK+W+V';
 
 export type UnidadEspesor = 'gr' | 'mm';
 
-export type EtapaPaso = 'Pre-prensa' | 'Produccion' | 'Terminacion' | 'Instalacion' | 'Entrega';
+export type EtapaPaso = 'Pre-prensa' | 'Produccion' | 'Terminacion' | 'Instalacion';
 
 export type TipoImpactoPrecio =
   | 'sin_impacto'

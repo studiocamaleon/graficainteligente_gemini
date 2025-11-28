@@ -16,14 +16,13 @@ interface RutaPasosEditorProps {
   onClose: () => void;
 }
 
-const ETAPAS: EtapaPaso[] = ['Pre-prensa', 'Produccion', 'Terminacion', 'Instalacion', 'Entrega'];
+const ETAPAS: EtapaPaso[] = ['Pre-prensa', 'Produccion', 'Terminacion', 'Instalacion'];
 
 const ETAPA_COLORS: Record<EtapaPaso, { bg: string; text: string; border: string }> = {
   'Pre-prensa': { bg: 'bg-purple-100', text: 'text-purple-700', border: 'border-purple-300' },
   'Produccion': { bg: 'bg-blue-100', text: 'text-blue-700', border: 'border-blue-300' },
   'Terminacion': { bg: 'bg-green-100', text: 'text-green-700', border: 'border-green-300' },
   'Instalacion': { bg: 'bg-orange-100', text: 'text-orange-700', border: 'border-orange-300' },
-  'Entrega': { bg: 'bg-teal-100', text: 'text-teal-700', border: 'border-teal-300' },
 };
 
 export function RutaPasosEditor({ rutaId, rutaNombre, onClose }: RutaPasosEditorProps) {

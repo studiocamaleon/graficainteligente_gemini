@@ -80,8 +80,6 @@ export function PasosSelector({ selectedPasos, onChange }: PasosSelectorProps) {
         return 'bg-green-100 text-green-700';
       case 'Instalacion':
         return 'bg-orange-100 text-orange-700';
-      case 'Entrega':
-        return 'bg-gray-100 text-gray-700';
       default:
         return 'bg-gray-100 text-gray-700';
     }

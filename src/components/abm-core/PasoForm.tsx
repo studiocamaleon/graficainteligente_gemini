@@ -24,7 +24,6 @@ const ETAPAS: { value: EtapaPaso; label: string }[] = [
   { value: 'Produccion', label: 'Producción' },
   { value: 'Terminacion', label: 'Terminación' },
   { value: 'Instalacion', label: 'Instalación' },
-  { value: 'Entrega', label: 'Entrega' },
 ];
 
 export function PasoForm({ paso, onSubmit, onCancel }: PasoFormProps) {
