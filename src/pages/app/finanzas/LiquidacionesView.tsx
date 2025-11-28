@@ -7,6 +7,7 @@ import { Select } from '../../../components/ui/Select';
 import { Badge } from '../../../components/ui/Badge';
 import { Button } from '../../../components/ui/Button';
 import { EmptyState } from '../../../components/ui/EmptyState';
+import { DetalleLiquidacionModal } from '../../../components/finanzas/DetalleLiquidacionModal';
 import { generateLiquidacionPDF } from '../../../utils/pdfGenerators/liquidacionPDF';
 import type { EstadoLiquidacion } from '../../../types/database';
 import dayjs from 'dayjs';
@@ -16,6 +17,7 @@ export default function LiquidacionesView() {
   const [estadoFilter, setEstadoFilter] = useState<EstadoLiquidacion | ''>('');
   const [page, setPage] = useState(1);
   const [exportingId, setExportingId] = useState<string | null>(null);
+  const [selectedLiquidacionId, setSelectedLiquidacionId] = useState<string | null>(null);
 
   const { liquidaciones, totalCount, loading } = useLiquidaciones({
     estado: estadoFilter || undefined,
@@ -60,7 +62,14 @@ export default function LiquidacionesView() {
   };
 
   return (
-    <div className="space-y-6">
+    <>
+      <DetalleLiquidacionModal
+        isOpen={selectedLiquidacionId !== null}
+        onClose={() => setSelectedLiquidacionId(null)}
+        liquidacionId={selectedLiquidacionId || ''}
+      />
+
+      <div className="space-y-6">
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="w-full sm:w-64 relative">
           <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none z-10">
@@ -185,7 +194,7 @@ export default function LiquidacionesView() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => console.log('Ver detalle:', liq.id)}
+                          onClick={() => setSelectedLiquidacionId(liq.id)}
                           title="Ver detalle"
                         >
                           <Eye className="w-4 h-4" />
@@ -207,6 +216,7 @@ export default function LiquidacionesView() {
           )}
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }
