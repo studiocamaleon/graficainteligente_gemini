@@ -6,11 +6,11 @@ export interface MaterialUVInfo {
   id: string;
   material_nombre: string;
   variante_nombre: string;
-  espesor: number | null;
-  unidad_espesor: string | null;
-  dim_ancho_cm: number;
-  dim_alto_cm: number;
-  precio_por_m2: number;
+  espesor_mm: number | null;
+  ancho_placa_cm: number;
+  alto_placa_cm: number;
+  precio_placa: number;
+  precio_mt2: number;
 }
 
 export interface PrecioImpresionUVInfo {
@@ -24,9 +24,14 @@ export interface PrecioImpresionUVInfo {
 export interface ProductoImpresionUVParaPrecios {
   id: string;
   nombre: string;
-  limite_ancho_cm: number | null;
-  limite_alto_cm: number | null;
-  material_cliente_permitido: boolean;
+  tecnologia_id: string;
+  tintas: string[];
+  ancho_minimo: number | null;
+  ancho_maximo: number | null;
+  alto_minimo: number | null;
+  alto_maximo: number | null;
+  permite_material_cliente: boolean;
+  cantidad_minima: number;
   materiales: MaterialUVInfo[];
   precios_impresion: PrecioImpresionUVInfo[];
 }
@@ -55,7 +60,7 @@ export function useAllProductosImpresionUVRigidosPrecios() {
         .from('productos_impresion_uv_rigidos')
         .select('*')
         .eq('company_id', profile.company_id)
-        .eq('is_active', true)
+        .eq('activo', true)
         .order('nombre');
 
       if (productosError) throw productosError;
@@ -74,18 +79,19 @@ export function useAllProductosImpresionUVRigidosPrecios() {
             .from('productos_impresion_uv_rigidos_materiales')
             .select(`
               id,
-              dim_ancho_cm,
-              dim_alto_cm,
-              precio_por_m2,
+              variante_nombre,
+              espesor_mm,
+              ancho_placa_cm,
+              alto_placa_cm,
+              precio_placa,
+              precio_mt2,
               materiales!inner (
                 id,
-                nombre,
-                variante_nombre,
-                espesor,
-                unidad_espesor
+                nombre
               )
             `)
             .eq('producto_uv_id', producto.id)
+            .eq('is_active', true)
             .order('materiales(nombre)');
 
           if (materialesError) {
@@ -96,12 +102,12 @@ export function useAllProductosImpresionUVRigidosPrecios() {
           const materiales: MaterialUVInfo[] = (materialesData || []).map((mat: any) => ({
             id: mat.id,
             material_nombre: mat.materiales.nombre,
-            variante_nombre: mat.materiales.variante_nombre,
-            espesor: mat.materiales.espesor,
-            unidad_espesor: mat.materiales.unidad_espesor,
-            dim_ancho_cm: mat.dim_ancho_cm,
-            dim_alto_cm: mat.dim_alto_cm,
-            precio_por_m2: mat.precio_por_m2,
+            variante_nombre: mat.variante_nombre,
+            espesor_mm: mat.espesor_mm,
+            ancho_placa_cm: mat.ancho_placa_cm,
+            alto_placa_cm: mat.alto_placa_cm,
+            precio_placa: mat.precio_placa,
+            precio_mt2: mat.precio_mt2,
           }));
 
           // Fetch precios de impresión del producto
@@ -127,9 +133,14 @@ export function useAllProductosImpresionUVRigidosPrecios() {
           return {
             id: producto.id,
             nombre: producto.nombre,
-            limite_ancho_cm: producto.limite_ancho_cm,
-            limite_alto_cm: producto.limite_alto_cm,
-            material_cliente_permitido: producto.material_cliente_permitido,
+            tecnologia_id: producto.tecnologia_id,
+            tintas: producto.tintas,
+            ancho_minimo: producto.ancho_minimo,
+            ancho_maximo: producto.ancho_maximo,
+            alto_minimo: producto.alto_minimo,
+            alto_maximo: producto.alto_maximo,
+            permite_material_cliente: producto.permite_material_cliente,
+            cantidad_minima: producto.cantidad_minima,
             materiales,
             precios_impresion,
           };
