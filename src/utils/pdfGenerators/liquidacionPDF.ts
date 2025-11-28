@@ -160,9 +160,8 @@ export const generateLiquidacionPDF = async (params: GenerateLiquidacionPDFParam
 
   currentY += 10;
 
-  // === Información del Cliente (dos columnas) ===
+  // === Información del Cliente ===
   const leftColX = 15;
-  const rightColX = pageWidth / 2 + 5;
 
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
@@ -171,7 +170,6 @@ export const generateLiquidacionPDF = async (params: GenerateLiquidacionPDFParam
 
   currentY += 6;
 
-  // Columna izquierda: Cliente
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(75, 85, 99);
@@ -189,35 +187,48 @@ export const generateLiquidacionPDF = async (params: GenerateLiquidacionPDFParam
   doc.setTextColor(55, 65, 81);
   doc.text(cliente.numero_documento, leftColX + 25, currentY);
 
-  // Columna derecha: Fechas
-  const rightCurrentY = currentY - 5;
+  currentY += 10;
 
+  // === Información de la Liquidación ===
+  doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(75, 85, 99);
-  doc.text('Período Liquidado:', rightColX, rightCurrentY);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(55, 65, 81);
+  doc.setTextColor(31, 41, 55);
+  doc.text('Información de la Liquidación', leftColX, currentY);
+
+  currentY += 6;
+
   const periodoTexto = liquidacion.periodo_desde && liquidacion.periodo_hasta
     ? `${dayjs(liquidacion.periodo_desde).format('DD/MM/YYYY')} - ${dayjs(liquidacion.periodo_hasta).format('DD/MM/YYYY')}`
     : '-';
-  doc.text(periodoTexto, rightColX + 35, rightCurrentY);
 
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(75, 85, 99);
-  doc.text('Fecha de Emisión:', rightColX, rightCurrentY + 5);
+  doc.text('Período Liquidado:', leftColX, currentY);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(55, 65, 81);
-  doc.text(dayjs(liquidacion.fecha_emision).format('DD/MM/YYYY'), rightColX + 35, rightCurrentY + 5);
+  doc.text(periodoTexto, leftColX + 35, currentY);
+
+  currentY += 5;
 
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(75, 85, 99);
-  doc.text('Fecha de Vencimiento:', rightColX, rightCurrentY + 10);
+  doc.text('Fecha de Emisión:', leftColX, currentY);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(55, 65, 81);
+  doc.text(dayjs(liquidacion.fecha_emision).format('DD/MM/YYYY'), leftColX + 35, currentY);
+
+  currentY += 5;
+
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(75, 85, 99);
+  doc.text('Fecha de Vencimiento:', leftColX, currentY);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(55, 65, 81);
   doc.text(
     liquidacion.fecha_vencimiento ? dayjs(liquidacion.fecha_vencimiento).format('DD/MM/YYYY') : '-',
-    rightColX + 35,
-    rightCurrentY + 10
+    leftColX + 35,
+    currentY
   );
 
   currentY += 8;
@@ -286,7 +297,7 @@ export const generateLiquidacionPDF = async (params: GenerateLiquidacionPDFParam
   }
 
   // === Sección de Totales (sin fondos de colores, justificados a la derecha) ===
-  const totalsStartX = pageWidth - 70;
+  const totalsStartX = pageWidth - 85;
   const totalsEndX = pageWidth - 15;
 
   // Subtotal
@@ -374,35 +385,6 @@ export const generateLiquidacionPDF = async (params: GenerateLiquidacionPDFParam
   doc.text(formatCurrency(liquidacion.saldo_pendiente), totalsEndX, currentY, { align: 'right' });
 
   currentY += 10;
-
-  // === Aviso de Vencimiento (si aplica) ===
-  if (liquidacion.fecha_vencimiento) {
-    const vencimiento = dayjs(liquidacion.fecha_vencimiento);
-    const hoy = dayjs();
-    const estaVencida = vencimiento.isBefore(hoy, 'day');
-
-    const bgColor = estaVencida ? [254, 226, 226] : [254, 243, 199];
-    const borderColor = estaVencida ? [239, 68, 68] : [245, 158, 11];
-    const textColor = estaVencida ? [153, 27, 27] : [146, 64, 14];
-
-    doc.setFillColor(...bgColor);
-    doc.setDrawColor(...borderColor);
-    doc.setLineWidth(0.5);
-    doc.roundedRect(15, currentY, pageWidth - 30, 10, 1, 1, 'FD');
-
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...textColor);
-    const estadoTexto = estaVencida ? '⚠️ VENCIDA' : 'Vence el';
-    doc.text(
-      `${estadoTexto}: ${vencimiento.format('DD/MM/YYYY')}`,
-      pageWidth / 2,
-      currentY + 6.5,
-      { align: 'center' }
-    );
-
-    currentY += 12;
-  }
 
   // === Notas (si existen) ===
   if (liquidacion.notas && liquidacion.notas.trim()) {

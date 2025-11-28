@@ -21,20 +21,22 @@ Se ha rediseñado completamente el PDF de liquidación con un enfoque moderno, l
 
 ---
 
-## 2. Información del Cliente en Dos Columnas
+## 2. Información del Cliente y Liquidación (Reorganizada)
 
 ### Antes:
 - Todo en una sola columna con fondo azul
 - Información apilada verticalmente
 - Ocupaba mucho espacio
 
-### Ahora:
-- **Diseño de dos columnas** para mejor legibilidad:
-  - **Columna izquierda**: Razón Social y Documento del cliente
-  - **Columna derecha**: Período Liquidado, Fecha de Emisión y Fecha de Vencimiento
+### Ahora (Actualizado):
+- **Diseño de una sola columna vertical** para mejor flujo de lectura
+- **Dos secciones separadas**:
+  - **"Información del Cliente"**: Razón Social y Documento
+  - **Espaciado visual de 10px**
+  - **"Información de la Liquidación"**: Período Liquidado, Fecha de Emisión y Fecha de Vencimiento
 - Sin fondos de colores
 - Etiquetas en negrita, valores en fuente normal
-- Línea separadora sutil debajo de la sección
+- Línea separadora sutil debajo de ambas secciones
 
 ---
 
@@ -53,18 +55,20 @@ Se ha rediseñado completamente el PDF de liquidación con un enfoque moderno, l
 - Cada total con fondo de color diferente
 - Algunos centrados, otros no
 - Diseño visualmente recargado
+- Texto de totales se montaba sobre los valores
 
-### Ahora:
+### Ahora (Actualizado):
 - **Sin fondos de colores** (diseño limpio)
 - **Todos los totales justificados a la derecha** del documento
+- **Espaciado corregido**: área de totales ampliada de 70px a 85px para evitar superposición de texto
 - Estructura jerárquica clara:
   1. **Subtotal**: fuente normal, gris oscuro
   2. **Ajustes** (si aplica): color verde/rojo según signo, sin fondo
   3. **IVA** (preparado para futura implementación): comentado en el código
   4. **Línea separadora** antes del total general
-  5. **TOTAL GENERAL**: destacado en azul, fuente 13pt
+  5. **TOTAL GENERAL**: destacado en azul, fuente 13pt, sin superposición
   6. **Total Pagado** (si aplica): verde, sin fondo
-  7. **SALDO PENDIENTE**: destacado, rojo/verde según monto
+  7. **SALDO PENDIENTE**: destacado, rojo/verde según monto, sin superposición
 
 ---
 
@@ -114,7 +118,7 @@ if (cliente.requiere_factura) {
 
 ---
 
-## Estructura Visual Resultante
+## Estructura Visual Resultante (Actualizada)
 
 ```
 ┌─────────────────────────────────────────────┐
@@ -124,11 +128,13 @@ if (cliente.requiere_factura) {
 │ Liquidación N° LIQ-XXXXX                    │
 │                                             │
 │ Información del Cliente                     │
-│ ┌─────────────────┬─────────────────────┐  │
-│ │ Razón Social:   │ Período Liquidado:  │  │
-│ │ Documento:      │ Fecha de Emisión:   │  │
-│ │                 │ Fecha de Vencimiento│  │
-│ └─────────────────┴─────────────────────┘  │
+│   Razón Social: [valor]                     │
+│   Documento: [valor]                        │
+│                                             │
+│ Información de la Liquidación               │
+│   Período Liquidado: DD/MM/YYYY - DD/MM/YY │
+│   Fecha de Emisión: DD/MM/YYYY             │
+│   Fecha de Vencimiento: DD/MM/YYYY         │
 ├─────────────────────────────────────────────┤
 │                                             │
 │ Órdenes de Trabajo Incluidas               │
@@ -136,14 +142,12 @@ if (cliente.requiere_factura) {
 │ │ Tabla de órdenes                        ││
 │ └─────────────────────────────────────────┘│
 │                                             │
-│                         Subtotal:  $XXX.XX │
-│                         Ajustes:   $XXX.XX │
-│                         ──────────────────  │
-│                    TOTAL GENERAL: $XXX.XX  │
-│                    Total Pagado:  $XXX.XX  │
-│                 SALDO PENDIENTE: $XXX.XX   │
-│                                             │
-│ [Aviso de vencimiento si aplica]           │
+│                      Subtotal:     $XXX.XX │
+│                      Ajustes:      $XXX.XX │
+│                      ─────────────────────  │
+│                 TOTAL GENERAL:    $XXX.XX  │
+│                 Total Pagado:     $XXX.XX  │
+│              SALDO PENDIENTE:    $XXX.XX   │
 │                                             │
 │ [Notas si existen]                         │
 │                                             │
@@ -160,12 +164,14 @@ if (cliente.requiere_factura) {
 ## Beneficios del Nuevo Diseño
 
 1. ✅ **Mayor legibilidad**: diseño limpio sin fondos que distraen
-2. ✅ **Uso eficiente del espacio**: dos columnas en información del cliente
+2. ✅ **Flujo de lectura vertical**: información organizada en una sola columna fácil de seguir
 3. ✅ **Profesionalismo**: apariencia moderna y corporativa
 4. ✅ **Información completa**: footer con todos los datos de la empresa
 5. ✅ **Flexibilidad**: manejo seguro de campos opcionales
 6. ✅ **Preparado para el futuro**: listo para implementar IVA condicional
 7. ✅ **Consistencia visual**: jerarquía tipográfica clara
+8. ✅ **Sin superposición de texto**: totales correctamente espaciados
+9. ✅ **Sin duplicación**: fecha de vencimiento solo aparece una vez
 
 ---
 
@@ -176,6 +182,11 @@ if (cliente.requiere_factura) {
 - **Dependencias**: jsPDF, jspdf-autotable, dayjs (sin cambios)
 - **Compatibilidad**: 100% compatible con la estructura de datos actual
 - **Build**: ✅ Exitoso sin errores
+
+### Correcciones Finales Aplicadas:
+1. **Reorganización de información**: Cambio de diseño de dos columnas a una sola columna vertical con dos secciones separadas ("Información del Cliente" e "Información de la Liquidación")
+2. **Ajuste de espaciado en totales**: Ampliación del área de totales de 70px a 85px (`totalsStartX = pageWidth - 85`) para evitar superposición de texto
+3. **Eliminación de aviso duplicado**: Removido el bloque completo del aviso de vencimiento al final del documento (líneas 378-404 del código original)
 
 ---
 
