@@ -252,7 +252,7 @@ export const MODULES: Module[] = [
       },
       {
         id: 'centro-copiado-ordenes-crear',
-        name: 'Crear Orden de Copiado',
+        name: 'Crear OC',
         description: 'Crear nueva orden de copiado',
         path: '/app/centro-copiado/ordenes/crear',
         icon: FilePlus,
