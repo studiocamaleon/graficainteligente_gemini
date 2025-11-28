@@ -60,7 +60,8 @@ export function ItemRouteEditor({
     console.log('📊 Rutas por etapa:', {
       pre_prensa: rutasPorEtapa.pre_prensa.length,
       principal: rutasPorEtapa.principal.length,
-      post_prensa: rutasPorEtapa.post_prensa.length
+      post_prensa: rutasPorEtapa.post_prensa.length,
+      instalacion: rutasPorEtapa.instalacion.length
     });
   }, [ordenItemId, productoId, productoNombre, rutas.length, loading, rutasPorEtapa]);
 
@@ -315,6 +316,7 @@ export function ItemRouteEditor({
       {renderEtapa('pre_prensa', 'Pre-Prensa', 'bg-purple-100 text-purple-800')}
       {renderEtapa('principal', 'Etapa Principal', 'bg-blue-100 text-blue-800')}
       {renderEtapa('post_prensa', 'Post-Prensa', 'bg-green-100 text-green-800')}
+      {renderEtapa('instalacion', 'Instalación', 'bg-orange-100 text-orange-800')}
 
       <ConfirmDialog
         isOpen={dialogState.isOpen}

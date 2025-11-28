@@ -276,6 +276,7 @@ export function useOrdenItemRutas(options: UseOrdenItemRutasOptions = {}) {
       pre_prensa: rutas.filter(r => r.tipo_etapa === 'pre_prensa'),
       principal: rutas.filter(r => r.tipo_etapa === 'principal'),
       post_prensa: rutas.filter(r => r.tipo_etapa === 'post_prensa'),
+      instalacion: rutas.filter(r => r.tipo_etapa === 'instalacion'),
     };
   }, [rutas]);
 
