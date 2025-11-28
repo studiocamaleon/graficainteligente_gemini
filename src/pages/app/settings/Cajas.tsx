@@ -28,7 +28,10 @@ export default function Cajas() {
   usePageHeader('Gestiona tus cajas y saldos');
 
   const filteredCajas = cajas.filter((caja) => {
-    if (activeTab !== 'todas' && caja.tipo !== activeTab) return false;
+    if (activeTab !== 'todas') {
+      const tipoFiltro = activeTab === 'virtual' ? 'pasarela' : activeTab;
+      if (caja.tipo !== tipoFiltro) return false;
+    }
     if (!showInactive && !caja.is_active) return false;
     return true;
   });
