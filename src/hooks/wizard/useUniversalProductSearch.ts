@@ -10,7 +10,8 @@ export type ProductCategory =
   | 'Materiales Rigidos'
   | 'Plotter de Corte'
   | 'Portabanners'
-  | 'Sellos';
+  | 'Sellos'
+  | 'Impresión UV sobre Rígidos';
 
 export interface UniversalProductSearchResult {
   id: string;
@@ -92,7 +93,8 @@ export function useUniversalProductSearch(searchTerm: string) {
           materialesRigidosProducts,
           plotterCorteProducts,
           portabannersProducts,
-          sellosProducts
+          sellosProducts,
+          uvRigidosProducts
         ] = await Promise.all([
           searchImpresionLaser(profile.company_id, debouncedSearch),
           searchTalonarios(profile.company_id, debouncedSearch),
@@ -100,7 +102,8 @@ export function useUniversalProductSearch(searchTerm: string) {
           searchMaterialesRigidos(profile.company_id, debouncedSearch),
           searchPlotterCorte(profile.company_id, debouncedSearch),
           searchPortabanners(profile.company_id, debouncedSearch),
-          searchSellos(profile.company_id, debouncedSearch)
+          searchSellos(profile.company_id, debouncedSearch),
+          searchImpresionUVRigidos(profile.company_id, debouncedSearch)
         ]);
 
         results.push(
@@ -110,7 +113,8 @@ export function useUniversalProductSearch(searchTerm: string) {
           ...materialesRigidosProducts,
           ...plotterCorteProducts,
           ...portabannersProducts,
-          ...sellosProducts
+          ...sellosProducts,
+          ...uvRigidosProducts
         );
 
         // Ordenar por nombre
@@ -448,6 +452,51 @@ async function searchSellos(
       tiene_espesor: false,
       tiene_color: false,
       tiene_marca: true,
+    }
+  }));
+}
+
+async function searchImpresionUVRigidos(
+  companyId: string,
+  searchTerm: string
+): Promise<UniversalProductSearchResult[]> {
+  const { data, error } = await supabase
+    .from('productos_impresion_uv_rigidos')
+    .select('id, nombre, descripcion')
+    .eq('company_id', companyId)
+    .eq('is_active', true)
+    .ilike('nombre', `%${searchTerm}%`)
+    .order('nombre')
+    .limit(10);
+
+  if (error) throw error;
+  if (!data) return [];
+
+  const { data: catData } = await supabase
+    .from('categorias')
+    .select('id')
+    .eq('nombre', 'Impresión UV sobre Rígidos')
+    .eq('is_system_category', true)
+    .single();
+
+  return data.map(p => ({
+    id: p.id,
+    nombre: p.nombre,
+    categoria: 'Impresión UV sobre Rígidos',
+    categoria_id: catData?.id || '',
+    descripcion: p.descripcion,
+    precio_desde: null,
+    tiene_precios: false,
+    config_disponible: {
+      tiene_medidas: true,
+      tiene_cantidad: true,
+      tiene_material: true,
+      tiene_tecnologia: false,
+      tiene_tintas: true,
+      tiene_caras_impresion: false,
+      tiene_espesor: false,
+      tiene_color: false,
+      tiene_marca: false,
     }
   }));
 }
