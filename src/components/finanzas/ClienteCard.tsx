@@ -99,7 +99,7 @@ export function ClienteCard({ cliente, onVerEstadoCuenta, onNuevaLiquidacion }: 
           onClick={onVerEstadoCuenta}
           className="flex-1"
         >
-          Ver Estado
+          Estado de Cuenta
         </Button>
         <Button
           variant="primary"
