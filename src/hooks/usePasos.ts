@@ -37,7 +37,7 @@ export function usePasos(params: UsePasosParams = {}) {
       }
 
       if (searchTerm) {
-        query = query.ilike('nombre', `%${searchTerm}%`);
+        query = query.or(`nombre.ilike.%${searchTerm}%,estaciones_trabajo.nombre.ilike.%${searchTerm}%`);
       }
 
       if (isActive !== null) {
