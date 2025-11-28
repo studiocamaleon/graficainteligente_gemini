@@ -49,6 +49,12 @@ export const CATEGORIAS_SISTEMA = {
     descripcion: 'Productos de talonarios y formularios',
     color: '#14B8A6',
   },
+  IMPRESION_UV_RIGIDOS: {
+    id: '00000000-0000-0000-0000-000000000008',
+    nombre: 'Impresión UV sobre Rígidos',
+    descripcion: 'Impresión UV sobre materiales rígidos con cálculo de precio material + impresión',
+    color: '#EC4899',
+  },
 } as const;
 
 // Exportaciones de compatibilidad
@@ -59,6 +65,7 @@ export const CATEGORIA_PLOTTER_CORTE_ID = CATEGORIAS_SISTEMA.PLOTTER_CORTE.id;
 export const CATEGORIA_SELLOS_ID = CATEGORIAS_SISTEMA.SELLOS.id;
 export const CATEGORIA_PORTABANNERS_ID = CATEGORIAS_SISTEMA.PORTABANNERS.id;
 export const CATEGORIA_TALONARIOS_ID = CATEGORIAS_SISTEMA.TALONARIOS.id;
+export const CATEGORIA_IMPRESION_UV_RIGIDOS_ID = CATEGORIAS_SISTEMA.IMPRESION_UV_RIGIDOS.id;
 
 // Lista de IDs de todas las categorías (útil para validaciones)
 export const CATEGORIA_IDS = Object.values(CATEGORIAS_SISTEMA).map(cat => cat.id);
