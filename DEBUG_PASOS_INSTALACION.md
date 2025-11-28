@@ -200,8 +200,86 @@ Después de estos cambios, **DEBES REINICIAR** el servidor de desarrollo para qu
 
 Sin reiniciar, los console.logs seguirán sin aparecer porque la configuración anterior de esbuild sigue activa en memoria.
 
+---
+
+## 🔍 ACTUALIZACIÓN: Logging Mejorado Agregado (Segunda Iteración)
+
+Se agregaron logs adicionales para identificar exactamente qué está pasando con la etapa "Instalacion":
+
+### Cambios Implementados en useRutaPasos.ts y RutaPasosEditor.tsx:
+
+1. **useRutaPasos.ts - Línea 28**: Log cuando la etapa ya está normalizada
+2. **useRutaPasos.ts - Líneas 165-168**: Log detallado de TODAS las etapas recuperadas
+3. **RutaPasosEditor.tsx - Líneas 49-54**: Log del filtrado de pasos por etapa en la UI
+
+### Qué Buscar en los Nuevos Logs:
+
+Después de reiniciar y reproducir el problema, busca en la consola:
+
+**1. ¿Se está insertando correctamente?**
+```
+[useRutaPasos.addPaso] ✅ INSERT exitoso
+```
+
+**2. ¿La etapa se normaliza correctamente?**
+```
+[useRutaPasos] Etapa ya está normalizada: "Instalacion"
+```
+
+**3. ¿Aparece en el listado completo de etapas?**
+```
+[useRutaPasos] Detalle de todas las etapas encontradas:
+  [X] Etapa: "Instalacion" | ID: ... | Orden: 0  ← DEBE APARECER
+```
+
+**4. ¿Se está filtrando correctamente en la UI?**
+```
+[RutaPasosEditor] Filtrando pasos: {
+  selectedEtapa: "Instalacion",
+  totalPasos: 10,
+  pasosFiltrados: 1,  ← DEBE SER > 0 si seleccionaste Instalacion
+  todasLasEtapas: ["Pre-prensa", "Produccion", "Terminacion", "Instalacion"]
+}
+```
+
+### Posibles Escenarios y Soluciones:
+
+**Escenario A: El paso se inserta pero no aparece en la UI**
+- **Síntoma**: `totalPasos` incluye el nuevo paso pero `pasosFiltrados: 0` para "Instalacion"
+- **Causa**: Error de comparación de strings (case sensitivity, espacios, caracteres especiales)
+- **Solución**: Verificar en los logs el valor exacto de `paso.etapa` vs `selectedEtapa`
+
+**Escenario B: El paso no se recarga después de insertarse**
+- **Síntoma**: No aparece en "Detalle de todas las etapas encontradas" después del INSERT
+- **Causa**: Issue con el refetch o problema de timing
+- **Solución**: Verificar que `fetchPasos()` se esté ejecutando y completando correctamente
+
+**Escenario C: El paso se inserta con etapa incorrecta**
+- **Síntoma**: Aparece en los logs pero con una etapa diferente a "Instalacion"
+- **Causa**: Normalización incorrecta o valor incorrecto en la inserción
+- **Solución**: Revisar el valor exacto de `data.etapa` que se envía al INSERT
+
+## Verificación de Constraints en Base de Datos
+
+La tabla `rutas_produccion_pasos` tiene el siguiente constraint de etapas (verificado en migración):
+
+```sql
+CONSTRAINT check_etapa CHECK (etapa IN (
+  'Pre-prensa',
+  'Produccion',
+  'Terminacion',
+  'Instalacion',
+  'Entrega'
+))
+```
+
+✅ "Instalacion" está incluida y es válida en la base de datos.
+
 ## Conclusión
 
-Con el logging detallado implementado, ahora será posible ver exactamente qué está fallando cuando intentas agregar un paso condicional en la etapa Instalación. El problema no es de datos corruptos ni de constraints mal configurados, sino que debe ser un error silencioso que ahora será visible en la consola del navegador.
+Con el logging detallado implementado, ahora será posible ver exactamente qué está fallando cuando intentas agregar un paso condicional en la etapa Instalación. El problema no es de datos corruptos ni de constraints mal configurados.
 
-**Siguiente acción recomendada**: Reproducir el problema con la consola abierta y compartir los logs para análisis adicional.
+**Siguiente acción recomendada**:
+1. Reiniciar el servidor de desarrollo
+2. Reproducir el problema con la consola abierta
+3. Compartir los nuevos logs que incluyen el detalle de TODAS las etapas encontradas

@@ -45,6 +45,14 @@ export function RutaPasosEditor({ rutaId, rutaNombre, onClose }: RutaPasosEditor
 
   const pasosPorEtapa = pasos.filter((p) => p.etapa === selectedEtapa);
 
+  // Debug: Log cuando cambia la etapa seleccionada o los pasos
+  console.log('[RutaPasosEditor] Filtrando pasos:', {
+    selectedEtapa,
+    totalPasos: pasos.length,
+    pasosFiltrados: pasosPorEtapa.length,
+    todasLasEtapas: [...new Set(pasos.map(p => p.etapa))]
+  });
+
   const getConteoEtapa = (etapa: EtapaPaso) => {
     return pasos.filter((p) => p.etapa === etapa).length;
   };

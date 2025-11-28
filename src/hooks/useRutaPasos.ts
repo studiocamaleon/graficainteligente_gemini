@@ -25,6 +25,7 @@ const normalizeEtapa = (etapa: string): EtapaPaso => {
   }
 
   // Si ya está en el formato correcto, retornarlo
+  console.log(`[useRutaPasos] Etapa ya está normalizada: "${etapa}"`);
   return etapa as EtapaPaso;
 };
 
@@ -159,6 +160,12 @@ export function useRutaPasos({
           acc[paso.etapa] = (acc[paso.etapa] || 0) + 1;
           return acc;
         }, {} as Record<string, number>)
+      });
+
+      // Log detallado de TODAS las etapas para debugging
+      console.log('[useRutaPasos] Detalle de todas las etapas encontradas:');
+      enrichedData.forEach((paso, index) => {
+        console.log(`  [${index}] Etapa: "${paso.etapa}" | ID: ${paso.id.slice(0, 8)} | Orden: ${paso.orden}`);
       });
 
       setPasos(enrichedData);
