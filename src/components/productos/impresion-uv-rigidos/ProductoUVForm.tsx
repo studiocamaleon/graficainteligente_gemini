@@ -54,7 +54,7 @@ export function ProductoUVForm({
   const { tintas: tintasDisponibles, loading: loadingTintas } = useTecnologiaTintas(tecnologiaId);
 
   const tecnologiasUV = tecnologias.filter(t =>
-    t.nombre.toLowerCase().includes('uv') && t.is_active
+    t.nombre === 'Impresion Cama Plana UV' && t.is_active
   );
 
   useEffect(() => {
@@ -239,11 +239,11 @@ export function ProductoUVForm({
                     >
                       <input
                         type="checkbox"
-                        checked={selectedTintas.includes(tinta.nombre)}
-                        onChange={() => handleTintaToggle(tinta.nombre)}
+                        checked={selectedTintas.includes(tinta.tinta)}
+                        onChange={() => handleTintaToggle(tinta.tinta)}
                         className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                       />
-                      <span className="font-medium">{tinta.nombre}</span>
+                      <span className="font-medium">{tinta.tinta}</span>
                     </label>
                   ))}
                 </div>
