@@ -50,7 +50,8 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
     cara_impresa: null,
     tipo_copia: null,
     color: null,
-    marca: null
+    marca: null,
+    usa_material_catalogo: false
   });
 
   const [selectedServicios, setSelectedServicios] = useState<SelectedService[]>([]);
@@ -431,6 +432,7 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
           cara_impresa: selectedConfig.cara_impresa,
           color: selectedConfig.color,
           marca: selectedConfig.marca,
+          usa_material_catalogo: selectedConfig.usa_material_catalogo,
           servicios_seleccionados: selectedServicios.map(s => ({
             servicio_id: s.servicio_id,
             nombre: s.servicio_nombre,

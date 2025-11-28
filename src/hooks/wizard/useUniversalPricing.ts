@@ -53,6 +53,9 @@ export function useUniversalPricing() {
         case 'Talonarios':
           precioBase = await getPrecioTalonarios(productId, config);
           break;
+        case 'Impresión UV sobre Rígidos':
+          precioBase = await getPrecioImpresionUV(productId, config);
+          break;
       }
 
       if (precioBase === null) {
@@ -377,6 +380,79 @@ async function getPrecioTalonarios(
   }
 
   return data?.precio || null;
+}
+
+async function getPrecioImpresionUV(
+  productId: string,
+  config: SelectedConfiguration
+): Promise<number | null> {
+  if (!config.medida_ancho || !config.medida_alto || !config.tinta) {
+    return null;
+  }
+
+  // Calcular m² por pieza
+  const mt2Pieza = (config.medida_ancho / 100) * (config.medida_alto / 100);
+
+  // Calcular m² totales (suma de todas las piezas)
+  const mt2Totales = mt2Pieza * config.cantidad;
+
+  // 1. Buscar precio de impresión UV por m² según rangos
+  const { data: preciosImpresion, error: errorImpresion } = await supabase
+    .from('productos_impresion_uv_rigidos_precios_impresion')
+    .select('precio_mt2, rango_mt2_min, rango_mt2_max')
+    .eq('producto_uv_id', productId)
+    .eq('tinta', config.tinta);
+
+  if (errorImpresion) {
+    console.error('Error buscando precio impresión UV:', errorImpresion);
+    return null;
+  }
+
+  if (!preciosImpresion || preciosImpresion.length === 0) {
+    console.warn('No se encontraron precios de impresión UV');
+    return null;
+  }
+
+  // Buscar en qué rango de m² cae
+  const precioImpresionEnRango = preciosImpresion.find(p => {
+    if (p.rango_mt2_max >= 999999) {
+      return mt2Totales >= p.rango_mt2_min;
+    }
+    return mt2Totales >= p.rango_mt2_min && mt2Totales <= p.rango_mt2_max;
+  });
+
+  if (!precioImpresionEnRango) {
+    console.warn('No se encontró precio en el rango de m²:', mt2Totales);
+    return null;
+  }
+
+  const costoImpresionTotal = precioImpresionEnRango.precio_mt2 * mt2Totales;
+
+  // 2. Si tiene material del catálogo, agregar su costo
+  let costoMaterialTotal = 0;
+
+  if (config.material_id && config.usa_material_catalogo) {
+    const { data: materialData, error: errorMaterial } = await supabase
+      .from('productos_impresion_uv_rigidos_materiales')
+      .select('precio_mt2')
+      .eq('producto_uv_id', productId)
+      .eq('material_id', config.material_id)
+      .eq('variante_nombre', config.variante_nombre || '')
+      .maybeSingle();
+
+    if (errorMaterial) {
+      console.error('Error buscando precio material UV:', errorMaterial);
+      // Continuar sin material, solo impresión
+    } else if (materialData) {
+      costoMaterialTotal = materialData.precio_mt2 * mt2Totales;
+    }
+  }
+
+  // 3. Precio total = impresión + material (si tiene)
+  const precioTotal = costoImpresionTotal + costoMaterialTotal;
+
+  // Retornar precio unitario (se multiplicará por cantidad después)
+  return precioTotal / config.cantidad;
 }
 
 // ===============================================

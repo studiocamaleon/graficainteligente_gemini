@@ -97,6 +97,9 @@ export interface SelectedConfiguration {
   // Color y marca
   color: string | null;
   marca: string | null;
+
+  // Para Impresión UV sobre Rígidos
+  usa_material_catalogo: boolean;
 }
 
 // ===============================================
