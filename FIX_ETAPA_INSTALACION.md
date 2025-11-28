@@ -4,11 +4,127 @@
 
 Cuando se intentaba agregar pasos en la etapa **"Instalacion"** al configurar una ruta de producción, los pasos se guardaban incorrectamente con la etapa **"Produccion"** en lugar de "Instalacion".
 
-## 🔍 Causa Raíz
+## 🔍 Causa Raíz (Actualizada tras análisis de logs)
 
-El problema estaba en **dos funciones de normalización de etapas** que tenían lógica incorrecta:
+### ❌ Diagnóstico Inicial Incorrecto
 
-### 1. `generateProductionRoutes.ts` - Función `normalizarEtapa()`
+Inicialmente se pensó que el problema estaba en funciones de normalización del frontend (`generateProductionRoutes.ts` y `OrdenRutasTab.tsx`), pero los logs revelaron que el problema REAL estaba en la **base de datos**.
+
+### ✅ Causa Real: Trigger de Base de Datos
+
+El problema estaba en el **trigger `validar_etapa_paso()`** en Supabase que se ejecuta ANTES de cada INSERT/UPDATE en la tabla `rutas_produccion_pasos`.
+
+**Evidencia de los logs:**
+```javascript
+[useRutaPasos.addPaso] insertData preparado: {
+  "etapa": "Instalacion",  // ← Frontend envía correctamente
+  ...
+}
+[useRutaPasos.addPaso] ✅ INSERT exitoso
+
+// Después del INSERT, al recargar:
+[useRutaPasos] Normalizing etapa: "principal" -> "Produccion"  // ← ¡Se lee como "principal"!
+```
+
+**El trigger defectuoso** (archivo: `20251121052718_fix_post_prensa_classification.sql`):
+
+```sql
+CREATE OR REPLACE FUNCTION validar_etapa_paso()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.etapa IS NOT NULL THEN
+    -- Solo reconocía 3 valores
+    IF NEW.etapa IN ('pre_prensa', 'principal', 'post_prensa') THEN
+      RETURN NEW;
+    END IF;
+
+    -- Validaciones para post, pre...
+
+    -- ❌ PROBLEMA: Default a principal para CUALQUIER otro valor
+    NEW.etapa := 'principal';  -- "Instalacion" → 'principal'
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+**Flujo del bug:**
+1. Frontend envía: `{ etapa: "Instalacion" }` ✅
+2. Trigger valida: ¿Es `pre_prensa`, `principal` o `post_prensa`? **NO**
+3. Trigger ejecuta fallback: `NEW.etapa := 'principal'` ❌
+4. Se guarda en DB: `'principal'` (no "Instalacion")
+5. Frontend lee: `'principal'` y lo normaliza a "Produccion"
+
+---
+
+## ✅ Solución Implementada
+
+### 1. Migración de Base de Datos (SOLUCIÓN PRINCIPAL)
+
+**Archivo**: `20251128160000_fix_trigger_validar_etapa_instalacion.sql`
+
+**Cambios clave:**
+
+```sql
+CREATE OR REPLACE FUNCTION validar_etapa_paso()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.etapa IS NOT NULL THEN
+    -- 1. Valores correctos (capitalizados)
+    IF NEW.etapa IN ('Pre-prensa', 'Produccion', 'Terminacion', 'Instalacion') THEN
+      RETURN NEW;
+    END IF;
+
+    -- 2. Mapeo legacy
+    IF LOWER(NEW.etapa) = 'pre_prensa' OR LOWER(NEW.etapa) = 'pre-prensa' THEN
+      NEW.etapa := 'Pre-prensa';
+      RETURN NEW;
+    END IF;
+
+    IF LOWER(NEW.etapa) = 'principal' OR LOWER(NEW.etapa) = 'produccion' THEN
+      NEW.etapa := 'Produccion';
+      RETURN NEW;
+    END IF;
+
+    IF LOWER(NEW.etapa) = 'post_prensa' OR LOWER(NEW.etapa) = 'post-prensa' OR LOWER(NEW.etapa) = 'terminacion' THEN
+      NEW.etapa := 'Terminacion';
+      RETURN NEW;
+    END IF;
+
+    -- 3. ✅ NUEVO: Manejo explícito de "Instalacion"
+    IF LOWER(NEW.etapa) = 'instalacion' THEN
+      NEW.etapa := 'Instalacion';
+      RETURN NEW;
+    END IF;
+
+    -- 4. Pattern matching con LIKE (orden crítico)
+    IF LOWER(NEW.etapa) LIKE '%instalacion%' THEN
+      NEW.etapa := 'Instalacion';
+      RETURN NEW;
+    END IF;
+
+    -- ... otros patterns ...
+
+    -- 5. ✅ CAMBIADO: En lugar de fallback silencioso, lanzar error
+    RAISE EXCEPTION 'Etapa no válida: %. Las etapas válidas son: Pre-prensa, Produccion, Terminacion, Instalacion', NEW.etapa;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+**Mejoras del trigger:**
+- ✅ Reconoce y normaliza "Instalacion" correctamente
+- ✅ Usa valores capitalizados que coinciden con el constraint de la tabla
+- ✅ Maneja "instalacion" (minúscula) y "Instalacion" (capitalizada)
+- ✅ Verifica "Instalacion" ANTES de otros pattern matching
+- ✅ Lanza error en lugar de fallback silencioso a 'principal'
+
+### 2. Correcciones en Frontend (Complementarias)
+
+Aunque el problema principal estaba en el trigger, también se corrigieron las funciones de normalización del frontend por consistencia:
+
+#### 2.1. `generateProductionRoutes.ts` - Función `normalizarEtapa()`
 
 **Línea 54 (ANTES):**
 ```typescript
@@ -133,20 +249,44 @@ function normalizeEtapa(etapa: string): string {
 
 ## 📋 Archivos Modificados
 
-1. **`src/utils/generateProductionRoutes.ts`**
+### Base de Datos (CORRECCIÓN PRINCIPAL)
+
+1. **`supabase/migrations/20251128160000_fix_trigger_validar_etapa_instalacion.sql`** ⭐
+   - Reemplaza la función `validar_etapa_paso()`
+   - Agrega manejo explícito de "Instalacion"
+   - Cambia valores de snake_case a capitalizados
+   - Elimina fallback silencioso, ahora lanza error descriptivo
+   - **ESTA ES LA CORRECCIÓN CRÍTICA QUE RESUELVE EL PROBLEMA**
+
+### Frontend (Correcciones Complementarias)
+
+2. **`src/utils/generateProductionRoutes.ts`**
    - Función `normalizarEtapa()` - Líneas 35-70
    - Agregado manejo explícito de "Instalacion"
    - Modificado fallback para preservar valores
 
-2. **`src/components/orders/OrdenRutasTab.tsx`**
+3. **`src/components/orders/OrdenRutasTab.tsx`**
    - Función `normalizeEtapa()` - Líneas 65-98
    - Agregado manejo de "Instalacion"
    - Eliminado `.includes('impresion')` problemático
    - Array `etapas` - Línea 124: Agregado 'Instalacion'
 
+4. **`src/hooks/useRutaPasos.ts`**
+   - Mejorado logging para debugging
+   - Normalización correcta de etapas legacy
+
+5. **`src/components/rutas/RutaPasosEditor.tsx`**
+   - Logging agregado para filtrado de pasos
+   - Array ETAPAS incluye 'Instalacion'
+
+6. **`vite.config.ts`**
+   - Console.logs habilitados en desarrollo para debugging
+
 ## ✅ Verificación
 
+- ✅ Migración aplicada exitosamente en Supabase
 - ✅ El proyecto compila sin errores: `npm run build`
+- ✅ Trigger de base de datos actualizado
 - ✅ Todas las etapas están correctamente mapeadas:
   - Pre-prensa ✓
   - Produccion ✓
