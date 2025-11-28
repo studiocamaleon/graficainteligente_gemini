@@ -141,19 +141,16 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
             return false;
           }
 
-          // Validar cantidad m\u00ednima en MT2 si aplica
-          if (config.cantidad_minima && linea.mt2_calculado && linea.mt2_calculado < config.cantidad_minima) {
-            return false;
-          }
+          // NOTA: NO validamos cantidad_minima aquí
+          // La cantidad mínima se aplica al TOTAL ACUMULADO en el pricing, no a cada línea
+          // Esto permite ingresar líneas con medidas reales menores al mínimo
         } else if (config.tipo_venta_real === 'mt_lineal') {
           if (!linea.ancho_seleccionado || !linea.metros_lineales || linea.metros_lineales <= 0) {
             return false;
           }
-
-          // Validar cantidad m\u00ednima en metros lineales si aplica
-          if (config.cantidad_minima && linea.metros_lineales < config.cantidad_minima) {
-            return false;
-          }
+          // NOTA: NO validamos cantidad_minima aquí
+          // La cantidad mínima se aplica al TOTAL ACUMULADO en el pricing, no a cada línea
+          // Esto permite ingresar líneas con medidas reales menores al mínimo
         }
 
         // Validar cantidad de unidades
