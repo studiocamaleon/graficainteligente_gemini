@@ -7,30 +7,51 @@ import type { OrdenItemRuta, TipoEtapaRuta } from '../types/database';
  * Normaliza el valor de tipo_etapa a uno de los valores válidos del enum
  * Esta función asegura que los datos existentes en BD se lean correctamente
  *
+ * Maneja 4 tipos de etapa:
+ * - 'pre_prensa': Pre-prensa, diseño, preparación
+ * - 'principal': Producción, impresión, proceso principal
+ * - 'post_prensa': Terminación, acabados, post-proceso
+ * - 'instalacion': Instalación, montaje, entrega en sitio
+ *
  * IMPORTANTE: El orden de las verificaciones es crítico para evitar falsos positivos
+ * - 'instalacion' se verifica ANTES de otros checks
+ * - 'post_prensa' se verifica ANTES de 'pre_prensa' (evitar conflicto con substring)
  */
 function normalizarTipoEtapa(etapa: string): TipoEtapaRuta {
   const etapaLower = etapa.toLowerCase().replace(/[-\s]/g, '_');
 
   // 1. Si ya está normalizado, devolver sin cambios
-  if (etapaLower === 'pre_prensa' || etapaLower === 'principal' || etapaLower === 'post_prensa') {
+  if (etapaLower === 'pre_prensa' ||
+      etapaLower === 'principal' ||
+      etapaLower === 'post_prensa' ||
+      etapaLower === 'instalacion') {
     return etapaLower as TipoEtapaRuta;
   }
 
-  // 2. Post-prensa (verificar ANTES que pre para evitar que "post_prensa" sea capturado por "pre")
+  // 2. Instalacion (verificar ANTES de otros checks para evitar conversión errónea)
+  if (etapaLower.includes('instalacion')) {
+    return 'instalacion';
+  }
+
+  // 3. Post-prensa (verificar ANTES que pre para evitar que "post_prensa" sea capturado por "pre")
   if (etapaLower.includes('post') ||
       etapaLower.includes('terminacion') ||
       etapaLower.includes('acabado')) {
     return 'post_prensa';
   }
 
-  // 3. Pre-prensa (usar condiciones más específicas)
+  // 4. Pre-prensa (usar condiciones más específicas)
   if (etapaLower.startsWith('pre') || etapaLower.includes('_pre_')) {
     return 'pre_prensa';
   }
 
-  // 4. Principal por defecto (producción, impresión, etc.)
-  return 'principal';
+  // 5. Produccion/Principal
+  if (etapaLower.includes('produccion') || etapaLower.includes('principal')) {
+    return 'principal';
+  }
+
+  // 6. Fallback: devolver valor original
+  return etapa as TipoEtapaRuta;
 }
 
 interface UseOrdenItemRutasOptions {
