@@ -3,7 +3,7 @@ import { Card } from '../ui/Card';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import type { ClienteConSaldo } from '../../types/database';
-import { calcularProximoCierre, getDescripcionAcuerdo } from '../../utils/liquidacionHelpers';
+import { calcularProximoCierre } from '../../utils/liquidacionHelpers';
 
 interface ClienteCardProps {
   cliente: ClienteConSaldo;
@@ -86,9 +86,6 @@ export function ClienteCard({ cliente, onVerEstadoCuenta, onNuevaLiquidacion }: 
             <div className="flex-1">
               <p className="text-xs text-blue-600 font-medium">
                 Próximo cierre: {calcularProximoCierre(cliente as any)}
-              </p>
-              <p className="text-xs text-blue-500">
-                {getDescripcionAcuerdo(cliente as any)}
               </p>
             </div>
           </div>
