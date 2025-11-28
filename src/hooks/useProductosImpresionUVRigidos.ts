@@ -8,14 +8,16 @@ export interface ProductoImpresionUVRigido {
   categoria_id: string;
   nombre: string;
   descripcion: string | null;
-  codigo_interno: string | null;
+  tecnologia_id: string;
+  tintas: string[];
   ruta_produccion_id: string | null;
-  limite_ancho_cm: number | null;
-  limite_alto_cm: number | null;
-  material_cliente_permitido: boolean;
-  servicios: string[];
-  acabados: string[];
-  is_active: boolean;
+  permite_material_cliente: boolean;
+  ancho_minimo: number | null;
+  ancho_maximo: number | null;
+  alto_minimo: number | null;
+  alto_maximo: number | null;
+  cantidad_minima: number;
+  activo: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -23,17 +25,19 @@ export interface ProductoImpresionUVRigido {
 export interface CreateProductoUVInput {
   nombre: string;
   descripcion?: string;
-  codigo_interno?: string;
+  tecnologia_id: string;
+  tintas: string[];
   ruta_produccion_id?: string;
-  limite_ancho_cm?: number;
-  limite_alto_cm?: number;
-  material_cliente_permitido?: boolean;
-  servicios?: string[];
-  acabados?: string[];
+  permite_material_cliente?: boolean;
+  ancho_minimo?: number;
+  ancho_maximo?: number;
+  alto_minimo?: number;
+  alto_maximo?: number;
+  cantidad_minima?: number;
 }
 
 export interface UpdateProductoUVInput extends Partial<CreateProductoUVInput> {
-  is_active?: boolean;
+  activo?: boolean;
 }
 
 export function useProductosImpresionUVRigidos() {
@@ -92,19 +96,24 @@ export function useProductosImpresionUVRigidos() {
           categoria_id: '00000000-0000-0000-0000-000000000008',
           nombre: input.nombre,
           descripcion: input.descripcion || null,
-          codigo_interno: input.codigo_interno || null,
+          tecnologia_id: input.tecnologia_id,
+          tintas: input.tintas,
           ruta_produccion_id: input.ruta_produccion_id || null,
-          limite_ancho_cm: input.limite_ancho_cm || null,
-          limite_alto_cm: input.limite_alto_cm || null,
-          material_cliente_permitido: input.material_cliente_permitido ?? true,
-          servicios: input.servicios || [],
-          acabados: input.acabados || [],
+          permite_material_cliente: input.permite_material_cliente ?? true,
+          ancho_minimo: input.ancho_minimo || null,
+          ancho_maximo: input.ancho_maximo || null,
+          alto_minimo: input.alto_minimo || null,
+          alto_maximo: input.alto_maximo || null,
+          cantidad_minima: input.cantidad_minima ?? 1,
         },
       ])
       .select()
       .single();
 
-    if (createError) throw createError;
+    if (createError) {
+      console.error('Error saving producto:', createError);
+      throw createError;
+    }
     if (!data) throw new Error('No se pudo crear el producto');
 
     await fetchProductos();

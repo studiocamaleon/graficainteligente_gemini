@@ -3,9 +3,10 @@ import { Card } from '../../ui/Card';
 import { Input } from '../../ui/Input';
 import { Button } from '../../ui/Button';
 import { Switch } from '../../ui/Switch';
-import { ServiciosSelector } from '../shared/ServiciosSelector';
-import { AcabadosSelector } from '../shared/AcabadosSelector';
+import { Select } from '../../ui/Select';
 import { RutaSelector } from '../../rutas/RutaSelector';
+import { useTecnologias } from '../../../hooks/useTecnologias';
+import { useTecnologiaTintas } from '../../../hooks/useTecnologiaTintas';
 import { CATEGORIA_IMPRESION_UV_RIGIDOS_ID } from '../../../constants/categorias';
 import type {
   CreateProductoUVInput,
@@ -21,8 +22,13 @@ interface ProductoUVFormProps {
 
 interface FormErrors {
   nombre?: string;
-  limiteAncho?: string;
-  limiteAlto?: string;
+  tecnologia_id?: string;
+  tintas?: string;
+  ancho_minimo?: string;
+  ancho_maximo?: string;
+  alto_minimo?: string;
+  alto_maximo?: string;
+  cantidad_minima?: string;
 }
 
 export function ProductoUVForm({
@@ -33,26 +39,37 @@ export function ProductoUVForm({
 }: ProductoUVFormProps) {
   const [nombre, setNombre] = useState('');
   const [descripcion, setDescripcion] = useState('');
-  const [codigoInterno, setCodigoInterno] = useState('');
-  const [limiteAnchoCm, setLimiteAnchoCm] = useState<number | undefined>(undefined);
-  const [limiteAltoCm, setLimiteAltoCm] = useState<number | undefined>(undefined);
-  const [materialClientePermitido, setMaterialClientePermitido] = useState(true);
-  const [servicios, setServicios] = useState<string[]>([]);
-  const [acabados, setAcabados] = useState<string[]>([]);
+  const [tecnologiaId, setTecnologiaId] = useState('');
+  const [selectedTintas, setSelectedTintas] = useState<string[]>([]);
   const [rutaProduccionId, setRutaProduccionId] = useState('');
+  const [permiteMaterialCliente, setPermiteMaterialCliente] = useState(true);
+  const [anchoMinimo, setAnchoMinimo] = useState<number | undefined>(undefined);
+  const [anchoMaximo, setAnchoMaximo] = useState<number | undefined>(undefined);
+  const [altoMinimo, setAltoMinimo] = useState<number | undefined>(undefined);
+  const [altoMaximo, setAltoMaximo] = useState<number | undefined>(undefined);
+  const [cantidadMinima, setCantidadMinima] = useState<number>(1);
   const [errors, setErrors] = useState<FormErrors>({});
+
+  const { tecnologias, loading: loadingTecnologias } = useTecnologias();
+  const { tintas: tintasDisponibles, loading: loadingTintas } = useTecnologiaTintas(tecnologiaId);
+
+  const tecnologiasUV = tecnologias.filter(t =>
+    t.nombre.toLowerCase().includes('uv') && t.is_active
+  );
 
   useEffect(() => {
     if (producto) {
       setNombre(producto.nombre);
       setDescripcion(producto.descripcion || '');
-      setCodigoInterno(producto.codigo_interno || '');
-      setLimiteAnchoCm(producto.limite_ancho_cm || undefined);
-      setLimiteAltoCm(producto.limite_alto_cm || undefined);
-      setMaterialClientePermitido(producto.material_cliente_permitido);
-      setServicios(producto.servicios);
-      setAcabados(producto.acabados);
+      setTecnologiaId(producto.tecnologia_id);
+      setSelectedTintas(producto.tintas);
       setRutaProduccionId(producto.ruta_produccion_id || '');
+      setPermiteMaterialCliente(producto.permite_material_cliente);
+      setAnchoMinimo(producto.ancho_minimo || undefined);
+      setAnchoMaximo(producto.ancho_maximo || undefined);
+      setAltoMinimo(producto.alto_minimo || undefined);
+      setAltoMaximo(producto.alto_maximo || undefined);
+      setCantidadMinima(producto.cantidad_minima);
     }
   }, [producto]);
 
@@ -63,12 +80,40 @@ export function ProductoUVForm({
       newErrors.nombre = 'El nombre es obligatorio';
     }
 
-    if (limiteAnchoCm !== undefined && limiteAnchoCm <= 0) {
-      newErrors.limiteAncho = 'El límite de ancho debe ser mayor a 0';
+    if (!tecnologiaId) {
+      newErrors.tecnologia_id = 'Debe seleccionar una tecnología';
     }
 
-    if (limiteAltoCm !== undefined && limiteAltoCm <= 0) {
-      newErrors.limiteAlto = 'El límite de alto debe ser mayor a 0';
+    if (selectedTintas.length === 0) {
+      newErrors.tintas = 'Debe seleccionar al menos una configuración de tintas';
+    }
+
+    if (anchoMinimo !== undefined && anchoMinimo < 0) {
+      newErrors.ancho_minimo = 'El ancho mínimo no puede ser negativo';
+    }
+
+    if (anchoMaximo !== undefined && anchoMaximo < 0) {
+      newErrors.ancho_maximo = 'El ancho máximo no puede ser negativo';
+    }
+
+    if (anchoMinimo !== undefined && anchoMaximo !== undefined && anchoMinimo > anchoMaximo) {
+      newErrors.ancho_maximo = 'El ancho máximo debe ser mayor al mínimo';
+    }
+
+    if (altoMinimo !== undefined && altoMinimo < 0) {
+      newErrors.alto_minimo = 'El alto mínimo no puede ser negativo';
+    }
+
+    if (altoMaximo !== undefined && altoMaximo < 0) {
+      newErrors.alto_maximo = 'El alto máximo no puede ser negativo';
+    }
+
+    if (altoMinimo !== undefined && altoMaximo !== undefined && altoMinimo > altoMaximo) {
+      newErrors.alto_maximo = 'El alto máximo debe ser mayor al mínimo';
+    }
+
+    if (cantidadMinima < 1) {
+      newErrors.cantidad_minima = 'La cantidad mínima debe ser al menos 1';
     }
 
     setErrors(newErrors);
@@ -83,16 +128,28 @@ export function ProductoUVForm({
     const data: CreateProductoUVInput = {
       nombre: nombre.trim(),
       descripcion: descripcion.trim() || undefined,
-      codigo_interno: codigoInterno.trim() || undefined,
-      limite_ancho_cm: limiteAnchoCm,
-      limite_alto_cm: limiteAltoCm,
-      material_cliente_permitido: materialClientePermitido,
-      servicios,
-      acabados,
+      tecnologia_id: tecnologiaId,
+      tintas: selectedTintas,
       ruta_produccion_id: rutaProduccionId || undefined,
+      permite_material_cliente: permiteMaterialCliente,
+      ancho_minimo: anchoMinimo,
+      ancho_maximo: anchoMaximo,
+      alto_minimo: altoMinimo,
+      alto_maximo: altoMaximo,
+      cantidad_minima: cantidadMinima,
     };
 
     await onSubmit(data);
+  };
+
+  const handleTintaToggle = (tinta: string) => {
+    setSelectedTintas(prev => {
+      if (prev.includes(tinta)) {
+        return prev.filter(t => t !== tinta);
+      } else {
+        return [...prev, tinta];
+      }
+    });
   };
 
   return (
@@ -112,22 +169,6 @@ export function ProductoUVForm({
             placeholder="Ej: Impresión UV sobre Acrílico"
           />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Input
-              label="Código Interno"
-              value={codigoInterno}
-              onChange={(e) => setCodigoInterno(e.target.value)}
-              placeholder="Código interno opcional"
-            />
-
-            <RutaSelector
-              label="Ruta de Producción"
-              value={rutaProduccionId}
-              onChange={setRutaProduccionId}
-              categoriaId={CATEGORIA_IMPRESION_UV_RIGIDOS_ID}
-            />
-          </div>
-
           <div className="space-y-2">
             <label className="block text-sm font-medium text-gray-700">
               Descripción
@@ -140,28 +181,109 @@ export function ProductoUVForm({
               placeholder="Descripción opcional del producto"
             />
           </div>
+
+          <RutaSelector
+            label="Ruta de Producción"
+            value={rutaProduccionId}
+            onChange={setRutaProduccionId}
+            categoriaId={CATEGORIA_IMPRESION_UV_RIGIDOS_ID}
+          />
         </div>
       </Card>
 
       <Card>
         <div className="p-6 space-y-4">
           <h3 className="text-lg font-semibold text-gray-900">
-            Límites de Dimensiones (por pieza)
+            Tecnología e Impresión
+          </h3>
+
+          <Select
+            label="Tecnología UV"
+            value={tecnologiaId}
+            onChange={(e) => {
+              setTecnologiaId(e.target.value);
+              setSelectedTintas([]);
+            }}
+            error={errors.tecnologia_id}
+            required
+            disabled={loadingTecnologias}
+          >
+            <option value="">Seleccionar tecnología...</option>
+            {tecnologiasUV.map(tec => (
+              <option key={tec.id} value={tec.id}>
+                {tec.nombre}
+              </option>
+            ))}
+          </Select>
+
+          {tecnologiaId && (
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Configuraciones de Tintas *
+              </label>
+              {errors.tintas && (
+                <p className="text-sm text-red-600">{errors.tintas}</p>
+              )}
+              {loadingTintas ? (
+                <p className="text-sm text-gray-500">Cargando tintas disponibles...</p>
+              ) : tintasDisponibles.length === 0 ? (
+                <p className="text-sm text-gray-500">
+                  No hay configuraciones de tintas para esta tecnología
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {tintasDisponibles.map(tinta => (
+                    <label
+                      key={tinta.id}
+                      className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedTintas.includes(tinta.nombre)}
+                        onChange={() => handleTintaToggle(tinta.nombre)}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="font-medium">{tinta.nombre}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </Card>
+
+      <Card>
+        <div className="p-6 space-y-4">
+          <h3 className="text-lg font-semibold text-gray-900">
+            Límites de Dimensiones
           </h3>
           <p className="text-sm text-gray-600">
-            Define los límites máximos permitidos para cada pieza individual.
-            Dejar en blanco si no hay límites.
+            Define los límites de tamaño para cada pieza. Dejar en blanco si no hay límites.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
               type="number"
-              label="Ancho Máximo (cm)"
-              value={limiteAnchoCm || ''}
+              label="Ancho Mínimo (cm)"
+              value={anchoMinimo || ''}
               onChange={(e) =>
-                setLimiteAnchoCm(e.target.value ? Number(e.target.value) : undefined)
+                setAnchoMinimo(e.target.value ? Number(e.target.value) : undefined)
               }
-              error={errors.limiteAncho}
+              error={errors.ancho_minimo}
+              placeholder="Ej: 5"
+              min="0"
+              step="0.01"
+            />
+
+            <Input
+              type="number"
+              label="Ancho Máximo (cm)"
+              value={anchoMaximo || ''}
+              onChange={(e) =>
+                setAnchoMaximo(e.target.value ? Number(e.target.value) : undefined)
+              }
+              error={errors.ancho_maximo}
               placeholder="Ej: 300"
               min="0"
               step="0.01"
@@ -169,17 +291,41 @@ export function ProductoUVForm({
 
             <Input
               type="number"
-              label="Alto Máximo (cm)"
-              value={limiteAltoCm || ''}
+              label="Alto Mínimo (cm)"
+              value={altoMinimo || ''}
               onChange={(e) =>
-                setLimiteAltoCm(e.target.value ? Number(e.target.value) : undefined)
+                setAltoMinimo(e.target.value ? Number(e.target.value) : undefined)
               }
-              error={errors.limiteAlto}
+              error={errors.alto_minimo}
+              placeholder="Ej: 5"
+              min="0"
+              step="0.01"
+            />
+
+            <Input
+              type="number"
+              label="Alto Máximo (cm)"
+              value={altoMaximo || ''}
+              onChange={(e) =>
+                setAltoMaximo(e.target.value ? Number(e.target.value) : undefined)
+              }
+              error={errors.alto_maximo}
               placeholder="Ej: 200"
               min="0"
               step="0.01"
             />
           </div>
+
+          <Input
+            type="number"
+            label="Cantidad Mínima por Pedido"
+            value={cantidadMinima}
+            onChange={(e) => setCantidadMinima(Number(e.target.value))}
+            error={errors.cantidad_minima}
+            required
+            min="1"
+            step="1"
+          />
         </div>
       </Card>
 
@@ -199,30 +345,10 @@ export function ProductoUVForm({
               </p>
             </div>
             <Switch
-              checked={materialClientePermitido}
-              onChange={setMaterialClientePermitido}
+              checked={permiteMaterialCliente}
+              onChange={setPermiteMaterialCliente}
             />
           </div>
-        </div>
-      </Card>
-
-      <Card>
-        <div className="p-6 space-y-4">
-          <h3 className="text-lg font-semibold text-gray-900">
-            Servicios y Acabados
-          </h3>
-
-          <ServiciosSelector
-            value={servicios}
-            onChange={setServicios}
-            categoriaId={CATEGORIA_IMPRESION_UV_RIGIDOS_ID}
-          />
-
-          <AcabadosSelector
-            value={acabados}
-            onChange={setAcabados}
-            categoriaId={CATEGORIA_IMPRESION_UV_RIGIDOS_ID}
-          />
         </div>
       </Card>
 
