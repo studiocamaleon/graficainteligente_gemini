@@ -10,6 +10,7 @@ import { supabase } from '../../../../lib/supabase';
 import type { PrecioGFInput } from '../../../../hooks/useAllProductosGranFormatoPrecios';
 import { usePDFExport } from '../../../../hooks/usePDFExport';
 import { GranFormatoPDFTemplate } from '../../../../components/pdf/templates/GranFormatoPDFTemplate';
+import { useAuth } from '../../../../hooks/useAuth';
 
 interface PreciosSnapshot {
   [key: string]: number;
@@ -57,6 +58,11 @@ const getChangedPrecios = (
 };
 
 export function PreciosGranFormatoTab() {
+  const { profile } = useAuth();
+  const canEditPrecios = useMemo(() => {
+    return !['operador_diseno', 'operador_taller'].includes(profile?.role || '');
+  }, [profile?.role]);
+
   const {
     productos,
     tecnologiasAgrupadas,
@@ -334,14 +340,17 @@ export function PreciosGranFormatoTab() {
             key={tecnologia.id}
             tecnologia={tecnologia}
             onPreciosChange={tecnologia.handleChange}
+            readonly={!canEditPrecios}
           />
         ))}
 
-        <FloatingPreciosSaveButton
-          hasChanges={hasUnsavedChangesLocal()}
-          onSave={saveAllPreciosWithTecnologias}
-          isSaving={isSaving}
-        />
+        {canEditPrecios && (
+          <FloatingPreciosSaveButton
+            hasChanges={hasUnsavedChangesLocal()}
+            onSave={saveAllPreciosWithTecnologias}
+            isSaving={isSaving}
+          />
+        )}
       </div>
 
       <div

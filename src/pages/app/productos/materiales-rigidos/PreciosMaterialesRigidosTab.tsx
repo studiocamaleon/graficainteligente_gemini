@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Package, Loader2 } from 'lucide-react';
 import { Card } from '../../../../components/ui/Card';
 import { EmptyState } from '../../../../components/ui/EmptyState';
@@ -8,8 +8,14 @@ import { FloatingPreciosSaveButton } from '../../../../components/productos/impr
 import { useAllProductosMaterialesRigidosPrecios } from '../../../../hooks/useAllProductosMaterialesRigidosPrecios';
 import { usePDFExport } from '../../../../hooks/usePDFExport';
 import { MaterialesRigidosPDFTemplate } from '../../../../components/pdf/templates/MaterialesRigidosPDFTemplate';
+import { useAuth } from '../../../../hooks/useAuth';
 
 export function PreciosMaterialesRigidosTab() {
+  const { profile } = useAuth();
+  const canEditPrecios = useMemo(() => {
+    return !['operador_diseno', 'operador_taller'].includes(profile?.role || '');
+  }, [profile?.role]);
+
   const {
     productosAgrupados,
     preciosModificados,
@@ -108,15 +114,18 @@ export function PreciosMaterialesRigidosTab() {
               calcularPrecioM2={calcularPrecioM2}
               onPrecioChange={updatePrecioForProducto}
               productosModificados={productosModificadosSet}
+              readonly={!canEditPrecios}
             />
           );
         })}
 
-        <FloatingPreciosSaveButton
-          hasChanges={hasUnsavedChanges()}
-          onSave={saveAllPrecios}
-          isSaving={isSaving}
-        />
+        {canEditPrecios && (
+          <FloatingPreciosSaveButton
+            hasChanges={hasUnsavedChanges()}
+            onSave={saveAllPrecios}
+            isSaving={isSaving}
+          />
+        )}
       </div>
 
       <div

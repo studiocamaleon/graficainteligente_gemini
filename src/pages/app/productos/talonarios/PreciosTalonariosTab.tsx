@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Package, Loader2 } from 'lucide-react';
 import { Card } from '../../../../components/ui/Card';
 import { EmptyState } from '../../../../components/ui/EmptyState';
@@ -8,8 +8,14 @@ import { FloatingPreciosSaveButton } from '../../../../components/productos/talo
 import { useAllProductosTalonariosPrecios } from '../../../../hooks/useAllProductosTalonariosPrecios';
 import { usePDFExport } from '../../../../hooks/usePDFExport';
 import { TalonariosPDFTemplate } from '../../../../components/pdf/templates/TalonariosPDFTemplate';
+import { useAuth } from '../../../../hooks/useAuth';
 
 export function PreciosTalonariosTab() {
+  const { profile } = useAuth();
+  const canEditPrecios = useMemo(() => {
+    return !['operador_diseno', 'operador_taller'].includes(profile?.role || '');
+  }, [profile?.role]);
+
   const {
     productos,
     isLoading,
@@ -94,14 +100,17 @@ export function PreciosTalonariosTab() {
             key={producto.id}
             producto={producto}
             onPreciosChange={updatePreciosForProducto}
+            readonly={!canEditPrecios}
           />
         ))}
 
-        <FloatingPreciosSaveButton
-          hasChanges={hasUnsavedChanges()}
-          onSave={saveAllPrecios}
-          isSaving={isSaving}
-        />
+        {canEditPrecios && (
+          <FloatingPreciosSaveButton
+            hasChanges={hasUnsavedChanges()}
+            onSave={saveAllPrecios}
+            isSaving={isSaving}
+          />
+        )}
       </div>
 
       <div

@@ -8,13 +8,14 @@ import type { PrecioInput } from '../../../hooks/useProductosTalonariosPrecios';
 interface Props {
   producto: ProductoTalonarioParaPrecios;
   onPreciosChange: (productoId: string, precios: PrecioInput[]) => void;
+  readonly?: boolean;
 }
 
 interface PreciosPorCombinacion {
   [key: string]: PrecioInput[]; // key format: "ancho-alto-tintaId"
 }
 
-export function ProductoTalonarioPreciosCard({ producto, onPreciosChange }: Props) {
+export function ProductoTalonarioPreciosCard({ producto, onPreciosChange, readonly = false }: Props) {
   const [preciosPorCombinacion, setPreciosPorCombinacion] = useState<PreciosPorCombinacion>({});
   const [isInitialized, setIsInitialized] = useState(false);
   const [lastProductoId, setLastProductoId] = useState<string | null>(null);
@@ -187,6 +188,7 @@ export function ProductoTalonarioPreciosCard({ producto, onPreciosChange }: Prop
                           onChange={(precios) =>
                             handleCombinacionChange(group.medida, tinta, precios)
                           }
+                          readonly={readonly}
                         />
                       );
                     })}
@@ -215,6 +217,7 @@ export function ProductoTalonarioPreciosCard({ producto, onPreciosChange }: Prop
                           onChange={(precios) =>
                             handleCombinacionChange(group.medida, tinta, precios)
                           }
+                          readonly={readonly}
                         />
                       );
                     })}

@@ -18,6 +18,7 @@ interface Props {
   unidadMedida: string;
   preciosActuales: Map<string, Map<string, number>>;
   onPreciosChange: (precios: PrecioGFInput[]) => void;
+  readonly?: boolean;
 }
 
 interface PrecioState {
@@ -32,6 +33,7 @@ export function GranFormatoMatrizPrecios({
   unidadMedida,
   preciosActuales,
   onPreciosChange,
+  readonly = false,
 }: Props) {
   const [preciosState, setPreciosState] = useState<PrecioState>({});
   const isInitialized = useRef(false);
@@ -172,6 +174,7 @@ export function GranFormatoMatrizPrecios({
                       onChange={(e) => handlePrecioChange(producto.id, rango, e.target.value)}
                       placeholder="$"
                       className="w-full"
+                      disabled={readonly}
                     />
                   </td>
                 );

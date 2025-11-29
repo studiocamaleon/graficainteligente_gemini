@@ -13,6 +13,7 @@ import { normalizeRangoMin, normalizeRangoMax } from '../../../utils/rangoUtils'
 interface Props {
   tecnologia: TecnologiaAgrupada;
   onPreciosChange: (precios: PrecioGFInput[]) => void;
+  readonly?: boolean;
 }
 
 interface PreciosCargados {
@@ -89,12 +90,13 @@ const MatrizPreciosWrapper = ({
         unidadMedida={unidadMedida}
         preciosActuales={preciosActuales}
         onPreciosChange={handlePreciosChange}
+        readonly={readonly}
       />
     </div>
   );
 };
 
-export function GranFormatoTecnologiaSection({ tecnologia, onPreciosChange }: Props) {
+export function GranFormatoTecnologiaSection({ tecnologia, onPreciosChange, readonly = false }: Props) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [preciosPorTinta, setPreciosPorTinta] = useState<Map<string, PrecioGFInput[]>>(
     new Map()

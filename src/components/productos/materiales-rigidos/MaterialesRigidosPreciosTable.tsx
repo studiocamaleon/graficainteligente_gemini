@@ -14,6 +14,7 @@ interface Props {
   calcularPrecioM2: (precioPlaca: number, ancho: number, alto: number) => number;
   onPrecioChange: (productoComboKey: string, precio: PrecioMRInput) => void;
   productosModificados: Set<string>;
+  readonly?: boolean;
 }
 
 export function MaterialesRigidosPreciosTable({
@@ -24,6 +25,7 @@ export function MaterialesRigidosPreciosTable({
   calcularPrecioM2,
   onPrecioChange,
   productosModificados,
+  readonly = false,
 }: Props) {
   const [preciosLocales, setPreciosLocales] = useState<Map<string, number>>(new Map());
 
@@ -209,6 +211,7 @@ export function MaterialesRigidosPreciosTable({
                       onChange={(e) => handlePrecioPlacaChange(producto, e.target.value)}
                       placeholder="0.00"
                       className="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                      disabled={readonly}
                     />
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
