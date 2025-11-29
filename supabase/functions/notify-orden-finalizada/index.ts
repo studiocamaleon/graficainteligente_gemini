@@ -49,6 +49,100 @@ function formatPhoneNumber(phone: string): string {
   return cleaned;
 }
 
+function formatBusinessHours(businessHours: any[]): string {
+  if (!businessHours || !Array.isArray(businessHours) || businessHours.length === 0) {
+    return 'Consultar horarios';
+  }
+
+  const openDays = businessHours.filter((h: any) => h.is_open);
+
+  if (openDays.length === 0) {
+    return 'Cerrado temporalmente';
+  }
+
+  const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
+  const formatTimeRange = (
+    opening1: string | null,
+    closing1: string | null,
+    opening2: string | null,
+    closing2: string | null
+  ): string => {
+    if (!opening1 || !closing1) return '';
+
+    let result = `${opening1}-${closing1}`;
+
+    if (opening2 && closing2) {
+      result += ` y ${opening2}-${closing2}`;
+    }
+
+    return result;
+  };
+
+  type DayGroup = {
+    days: number[];
+    schedule: string;
+  };
+
+  const groups: DayGroup[] = [];
+
+  for (const day of openDays) {
+    const schedule = formatTimeRange(
+      day.opening_time_1,
+      day.closing_time_1,
+      day.opening_time_2,
+      day.closing_time_2
+    );
+
+    if (!schedule) continue;
+
+    const existingGroup = groups.find(g => g.schedule === schedule);
+
+    if (existingGroup) {
+      existingGroup.days.push(day.day_of_week);
+    } else {
+      groups.push({
+        days: [day.day_of_week],
+        schedule,
+      });
+    }
+  }
+
+  groups.forEach(g => g.days.sort((a, b) => a - b));
+
+  const result = groups.map(group => {
+    const { days, schedule } = group;
+
+    if (days.length === 1) {
+      return `${dayNames[days[0]]}: ${schedule}`;
+    }
+
+    const ranges: number[][] = [];
+    let currentRange = [days[0]];
+
+    for (let i = 1; i < days.length; i++) {
+      if (days[i] === days[i - 1] + 1) {
+        currentRange.push(days[i]);
+      } else {
+        ranges.push(currentRange);
+        currentRange = [days[i]];
+      }
+    }
+    ranges.push(currentRange);
+
+    const daysStr = ranges.map(range => {
+      if (range.length === 1) {
+        return dayNames[range[0]];
+      }
+      return `${dayNames[range[0]]} a ${dayNames[range[range.length - 1]]}`;
+    }).join(', ');
+
+    return `${daysStr}: ${schedule}`;
+  });
+
+  return result.join('\n');
+}
+
 function formatItemCopiado(item: any): string {
   const cantidad = item.cantidad_unidades;
   const precio = parseFloat(item.precio_unitario || 0).toFixed(2);
@@ -88,7 +182,8 @@ function generateOrdenTrabajoFinalizadaMessage(
   orden: any,
   cliente: any,
   company: any,
-  saldoPendiente: number
+  saldoPendiente: number,
+  horariosFormateados: string
 ): string {
   const nombreCliente = cliente.nombre_fantasia || cliente.razon_social;
   const total = parseFloat(orden.total || 0).toFixed(2);
@@ -104,9 +199,9 @@ function generateOrdenTrabajoFinalizadaMessage(
     mensaje += `${company.address}\n\n`;
   }
 
-  if (company.business_hours) {
+  if (horariosFormateados && horariosFormateados !== 'Consultar horarios') {
     mensaje += `🕐 *Horarios de atención:*\n`;
-    mensaje += `${company.business_hours}\n\n`;
+    mensaje += `${horariosFormateados}\n\n`;
   }
 
   if (company.contact_phone) {
@@ -128,7 +223,8 @@ function generateOrdenCopiadoFinalizadaMessage(
   orden: any,
   cliente: any,
   company: any,
-  saldoPendiente: number
+  saldoPendiente: number,
+  horariosFormateados: string
 ): string {
   const nombreCliente = cliente.nombre_fantasia || cliente.razon_social;
   const total = parseFloat(orden.total || 0).toFixed(2);
@@ -145,9 +241,9 @@ function generateOrdenCopiadoFinalizadaMessage(
     mensaje += `${company.address}\n\n`;
   }
 
-  if (company.business_hours) {
+  if (horariosFormateados && horariosFormateados !== 'Consultar horarios') {
     mensaje += `🕐 *Horarios de atención:*\n`;
-    mensaje += `${company.business_hours}\n\n`;
+    mensaje += `${horariosFormateados}\n\n`;
   }
 
   if (company.contact_phone) {
@@ -418,6 +514,22 @@ Deno.serve(async (req: Request) => {
       throw new Error('No se encontró información de la empresa');
     }
 
+    // Obtener horarios de atención de la empresa
+    const { data: businessHours } = await supabase
+      .from('company_business_hours')
+      .select('*')
+      .eq('company_id', company_id)
+      .order('day_of_week', { ascending: true });
+
+    console.log('[Notify] Horarios obtenidos:', {
+      count: businessHours?.length || 0,
+      businessHours
+    });
+
+    // Formatear horarios para el mensaje
+    const horariosFormateados = formatBusinessHours(businessHours || []);
+    console.log('[Notify] Horarios formateados:', horariosFormateados);
+
     const isConnected = await checkWhatsAppConnection(company_id);
 
     if (!isConnected) {
@@ -438,8 +550,8 @@ Deno.serve(async (req: Request) => {
     console.log('[Notify] 📝 Generando mensaje para tipo:', tipo_orden);
 
     const mensaje = tipo_orden === 'trabajo'
-      ? generateOrdenTrabajoFinalizadaMessage(orden, cliente, company, saldoPendiente)
-      : generateOrdenCopiadoFinalizadaMessage(orden, cliente, company, saldoPendiente);
+      ? generateOrdenTrabajoFinalizadaMessage(orden, cliente, company, saldoPendiente, horariosFormateados)
+      : generateOrdenCopiadoFinalizadaMessage(orden, cliente, company, saldoPendiente, horariosFormateados);
 
     console.log('[Notify] ✅ Mensaje generado, longitud:', mensaje.length);
 

@@ -113,11 +113,16 @@ export function formatTimeForDisplay(time: string): string {
 }
 
 export function formatBusinessHoursForDisplay(hours: any[]): string {
+  console.log('🕐 formatBusinessHoursForDisplay llamado con:', hours);
+  console.log('🕐 Tipo:', typeof hours, 'Es array?:', Array.isArray(hours), 'Length:', hours?.length);
+
   if (!hours || !Array.isArray(hours) || hours.length === 0) {
+    console.warn('⚠️ Horarios vacíos o inválidos:', { hours, isArray: Array.isArray(hours) });
     return 'Consultar horarios';
   }
 
   const openDays = hours.filter(h => h.is_open);
+  console.log('🕐 Días abiertos filtrados:', openDays.length);
 
   if (openDays.length === 0) {
     return 'Cerrado temporalmente';
