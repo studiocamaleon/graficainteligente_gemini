@@ -444,10 +444,7 @@ export interface ConfiguracionCondicionAcabadoConNivel {
   mapeo_niveles: Record<string, string>;
 }
 
-export interface ConfiguracionCondicionTecnologiaTinta {
-  tecnologia_id: string;
-  tinta: TintaType;
-}
+export type ConfiguracionCondicionTecnologiaTinta = Record<string, never>;
 
 export type ConfiguracionCondicion =
   | ConfiguracionCondicionServicioSinNivel

@@ -92,12 +92,7 @@ export function RutaPasoModal({ rutaId, etapa, paso, onClose, onSuccess }: RutaP
         return false;
       }
       if (tipoCondicion === 'tecnologia_tinta') {
-        if (!('tecnologia_id' in configuracionCondicion)) {
-          console.log('[RutaPasoModal] ❌ Error: Tecnología tinta sin tecnologia_id');
-          setError('Debes seleccionar una tecnología');
-          return false;
-        }
-        console.log('[RutaPasoModal] ✅ Tecnología tinta válida');
+        console.log('[RutaPasoModal] ✅ Tecnología tinta válida (evaluación automática)');
       }
     }
 
