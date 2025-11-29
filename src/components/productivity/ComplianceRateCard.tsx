@@ -85,12 +85,12 @@ export function ComplianceRateCard({ data, loading = false }: ComplianceRateCard
             </span>
           </div>
           <div className="flex items-baseline gap-2">
-            <p className={`text-6xl font-bold ${colors.text}`}>
+            <p className={`text-4xl font-bold ${colors.text}`}>
               {tasa.toFixed(1)}%
             </p>
           </div>
           <p className="text-sm text-gray-600 mt-2">
-            {data.ordenes_a_tiempo} de {data.total_ordenes_evaluadas} órdenes entregadas a tiempo
+            {data.ordenes_a_tiempo} de {data.total_ordenes_evaluadas} órdenes completadas a tiempo
           </p>
         </div>
 

@@ -158,7 +158,7 @@ export function ProductivityView() {
           <h2 className="text-xl font-semibold text-gray-900">Cumplimiento de Plazos</h2>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <div className="space-y-6 mb-6">
           <ComplianceRateCard data={tasaCumplimiento!} loading={loading} />
           <ComplianceEvolutionChart data={evolutivoTasa} loading={loading} />
         </div>
