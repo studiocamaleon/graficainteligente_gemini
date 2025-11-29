@@ -1,15 +1,15 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { TrendingUp } from 'lucide-react';
 import { Tabs } from '../../../components/ui/Tabs';
-import ReporteVentas from './reportes/ReporteVentas';
+import ReporteGeneral from './reportes/ReporteGeneral';
 
 export default function ReportesView() {
   const tabs = [
     {
-      id: 'ventas',
-      label: 'Ventas',
+      id: 'general',
+      label: 'General',
       icon: TrendingUp,
-      path: '/app/finanzas/reportes/ventas',
+      path: '/app/finanzas/reportes/general',
     },
   ];
 
@@ -18,8 +18,8 @@ export default function ReportesView() {
       <Tabs tabs={tabs} />
 
       <Routes>
-        <Route path="/" element={<Navigate to="/app/finanzas/reportes/ventas" replace />} />
-        <Route path="/ventas" element={<ReporteVentas />} />
+        <Route path="/" element={<Navigate to="/app/finanzas/reportes/general" replace />} />
+        <Route path="/general" element={<ReporteGeneral />} />
       </Routes>
     </div>
   );

@@ -1,11 +1,20 @@
-import type { VentasPorCanal } from '../../types/reportes';
+import type { VentasPorCategoria } from '../../types/reportes';
 
-interface VentasPorCanalChartProps {
-  data?: VentasPorCanal[];
+interface VentasPorCategoriaChartProps {
+  data?: VentasPorCategoria[];
   loading?: boolean;
 }
 
-export function VentasPorCanalChart({ data, loading }: VentasPorCanalChartProps) {
+const COLORS = [
+  { bg: 'bg-blue-500', text: 'text-blue-600', border: 'border-blue-500' },
+  { bg: 'bg-green-500', text: 'text-green-600', border: 'border-green-500' },
+  { bg: 'bg-orange-500', text: 'text-orange-600', border: 'border-orange-500' },
+  { bg: 'bg-purple-500', text: 'text-purple-600', border: 'border-purple-500' },
+  { bg: 'bg-pink-500', text: 'text-pink-600', border: 'border-pink-500' },
+  { bg: 'bg-teal-500', text: 'text-teal-600', border: 'border-teal-500' },
+];
+
+export function VentasPorCategoriaChart({ data, loading }: VentasPorCategoriaChartProps) {
   if (loading) {
     return (
       <div className="h-64 flex items-center justify-center">
@@ -22,33 +31,30 @@ export function VentasPorCanalChart({ data, loading }: VentasPorCanalChartProps)
     );
   }
 
-  const colors = [
-    { bg: 'bg-blue-500', text: 'text-blue-600', border: 'border-blue-500' },
-    { bg: 'bg-green-500', text: 'text-green-600', border: 'border-green-500' },
-    { bg: 'bg-orange-500', text: 'text-orange-600', border: 'border-orange-500' },
-  ];
-
   return (
     <div className="space-y-6">
       <div className="space-y-3">
         {data.map((item, index) => {
-          const color = colors[index % colors.length];
+          const color = COLORS[index % COLORS.length];
           return (
             <div key={index}>
               <div className="flex items-center justify-between mb-1">
-                <span className="text-sm font-medium text-gray-700">{item.canal}</span>
+                <div className="flex items-center gap-2">
+                  <div className={`w-3 h-3 rounded-full ${color.bg}`}></div>
+                  <span className="text-sm font-medium text-gray-700">{item.categoria_nombre}</span>
+                </div>
                 <span className="text-sm font-semibold text-gray-900">
-                  ${item.total_ventas.toFixed(2)} ({item.porcentaje_ventas.toFixed(1)}%)
+                  ${item.total_ventas.toFixed(2)} ({item.porcentaje.toFixed(1)}%)
                 </span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-3">
                 <div
                   className={`${color.bg} h-3 rounded-full transition-all duration-500`}
-                  style={{ width: `${item.porcentaje_ventas}%` }}
+                  style={{ width: `${item.porcentaje}%` }}
                 ></div>
               </div>
               <div className="flex items-center justify-between mt-1 text-xs text-gray-500">
-                <span>{item.total_ordenes} órdenes ({item.ordenes_trabajo} trabajo, {item.ordenes_copiado} copiado)</span>
+                <span>{item.total_ordenes} órdenes</span>
                 <span>Promedio: ${item.ticket_promedio.toFixed(2)}</span>
               </div>
             </div>
@@ -60,29 +66,22 @@ export function VentasPorCanalChart({ data, loading }: VentasPorCanalChartProps)
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-gray-600 border-b">
-              <th className="pb-2">Canal</th>
+              <th className="pb-2">Categoría</th>
               <th className="pb-2 text-right">Ventas</th>
-              <th className="pb-2 text-right">Órdenes</th>
               <th className="pb-2 text-right">%</th>
             </tr>
           </thead>
           <tbody>
             {data.map((item, index) => {
-              const color = colors[index % colors.length];
+              const color = COLORS[index % COLORS.length];
               return (
                 <tr key={index} className="border-b">
                   <td className="py-2 flex items-center gap-2">
                     <div className={`w-3 h-3 rounded-full ${color.bg}`}></div>
-                    {item.canal}
+                    {item.categoria_nombre}
                   </td>
                   <td className="py-2 text-right font-medium">${item.total_ventas.toFixed(2)}</td>
-                  <td className="py-2 text-right">
-                    <div className="text-xs">
-                      <div>{item.total_ordenes} total</div>
-                      <div className="text-gray-500">({item.ordenes_trabajo}T / {item.ordenes_copiado}C)</div>
-                    </div>
-                  </td>
-                  <td className="py-2 text-right">{item.porcentaje_ventas.toFixed(1)}%</td>
+                  <td className="py-2 text-right">{item.porcentaje.toFixed(1)}%</td>
                 </tr>
               );
             })}

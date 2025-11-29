@@ -1,19 +1,9 @@
 import { TrendingUp, TrendingDown, ShoppingCart, DollarSign, CreditCard, Target, Percent } from 'lucide-react';
 import { Card } from '../ui/Card';
-
-interface KPIData {
-  total_ventas: number;
-  total_ordenes: number;
-  ticket_promedio: number;
-  total_cobrado: number;
-  saldo_pendiente: number;
-  tasa_cobro: number;
-  variacion_ventas: number;
-  variacion_ordenes: number;
-}
+import type { ReporteGeneralKPIs } from '../../types/reportes';
 
 interface VentasKPICardsProps {
-  data?: KPIData;
+  data?: ReporteGeneralKPIs | null;
   loading?: boolean;
 }
 
