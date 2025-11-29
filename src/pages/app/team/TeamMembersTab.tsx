@@ -55,8 +55,10 @@ export function TeamMembersTab() {
         return 'orange';
       case 'manager':
         return 'blue';
-      case 'operator':
+      case 'operador_diseno':
         return 'green';
+      case 'operador_taller':
+        return 'teal';
       default:
         return 'gray';
     }
@@ -70,8 +72,10 @@ export function TeamMembersTab() {
         return 'Admin';
       case 'manager':
         return 'Gerente';
-      case 'operator':
-        return 'Operador';
+      case 'operador_diseno':
+        return 'Operador de Diseño';
+      case 'operador_taller':
+        return 'Operador de Taller';
       case 'viewer':
         return 'Visualizador';
       default:

@@ -105,7 +105,8 @@ export function CreateMemberModal({ isOpen, onClose, onSuccess }: CreateMemberMo
           required
         >
           <option value="viewer">Visualizador</option>
-          <option value="operator">Operador</option>
+          <option value="operador_taller">Operador de Taller</option>
+          <option value="operador_diseno">Operador de Diseño</option>
           <option value="manager">Gerente</option>
           <option value="admin">Administrador</option>
         </Select>
