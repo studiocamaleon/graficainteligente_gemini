@@ -18,13 +18,54 @@ El super_admin puede:
 
 #### Roles Predefinidos
 
-El sistema incluye 5 roles predefinidos con permisos preconfigurados:
+El sistema incluye 6 roles predefinidos con permisos preconfigurados:
 
 1. **Super Administrador** - Acceso completo a todas las funcionalidades
-2. **Administrador** - Acceso completo excepto gestión de equipo y seguridad
+2. **Administrador** - Acceso completo excepto gestión de equipo y configuración del sistema
 3. **Gerente** - Puede gestionar clientes, proveedores, órdenes y producción
-4. **Operador** - Acceso de lectura y creación en módulos operativos
-5. **Visualizador** - Solo puede ver información, sin permisos de edición
+4. **Operador de Diseño** - Gestión de órdenes, clientes y centro de copiado, con visualización de productos
+5. **Operador de Taller** - Acceso limitado solo a módulo de producción para ejecutar trabajos
+6. **Visualizador** - Solo puede ver información, sin permisos de edición
+
+### Nuevos Roles Especializados (Noviembre 2025)
+
+#### Operador de Diseño
+**Descripción**: Rol especializado para personal que gestiona órdenes, clientes y diseño de trabajos.
+
+**Acceso completo (CRUD)**:
+- Clientes
+- Órdenes de Trabajo (crear, ver, editar)
+- Centro de Copiado (todas las funcionalidades)
+
+**Acceso de solo lectura**:
+- Dashboard
+- Productos (todos los tipos)
+- Precios (puede VER pero NO modificar)
+- Producción (tabs Jobs y Estaciones)
+
+**Puede ejecutar**:
+- Pasos de producción (iniciar, completar, pausar)
+
+**Sin acceso**:
+- Proveedores
+- ABM Core
+- Finanzas
+- Equipo y Seguridad
+- Configuración
+
+**Integraciones**:
+- WhatsApp: Puede conectar, NO puede desconectar
+
+---
+
+#### Operador de Taller
+**Descripción**: Rol ultra-limitado para personal de taller que solo ejecuta trabajos de producción.
+
+**Único acceso**: Módulo Producción
+- Tabs: Jobs y Estaciones únicamente
+- Puede ejecutar pasos de producción
+
+**Sin acceso**: Todos los demás módulos del sistema
 
 ### 2. Sistema de Roles Personalizados
 
