@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { MessageSquare, QrCode, CheckCircle2, XCircle, Loader2, AlertCircle, Send, History } from 'lucide-react';
 import { Card } from '../../../components/ui/Card';
 import { Button } from '../../../components/ui/Button';
@@ -21,6 +21,12 @@ export function WhatsAppIntegration() {
   usePageHeader('Integración con WhatsApp');
   const { profile } = useAuth();
   const { showSuccess, showError } = useToast();
+
+  // Validación de permisos para desconectar
+  const canDisconnect = useMemo(() => {
+    const allowedRoles = ['super_admin', 'admin', 'manager'];
+    return profile?.role ? allowedRoles.includes(profile.role) : false;
+  }, [profile?.role]);
   const {
     dialogState,
     isLoading: isConfirmLoading,
@@ -395,24 +401,26 @@ export function WhatsAppIntegration() {
                     '🔄'
                   )}
                 </Button>
-                <Button
-                  onClick={handleDisconnectRequest}
-                  disabled={isDisconnecting || isGeneratingQR || pollingActive || !companyId}
-                  variant="danger"
-                  className="flex-1"
-                >
-                  {isDisconnecting ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Desconectando...
-                    </>
-                  ) : (
-                    <>
-                      <XCircle className="w-4 h-4 mr-2" />
-                      Desconectar WhatsApp
-                    </>
-                  )}
-                </Button>
+                {canDisconnect && (
+                  <Button
+                    onClick={handleDisconnectRequest}
+                    disabled={isDisconnecting || isGeneratingQR || pollingActive || !companyId}
+                    variant="danger"
+                    className="flex-1"
+                  >
+                    {isDisconnecting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Desconectando...
+                      </>
+                    ) : (
+                      <>
+                        <XCircle className="w-4 h-4 mr-2" />
+                        Desconectar WhatsApp
+                      </>
+                    )}
+                  </Button>
+                )}
               </>
             )}
           </div>
