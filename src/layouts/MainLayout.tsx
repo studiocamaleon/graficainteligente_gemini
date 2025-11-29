@@ -1,7 +1,7 @@
 import { ReactNode, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, LogOut, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Settings, Building2 } from 'lucide-react';
+import { Menu, X, LogOut, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Settings, Building2, Bell } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { MODULES, Module } from '../constants/modules';
 import { Avatar } from '../components/ui/Avatar';
@@ -11,6 +11,8 @@ import { PageHeaderProvider, usePageHeaderContext } from '../hooks/usePageHeader
 import { ProfileModal } from '../components/user/ProfileModal';
 import { CompanyProfileModal } from '../components/company/CompanyProfileModal';
 import { usePermissions } from '../hooks/usePermissions';
+import { useNotificaciones } from '../hooks/useNotificaciones';
+import { NotificationsPanel } from '../components/notifications/NotificationsPanel';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -26,6 +28,8 @@ function MainLayoutContent({ children }: MainLayoutProps) {
   const [expandedModules, setExpandedModules] = useState<string[]>([]);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isCompanyModalOpen, setIsCompanyModalOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const { noLeidas } = useNotificaciones();
 
   const canEditCompany = profile?.role === 'super_admin' || profile?.role === 'admin';
 
@@ -554,11 +558,50 @@ function MainLayoutContent({ children }: MainLayoutProps) {
                 </div>
               </div>
 
-              {action && (
-                <div className="flex-shrink-0">
-                  {action}
+              <div className="flex items-center gap-3">
+                {/* Botón de Notificaciones */}
+                <div className="relative">
+                  <button
+                    onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+                    className="relative p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
+                  >
+                    <Bell className="w-5 h-5 text-gray-600" />
+                    {noLeidas > 0 && (
+                      <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                    )}
+                  </button>
+
+                  {/* Panel de Notificaciones */}
+                  <AnimatePresence>
+                    {isNotificationsOpen && (
+                      <>
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          onClick={() => setIsNotificationsOpen(false)}
+                          className="fixed inset-0 z-40"
+                        />
+                        <motion.div
+                          initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                          transition={{ duration: 0.15 }}
+                          className="absolute right-0 top-full mt-2 z-50"
+                        >
+                          <NotificationsPanel />
+                        </motion.div>
+                      </>
+                    )}
+                  </AnimatePresence>
                 </div>
-              )}
+
+                {action && (
+                  <div className="flex-shrink-0">
+                    {action}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </header>
