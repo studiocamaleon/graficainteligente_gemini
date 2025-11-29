@@ -23,6 +23,7 @@ interface Props {
   materialInfo?: MaterialInfo;
   preciosExistentes: ProductoLaserPrecio[];
   onChange: (precios: PrecioInput[]) => void;
+  readonly?: boolean;
 }
 
 interface PrecioState {
@@ -39,6 +40,7 @@ export function ProductoLaserPrecioMatriz({
   materialInfo,
   preciosExistentes,
   onChange,
+  readonly = false,
 }: Props) {
   const [preciosState, setPreciosState] = useState<PrecioState>({});
 
@@ -164,6 +166,7 @@ export function ProductoLaserPrecioMatriz({
                         onChange={(e) => handlePrecioChange(cantidad, cara, e.target.value)}
                         placeholder="$"
                         className="w-full"
+                        disabled={readonly}
                       />
                     </td>
                   );

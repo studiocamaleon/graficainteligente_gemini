@@ -8,13 +8,14 @@ import type { PrecioInput } from '../../../hooks/useProductosImpresionLaserPreci
 interface Props {
   producto: ProductoLaserParaPrecios;
   onPreciosChange: (productoId: string, precios: PrecioInput[]) => void;
+  readonly?: boolean;
 }
 
 interface PreciosPorCombinacion {
   [key: string]: PrecioInput[]; // key format: "ancho-alto-tintaId"
 }
 
-export function ProductoLaserPreciosCard({ producto, onPreciosChange }: Props) {
+export function ProductoLaserPreciosCard({ producto, onPreciosChange, readonly = false }: Props) {
   const [preciosPorCombinacion, setPreciosPorCombinacion] = useState<PreciosPorCombinacion>({});
   const [isInitialized, setIsInitialized] = useState(false);
   const [lastProductoId, setLastProductoId] = useState<string | null>(null);
@@ -187,6 +188,7 @@ export function ProductoLaserPreciosCard({ producto, onPreciosChange }: Props) {
                           onChange={(precios) =>
                             handleCombinacionChange(group.medida, tinta, precios)
                           }
+                          readonly={readonly}
                         />
                       );
                     })}
@@ -215,6 +217,7 @@ export function ProductoLaserPreciosCard({ producto, onPreciosChange }: Props) {
                           onChange={(precios) =>
                             handleCombinacionChange(group.medida, tinta, precios)
                           }
+                          readonly={readonly}
                         />
                       );
                     })}
