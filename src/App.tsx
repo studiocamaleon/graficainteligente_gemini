@@ -316,7 +316,7 @@ function AppRoutes() {
                 <Route
                   path="finanzas/*"
                   element={
-                    <ProtectedModuleRoute moduleId="finanzas">
+                    <ProtectedModuleRoute moduleId="finance">
                       <Finanzas />
                     </ProtectedModuleRoute>
                   }
