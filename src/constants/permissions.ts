@@ -65,7 +65,7 @@ export const PREDEFINED_ROLES = {
   },
   operador_taller: {
     name: 'Operador de Taller',
-    description: 'Acceso limitado solo al módulo de producción para ejecutar pasos',
+    description: 'Acceso al módulo de producción para ejecutar pasos y visualización de órdenes',
     permissions: {} as ModulePermissions,
   },
   viewer: {
@@ -207,12 +207,26 @@ AVAILABLE_PERMISSIONS.forEach((permission) => {
     };
   }
 
-  // Operador de Taller: Solo acceso al módulo de producción
-  if (permission.moduleId === 'production') {
+  // Operador de Taller: Acceso a producción (full) y órdenes (solo lectura)
+  const operadorTallerFullAccessModules = ['production'];
+  const operadorTallerViewOnlyModules = [
+    'dashboard',
+    'orders',
+    'orders-lista'
+  ];
+
+  if (operadorTallerFullAccessModules.includes(permission.moduleId)) {
     PREDEFINED_ROLES.operador_taller.permissions[permission.moduleId] = {
       view: true,
       create: true,
       edit: true,
+      delete: false,
+    };
+  } else if (operadorTallerViewOnlyModules.includes(permission.moduleId)) {
+    PREDEFINED_ROLES.operador_taller.permissions[permission.moduleId] = {
+      view: true,
+      create: false,
+      edit: false,
       delete: false,
     };
   } else {

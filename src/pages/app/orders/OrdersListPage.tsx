@@ -6,10 +6,14 @@ import { Card } from '../../../components/ui/Card';
 import { usePageHeader } from '../../../hooks/usePageHeader';
 import { useOrdenesTrabajo } from '../../../hooks/useOrdenesTrabajo';
 import { KanbanBoard } from '../../../components/orders/KanbanBoard';
+import { usePermissions } from '../../../hooks/usePermissions';
 
 export function OrdersListPage() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
+  const { hasPermission } = usePermissions();
+
+  const canCreate = hasPermission('orders', 'create');
 
   const { ordenes, metrics, loading } = useOrdenesTrabajo({
     searchTerm,
@@ -18,13 +22,13 @@ export function OrdersListPage() {
   });
 
   const headerAction = useMemo(
-    () => (
+    () => canCreate ? (
       <Button variant="primary" onClick={() => navigate('/app/orders/crear-ot')}>
         <Plus className="w-5 h-5 mr-2" />
         Nueva Orden
       </Button>
-    ),
-    [navigate]
+    ) : null,
+    [navigate, canCreate]
   );
 
   usePageHeader('Gestiona tus órdenes y proyectos', headerAction);
@@ -96,14 +100,16 @@ export function OrdersListPage() {
           ) : ordenes.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-gray-500">No se encontraron órdenes</p>
-              <Button
-                variant="primary"
-                onClick={() => navigate('/app/orders/crear-ot')}
-                className="mt-4"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Crear Primera Orden
-              </Button>
+              {canCreate && (
+                <Button
+                  variant="primary"
+                  onClick={() => navigate('/app/orders/crear-ot')}
+                  className="mt-4"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Crear Primera Orden
+                </Button>
+              )}
             </div>
           ) : (
             <KanbanBoard ordenes={ordenes} />
