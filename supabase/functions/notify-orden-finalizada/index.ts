@@ -136,26 +136,6 @@ function generateOrdenCopiadoFinalizadaMessage(
 
   let mensaje = `Hola ${nombreCliente}!\n\n`;
   mensaje += `✅ Tu orden de copiado *${orden.numero_orden}* está lista para retirar!\n\n`;
-
-  if (orden.fecha_entrega_estimada) {
-    const fecha = new Date(orden.fecha_entrega_estimada);
-    const fechaFormateada = fecha.toLocaleDateString('es-AR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
-    mensaje += `📅 *Fecha de entrega:* ${fechaFormateada}\n\n`;
-  } else {
-    mensaje += `📅 *Fecha de entrega:* A confirmar\n\n`;
-  }
-
-  if (orden.items && orden.items.length > 0) {
-    mensaje += `📋 *Detalle de la orden:*\n\n`;
-    orden.items.forEach((item: any) => {
-      mensaje += formatItemCopiado(item) + '\n\n';
-    });
-  }
-
   mensaje += `💰 *Total:* $${total}\n`;
   mensaje += `💳 *Saldo pendiente:* $${saldo}\n\n`;
 
