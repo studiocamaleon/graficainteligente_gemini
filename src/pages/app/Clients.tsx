@@ -20,7 +20,7 @@ import type { Client } from '../../types/database';
 
 export function Clients() {
   const { profile } = useAuth();
-  const canEdit = profile?.role && ['super_admin', 'admin', 'manager'].includes(profile.role);
+  const canEdit = profile?.role && ['super_admin', 'admin', 'manager', 'operador_diseno'].includes(profile.role);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');

@@ -32,6 +32,7 @@ interface MatrizPreciosWrapperProps {
   preciosCargados: Map<string, PreciosCargados[]>;
   productosIds: string[];
   onTintaChange: (tinta: string, precios: PrecioGFInput[]) => void;
+  readonly?: boolean;
 }
 
 const MatrizPreciosWrapper = ({
@@ -43,6 +44,7 @@ const MatrizPreciosWrapper = ({
   preciosCargados,
   productosIds,
   onTintaChange,
+  readonly = false,
 }: MatrizPreciosWrapperProps) => {
   const preciosActuales = useMemo(() => {
     const map = new Map<string, Map<string, number>>();
@@ -277,6 +279,7 @@ export function GranFormatoTecnologiaSection({ tecnologia, onPreciosChange, read
                       preciosCargados={preciosCargados}
                       productosIds={productosIds}
                       onTintaChange={handleTintaChange}
+                      readonly={readonly}
                     />
                   );
                 }
