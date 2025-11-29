@@ -58,9 +58,14 @@ export const PREDEFINED_ROLES = {
     description: 'Puede gestionar clientes, proveedores, órdenes y producción',
     permissions: {} as ModulePermissions,
   },
-  operator: {
-    name: 'Operador',
-    description: 'Acceso de solo lectura y creación en módulos operativos',
+  operador_diseno: {
+    name: 'Operador de Diseño',
+    description: 'Acceso a órdenes, clientes, centro de copiado y visualización de productos',
+    permissions: {} as ModulePermissions,
+  },
+  operador_taller: {
+    name: 'Operador de Taller',
+    description: 'Acceso limitado solo al módulo de producción para ejecutar pasos',
     permissions: {} as ModulePermissions,
   },
   viewer: {
@@ -78,14 +83,17 @@ AVAILABLE_PERMISSIONS.forEach((permission) => {
     delete: true,
   };
 
-  if (permission.moduleId === 'team') {
-    PREDEFINED_ROLES.admin.permissions[permission.moduleId] = {
-      view: true,
-      create: true,
-      edit: true,
-      delete: true,
-    };
-  } else {
+  // Admin NO tiene acceso a 'team' ni a ningún submódulo de 'settings'
+  const adminRestrictedModules = [
+    'team',
+    'settings',
+    'settings-locations',
+    'settings-cajas',
+    'settings-medios-cobro',
+    'settings-pausas'
+  ];
+
+  if (!adminRestrictedModules.includes(permission.moduleId)) {
     PREDEFINED_ROLES.admin.permissions[permission.moduleId] = {
       view: true,
       create: true,
@@ -94,7 +102,33 @@ AVAILABLE_PERMISSIONS.forEach((permission) => {
     };
   }
 
-  if (['clients', 'providers', 'orders', 'production', 'catalog', 'pricing'].includes(permission.moduleId)) {
+  const managerAllowedModules = [
+    'clients',
+    'providers',
+    'orders',
+    'orders-crear',
+    'orders-lista',
+    'production',
+    'productos',
+    'productos-impresion-laser',
+    'productos-talonarios',
+    'productos-gran-formato',
+    'productos-materiales-rigidos',
+    'productos-plotter-corte',
+    'productos-sellos',
+    'productos-portabanners',
+    'centro-copiado',
+    'centro-copiado-configuracion',
+    'centro-copiado-terminaciones',
+    'centro-copiado-rangos-precio',
+    'centro-copiado-precios',
+    'centro-copiado-ordenes',
+    'centro-copiado-ordenes-crear',
+    'integrations',
+    'integrations-whatsapp'
+  ];
+
+  if (managerAllowedModules.includes(permission.moduleId)) {
     PREDEFINED_ROLES.manager.permissions[permission.moduleId] = {
       view: true,
       create: true,
@@ -110,16 +144,80 @@ AVAILABLE_PERMISSIONS.forEach((permission) => {
     };
   }
 
-  if (['clients', 'providers', 'orders', 'production', 'catalog'].includes(permission.moduleId)) {
-    PREDEFINED_ROLES.operator.permissions[permission.moduleId] = {
+  // Operador de Diseño: Acceso a clientes, órdenes, centro copiado, y visualización de productos
+  const operadorDisenoFullAccessModules = [
+    'clients',
+    'orders',
+    'orders-crear',
+    'orders-lista',
+    'centro-copiado',
+    'centro-copiado-configuracion',
+    'centro-copiado-terminaciones',
+    'centro-copiado-rangos-precio',
+    'centro-copiado-precios',
+    'centro-copiado-ordenes',
+    'centro-copiado-ordenes-crear'
+  ];
+
+  const operadorDisenoViewOnlyModules = [
+    'dashboard',
+    'productos',
+    'productos-impresion-laser',
+    'productos-talonarios',
+    'productos-gran-formato',
+    'productos-materiales-rigidos',
+    'productos-plotter-corte',
+    'productos-sellos',
+    'productos-portabanners',
+    'production'
+  ];
+
+  const operadorDisenoIntegracionesModules = [
+    'integrations',
+    'integrations-whatsapp'
+  ];
+
+  if (operadorDisenoFullAccessModules.includes(permission.moduleId)) {
+    PREDEFINED_ROLES.operador_diseno.permissions[permission.moduleId] = {
+      view: true,
+      create: true,
+      edit: true,
+      delete: true,
+    };
+  } else if (operadorDisenoViewOnlyModules.includes(permission.moduleId)) {
+    PREDEFINED_ROLES.operador_diseno.permissions[permission.moduleId] = {
+      view: true,
+      create: false,
+      edit: false,
+      delete: false,
+    };
+  } else if (operadorDisenoIntegracionesModules.includes(permission.moduleId)) {
+    PREDEFINED_ROLES.operador_diseno.permissions[permission.moduleId] = {
       view: true,
       create: true,
       edit: false,
       delete: false,
     };
   } else {
-    PREDEFINED_ROLES.operator.permissions[permission.moduleId] = {
-      view: permission.moduleId === 'dashboard',
+    PREDEFINED_ROLES.operador_diseno.permissions[permission.moduleId] = {
+      view: false,
+      create: false,
+      edit: false,
+      delete: false,
+    };
+  }
+
+  // Operador de Taller: Solo acceso al módulo de producción
+  if (permission.moduleId === 'production') {
+    PREDEFINED_ROLES.operador_taller.permissions[permission.moduleId] = {
+      view: true,
+      create: true,
+      edit: true,
+      delete: false,
+    };
+  } else {
+    PREDEFINED_ROLES.operador_taller.permissions[permission.moduleId] = {
+      view: false,
       create: false,
       edit: false,
       delete: false,
