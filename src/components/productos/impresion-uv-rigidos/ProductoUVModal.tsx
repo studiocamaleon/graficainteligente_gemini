@@ -30,33 +30,34 @@ export function ProductoUVModal({
   const isEditing = !!producto;
 
   const tabs = [
-    {
-      id: 'general',
-      label: 'General',
-      content: (
-        <ProductoUVForm
-          producto={producto}
-          onSubmit={onSave}
-          onCancel={onClose}
-          isLoading={isLoading}
-        />
-      ),
-    },
+    { id: 'general', label: 'General' },
     ...(isEditing
       ? [
-          {
-            id: 'materiales',
-            label: 'Materiales',
-            content: <MaterialesUVEditor productoUvId={producto.id} />,
-          },
-          {
-            id: 'precios',
-            label: 'Precios Impresión',
-            content: <PreciosUVMatrizEditor productoUvId={producto.id} />,
-          },
+          { id: 'materiales', label: 'Materiales' },
+          { id: 'precios', label: 'Precios Impresión' },
         ]
       : []),
   ];
+
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'general':
+        return (
+          <ProductoUVForm
+            producto={producto}
+            onSubmit={onSave}
+            onCancel={onClose}
+            isLoading={isLoading}
+          />
+        );
+      case 'materiales':
+        return isEditing ? <MaterialesUVEditor productoUvId={producto.id} /> : null;
+      case 'precios':
+        return isEditing ? <PreciosUVMatrizEditor productoUvId={producto.id} /> : null;
+      default:
+        return null;
+    }
+  };
 
   return (
     <Modal
@@ -69,16 +70,15 @@ export function ProductoUVModal({
       }
       size="2xl"
     >
-      <div className="p-6">
-        {isEditing ? (
-          <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
-        ) : (
-          <ProductoUVForm
-            onSubmit={onSave}
-            onCancel={onClose}
-            isLoading={isLoading}
-          />
+      <div>
+        {isEditing && (
+          <div className="border-b border-gray-200">
+            <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
+          </div>
         )}
+        <div className="p-6">
+          {renderTabContent()}
+        </div>
       </div>
     </Modal>
   );
