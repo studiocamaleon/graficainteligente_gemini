@@ -1,4 +1,4 @@
-import { Check, Loader2, Circle, X, MessageSquare } from 'lucide-react';
+import { Check, Loader2, Circle, X } from 'lucide-react';
 import type { TrackingPaso } from '../../types/tracking';
 import { getEstadoPasoLabel, getEtapaLabel } from '../../types/tracking';
 import dayjs from 'dayjs';
@@ -112,18 +112,6 @@ export function TrackingStepProgress({ pasos }: TrackingStepProgressProps) {
                         {dayjs(paso.fecha_fin).format('DD/MM/YYYY HH:mm')}
                       </>
                     )}
-                  </div>
-                )}
-
-                {paso.comentario_vendedor && (
-                  <div className="mt-3 bg-blue-500/5 border border-blue-500/20 rounded-lg p-3">
-                    <div className="flex items-start space-x-2">
-                      <MessageSquare className="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <p className="text-xs font-medium text-blue-300 mb-1">Nota del vendedor:</p>
-                        <p className="text-sm text-gray-300">{paso.comentario_vendedor}</p>
-                      </div>
-                    </div>
                   </div>
                 )}
               </div>
