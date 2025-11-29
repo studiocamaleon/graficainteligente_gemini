@@ -12,6 +12,12 @@ interface ReanudarPasoButtonProps {
   variant?: 'primary' | 'secondary';
   size?: 'sm' | 'md';
   fullWidth?: boolean;
+  showConfirm?: (options: {
+    title: string;
+    message: string;
+    confirmText?: string;
+    cancelText?: string;
+  }) => Promise<boolean>;
 }
 
 export function ReanudarPasoButton({
@@ -21,9 +27,11 @@ export function ReanudarPasoButton({
   variant = 'primary',
   size = 'md',
   fullWidth = false,
+  showConfirm: showConfirmProp,
 }: ReanudarPasoButtonProps) {
   const { showSuccess, showError } = useToast();
-  const { showConfirm } = useConfirmDialog();
+  const confirmDialogHook = useConfirmDialog();
+  const showConfirm = showConfirmProp || confirmDialogHook.showConfirm;
   const [submitting, setSubmitting] = useState(false);
 
   const handleReanudar = async () => {

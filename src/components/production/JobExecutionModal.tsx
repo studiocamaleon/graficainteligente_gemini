@@ -241,6 +241,7 @@ export function JobExecutionModal({ isOpen, onClose, job, onJobUpdated }: JobExe
                                     rutaId={ruta.id}
                                     pasoNombre={ruta.paso_nombre}
                                     onSuccess={handlePausaSuccess}
+                                    showConfirm={showConfirm}
                                     fullWidth
                                   />
                                   {ruta.cantidad_pausas > 0 && (
