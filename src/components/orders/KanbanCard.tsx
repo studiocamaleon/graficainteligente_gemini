@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { Calendar, DollarSign } from 'lucide-react';
 import { ChannelBadge } from './ChannelBadge';
+import { useAuth } from '../../hooks/useAuth';
 import type { CanalVenta } from '../../types/database';
 
 interface KanbanCardProps {
@@ -23,6 +24,9 @@ export function KanbanCard({
   total,
 }: KanbanCardProps) {
   const navigate = useNavigate();
+  const { profile } = useAuth();
+
+  const canViewPrices = profile?.role !== 'operador_taller';
 
   const handleClick = () => {
     navigate(`/app/orders/${ordenId}`);
@@ -63,10 +67,12 @@ export function KanbanCard({
           <Calendar className="w-3 h-3" />
           <span>{formattedDate}</span>
         </div>
-        <div className="flex items-center gap-1 font-semibold text-gray-900">
-          <DollarSign className="w-3 h-3" />
-          <span>{formattedTotal}</span>
-        </div>
+        {canViewPrices && (
+          <div className="flex items-center gap-1 font-semibold text-gray-900">
+            <DollarSign className="w-3 h-3" />
+            <span>{formattedTotal}</span>
+          </div>
+        )}
       </div>
     </div>
   );
