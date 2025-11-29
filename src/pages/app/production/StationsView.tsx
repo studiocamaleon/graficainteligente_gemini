@@ -128,6 +128,7 @@ export function StationsView() {
                   estacion_descripcion={station.estacion_descripcion}
                   pasos_en_proceso={station.pasos_en_proceso}
                   pasos_pendientes={station.pasos_pendientes}
+                  pasos_pausados={station.pasos_pausados}
                   total_activos={station.total_pasos_activos}
                   onClick={() => handleStationClick(station.estacion_id)}
                 />
@@ -172,7 +173,36 @@ export function StationsView() {
                   description="Esta estación no tiene pasos pendientes o en proceso"
                 />
               ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                        <span className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></span>
+                        Pausados
+                      </h3>
+                      <span className="text-sm text-gray-500">
+                        {selectedStation.pasos_pausados}{' '}
+                        {selectedStation.pasos_pausados === 1 ? 'paso' : 'pasos'}
+                      </span>
+                    </div>
+                    <div className="space-y-3">
+                      {selectedStation.pasos
+                        .filter((paso) => paso.estado_paso === 'pausado')
+                        .map((paso) => (
+                          <StationStepCard
+                            key={paso.ruta_id}
+                            {...paso}
+                            onViewDetails={() => handleViewStepDetails(paso)}
+                          />
+                        ))}
+                      {selectedStation.pasos_pausados === 0 && (
+                        <div className="text-center py-8 text-gray-500">
+                          No hay pasos pausados
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">

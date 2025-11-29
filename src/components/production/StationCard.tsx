@@ -8,6 +8,7 @@ interface StationCardProps {
   estacion_descripcion: string | null;
   pasos_en_proceso: number;
   pasos_pendientes: number;
+  pasos_pausados: number;
   total_activos: number;
   onClick: () => void;
 }
@@ -17,6 +18,7 @@ export function StationCard({
   estacion_descripcion,
   pasos_en_proceso,
   pasos_pendientes,
+  pasos_pausados,
   total_activos,
   onClick,
 }: StationCardProps) {
@@ -63,6 +65,12 @@ export function StationCard({
           </div>
 
           <div className="flex gap-2 flex-wrap">
+            {pasos_pausados > 0 && (
+              <Badge variant="error" className="flex items-center gap-1">
+                <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+                {pasos_pausados} {pasos_pausados === 1 ? 'pausado' : 'pausados'}
+              </Badge>
+            )}
             {pasos_en_proceso > 0 && (
               <Badge variant="warning" className="flex items-center gap-1">
                 <span className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></span>

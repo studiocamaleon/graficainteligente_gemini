@@ -38,6 +38,7 @@ export interface StationWithJobs {
   estacion_descripcion: string | null;
   pasos_pendientes: number;
   pasos_en_proceso: number;
+  pasos_pausados: number;
   total_pasos_activos: number;
   pasos: StationStep[];
 }
@@ -129,7 +130,7 @@ export function useProductionStations(params: UseProductionStationsParams = {}) 
       });
 
       const isPasoListo = (ruta: RutaConOrden, rutasOrdenadas: RutaConOrden[]): boolean => {
-        if (ruta.estado_paso === 'en_proceso') return true;
+        if (ruta.estado_paso === 'en_proceso' || ruta.estado_paso === 'pausado') return true;
 
         const indicePasoActual = rutasOrdenadas.findIndex((r) => r.id === ruta.id);
         if (indicePasoActual === 0) return true;
@@ -152,7 +153,7 @@ export function useProductionStations(params: UseProductionStationsParams = {}) 
         rutasOrdenadas.forEach((ruta) => {
           if (!ruta.paso?.estacion) return;
 
-          const estadoEsActivo = ruta.estado_paso === 'pendiente' || ruta.estado_paso === 'en_proceso';
+          const estadoEsActivo = ruta.estado_paso === 'pendiente' || ruta.estado_paso === 'en_proceso' || ruta.estado_paso === 'pausado';
           if (!estadoEsActivo) return;
 
           const estaListo = isPasoListo(ruta, rutasOrdenadas);
@@ -195,8 +196,21 @@ export function useProductionStations(params: UseProductionStationsParams = {}) 
           const pasos = stepsMap.get(estacionId) || [];
 
           pasos.sort((a, b) => {
-            if (a.estado_paso === 'en_proceso' && b.estado_paso === 'pendiente') return -1;
-            if (a.estado_paso === 'pendiente' && b.estado_paso === 'en_proceso') return 1;
+            // Prioridad: pausado > en_proceso > pendiente
+            const prioridad: Record<EstadoPaso, number> = {
+              pausado: 1,
+              en_proceso: 2,
+              pendiente: 3,
+              completado: 4,
+              omitido: 5,
+            };
+
+            const prioridadA = prioridad[a.estado_paso] || 99;
+            const prioridadB = prioridad[b.estado_paso] || 99;
+
+            if (prioridadA !== prioridadB) {
+              return prioridadA - prioridadB;
+            }
 
             const fechaA = new Date(a.fecha_creacion_orden).getTime();
             const fechaB = new Date(b.fecha_creacion_orden).getTime();
@@ -205,6 +219,7 @@ export function useProductionStations(params: UseProductionStationsParams = {}) 
 
           const pasosEnProceso = pasos.filter((p) => p.estado_paso === 'en_proceso').length;
           const pasosPendientes = pasos.filter((p) => p.estado_paso === 'pendiente').length;
+          const pasosPausados = pasos.filter((p) => p.estado_paso === 'pausado').length;
 
           return {
             estacion_id: estacionId,
@@ -212,6 +227,7 @@ export function useProductionStations(params: UseProductionStationsParams = {}) 
             estacion_descripcion: info.descripcion,
             pasos_en_proceso: pasosEnProceso,
             pasos_pendientes: pasosPendientes,
+            pasos_pausados: pasosPausados,
             total_pasos_activos: pasos.length,
             pasos,
           };

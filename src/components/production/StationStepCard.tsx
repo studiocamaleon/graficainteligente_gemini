@@ -1,4 +1,4 @@
-import { Clock, Package, User, FileText } from 'lucide-react';
+import { Clock, Package, User, FileText, PauseCircle } from 'lucide-react';
 import { Card } from '../ui/Card';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
@@ -31,13 +31,18 @@ export function StationStepCard({
   onViewDetails,
 }: StationStepCardProps) {
   const isEnProceso = estado_paso === 'en_proceso';
+  const isPausado = estado_paso === 'pausado';
 
   const getBorderColor = () => {
-    return isEnProceso ? 'border-orange-400' : 'border-blue-400';
+    if (isPausado) return 'border-red-400';
+    if (isEnProceso) return 'border-orange-400';
+    return 'border-blue-400';
   };
 
   const getBgColor = () => {
-    return isEnProceso ? 'bg-orange-50' : 'bg-white';
+    if (isPausado) return 'bg-red-50';
+    if (isEnProceso) return 'bg-orange-50';
+    return 'bg-white';
   };
 
   return (
@@ -52,7 +57,12 @@ export function StationStepCard({
               >
                 {numero_orden}
               </button>
-              {isEnProceso ? (
+              {isPausado ? (
+                <Badge variant="error" className="flex items-center gap-1">
+                  <PauseCircle className="w-3.5 h-3.5" />
+                  PAUSADO
+                </Badge>
+              ) : isEnProceso ? (
                 <Badge variant="warning" className="flex items-center gap-1">
                   <span className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></span>
                   EN PROCESO
@@ -83,7 +93,12 @@ export function StationStepCard({
 
         <div className="flex items-center justify-between pt-3 border-t border-gray-200">
           <div className="flex items-center gap-4 text-xs text-gray-500">
-            {isEnProceso && fecha_inicio ? (
+            {isPausado && fecha_inicio ? (
+              <div className="flex items-center gap-1 text-red-600 font-medium">
+                <PauseCircle className="w-3.5 h-3.5" />
+                <span>Pausado desde {calcularTiempoTranscurrido(fecha_inicio)}</span>
+              </div>
+            ) : isEnProceso && fecha_inicio ? (
               <div className="flex items-center gap-1 text-orange-600 font-medium">
                 <Clock className="w-3.5 h-3.5" />
                 <span>{calcularTiempoTranscurrido(fecha_inicio)}</span>
