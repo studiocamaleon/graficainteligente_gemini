@@ -124,6 +124,10 @@ AVAILABLE_PERMISSIONS.forEach((permission) => {
     'centro-copiado-precios',
     'centro-copiado-ordenes',
     'centro-copiado-ordenes-crear',
+    'finance',
+    'finance-tesoreria',
+    'finance-cuentas-corrientes',
+    'finance-reportes',
     'integrations',
     'integrations-whatsapp'
   ];
