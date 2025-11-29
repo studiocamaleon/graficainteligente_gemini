@@ -1,4 +1,4 @@
-import { Clock, CheckCircle2, XCircle, User, MessageSquare } from 'lucide-react';
+import { Clock, CheckCircle2, XCircle, User, MessageSquare, Pause } from 'lucide-react';
 import type { OrdenItemRuta } from '../../types/database';
 import { formatDate } from '../../utils/stringUtils';
 
@@ -45,10 +45,17 @@ const estadoStyles = {
     iconColor: 'text-orange-600',
     text: 'text-orange-700',
   },
+  pausado: {
+    border: 'border-orange-500',
+    bg: 'bg-orange-100',
+    icon: Pause,
+    iconColor: 'text-orange-700 animate-pulse',
+    text: 'text-orange-800',
+  },
 };
 
 export function StepCard({ ruta, isActive, canStart, children }: StepCardProps) {
-  const style = estadoStyles[ruta.estado_paso];
+  const style = estadoStyles[ruta.estado_paso] || estadoStyles.pendiente;
   const Icon = style.icon;
 
   const calcularDuracion = (): string | null => {
