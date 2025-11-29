@@ -7,7 +7,6 @@ import { CATEGORIA_MATERIALES_RIGIDOS_ID } from '../../../constants/categorias';
 interface Acabado {
   id: string;
   nombre: string;
-  descripcion?: string;
   is_active: boolean;
 }
 
@@ -58,7 +57,7 @@ export function AcabadosSelectorMaterialesRigidos({
 
       const { data: acabadosData, error: acabError } = await supabase
         .from('acabados')
-        .select('id, nombre, descripcion, is_active')
+        .select('id, nombre, is_active')
         .eq('company_id', profile?.company_id)
         .eq('is_active', true)
         .in('id', acabadoIds)
@@ -135,9 +134,6 @@ export function AcabadosSelectorMaterialesRigidos({
                   <p className={`text-sm font-medium ${isSelected ? 'text-blue-900' : 'text-gray-900'}`}>
                     {acabado.nombre}
                   </p>
-                  {acabado.descripcion && (
-                    <p className="text-xs text-gray-500 mt-0.5">{acabado.descripcion}</p>
-                  )}
                 </div>
               </div>
             </button>

@@ -7,7 +7,6 @@ import { CATEGORIA_MATERIALES_RIGIDOS_ID } from '../../../constants/categorias';
 interface Servicio {
   id: string;
   nombre: string;
-  descripcion?: string;
   is_active: boolean;
 }
 
@@ -58,7 +57,7 @@ export function ServiciosSelectorMaterialesRigidos({
 
       const { data: serviciosData, error: servError } = await supabase
         .from('servicios')
-        .select('id, nombre, descripcion, is_active')
+        .select('id, nombre, is_active')
         .eq('company_id', profile?.company_id)
         .eq('is_active', true)
         .in('id', servicioIds)
@@ -135,9 +134,6 @@ export function ServiciosSelectorMaterialesRigidos({
                   <p className={`text-sm font-medium ${isSelected ? 'text-blue-900' : 'text-gray-900'}`}>
                     {servicio.nombre}
                   </p>
-                  {servicio.descripcion && (
-                    <p className="text-xs text-gray-500 mt-0.5">{servicio.descripcion}</p>
-                  )}
                 </div>
               </div>
             </button>
