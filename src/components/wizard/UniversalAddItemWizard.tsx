@@ -660,7 +660,7 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t bg-gray-50 flex items-center justify-between">
+        <div className="px-6 py-4 border-t bg-gray-50 flex items-center justify-between mt-6">
           <div>
             {currentStep !== 'search' && (
               <Button
