@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Package, Loader2 } from 'lucide-react';
 import { Card } from '../../../../components/ui/Card';
 import { EmptyState } from '../../../../components/ui/EmptyState';
@@ -9,8 +9,14 @@ import { useProductosSellosPrecios } from '../../../../hooks/useProductosSellosP
 import type { PrecioSelloInput } from '../../../../hooks/useProductosSellosPrecios';
 import { usePDFExport } from '../../../../hooks/usePDFExport';
 import { SellosPDFTemplate } from '../../../../components/pdf/templates/SellosPDFTemplate';
+import { useAuth } from '../../../../hooks/useAuth';
 
 export function PreciosSellosTab() {
+  const { profile } = useAuth();
+  const canEditPrecios = useMemo(() => {
+    return !['operador_diseno', 'operador_taller'].includes(profile?.role || '');
+  }, [profile?.role]);
+
   const { productos, isLoading, isSaving, error, saveAllPrecios, refetch } =
     useProductosSellosPrecios();
 
@@ -126,15 +132,17 @@ export function PreciosSellosTab() {
 
         <Card>
           <div className="p-6">
-            <SellosPreciosTable productos={productos} onPreciosChange={handlePreciosChange} />
+            <SellosPreciosTable productos={productos} onPreciosChange={handlePreciosChange} readonly={!canEditPrecios} />
           </div>
         </Card>
 
-        <FloatingPreciosSaveButton
-          hasChanges={hasUnsavedChanges}
-          onSave={handleSave}
-          isSaving={isSaving}
-        />
+        {canEditPrecios && (
+          <FloatingPreciosSaveButton
+            hasChanges={hasUnsavedChanges}
+            onSave={handleSave}
+            isSaving={isSaving}
+          />
+        )}
       </div>
 
       <div

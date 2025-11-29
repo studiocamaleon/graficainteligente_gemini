@@ -9,8 +9,14 @@ import { PortabannersPDFTemplate } from '../../../../components/pdf/templates/Po
 import { useAllProductosPortabannersPrecios } from '../../../../hooks/useAllProductosPortabannersPrecios';
 import { usePDFExport } from '../../../../hooks/usePDFExport';
 import type { PrecioPortabannerInput } from '../../../../hooks/useAllProductosPortabannersPrecios';
+import { useAuth } from '../../../../hooks/useAuth';
 
 export function PreciosPortabannersTab() {
+  const { profile } = useAuth();
+  const canEditPrecios = useMemo(() => {
+    return !['operador_diseno', 'operador_taller'].includes(profile?.role || '');
+  }, [profile?.role]);
+
   const {
     productos,
     tecnologias,
@@ -158,17 +164,20 @@ export function PreciosPortabannersTab() {
                   rangos={rangos}
                   unidadMedida={unidadMedida}
                   onPreciosChange={handlePreciosChange}
+                  readonly={!canEditPrecios}
                 />
               </div>
             </Card>
           );
         })}
 
-        <FloatingPreciosSaveButton
-          hasChanges={hasUnsavedChanges()}
-          onSave={handleSave}
-          isSaving={isSaving}
-        />
+        {canEditPrecios && (
+          <FloatingPreciosSaveButton
+            hasChanges={hasUnsavedChanges()}
+            onSave={handleSave}
+            isSaving={isSaving}
+          />
+        )}
       </div>
 
       <div

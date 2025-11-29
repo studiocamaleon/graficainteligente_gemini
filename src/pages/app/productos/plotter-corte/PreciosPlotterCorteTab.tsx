@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Package, Loader2 } from 'lucide-react';
 import { Card } from '../../../../components/ui/Card';
 import { EmptyState } from '../../../../components/ui/EmptyState';
@@ -9,6 +9,7 @@ import { useAllProductosPlotterCortePrecios } from '../../../../hooks/useAllProd
 import type { PrecioPCInput } from '../../../../hooks/useAllProductosPlotterCortePrecios';
 import { usePDFExport } from '../../../../hooks/usePDFExport';
 import { PlotterCortePDFTemplate } from '../../../../components/pdf/templates/PlotterCortePDFTemplate';
+import { useAuth } from '../../../../hooks/useAuth';
 
 interface PreciosSnapshot {
   [key: string]: number;
@@ -19,6 +20,11 @@ const createPrecioKey = (precio: PrecioPCInput): string => {
 };
 
 export function PreciosPlotterCorteTab() {
+  const { profile } = useAuth();
+  const canEditPrecios = useMemo(() => {
+    return !['operador_diseno', 'operador_taller'].includes(profile?.role || '');
+  }, [profile?.role]);
+
   const { productosPorAncho, isLoading, isSaving, error, saveAllPrecios } =
     useAllProductosPlotterCortePrecios();
 
@@ -145,15 +151,18 @@ export function PreciosPlotterCorteTab() {
             <PlotterCorteMatrizPrecios
               productosPorAncho={productosPorAncho}
               onPreciosChange={handlePreciosChange}
+              readonly={!canEditPrecios}
             />
           </div>
         </Card>
 
-        <FloatingPreciosSaveButton
-          hasChanges={hasUnsavedChanges}
-          onSave={handleSave}
-          isSaving={isSaving}
-        />
+        {canEditPrecios && (
+          <FloatingPreciosSaveButton
+            hasChanges={hasUnsavedChanges}
+            onSave={handleSave}
+            isSaving={isSaving}
+          />
+        )}
       </div>
 
       <div

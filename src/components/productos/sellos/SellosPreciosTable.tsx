@@ -6,6 +6,7 @@ import type { ProductoSelloConPrecio, PrecioSelloInput } from '../../../hooks/us
 interface SellosPreciosTableProps {
   productos: ProductoSelloConPrecio[];
   onPreciosChange: (precios: PrecioSelloInput[]) => void;
+  readonly?: boolean;
 }
 
 const getTipoProductoLabel = (tipo: string): string => {
@@ -27,7 +28,7 @@ const formatMedida = (ancho: number | null, alto: number | null): string => {
   return '-';
 };
 
-export function SellosPreciosTable({ productos, onPreciosChange }: SellosPreciosTableProps) {
+export function SellosPreciosTable({ productos, onPreciosChange, readonly = false }: SellosPreciosTableProps) {
   const [precios, setPrecios] = useState<Record<string, number>>({});
 
   useEffect(() => {
@@ -110,6 +111,7 @@ export function SellosPreciosTable({ productos, onPreciosChange }: SellosPrecios
                     onChange={(e) => handlePrecioChange(producto.id, e.target.value)}
                     placeholder="0.00"
                     className="w-full"
+                    disabled={readonly}
                   />
                 </div>
               </td>

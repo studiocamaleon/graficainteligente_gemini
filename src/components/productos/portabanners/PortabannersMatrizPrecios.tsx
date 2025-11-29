@@ -14,6 +14,7 @@ interface Props {
   rangos: RangoPrecio[];
   unidadMedida: string;
   onPreciosChange: (precios: PrecioPortabannerInput[]) => void;
+  readonly?: boolean;
 }
 
 interface PrecioState {
@@ -26,6 +27,7 @@ export function PortabannersMatrizPrecios({
   rangos,
   unidadMedida,
   onPreciosChange,
+  readonly = false,
 }: Props) {
   const [preciosState, setPreciosState] = useState<PrecioState>({});
   const isInitialized = useRef(false);
@@ -205,6 +207,7 @@ export function PortabannersMatrizPrecios({
                         }
                         placeholder="$"
                         className="w-full"
+                        disabled={readonly}
                       />
                     </td>
                   );

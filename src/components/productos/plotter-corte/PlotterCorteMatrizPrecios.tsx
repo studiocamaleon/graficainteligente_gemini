@@ -6,13 +6,14 @@ import { normalizeRangoMax, normalizeRangoMin, formatRangoValue } from '../../..
 interface Props {
   productosPorAncho: ProductoPorAncho[];
   onPreciosChange: (precios: PrecioPCInput[]) => void;
+  readonly?: boolean;
 }
 
 interface PrecioState {
   [key: string]: number;
 }
 
-export function PlotterCorteMatrizPrecios({ productosPorAncho, onPreciosChange }: Props) {
+export function PlotterCorteMatrizPrecios({ productosPorAncho, onPreciosChange, readonly = false }: Props) {
   const [preciosState, setPreciosState] = useState<PrecioState>({});
   const isInitialized = useRef(false);
   const hasLocalChanges = useRef(false);
@@ -161,6 +162,7 @@ export function PlotterCorteMatrizPrecios({ productosPorAncho, onPreciosChange }
                         }
                         placeholder="$"
                         className="w-full"
+                        disabled={readonly}
                       />
                     </td>
                   );
