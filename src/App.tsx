@@ -88,36 +88,239 @@ function AppRoutes() {
             <MainLayout>
               <Routes>
                 <Route path="dashboard" element={<Dashboard />} />
-                <Route path="clients" element={<Clients />} />
-                <Route path="providers" element={<Providers />} />
-                <Route path="abm-core/estaciones" element={<Estaciones />} />
-                <Route path="abm-core/tecnologias" element={<Tecnologias />} />
-                <Route path="abm-core/materiales" element={<Materiales />} />
-                <Route path="abm-core/pasos" element={<Pasos />} />
-                <Route path="abm-core/rutas-produccion" element={<RutasProduccion />} />
-                <Route path="abm-core/servicios" element={<Servicios />} />
-                <Route path="abm-core/acabados" element={<Acabados />} />
-                <Route path="abm-core/rangos-precio" element={<RangosPrecio />} />
-                <Route path="productos/impresion-laser" element={<ImpresionLaser />} />
-                <Route path="productos/talonarios" element={<Talonarios />} />
-                <Route path="productos/gran-formato" element={<GranFormato />} />
-                <Route path="productos/materiales-rigidos" element={<MaterialesRigidos />} />
-                <Route path="productos/plotter-corte" element={<PlotterCorte />} />
-                <Route path="productos/sellos" element={<Sellos />} />
-                <Route path="productos/portabanners" element={<Portabanners />} />
-                <Route path="centro-copiado/configuracion" element={<CentroCopiadoConfiguracion />} />
-                <Route path="centro-copiado/terminaciones" element={<CentroCopiadoTerminaciones />} />
-                <Route path="centro-copiado/rangos-precio" element={<CentroCopiadoRangosPrecio />} />
-                <Route path="centro-copiado/precios" element={<CentroCopiadoPrecios />} />
-                <Route path="centro-copiado/ordenes" element={<CentroCopiadoOrdenes />} />
-                <Route path="centro-copiado/ordenes/crear" element={<CrearOrdenCopiado />} />
-                <Route path="centro-copiado/ordenes/:id" element={<DetalleOrdenCopiado />} />
+                <Route
+                  path="clients"
+                  element={
+                    <ProtectedModuleRoute moduleId="clients">
+                      <Clients />
+                    </ProtectedModuleRoute>
+                  }
+                />
+                <Route
+                  path="providers"
+                  element={
+                    <ProtectedModuleRoute moduleId="providers">
+                      <Providers />
+                    </ProtectedModuleRoute>
+                  }
+                />
+                <Route
+                  path="abm-core/estaciones"
+                  element={
+                    <ProtectedModuleRoute moduleId="abm-core-estaciones">
+                      <Estaciones />
+                    </ProtectedModuleRoute>
+                  }
+                />
+                <Route
+                  path="abm-core/tecnologias"
+                  element={
+                    <ProtectedModuleRoute moduleId="abm-core-tecnologias">
+                      <Tecnologias />
+                    </ProtectedModuleRoute>
+                  }
+                />
+                <Route
+                  path="abm-core/materiales"
+                  element={
+                    <ProtectedModuleRoute moduleId="abm-core-materiales">
+                      <Materiales />
+                    </ProtectedModuleRoute>
+                  }
+                />
+                <Route
+                  path="abm-core/pasos"
+                  element={
+                    <ProtectedModuleRoute moduleId="abm-core-pasos">
+                      <Pasos />
+                    </ProtectedModuleRoute>
+                  }
+                />
+                <Route
+                  path="abm-core/rutas-produccion"
+                  element={
+                    <ProtectedModuleRoute moduleId="abm-core-rutas-produccion">
+                      <RutasProduccion />
+                    </ProtectedModuleRoute>
+                  }
+                />
+                <Route
+                  path="abm-core/servicios"
+                  element={
+                    <ProtectedModuleRoute moduleId="abm-core-servicios">
+                      <Servicios />
+                    </ProtectedModuleRoute>
+                  }
+                />
+                <Route
+                  path="abm-core/acabados"
+                  element={
+                    <ProtectedModuleRoute moduleId="abm-core-acabados">
+                      <Acabados />
+                    </ProtectedModuleRoute>
+                  }
+                />
+                <Route
+                  path="abm-core/rangos-precio"
+                  element={
+                    <ProtectedModuleRoute moduleId="abm-core-rangos-precio">
+                      <RangosPrecio />
+                    </ProtectedModuleRoute>
+                  }
+                />
+                <Route
+                  path="productos/impresion-laser"
+                  element={
+                    <ProtectedModuleRoute moduleId="productos-impresion-laser">
+                      <ImpresionLaser />
+                    </ProtectedModuleRoute>
+                  }
+                />
+                <Route
+                  path="productos/talonarios"
+                  element={
+                    <ProtectedModuleRoute moduleId="productos-talonarios">
+                      <Talonarios />
+                    </ProtectedModuleRoute>
+                  }
+                />
+                <Route
+                  path="productos/gran-formato"
+                  element={
+                    <ProtectedModuleRoute moduleId="productos-gran-formato">
+                      <GranFormato />
+                    </ProtectedModuleRoute>
+                  }
+                />
+                <Route
+                  path="productos/materiales-rigidos"
+                  element={
+                    <ProtectedModuleRoute moduleId="productos-materiales-rigidos">
+                      <MaterialesRigidos />
+                    </ProtectedModuleRoute>
+                  }
+                />
+                <Route
+                  path="productos/plotter-corte"
+                  element={
+                    <ProtectedModuleRoute moduleId="productos-plotter-corte">
+                      <PlotterCorte />
+                    </ProtectedModuleRoute>
+                  }
+                />
+                <Route
+                  path="productos/sellos"
+                  element={
+                    <ProtectedModuleRoute moduleId="productos-sellos">
+                      <Sellos />
+                    </ProtectedModuleRoute>
+                  }
+                />
+                <Route
+                  path="productos/portabanners"
+                  element={
+                    <ProtectedModuleRoute moduleId="productos-portabanners">
+                      <Portabanners />
+                    </ProtectedModuleRoute>
+                  }
+                />
+                <Route
+                  path="centro-copiado/configuracion"
+                  element={
+                    <ProtectedModuleRoute moduleId="centro-copiado-configuracion">
+                      <CentroCopiadoConfiguracion />
+                    </ProtectedModuleRoute>
+                  }
+                />
+                <Route
+                  path="centro-copiado/terminaciones"
+                  element={
+                    <ProtectedModuleRoute moduleId="centro-copiado-terminaciones">
+                      <CentroCopiadoTerminaciones />
+                    </ProtectedModuleRoute>
+                  }
+                />
+                <Route
+                  path="centro-copiado/rangos-precio"
+                  element={
+                    <ProtectedModuleRoute moduleId="centro-copiado-rangos-precio">
+                      <CentroCopiadoRangosPrecio />
+                    </ProtectedModuleRoute>
+                  }
+                />
+                <Route
+                  path="centro-copiado/precios"
+                  element={
+                    <ProtectedModuleRoute moduleId="centro-copiado-precios">
+                      <CentroCopiadoPrecios />
+                    </ProtectedModuleRoute>
+                  }
+                />
+                <Route
+                  path="centro-copiado/ordenes"
+                  element={
+                    <ProtectedModuleRoute moduleId="centro-copiado-ordenes">
+                      <CentroCopiadoOrdenes />
+                    </ProtectedModuleRoute>
+                  }
+                />
+                <Route
+                  path="centro-copiado/ordenes/crear"
+                  element={
+                    <ProtectedModuleRoute moduleId="centro-copiado-ordenes-crear">
+                      <CrearOrdenCopiado />
+                    </ProtectedModuleRoute>
+                  }
+                />
+                <Route
+                  path="centro-copiado/ordenes/:id"
+                  element={
+                    <ProtectedModuleRoute moduleId="centro-copiado-ordenes">
+                      <DetalleOrdenCopiado />
+                    </ProtectedModuleRoute>
+                  }
+                />
                 <Route path="orders" element={<Navigate to="/app/orders/ordenes" replace />} />
-                <Route path="orders/ordenes" element={<OrdersListPage />} />
-                <Route path="orders/crear-ot" element={<CreateOrderPage />} />
-                <Route path="orders/:id" element={<OrderDetailPage />} />
-                <Route path="production" element={<ProductionPage />} />
-                <Route path="finanzas/*" element={<Finanzas />} />
+                <Route
+                  path="orders/ordenes"
+                  element={
+                    <ProtectedModuleRoute moduleId="orders-lista">
+                      <OrdersListPage />
+                    </ProtectedModuleRoute>
+                  }
+                />
+                <Route
+                  path="orders/crear-ot"
+                  element={
+                    <ProtectedModuleRoute moduleId="orders-crear">
+                      <CreateOrderPage />
+                    </ProtectedModuleRoute>
+                  }
+                />
+                <Route
+                  path="orders/:id"
+                  element={
+                    <ProtectedModuleRoute moduleId="orders-lista">
+                      <OrderDetailPage />
+                    </ProtectedModuleRoute>
+                  }
+                />
+                <Route
+                  path="production"
+                  element={
+                    <ProtectedModuleRoute moduleId="production">
+                      <ProductionPage />
+                    </ProtectedModuleRoute>
+                  }
+                />
+                <Route
+                  path="finanzas/*"
+                  element={
+                    <ProtectedModuleRoute moduleId="finanzas">
+                      <Finanzas />
+                    </ProtectedModuleRoute>
+                  }
+                />
                 <Route
                   path="team"
                   element={
@@ -126,13 +329,62 @@ function AppRoutes() {
                     </ProtectedModuleRoute>
                   }
                 />
-                <Route path="integrations" element={<Integrations />} />
-                <Route path="integrations/whatsapp" element={<WhatsAppIntegration />} />
-                <Route path="settings" element={<SystemSettings />} />
-                <Route path="settings/pausas" element={<SystemSettings />} />
-                <Route path="settings/locations" element={<Locations />} />
-                <Route path="settings/medios-cobro" element={<MediosCobro />} />
-                <Route path="settings/cajas" element={<Cajas />} />
+                <Route
+                  path="integrations"
+                  element={
+                    <ProtectedModuleRoute moduleId="integrations">
+                      <Integrations />
+                    </ProtectedModuleRoute>
+                  }
+                />
+                <Route
+                  path="integrations/whatsapp"
+                  element={
+                    <ProtectedModuleRoute moduleId="integrations-whatsapp">
+                      <WhatsAppIntegration />
+                    </ProtectedModuleRoute>
+                  }
+                />
+                <Route
+                  path="settings"
+                  element={
+                    <ProtectedModuleRoute moduleId="settings">
+                      <SystemSettings />
+                    </ProtectedModuleRoute>
+                  }
+                />
+                <Route
+                  path="settings/pausas"
+                  element={
+                    <ProtectedModuleRoute moduleId="settings-pausas">
+                      <SystemSettings />
+                    </ProtectedModuleRoute>
+                  }
+                />
+                <Route
+                  path="settings/locations"
+                  element={
+                    <ProtectedModuleRoute moduleId="settings-locations">
+                      <Locations />
+                    </ProtectedModuleRoute>
+                  }
+                />
+                <Route
+                  path="settings/medios-cobro"
+                  element={
+                    <ProtectedModuleRoute moduleId="settings-medios-cobro">
+                      <MediosCobro />
+                    </ProtectedModuleRoute>
+                  }
+                />
+                <Route
+                  path="settings/cajas"
+                  element={
+                    <ProtectedModuleRoute moduleId="settings-cajas">
+                      <Cajas />
+                    </ProtectedModuleRoute>
+                  }
+                />
                 <Route path="*" element={<Navigate to="/app/dashboard" replace />} />
               </Routes>
             </MainLayout>
