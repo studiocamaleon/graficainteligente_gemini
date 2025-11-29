@@ -16,6 +16,11 @@ interface StationStepCardProps {
   fecha_inicio: string | null;
   fecha_creacion_orden: string;
   orden_item_id: string;
+  pausa_activa?: {
+    motivo_nombre: string;
+    categoria_motivo: string;
+    fecha_inicio_pausa: string;
+  } | null;
   onViewDetails: () => void;
 }
 
@@ -28,6 +33,7 @@ export function StationStepCard({
   cantidad,
   fecha_inicio,
   fecha_creacion_orden,
+  pausa_activa,
   onViewDetails,
 }: StationStepCardProps) {
   const isEnProceso = estado_paso === 'en_proceso';
@@ -87,16 +93,24 @@ export function StationStepCard({
                 <FileText className="w-4 h-4 text-gray-400" />
                 <span className="font-medium text-gray-700">{paso_nombre}</span>
               </div>
+              {isPausado && pausa_activa && (
+                <div className="flex items-center gap-2 mt-2 pt-2 border-t border-red-200">
+                  <PauseCircle className="w-4 h-4 text-red-500" />
+                  <span className="font-medium text-red-700 text-xs">
+                    Motivo: {pausa_activa.motivo_nombre}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </div>
 
         <div className="flex items-center justify-between pt-3 border-t border-gray-200">
           <div className="flex items-center gap-4 text-xs text-gray-500">
-            {isPausado && fecha_inicio ? (
+            {isPausado && pausa_activa?.fecha_inicio_pausa ? (
               <div className="flex items-center gap-1 text-red-600 font-medium">
                 <PauseCircle className="w-3.5 h-3.5" />
-                <span>Pausado desde {calcularTiempoTranscurrido(fecha_inicio)}</span>
+                <span>Pausado desde {calcularTiempoTranscurrido(pausa_activa.fecha_inicio_pausa)}</span>
               </div>
             ) : isEnProceso && fecha_inicio ? (
               <div className="flex items-center gap-1 text-orange-600 font-medium">

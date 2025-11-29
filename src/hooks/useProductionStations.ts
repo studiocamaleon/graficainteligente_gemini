@@ -17,6 +17,11 @@ export interface StationStep {
   fecha_inicio: string | null;
   fecha_creacion_orden: string;
   orden_id: string;
+  pausa_activa?: {
+    motivo_nombre: string;
+    categoria_motivo: string;
+    fecha_inicio_pausa: string;
+  } | null;
 }
 
 interface RutaConOrden {
@@ -30,6 +35,7 @@ interface RutaConOrden {
   fecha_inicio: string | null;
   orden_item: any;
   paso: any;
+  pausa_activa?: any;
 }
 
 export interface StationWithJobs {
@@ -120,13 +126,52 @@ export function useProductionStations(params: UseProductionStationsParams = {}) 
         return;
       }
 
+      // Obtener IDs de rutas pausadas
+      const rutasPausadasIds = rutasData
+        .filter((r: any) => r.estado_paso === 'pausado')
+        .map((r: any) => r.id);
+
+      // Obtener información de pausas activas para rutas pausadas
+      let pausasActivasMap = new Map<string, any>();
+      if (rutasPausadasIds.length > 0) {
+        const { data: pausasData } = await supabase
+          .from('ordenes_items_rutas_pausas')
+          .select(`
+            ruta_id,
+            categoria_motivo,
+            fecha_inicio_pausa,
+            motivo:pasos_motivos_pausa(
+              nombre
+            )
+          `)
+          .in('ruta_id', rutasPausadasIds)
+          .is('fecha_fin_pausa', null);
+
+        if (pausasData) {
+          pausasData.forEach((pausa: any) => {
+            pausasActivasMap.set(pausa.ruta_id, {
+              motivo_nombre: pausa.motivo?.nombre || 'Sin motivo',
+              categoria_motivo: pausa.categoria_motivo,
+              fecha_inicio_pausa: pausa.fecha_inicio_pausa,
+            });
+          });
+        }
+      }
+
       const rutasPorItem = new Map<string, RutaConOrden[]>();
       rutasData.forEach((ruta: any) => {
         if (!ruta.paso?.estacion) return;
+
+        // Agregar información de pausa activa si existe
+        const rutaConPausa = {
+          ...ruta,
+          pausa_activa: ruta.estado_paso === 'pausado' ? pausasActivasMap.get(ruta.id) : null,
+        };
+
         if (!rutasPorItem.has(ruta.orden_item_id)) {
           rutasPorItem.set(ruta.orden_item_id, []);
         }
-        rutasPorItem.get(ruta.orden_item_id)!.push(ruta as RutaConOrden);
+        rutasPorItem.get(ruta.orden_item_id)!.push(rutaConPausa as RutaConOrden);
       });
 
       const isPasoListo = (ruta: RutaConOrden, rutasOrdenadas: RutaConOrden[]): boolean => {
@@ -182,6 +227,7 @@ export function useProductionStations(params: UseProductionStationsParams = {}) 
             fecha_inicio: ruta.fecha_inicio,
             fecha_creacion_orden: ruta.orden_item.orden.fecha_creacion,
             orden_id: ruta.orden_item.orden.id,
+            pausa_activa: ruta.pausa_activa || null,
           };
 
           if (!stepsMap.has(estacionId)) {
