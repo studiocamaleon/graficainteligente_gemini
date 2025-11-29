@@ -464,7 +464,7 @@ async function searchImpresionUVRigidos(
     .from('productos_impresion_uv_rigidos')
     .select('id, nombre, descripcion')
     .eq('company_id', companyId)
-    .eq('is_active', true)
+    .eq('activo', true)
     .ilike('nombre', `%${searchTerm}%`)
     .order('nombre')
     .limit(10);
