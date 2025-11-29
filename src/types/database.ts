@@ -1,4 +1,4 @@
-export type UserRole = 'super_admin' | 'admin' | 'manager' | 'operator' | 'viewer';
+export type UserRole = 'super_admin' | 'admin' | 'manager' | 'operador_diseno' | 'operador_taller' | 'viewer';
 
 export type CompanyStatus = 'active' | 'suspended' | 'cancelled';
 
