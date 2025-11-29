@@ -141,8 +141,8 @@ export function ProductosUVTab({ triggerCreate }: ProductosUVTabProps) {
                       <h3 className="text-lg font-semibold text-gray-900">
                         {producto.nombre}
                       </h3>
-                      <Badge variant={producto.is_active ? 'success' : 'secondary'}>
-                        {producto.is_active ? 'Activo' : 'Inactivo'}
+                      <Badge variant={producto.activo ? 'success' : 'secondary'}>
+                        {producto.activo ? 'Activo' : 'Inactivo'}
                       </Badge>
                     </div>
 
@@ -152,33 +152,39 @@ export function ProductosUVTab({ triggerCreate }: ProductosUVTabProps) {
                       </p>
                     )}
 
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                      {producto.limite_ancho_cm && (
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                      {producto.ancho_minimo && producto.ancho_maximo && (
                         <div>
-                          <span className="text-gray-600">Ancho máx:</span>{' '}
+                          <span className="text-gray-600">Ancho:</span>{' '}
                           <span className="font-medium">
-                            {producto.limite_ancho_cm} cm
+                            {producto.ancho_minimo} - {producto.ancho_maximo} cm
                           </span>
                         </div>
                       )}
-                      {producto.limite_alto_cm && (
+                      {producto.alto_minimo && producto.alto_maximo && (
                         <div>
-                          <span className="text-gray-600">Alto máx:</span>{' '}
+                          <span className="text-gray-600">Alto:</span>{' '}
                           <span className="font-medium">
-                            {producto.limite_alto_cm} cm
+                            {producto.alto_minimo} - {producto.alto_maximo} cm
                           </span>
                         </div>
                       )}
                       <div>
                         <span className="text-gray-600">Material cliente:</span>{' '}
                         <span className="font-medium">
-                          {producto.material_cliente_permitido ? 'Sí' : 'No'}
+                          {producto.permite_material_cliente ? 'Sí' : 'No'}
                         </span>
                       </div>
                       <div>
-                        <span className="text-gray-600">Servicios:</span>{' '}
+                        <span className="text-gray-600">Tintas:</span>{' '}
                         <span className="font-medium">
-                          {producto.servicios.length}
+                          {producto.tintas.length} opciones
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Cantidad mínima:</span>{' '}
+                        <span className="font-medium">
+                          {producto.cantidad_minima}
                         </span>
                       </div>
                     </div>
