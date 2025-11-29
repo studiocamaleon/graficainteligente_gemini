@@ -7,13 +7,16 @@ import { usePageHeader } from '../../../hooks/usePageHeader';
 import { useOrdenesTrabajo } from '../../../hooks/useOrdenesTrabajo';
 import { KanbanBoard } from '../../../components/orders/KanbanBoard';
 import { usePermissions } from '../../../hooks/usePermissions';
+import { useAuth } from '../../../hooks/useAuth';
 
 export function OrdersListPage() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const { hasPermission } = usePermissions();
+  const { profile } = useAuth();
 
   const canCreate = hasPermission('orders', 'create');
+  const canViewFinancials = profile?.role !== 'operador_taller';
 
   const { ordenes, metrics, loading } = useOrdenesTrabajo({
     searchTerm,
@@ -35,7 +38,7 @@ export function OrdersListPage() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div className={`grid grid-cols-1 md:grid-cols-${canViewFinancials ? '5' : '4'} gap-4`}>
         <Card>
           <div className="p-4">
             <div className="text-xs text-gray-600 mb-1">Total Órdenes (Mes)</div>
@@ -43,14 +46,16 @@ export function OrdersListPage() {
           </div>
         </Card>
 
-        <Card>
-          <div className="p-4">
-            <div className="text-xs text-gray-600 mb-1">Total Facturado</div>
-            <div className="text-2xl font-bold text-green-600">
-              ${metrics.totalFacturado.toLocaleString('es-AR')}
+        {canViewFinancials && (
+          <Card>
+            <div className="p-4">
+              <div className="text-xs text-gray-600 mb-1">Total Facturado</div>
+              <div className="text-2xl font-bold text-green-600">
+                ${metrics.totalFacturado.toLocaleString('es-AR')}
+              </div>
             </div>
-          </div>
-        </Card>
+          </Card>
+        )}
 
         <Card>
           <div className="p-4">

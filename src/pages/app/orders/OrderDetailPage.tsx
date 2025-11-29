@@ -68,6 +68,7 @@ export function OrderDetailPage() {
   const [editingPago, setEditingPago] = useState<any>(null);
 
   const isAdmin = profile?.role === 'super_admin' || profile?.role === 'admin';
+  const canViewPrices = profile?.role !== 'operador_taller';
 
   usePageHeader(orden ? `Orden ${orden.numero_orden}` : 'Cargando orden...');
 
@@ -444,7 +445,7 @@ export function OrderDetailPage() {
             { key: 'items' as const, label: 'Items', icon: Package, count: orden.items?.length || 0 },
             { key: 'ruta' as const, label: 'Ruta de Producción', icon: Route },
             { key: 'adjuntos' as const, label: 'Adjuntos', icon: FileText },
-            { key: 'pagos' as const, label: 'Pagos', icon: CreditCard, count: orden.pagos?.length || 0 },
+            ...(canViewPrices ? [{ key: 'pagos' as const, label: 'Pagos', icon: CreditCard, count: orden.pagos?.length || 0 }] : []),
             { key: 'historial' as const, label: 'Historial', icon: History },
           ].map((tab) => {
             const Icon = tab.icon;
@@ -572,9 +573,11 @@ export function OrderDetailPage() {
                           <span className="text-sm text-gray-600">
                             Cantidad: <span className="font-semibold text-gray-900">{item.cantidad} unidades</span>
                           </span>
-                          <span className="text-lg font-bold text-blue-600">
-                            ${Number(item.precio_total).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                          </span>
+                          {canViewPrices && (
+                            <span className="text-lg font-bold text-blue-600">
+                              ${Number(item.precio_total).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                            </span>
+                          )}
                         </div>
                       </motion.div>
                     );
@@ -593,23 +596,25 @@ export function OrderDetailPage() {
                   </div>
                 )}
 
-                <div className="border-t border-gray-200 pt-4 mt-6">
-                  <div className="flex justify-end items-center gap-8">
-                    <div className="text-right">
-                      <p className="text-sm text-gray-600">Subtotal</p>
-                      <p className="text-lg font-semibold text-gray-900">
-                        ${Number(orden.subtotal).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                      </p>
-                    </div>
+                {canViewPrices && (
+                  <div className="border-t border-gray-200 pt-4 mt-6">
+                    <div className="flex justify-end items-center gap-8">
+                      <div className="text-right">
+                        <p className="text-sm text-gray-600">Subtotal</p>
+                        <p className="text-lg font-semibold text-gray-900">
+                          ${Number(orden.subtotal).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                        </p>
+                      </div>
 
-                    <div className="text-right">
-                      <p className="text-sm text-gray-600">Total</p>
-                      <p className="text-2xl font-bold text-blue-600">
-                        ${Number(orden.total).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                      </p>
+                      <div className="text-right">
+                        <p className="text-sm text-gray-600">Total</p>
+                        <p className="text-2xl font-bold text-blue-600">
+                          ${Number(orden.total).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
               </div>
             )}
           </div>

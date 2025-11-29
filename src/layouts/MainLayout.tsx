@@ -122,7 +122,7 @@ function MainLayoutContent({ children }: MainLayoutProps) {
                   transition={{ duration: 0.2 }}
                   className="ml-4 mt-1 space-y-1 overflow-hidden"
                 >
-                  {module.children?.map((subModule) => {
+                  {module.children?.filter(subModule => canAccessModule(subModule.id)).map((subModule) => {
                     const SubIcon = subModule.icon;
                     const subActive = isActive(subModule.path);
 
