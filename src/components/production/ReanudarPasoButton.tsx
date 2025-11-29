@@ -22,7 +22,7 @@ export function ReanudarPasoButton({
   size = 'md',
   fullWidth = false,
 }: ReanudarPasoButtonProps) {
-  const { showToast } = useToast();
+  const { showSuccess, showError } = useToast();
   const { showConfirm } = useConfirmDialog();
   const [submitting, setSubmitting] = useState(false);
 
@@ -55,16 +55,12 @@ export function ReanudarPasoButton({
       const duracionTexto =
         horas > 0 ? `${horas}h ${minutos}min` : `${minutos} min`;
 
-      showToast(
-        `Paso reanudado. Duración de pausa: ${duracionTexto}`,
-        'success'
-      );
+      showSuccess(`Paso reanudado. Duración de pausa: ${duracionTexto}`);
       onSuccess?.();
     } catch (error) {
       console.error('Error reanudando paso:', error);
-      showToast(
-        error instanceof Error ? error.message : 'Error reanudando paso',
-        'error'
+      showError(
+        error instanceof Error ? error.message : 'Error reanudando paso'
       );
     } finally {
       setSubmitting(false);

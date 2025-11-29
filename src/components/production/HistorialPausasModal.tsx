@@ -20,12 +20,10 @@ interface Pausa {
     color: string;
   } | null;
   pausado_por_profile: {
-    nombre: string;
-    apellido: string;
+    full_name: string;
   } | null;
   reanudado_por_profile: {
-    nombre: string;
-    apellido: string;
+    full_name: string;
   } | null;
 }
 
@@ -61,8 +59,8 @@ export function HistorialPausasModal({
           `
           *,
           motivo:pasos_motivos_pausa!motivo_pausa_id(nombre, color),
-          pausado_por_profile:profiles!pausado_por(nombre, apellido),
-          reanudado_por_profile:profiles!reanudado_por(nombre, apellido)
+          pausado_por_profile:profiles!pausado_por(full_name),
+          reanudado_por_profile:profiles!reanudado_por(full_name)
         `
         )
         .eq('ruta_id', rutaId)
@@ -141,12 +139,8 @@ export function HistorialPausasModal({
           <div className="relative">
             {pausas.map((pausa, index) => {
               const isActiva = !pausa.fecha_fin_pausa;
-              const pausadoPor = pausa.pausado_por_profile
-                ? `${pausa.pausado_por_profile.nombre} ${pausa.pausado_por_profile.apellido}`
-                : 'Desconocido';
-              const reanudadoPor = pausa.reanudado_por_profile
-                ? `${pausa.reanudado_por_profile.nombre} ${pausa.reanudado_por_profile.apellido}`
-                : null;
+              const pausadoPor = pausa.pausado_por_profile?.full_name || 'Desconocido';
+              const reanudadoPor = pausa.reanudado_por_profile?.full_name || null;
 
               return (
                 <div key={pausa.id} className="relative pl-8 pb-8 last:pb-0">
