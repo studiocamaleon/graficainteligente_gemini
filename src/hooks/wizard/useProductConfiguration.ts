@@ -55,18 +55,6 @@ export interface ProductConfiguration {
   color?: string;
   marca?: string;
 
-  // Para Impresión UV sobre Rígidos
-  permite_material_cliente?: boolean;
-  tintas_disponibles?: string[];
-  materiales_uv?: Array<{
-    id: string;
-    material_id: string;
-    material_nombre: string;
-    variante_nombre: string;
-    espesor_mm: number | null;
-    precio_mt2: number;
-  }>;
-
   // Servicios disponibles
   servicios: Array<{
     id: string;
@@ -140,9 +128,6 @@ export function useProductConfiguration(productId: string | null, categoria: Pro
             break;
           case 'Talonarios':
             configuration = await loadTalonariosConfig(productId);
-            break;
-          case 'Impresión UV sobre Rígidos':
-            configuration = await loadImpresionUVConfig(productId);
             break;
         }
 
@@ -775,59 +760,3 @@ async function loadAcabadosForProduct(
   return acabadosWithNiveles;
 }
 
-async function loadImpresionUVConfig(productId: string): Promise<ProductConfiguration> {
-  // Cargar datos básicos del producto UV
-  const { data: producto, error: prodError } = await supabase
-    .from('productos_impresion_uv_rigidos')
-    .select('id, nombre, permite_material_cliente')
-    .eq('id', productId)
-    .single();
-
-  if (prodError) throw prodError;
-
-  // Cargar materiales UV disponibles
-  const { data: materialesUV } = await supabase
-    .from('productos_impresion_uv_rigidos_materiales')
-    .select(`
-      id,
-      material_id,
-      variante_nombre,
-      espesor_mm,
-      precio_mt2,
-      material:materiales(id, nombre)
-    `)
-    .eq('producto_uv_id', productId)
-    .eq('is_active', true);
-
-  // Cargar tintas disponibles desde precios de impresión
-  const { data: preciosImpresion } = await supabase
-    .from('productos_impresion_uv_rigidos_precios_impresion')
-    .select('tinta')
-    .eq('producto_uv_id', productId);
-
-  // Extraer tintas únicas
-  const tintasDisponibles = [...new Set(preciosImpresion?.map(p => p.tinta) || [])];
-
-  // Productos UV no tienen servicios ni acabados en su tabla
-  return {
-    id: producto.id,
-    nombre: producto.nombre,
-    categoria: 'Impresión UV sobre Rígidos',
-    tipo_medida: 'sin_medida',
-    tipo_venta: 'unidad',
-    permite_multiples_lineas: true,
-    permite_material_cliente: producto.permite_material_cliente,
-    tintas_disponibles: tintasDisponibles,
-    materiales_uv: materialesUV?.map(m => ({
-      id: m.id,
-      material_id: m.material_id,
-      material_nombre: (m.material as any)?.nombre || '',
-      variante_nombre: m.variante_nombre,
-      espesor_mm: m.espesor_mm,
-      precio_mt2: m.precio_mt2
-    })) || [],
-    servicios: [],
-    acabados: [],
-    impuesto_iva: 21
-  };
-}
