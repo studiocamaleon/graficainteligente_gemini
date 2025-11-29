@@ -23,7 +23,7 @@ export interface JobItem {
   progreso_porcentaje: number;
   paso_relevante?: {
     nombre: string;
-    estado: 'pendiente' | 'en_proceso';
+    estado: 'pendiente' | 'en_proceso' | 'pausado';
     etapa: TipoEtapaRuta;
   } | null;
   rutas?: OrdenItemRuta[];
@@ -40,6 +40,17 @@ const encontrarPasoRelevante = (itemRutas: any[]) => {
 
   const rutasOrdenadas = ordenarRutasPorEtapaYOrden(itemRutas);
 
+  // Prioridad 1: Paso pausado (máxima prioridad visual)
+  const pasoPausado = rutasOrdenadas.find((r) => r.estado_paso === 'pausado');
+  if (pasoPausado) {
+    return {
+      nombre: pasoPausado.paso_nombre,
+      estado: 'pausado' as const,
+      etapa: pasoPausado.tipo_etapa,
+    };
+  }
+
+  // Prioridad 2: Paso en proceso
   const pasoEnProceso = rutasOrdenadas.find((r) => r.estado_paso === 'en_proceso');
   if (pasoEnProceso) {
     return {
@@ -49,6 +60,7 @@ const encontrarPasoRelevante = (itemRutas: any[]) => {
     };
   }
 
+  // Prioridad 3: Primer paso pendiente
   const pasoPendiente = rutasOrdenadas.find((r) => r.estado_paso === 'pendiente');
   if (pasoPendiente) {
     return {

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { ConfirmDialogVariant } from '../components/ui/ConfirmDialog';
 
 interface ConfirmDialogState {
@@ -24,6 +24,7 @@ const initialState: ConfirmDialogState = {
 export function useConfirmDialog() {
   const [state, setState] = useState<ConfirmDialogState>(initialState);
   const [isLoading, setIsLoading] = useState(false);
+  const promiseResolveRef = useRef<((value: boolean) => void) | null>(null);
 
   const openDialog = useCallback(
     (options: {
@@ -48,6 +49,11 @@ export function useConfirmDialog() {
   );
 
   const closeDialog = useCallback(() => {
+    // Si hay una promesa pendiente, resolverla con false (cancelado)
+    if (promiseResolveRef.current) {
+      promiseResolveRef.current(false);
+      promiseResolveRef.current = null;
+    }
     setState(initialState);
     setIsLoading(false);
   }, []);
@@ -159,24 +165,23 @@ export function useConfirmDialog() {
       variant?: ConfirmDialogVariant;
     }): Promise<boolean> => {
       return new Promise((resolve) => {
+        // Guardar el resolve en el ref para poder llamarlo desde closeDialog
+        promiseResolveRef.current = resolve;
+
         openDialog({
           ...options,
           onConfirm: () => {
-            resolve(true);
+            if (promiseResolveRef.current) {
+              promiseResolveRef.current(true);
+              promiseResolveRef.current = null;
+            }
+            setState(initialState);
+            setIsLoading(false);
           },
         });
-
-        const originalClose = closeDialog;
-        setState((prev) => ({
-          ...prev,
-          onCancel: () => {
-            originalClose();
-            resolve(false);
-          },
-        }));
       });
     },
-    [openDialog, closeDialog]
+    [openDialog]
   );
 
   return {
