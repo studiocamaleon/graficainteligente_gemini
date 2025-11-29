@@ -744,8 +744,8 @@ export function ConfigurationStep({
         </Card>
       )}
 
-      {/* Tecnología y Tintas - NO mostrar tecnología para Impresión Láser, mostrar solo tintas para UV */}
-      {config.tecnologias && config.tecnologias.length > 0 && (isImpresionUV || !isImpresionLaser) && (
+      {/* Tecnología y Tintas - Mostrar siempre que haya tecnologías. Controles internos gestionan qué mostrar */}
+      {config.tecnologias && config.tecnologias.length > 0 && (
         <Card className="p-6">
           <div className="flex items-center gap-2 mb-4">
             <Palette className="w-5 h-5 text-blue-600" />
