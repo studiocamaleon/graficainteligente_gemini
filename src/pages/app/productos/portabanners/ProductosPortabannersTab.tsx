@@ -10,6 +10,7 @@ import { EmptyState } from '../../../../components/ui/EmptyState';
 import { ConfirmDialog } from '../../../../components/ui/ConfirmDialog';
 import { useProductosPortabanners, useProductoPortabanner } from '../../../../hooks/useProductosPortabanners';
 import { useConfirmDialog } from '../../../../hooks/useConfirmDialog';
+import { useAuth } from '../../../../hooks/useAuth';
 import { ProductoPortabannerModal } from '../../../../components/productos/portabanners/ProductoPortabannerModal';
 import { ProductoPortabannerDetalle } from '../../../../components/productos/portabanners/ProductoPortabannerDetalle';
 import type { ProductoPortabanner, ProductoPortabannerConRelaciones } from '../../../../types/database';
@@ -19,6 +20,9 @@ interface ProductosPortabannersTabProps {
 }
 
 export function ProductosPortabannersTab({ triggerCreate = 0 }: ProductosPortabannersTabProps) {
+  const { profile } = useAuth();
+  const isOperador = ['operador_diseno', 'operador_taller'].includes(profile?.role || '');
+
   const [search, setSearch] = useState('');
   const [filterActive, setFilterActive] = useState<string>('all');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -187,36 +191,40 @@ export function ProductosPortabannersTab({ triggerCreate = 0 }: ProductosPortaba
           >
             <Eye className="w-4 h-4" />
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleEditar(producto)}
-            title="Editar"
-          >
-            <Pencil className="w-4 h-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleToggleStatus(producto.id, producto.nombre, producto.is_active)}
-            title={producto.is_active ? 'Desactivar' : 'Activar'}
-            className={
-              producto.is_active
-                ? 'text-yellow-600 hover:text-yellow-700'
-                : 'text-green-600 hover:text-green-700'
-            }
-          >
-            <Power className="w-4 h-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleEliminar(producto.id, producto.nombre)}
-            title="Eliminar"
-            className="text-red-600 hover:text-red-700"
-          >
-            <Trash2 className="w-4 h-4" />
-          </Button>
+          {!isOperador && (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleEditar(producto)}
+                title="Editar"
+              >
+                <Pencil className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleToggleStatus(producto.id, producto.nombre, producto.is_active)}
+                title={producto.is_active ? 'Desactivar' : 'Activar'}
+                className={
+                  producto.is_active
+                    ? 'text-yellow-600 hover:text-yellow-700'
+                    : 'text-green-600 hover:text-green-700'
+                }
+              >
+                <Power className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleEliminar(producto.id, producto.nombre)}
+                title="Eliminar"
+                className="text-red-600 hover:text-red-700"
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            </>
+          )}
         </div>
       ),
     },

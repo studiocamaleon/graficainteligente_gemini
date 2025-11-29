@@ -9,6 +9,7 @@ import { EmptyState } from '../../../../components/ui/EmptyState';
 import { ProductoSelloModal } from '../../../../components/productos/sellos/ProductoSelloModal';
 import { useProductosSellos, useProductoSelloActions } from '../../../../hooks/useProductosSellos';
 import { useConfirmDialog } from '../../../../hooks/useConfirmDialog';
+import { useAuth } from '../../../../hooks/useAuth';
 import type { CreateProductoSelloData, ProductoSelloConRelaciones } from '../../../../types/database';
 
 interface ProductosSellosTabProps {
@@ -27,6 +28,9 @@ const getTipoProductoLabel = (tipo: string): string => {
 };
 
 export function ProductosSellosTab({ triggerCreate }: ProductosSellosTabProps) {
+  const { profile } = useAuth();
+  const isOperador = ['operador_diseno', 'operador_taller'].includes(profile?.role || '');
+
   const [search, setSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedProducto, setSelectedProducto] = useState<ProductoSelloConRelaciones | undefined>();
@@ -165,32 +169,36 @@ export function ProductosSellosTab({ triggerCreate }: ProductosSellosTabProps) {
       header: 'Acciones',
       render: (producto: any) => (
         <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => handleOpenEdit(producto)}
-            disabled={isActioning}
-          >
-            <Edit2 className="w-4 h-4" />
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => handleToggleActive(producto.id, producto.nombre, producto.is_active)}
-            disabled={isActioning}
-          >
-            <Power
-              className={`w-4 h-4 ${producto.is_active ? 'text-green-600' : 'text-gray-400'}`}
-            />
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => handleDelete(producto.id, producto.nombre)}
-            disabled={isActioning}
-          >
-            <Trash2 className="w-4 h-4 text-red-600" />
-          </Button>
+          {!isOperador && (
+            <>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => handleOpenEdit(producto)}
+                disabled={isActioning}
+              >
+                <Edit2 className="w-4 h-4" />
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => handleToggleActive(producto.id, producto.nombre, producto.is_active)}
+                disabled={isActioning}
+              >
+                <Power
+                  className={`w-4 h-4 ${producto.is_active ? 'text-green-600' : 'text-gray-400'}`}
+                />
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => handleDelete(producto.id, producto.nombre)}
+                disabled={isActioning}
+              >
+                <Trash2 className="w-4 h-4 text-red-600" />
+              </Button>
+            </>
+          )}
         </div>
       ),
     },
