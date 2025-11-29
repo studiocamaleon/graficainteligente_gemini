@@ -1,20 +1,21 @@
 import { useState, useEffect } from 'react';
 import { Modal } from '../ui/Modal';
 import { StepCard } from './StepCard';
-import { StepActionButtons } from './StepActionButtons';
+import { StepActionsBar } from './StepActionsBar';
 import { StepProgressIndicator } from './StepProgressIndicator';
 import { useStepExecution } from '../../hooks/useStepExecution';
 import { useOrdenItemRutas } from '../../hooks/useOrdenItemRutas';
 import type { JobItem } from '../../hooks/useProductionJobs';
-import { AlertCircle, Package, User, Hash, Pause, History } from 'lucide-react';
+import { AlertCircle, Package, User, Hash } from 'lucide-react';
 import { useConfirmDialog } from '../../hooks/useConfirmDialog';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { PausarPasoDialog } from './PausarPasoDialog';
-import { ReanudarPasoButton } from './ReanudarPasoButton';
 import { PausaBadge } from './PausaBadge';
 import { HistorialPausasModal } from './HistorialPausasModal';
+import { supabase } from '../../lib/supabase';
+import { useToast } from '../../contexts/ToastContext';
 
 interface JobExecutionModalProps {
   isOpen: boolean;
@@ -117,6 +118,60 @@ export function JobExecutionModal({ isOpen, onClose, job, onJobUpdated }: JobExe
   const handlePausaSuccess = async () => {
     await refetch();
     onJobUpdated?.();
+  };
+
+  const { showSuccess, showError } = useToast();
+
+  const handleReanudar = async (rutaId: string, pasoNombre: string) => {
+    console.log('🔄 Intentando reanudar paso:', { rutaId, pasoNombre });
+
+    const confirmed = await showConfirm({
+      title: 'Reanudar Paso',
+      message: `¿Confirmas que deseas reanudar el paso "${pasoNombre}"?`,
+      confirmText: 'Reanudar',
+      cancelText: 'Cancelar',
+    });
+
+    console.log('🔄 Confirmación de reanudar:', confirmed);
+
+    if (!confirmed) {
+      console.log('❌ Usuario canceló la reanudación');
+      return;
+    }
+
+    try {
+      console.log('⏳ Llamando fn_reanudar_paso con rutaId:', rutaId);
+
+      const { data, error } = await supabase.rpc('fn_reanudar_paso', {
+        p_ruta_id: rutaId,
+      });
+
+      console.log('📦 Respuesta de fn_reanudar_paso:', { data, error });
+
+      if (error) {
+        console.error('❌ Error al reanudar paso:', error);
+        showError(error.message || 'Error al reanudar el paso');
+        return;
+      }
+
+      if (data && data.success) {
+        console.log('✅ Paso reanudado exitosamente. Duración:', data.duracion_pausa);
+
+        const duracion = data.duracion_pausa || '0 minutos';
+        showSuccess(`Paso reanudado. Duración de pausa: ${duracion}`);
+
+        await refetch();
+        onJobUpdated?.();
+      } else {
+        console.error('❌ fn_reanudar_paso retornó success=false');
+        showError('No se pudo reanudar el paso');
+      }
+    } catch (err) {
+      console.error('❌ Error inesperado al reanudar:', err);
+      showError('Error inesperado al reanudar el paso');
+    }
+
+    console.log('🔄 Proceso de reanudación finalizado');
   };
 
   const handleSkipStepClick = (rutaId: string) => {
@@ -233,59 +288,19 @@ export function JobExecutionModal({ isOpen, onClose, job, onJobUpdated }: JobExe
                               </div>
                             )}
 
-                            {/* Botones de Acción */}
-                            <div className="space-y-2">
-                              {ruta.estado_paso === 'pausado' ? (
-                                <div className="flex gap-2">
-                                  <ReanudarPasoButton
-                                    rutaId={ruta.id}
-                                    pasoNombre={ruta.paso_nombre}
-                                    onSuccess={handlePausaSuccess}
-                                    showConfirm={showConfirm}
-                                    fullWidth
-                                  />
-                                  {ruta.cantidad_pausas > 0 && (
-                                    <Button
-                                      variant="secondary"
-                                      onClick={() => handleHistorialClick(ruta.id, ruta.paso_nombre)}
-                                    >
-                                      <History className="w-4 h-4" />
-                                    </Button>
-                                  )}
-                                </div>
-                              ) : (
-                                <>
-                                  <StepActionButtons
-                                    estadoPaso={ruta.estado_paso}
-                                    canStart={canStart}
-                                    onStart={() => handleStartStep(ruta.id)}
-                                    onComplete={() => handleCompleteStep(ruta.id)}
-                                    onSkip={() => handleSkipStepClick(ruta.id)}
-                                    loading={loading}
-                                  />
-                                  {ruta.estado_paso === 'en_proceso' && (
-                                    <Button
-                                      variant="secondary"
-                                      onClick={() => handlePausarClick(ruta.id, ruta.paso_nombre)}
-                                      className="w-full"
-                                    >
-                                      <Pause className="w-4 h-4 mr-2" />
-                                      Pausar Paso
-                                    </Button>
-                                  )}
-                                  {ruta.cantidad_pausas > 0 && (
-                                    <Button
-                                      variant="outline"
-                                      onClick={() => handleHistorialClick(ruta.id, ruta.paso_nombre)}
-                                      className="w-full text-sm"
-                                    >
-                                      <History className="w-4 h-4 mr-2" />
-                                      Ver Historial ({ruta.cantidad_pausas})
-                                    </Button>
-                                  )}
-                                </>
-                              )}
-                            </div>
+                            {/* Botones de Acción - Diseño Moderno */}
+                            <StepActionsBar
+                              estadoPaso={ruta.estado_paso}
+                              canStart={canStart}
+                              onStart={() => handleStartStep(ruta.id)}
+                              onComplete={() => handleCompleteStep(ruta.id)}
+                              onPause={() => handlePausarClick(ruta.id, ruta.paso_nombre)}
+                              onSkip={() => handleSkipStepClick(ruta.id)}
+                              onViewHistory={() => handleHistorialClick(ruta.id, ruta.paso_nombre)}
+                              onResume={() => handleReanudar(ruta.id, ruta.paso_nombre)}
+                              loading={loading}
+                              cantidadPausas={ruta.cantidad_pausas || 0}
+                            />
                           </StepCard>
                         );
                       })}

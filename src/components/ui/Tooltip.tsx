@@ -13,6 +13,7 @@ export function Tooltip({ content, children, position = 'top', icon = false }: T
   const [coords, setCoords] = useState({ top: 0, left: 0 });
   const triggerRef = useRef<HTMLDivElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (isVisible && triggerRef.current && tooltipRef.current) {
@@ -47,8 +48,30 @@ export function Tooltip({ content, children, position = 'top', icon = false }: T
     }
   }, [isVisible, position]);
 
-  const handleMouseEnter = () => setIsVisible(true);
-  const handleMouseLeave = () => setIsVisible(false);
+  const handleMouseEnter = () => {
+    // Delay de 300ms antes de mostrar el tooltip
+    timeoutRef.current = setTimeout(() => {
+      setIsVisible(true);
+    }, 300);
+  };
+
+  const handleMouseLeave = () => {
+    // Cancelar el timeout si el usuario sale antes
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    setIsVisible(false);
+  };
+
+  // Limpiar timeout al desmontar
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
 
   return (
     <>
@@ -68,11 +91,12 @@ export function Tooltip({ content, children, position = 'top', icon = false }: T
       {isVisible && (
         <div
           ref={tooltipRef}
-          className="fixed z-50 px-3 py-2 text-sm text-white bg-gray-900 rounded-lg shadow-lg max-w-xs pointer-events-none"
+          className="fixed z-50 px-3 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg shadow-xl max-w-sm pointer-events-none animate-in fade-in duration-200"
           style={{
             top: `${coords.top}px`,
             left: `${coords.left}px`,
             opacity: coords.top === 0 && coords.left === 0 ? 0 : 1,
+            transition: 'opacity 200ms ease-out',
           }}
         >
           {content}
