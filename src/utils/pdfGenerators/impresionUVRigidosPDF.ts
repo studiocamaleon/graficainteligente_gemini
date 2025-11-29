@@ -23,7 +23,7 @@ interface ProductoUVPDF {
   nombre: string;
   limite_ancho_cm: number | null;
   limite_alto_cm: number | null;
-  material_cliente_permitido: boolean;
+  permite_material_cliente: boolean;
   materiales: MaterialUVPDF[];
   precios_impresion: PrecioImpresionUVPDF[];
 }
@@ -80,7 +80,7 @@ export const generateImpresionUVRigidosPDF = (productos: ProductoUVPDF[]) => {
     doc.text(producto.nombre, 15, currentY + 8);
 
     // Badge de modalidad
-    const badgeText = producto.material_cliente_permitido ? 'Con/Sin Material' : 'Solo Con Material';
+    const badgeText = producto.permite_material_cliente ? 'Con/Sin Material' : 'Solo Con Material';
     doc.setFillColor(236, 72, 153); // pink-600
     doc.roundedRect(pageWidth - 55, currentY + 2, 45, 8, 2, 2, 'F');
     doc.setFontSize(8);
@@ -113,7 +113,7 @@ export const generateImpresionUVRigidosPDF = (productos: ProductoUVPDF[]) => {
 
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(17, 24, 39);
-    const modalidad = producto.material_cliente_permitido
+    const modalidad = producto.permite_material_cliente
       ? 'Acepta material del cliente o del catálogo'
       : 'Solo material del catálogo';
     doc.text(modalidad, 110, currentY + 11);
@@ -262,7 +262,7 @@ export const generateImpresionUVRigidosPDF = (productos: ProductoUVPDF[]) => {
     doc.text(nota1, 15, currentY + 11);
     doc.text(nota2, 15, currentY + 15);
 
-    if (producto.material_cliente_permitido) {
+    if (producto.permite_material_cliente) {
       doc.text('Si el cliente provee el material, solo se cobra la impresión UV.', 15, currentY + 19);
       currentY += 24;
     } else {

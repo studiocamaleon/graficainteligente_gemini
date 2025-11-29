@@ -199,7 +199,7 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
       // Para UV, validar según el tipo de material elegido
       if (config.categoria === 'Impresión UV sobre Rígidos') {
         // Si permite material del cliente, debe haber elegido una opción
-        if (config.material_cliente_permitido && selectedConfig.usa_material_catalogo === undefined) {
+        if (config.permite_material_cliente && selectedConfig.usa_material_catalogo === undefined) {
           return false;
         }
         // Si eligió material de catálogo, debe seleccionar uno

@@ -56,7 +56,7 @@ export interface ProductConfiguration {
   marca?: string;
 
   // Para Impresión UV sobre Rígidos
-  material_cliente_permitido?: boolean;
+  permite_material_cliente?: boolean;
   tintas_disponibles?: string[];
   materiales_uv?: Array<{
     id: string;
@@ -779,7 +779,7 @@ async function loadImpresionUVConfig(productId: string): Promise<ProductConfigur
   // Cargar datos básicos del producto UV
   const { data: producto, error: prodError } = await supabase
     .from('productos_impresion_uv_rigidos')
-    .select('id, nombre, material_cliente_permitido, servicios, acabados')
+    .select('id, nombre, permite_material_cliente')
     .eq('id', productId)
     .single();
 
@@ -808,12 +808,7 @@ async function loadImpresionUVConfig(productId: string): Promise<ProductConfigur
   // Extraer tintas únicas
   const tintasDisponibles = [...new Set(preciosImpresion?.map(p => p.tinta) || [])];
 
-  // Cargar servicios
-  const servicios = await loadServiciosForProduct(producto.servicios);
-
-  // Cargar acabados
-  const acabados = await loadAcabadosForProduct(producto.acabados);
-
+  // Productos UV no tienen servicios ni acabados en su tabla
   return {
     id: producto.id,
     nombre: producto.nombre,
@@ -821,7 +816,7 @@ async function loadImpresionUVConfig(productId: string): Promise<ProductConfigur
     tipo_medida: 'sin_medida',
     tipo_venta: 'unidad',
     permite_multiples_lineas: true,
-    material_cliente_permitido: producto.material_cliente_permitido,
+    permite_material_cliente: producto.permite_material_cliente,
     tintas_disponibles: tintasDisponibles,
     materiales_uv: materialesUV?.map(m => ({
       id: m.id,
@@ -831,8 +826,8 @@ async function loadImpresionUVConfig(productId: string): Promise<ProductConfigur
       espesor_mm: m.espesor_mm,
       precio_mt2: m.precio_mt2
     })) || [],
-    servicios,
-    acabados,
+    servicios: [],
+    acabados: [],
     impuesto_iva: 21
   };
 }

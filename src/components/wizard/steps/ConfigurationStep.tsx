@@ -373,7 +373,7 @@ export function ConfigurationStep({
       )}
 
       {/* Selector de tipo de material UV - Solo para Impresión UV sobre Rígidos */}
-      {isImpresionUV && config.material_cliente_permitido && (
+      {isImpresionUV && config.permite_material_cliente && (
         <Card className="p-6">
           <div className="flex items-center gap-2 mb-4">
             <Layers className="w-5 h-5 text-blue-600" />

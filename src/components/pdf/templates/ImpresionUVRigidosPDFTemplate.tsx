@@ -26,7 +26,7 @@ interface ProductoUVPDF {
   nombre: string;
   limite_ancho_cm: number | null;
   limite_alto_cm: number | null;
-  material_cliente_permitido: boolean;
+  permite_material_cliente: boolean;
   materiales: MaterialUVPDF[];
   precios_impresion: PrecioImpresionUVPDF[];
 }
@@ -68,7 +68,7 @@ export const ImpresionUVRigidosPDFTemplate = forwardRef<HTMLDivElement, Impresio
                 title={producto.nombre}
                 badge={
                   <PDFBadge
-                    label={producto.material_cliente_permitido ? 'Con/Sin Material' : 'Solo Con Material'}
+                    label={producto.permite_material_cliente ? 'Con/Sin Material' : 'Solo Con Material'}
                     color="pink"
                     size="md"
                   />
@@ -90,7 +90,7 @@ export const ImpresionUVRigidosPDFTemplate = forwardRef<HTMLDivElement, Impresio
                   <div>
                     <div className="text-sm font-medium text-gray-700">Modalidad de Trabajo</div>
                     <div className="text-sm text-gray-900 mt-1">
-                      {producto.material_cliente_permitido
+                      {producto.permite_material_cliente
                         ? 'Acepta material del cliente o material del catálogo'
                         : 'Solo material del catálogo'}
                     </div>
@@ -149,7 +149,7 @@ export const ImpresionUVRigidosPDFTemplate = forwardRef<HTMLDivElement, Impresio
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
                 <div className="text-xs text-gray-700">
                   <strong>Nota:</strong> El precio final se calcula sumando el costo del material (si aplica) más el costo de la impresión UV según los m² y el tipo de tinta seleccionado.
-                  {producto.material_cliente_permitido && (
+                  {producto.permite_material_cliente && (
                     <span> Si el cliente provee el material, solo se cobra la impresión UV.</span>
                   )}
                 </div>
