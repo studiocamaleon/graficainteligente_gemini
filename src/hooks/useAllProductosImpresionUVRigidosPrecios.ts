@@ -16,9 +16,9 @@ export interface MaterialUVInfo {
 export interface PrecioImpresionUVInfo {
   id: string;
   tinta: string;
-  rango_minimo: number;
-  rango_maximo: number | null;
-  precio_por_m2: number;
+  rango_mt2_min: number;
+  rango_mt2_max: number | null;
+  precio_mt2: number;
 }
 
 export interface ProductoImpresionUVParaPrecios {
@@ -116,7 +116,7 @@ export function useAllProductosImpresionUVRigidosPrecios() {
             .select('*')
             .eq('producto_uv_id', producto.id)
             .order('tinta')
-            .order('rango_minimo');
+            .order('rango_mt2_min');
 
           if (preciosError) {
             console.error('Error fetching precios:', preciosError);
@@ -125,9 +125,9 @@ export function useAllProductosImpresionUVRigidosPrecios() {
           const precios_impresion: PrecioImpresionUVInfo[] = (preciosData || []).map((precio) => ({
             id: precio.id,
             tinta: precio.tinta,
-            rango_minimo: precio.rango_minimo,
-            rango_maximo: precio.rango_maximo,
-            precio_por_m2: precio.precio_por_m2,
+            rango_mt2_min: precio.rango_mt2_min,
+            rango_mt2_max: precio.rango_mt2_max,
+            precio_mt2: precio.precio_mt2,
           }));
 
           return {

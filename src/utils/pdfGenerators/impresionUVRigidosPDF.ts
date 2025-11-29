@@ -9,14 +9,14 @@ interface MaterialUVPDF {
   unidad_espesor: string | null;
   dim_ancho_cm: number;
   dim_alto_cm: number;
-  precio_por_m2: number;
+  precio_mt2: number;
 }
 
 interface PrecioImpresionUVPDF {
   tinta: string;
-  rango_minimo: number;
-  rango_maximo: number | null;
-  precio_por_m2: number;
+  rango_mt2_min: number;
+  rango_mt2_max: number | null;
+  precio_mt2: number;
 }
 
 interface ProductoUVPDF {
@@ -142,7 +142,7 @@ export const generateImpresionUVRigidosPDF = (productos: ProductoUVPDF[]) => {
           mat.variante_nombre,
           mat.espesor && mat.unidad_espesor ? `${mat.espesor} ${mat.unidad_espesor}` : '-',
           `${mat.dim_ancho_cm} × ${mat.dim_alto_cm} cm\n(${m2.toFixed(2)} m²)`,
-          formatCurrency(mat.precio_por_m2),
+          formatCurrency(mat.precio_mt2),
         ];
       });
 
@@ -201,8 +201,8 @@ export const generateImpresionUVRigidosPDF = (productos: ProductoUVPDF[]) => {
 
       const preciosData = producto.precios_impresion.map((precio) => [
         getNombreTinta(precio.tinta),
-        formatRango(precio.rango_minimo, precio.rango_maximo),
-        formatCurrency(precio.precio_por_m2),
+        formatRango(precio.rango_mt2_min, precio.rango_mt2_max),
+        formatCurrency(precio.precio_mt2),
       ]);
 
       autoTable(doc, {

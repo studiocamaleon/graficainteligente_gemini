@@ -12,14 +12,14 @@ interface MaterialUVPDF {
   unidad_espesor: string | null;
   dim_ancho_cm: number;
   dim_alto_cm: number;
-  precio_por_m2: number;
+  precio_mt2: number;
 }
 
 interface PrecioImpresionUVPDF {
   tinta: string;
-  rango_minimo: number;
-  rango_maximo: number | null;
-  precio_por_m2: number;
+  rango_mt2_min: number;
+  rango_mt2_max: number | null;
+  precio_mt2: number;
 }
 
 interface ProductoUVPDF {
@@ -119,7 +119,7 @@ export const ImpresionUVRigidosPDFTemplate = forwardRef<HTMLDivElement, Impresio
                           ? `${mat.espesor} ${mat.unidad_espesor}`
                           : '-',
                         dimensiones: `${mat.dim_ancho_cm} × ${mat.dim_alto_cm} cm (${m2.toFixed(2)} m²)`,
-                        precio_m2: formatCurrency(mat.precio_por_m2),
+                        precio_m2: formatCurrency(mat.precio_mt2),
                       };
                     })}
                   />
@@ -138,8 +138,8 @@ export const ImpresionUVRigidosPDFTemplate = forwardRef<HTMLDivElement, Impresio
                     ]}
                     data={producto.precios_impresion.map((precio) => ({
                       tinta: getNombreTinta(precio.tinta),
-                      rango: formatRango(precio.rango_minimo, precio.rango_maximo),
-                      precio: formatCurrency(precio.precio_por_m2),
+                      rango: formatRango(precio.rango_mt2_min, precio.rango_mt2_max),
+                      precio: formatCurrency(precio.precio_mt2),
                     }))}
                   />
                 </div>
