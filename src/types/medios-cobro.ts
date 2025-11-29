@@ -126,6 +126,7 @@ export interface OrdenPorCobrar {
   saldo_pendiente: number;
   dias_transcurridos: number;
   estado: string;
+  tipo_orden: 'trabajo' | 'copiado';
 }
 
 export interface CajaFormData {

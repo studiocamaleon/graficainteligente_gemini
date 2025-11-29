@@ -92,6 +92,7 @@ export function DineroPorCobrarPanel() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Orden</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Origen</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
@@ -103,13 +104,13 @@ export function DineroPorCobrarPanel() {
             <tbody className="bg-white divide-y divide-gray-200">
               {loadingOrdenes ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
                     Cargando órdenes...
                   </td>
                 </tr>
               ) : ordenes.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
                     No hay órdenes pendientes de cobro
                   </td>
                 </tr>
@@ -123,6 +124,13 @@ export function DineroPorCobrarPanel() {
                         <div className="text-xs text-gray-500">
                           {new Date(orden.fecha_creacion).toLocaleDateString('es-AR')}
                         </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {orden.tipo_orden === 'trabajo' ? (
+                          <Badge variant="primary">Trabajo</Badge>
+                        ) : (
+                          <Badge variant="secondary">Copiado</Badge>
+                        )}
                       </td>
                       <td className="px-6 py-4">
                         <div className="text-sm text-gray-900">{orden.cliente_nombre}</div>
