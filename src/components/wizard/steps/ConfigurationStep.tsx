@@ -144,6 +144,24 @@ export function ConfigurationStep({
   const [variantesDisponibles, setVariantesDisponibles] = useState<string[]>([]);
   const [espesoresDisponibles, setEspesoresDisponibles] = useState<number[]>([]);
 
+  // Función helper para nombres de tintas (movida aquí para usar en useEffect)
+  const getNombreTinta = (tinta: string): string => {
+    const nombresMap: Record<string, string> = {
+      'K': 'Negro',
+      'CMYK': 'Color (CMYK)',
+      'CMYK+W': 'Color + Blanco',
+      'CMYK+V': 'Color + Barniz',
+      'CMYK+W+V': 'Color + Blanco + Barniz'
+    };
+    return nombresMap[tinta] || tinta;
+  };
+
+  // Sincronizar localConfig cuando selectedConfig cambia desde el padre
+  useEffect(() => {
+    console.log('[ConfigurationStep] Sincronizando selectedConfig desde padre:', selectedConfig);
+    setLocalConfig(selectedConfig);
+  }, [selectedConfig]);
+
   // Auto-seleccionar opciones únicas al cargar
   useEffect(() => {
     const autoSelections: Partial<SelectedConfiguration> = {};
@@ -171,6 +189,18 @@ export function ConfigurationStep({
       const tecnologia = config.tecnologias[0];
       autoSelections.tecnologia_id = tecnologia.tecnologia_id;
       autoSelections.tecnologia_nombre = tecnologia.tecnologia_nombre;
+
+      console.log('[ConfigurationStep] Auto-seleccionando tecnología para Impresion Laser:', tecnologia.tecnologia_nombre);
+
+      // Auto-seleccionar tinta única si solo hay una opción
+      if (tecnologia.tintas && tecnologia.tintas.length === 1) {
+        const tintaUnica = tecnologia.tintas[0];
+        autoSelections.tinta = tintaUnica;
+        autoSelections.tinta_nombre = getNombreTinta(tintaUnica);
+        console.log('[ConfigurationStep] Auto-seleccionando tinta única:', autoSelections.tinta_nombre);
+      } else {
+        console.log('[ConfigurationStep] Tintas disponibles:', tecnologia.tintas?.length || 0);
+      }
     }
 
     // Auto-seleccionar tecnología única para UV (siempre es una sola)
@@ -181,6 +211,7 @@ export function ConfigurationStep({
     }
 
     if (Object.keys(autoSelections).length > 0) {
+      console.log('[ConfigurationStep] Aplicando auto-selecciones:', autoSelections);
       handleChange(autoSelections);
     }
   }, [config]);
@@ -209,8 +240,10 @@ export function ConfigurationStep({
 
   const handleChange = (changes: Partial<SelectedConfiguration>) => {
     const newConfig = { ...localConfig, ...changes };
+    console.log('[ConfigurationStep] handleChange - changes:', changes);
+    console.log('[ConfigurationStep] handleChange - newConfig completo:', newConfig);
     setLocalConfig(newConfig);
-    onConfigChange(changes);
+    onConfigChange(newConfig);
   };
 
   // Handlers específicos para Materiales Rígidos
@@ -259,18 +292,6 @@ export function ConfigurationStep({
 
   const isImpresionLaser = config.categoria === 'Impresion Laser';
   const isImpresionUV = config.categoria === 'Impresión UV sobre Rígidos';
-
-  // Función helper para nombres de tintas
-  const getNombreTinta = (tinta: string): string => {
-    const nombresMap: Record<string, string> = {
-      'K': 'Negro',
-      'CMYK': 'Color (CMYK)',
-      'CMYK+W': 'Color + Blanco',
-      'CMYK+V': 'Color + Barniz',
-      'CMYK+W+V': 'Color + Blanco + Barniz'
-    };
-    return nombresMap[tinta] || tinta;
-  };
 
   return (
     <div className="space-y-6">
@@ -775,10 +796,16 @@ export function ConfigurationStep({
 
             {/* Selector de tintas - Cards */}
             {(localConfig.tecnologia_id || isImpresionUV) && (() => {
+              console.log('[ConfigurationStep] Evaluando selector de tintas - localConfig.tecnologia_id:', localConfig.tecnologia_id, 'isImpresionUV:', isImpresionUV);
+
               // Para UV, usar la primera tecnología (solo hay una)
               const tecnologia = isImpresionUV && config.tecnologias && config.tecnologias.length > 0
                 ? config.tecnologias[0]
                 : config.tecnologias?.find(t => t.tecnologia_id === localConfig.tecnologia_id);
+
+              console.log('[ConfigurationStep] Tecnología encontrada:', tecnologia?.tecnologia_nombre);
+              console.log('[ConfigurationStep] Tintas disponibles:', tecnologia?.tintas);
+              console.log('[ConfigurationStep] Tinta seleccionada:', localConfig.tinta);
 
               return tecnologia && tecnologia.tintas && tecnologia.tintas.length > 0 && (
                 <div>

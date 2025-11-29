@@ -125,7 +125,14 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
   }, [config]);
 
   const isConfigurationComplete = (): boolean => {
-    if (!config) return false;
+    console.log('[UniversalWizard] === Validando configuración completa ===');
+    console.log('[UniversalWizard] selectedConfig:', selectedConfig);
+    console.log('[UniversalWizard] config:', config);
+
+    if (!config) {
+      console.log('[UniversalWizard] ❌ No hay config');
+      return false;
+    }
 
     // Si permite m\u00faltiples l\u00edneas, validar l\u00edneas
     if (config.permite_multiples_lineas) {
@@ -180,12 +187,21 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
 
     // L\u00f3gica tradicional para productos sin m\u00faltiples l\u00edneas
     // Validar cantidad
-    if (selectedConfig.cantidad < 1) return false;
-    if (config.cantidad_minima && selectedConfig.cantidad < config.cantidad_minima) return false;
+    if (selectedConfig.cantidad < 1) {
+      console.log('[UniversalWizard] ❌ Cantidad menor a 1:', selectedConfig.cantidad);
+      return false;
+    }
+    if (config.cantidad_minima && selectedConfig.cantidad < config.cantidad_minima) {
+      console.log('[UniversalWizard] ❌ Cantidad menor al mínimo:', selectedConfig.cantidad, '<', config.cantidad_minima);
+      return false;
+    }
 
     // Validar medidas si es necesario
     if (config.medidas && config.medidas.length > 1) {
-      if (!selectedConfig.medida_ancho || !selectedConfig.medida_alto) return false;
+      if (!selectedConfig.medida_ancho || !selectedConfig.medida_alto) {
+        console.log('[UniversalWizard] ❌ Falta medida (múltiples opciones):', { ancho: selectedConfig.medida_ancho, alto: selectedConfig.medida_alto });
+        return false;
+      }
     }
 
     // Validar anchos disponibles (gran formato / plotter)
@@ -200,38 +216,59 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
       if (config.categoria === 'Impresión UV sobre Rígidos') {
         // Si permite material del cliente, debe haber elegido una opción
         if (config.permite_material_cliente && selectedConfig.usa_material_catalogo === undefined) {
+          console.log('[UniversalWizard] ❌ UV: No ha elegido tipo de material');
           return false;
         }
         // Si eligió material de catálogo, debe seleccionar uno
         if (selectedConfig.usa_material_catalogo === true && !selectedConfig.material_id) {
+          console.log('[UniversalWizard] ❌ UV: Eligió catálogo pero no hay material_id');
           return false;
         }
         // Si eligió material del cliente, no necesita seleccionar material_id
       } else {
         // Para otros productos, validar material normalmente
-        if (!selectedConfig.material_id) return false;
+        if (!selectedConfig.material_id) {
+          console.log('[UniversalWizard] ❌ Falta material_id. Materiales disponibles:', config.materiales.length);
+          return false;
+        }
       }
     }
 
     // Validar tecnología si es necesario
     if (config.tecnologias && config.tecnologias.length > 0) {
-      if (!selectedConfig.tecnologia_id) return false;
+      if (!selectedConfig.tecnologia_id) {
+        console.log('[UniversalWizard] ❌ Falta tecnologia_id. Tecnologías disponibles:', config.tecnologias.length);
+        return false;
+      }
 
       // Validar tinta si la tecnología tiene tintas
       const tec = config.tecnologias.find(t => t.tecnologia_id === selectedConfig.tecnologia_id);
-      if (tec && tec.tintas.length > 0 && !selectedConfig.tinta) return false;
+      if (tec && tec.tintas.length > 0 && !selectedConfig.tinta) {
+        console.log('[UniversalWizard] ❌ Falta tinta. Tintas disponibles para tecnología:', tec.tintas);
+        console.log('[UniversalWizard] ❌ selectedConfig.tinta actual:', selectedConfig.tinta);
+        return false;
+      }
+      console.log('[UniversalWizard] ✅ Tecnología y tinta OK:', { tecnologia_id: selectedConfig.tecnologia_id, tinta: selectedConfig.tinta });
     }
 
     // Validar caras si es necesario
     if (config.caras_impresas && config.caras_impresas.length > 0) {
-      if (!selectedConfig.cara_impresa) return false;
+      if (!selectedConfig.cara_impresa) {
+        console.log('[UniversalWizard] ❌ Falta cara_impresa. Opciones disponibles:', config.caras_impresas);
+        return false;
+      }
+      console.log('[UniversalWizard] ✅ Cara impresa OK:', selectedConfig.cara_impresa);
     }
 
     // Validar tipo_copia si es necesario (para talonarios)
     if (config.tipo_copia && config.tipo_copia.length > 0) {
-      if (!selectedConfig.tipo_copia) return false;
+      if (!selectedConfig.tipo_copia) {
+        console.log('[UniversalWizard] ❌ Falta tipo_copia. Opciones disponibles:', config.tipo_copia);
+        return false;
+      }
     }
 
+    console.log('[UniversalWizard] ✅ ¡Todas las validaciones pasaron!');
     return true;
   };
 
@@ -293,7 +330,12 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
   };
 
   const handleConfigChange = (changes: Partial<SelectedConfiguration>) => {
-    setSelectedConfig(prev => ({ ...prev, ...changes }));
+    console.log('[UniversalWizard] handleConfigChange recibido:', changes);
+    setSelectedConfig(prev => {
+      const newConfig = { ...prev, ...changes };
+      console.log('[UniversalWizard] selectedConfig actualizado:', newConfig);
+      return newConfig;
+    });
   };
 
   const canProceedToNext = (): boolean => {
