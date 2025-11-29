@@ -61,30 +61,30 @@ export function useDashboardData() {
       const manana = new Date(hoy);
       manana.setDate(manana.getDate() + 1);
 
-      const { data: ordenesPendientes } = await supabase
+      const { count: pendientesCount } = await supabase
         .from('ordenes_trabajo')
-        .select('id', { count: 'exact', head: true })
+        .select('*', { count: 'exact', head: true })
         .eq('company_id', companyId)
         .eq('estado', 'pendiente');
 
-      const { data: ordenesEnProceso } = await supabase
+      const { count: enProcesoCount } = await supabase
         .from('ordenes_trabajo')
-        .select('id', { count: 'exact', head: true })
+        .select('*', { count: 'exact', head: true })
         .eq('company_id', companyId)
         .eq('estado', 'en_proceso');
 
-      const { data: entregasHoyData } = await supabase
+      const { count: entregasHoyCount } = await supabase
         .from('ordenes_trabajo')
-        .select('id', { count: 'exact', head: true })
+        .select('*', { count: 'exact', head: true })
         .eq('company_id', companyId)
         .in('estado', ['pendiente', 'en_proceso'])
         .gte('fecha_estimada_entrega', hoy.toISOString())
         .lt('fecha_estimada_entrega', manana.toISOString());
 
       setStats({
-        ordenesPendientes: ordenesPendientes?.length || 0,
-        ordenesEnProceso: ordenesEnProceso?.length || 0,
-        entregasHoy: entregasHoyData?.length || 0,
+        ordenesPendientes: pendientesCount || 0,
+        ordenesEnProceso: enProcesoCount || 0,
+        entregasHoy: entregasHoyCount || 0,
       });
     } catch (err) {
       console.error('Error loading stats:', err);
@@ -187,7 +187,13 @@ export function useDashboardData() {
     if (!companyId) return;
 
     try {
-      const { data, error } = await supabase
+      const hace7Dias = new Date();
+      hace7Dias.setDate(hace7Dias.getDate() - 7);
+
+      const actividadesOrdenes: ActividadReciente[] = [];
+      const actividadesProduccion: ActividadReciente[] = [];
+
+      const { data: historialOrdenes } = await supabase
         .from('ordenes_trabajo_historial')
         .select(`
           id,
@@ -208,25 +214,133 @@ export function useDashboardData() {
         .order('created_at', { ascending: false })
         .limit(10);
 
-      if (error) {
-        console.error('Error loading actividad reciente:', error);
-        return;
+      if (historialOrdenes) {
+        historialOrdenes
+          .filter((item: any) => item.ordenes_trabajo)
+          .forEach((item: any) => {
+            actividadesOrdenes.push({
+              id: item.id,
+              tipo: 'orden',
+              tipo_evento: item.tipo_evento,
+              descripcion: item.descripcion,
+              orden_numero: item.ordenes_trabajo.numero_orden,
+              orden_id: item.ordenes_trabajo.id,
+              usuario_nombre: item.profiles?.full_name || null,
+              tiempo_relativo: formatTiempoRelativo(item.created_at),
+              created_at: item.created_at,
+            });
+          });
       }
 
-      const actividades: ActividadReciente[] = (data || [])
-        .filter((item: any) => item.ordenes_trabajo)
-        .map((item: any) => ({
-          id: item.id,
-          tipo_evento: item.tipo_evento,
-          descripcion: item.descripcion,
-          orden_numero: item.ordenes_trabajo.numero_orden,
-          orden_id: item.ordenes_trabajo.id,
-          usuario_nombre: item.profiles?.full_name || null,
-          tiempo_relativo: formatTiempoRelativo(item.created_at),
-          created_at: item.created_at,
-        }));
+      const { data: pasosCompletados } = await supabase
+        .from('ordenes_trabajo_items_rutas')
+        .select(`
+          id,
+          paso_nombre,
+          fecha_fin,
+          ordenes_trabajo_items!inner (
+            ordenes_trabajo!inner (
+              numero_orden,
+              id,
+              company_id
+            )
+          ),
+          profiles:responsable_id (
+            full_name
+          )
+        `)
+        .eq('ordenes_trabajo_items.ordenes_trabajo.company_id', companyId)
+        .eq('estado_paso', 'completado')
+        .not('fecha_fin', 'is', null)
+        .gte('fecha_fin', hace7Dias.toISOString())
+        .order('fecha_fin', { ascending: false })
+        .limit(10);
 
-      setActividadReciente(actividades);
+      if (pasosCompletados) {
+        pasosCompletados.forEach((paso: any) => {
+          actividadesProduccion.push({
+            id: `paso-comp-${paso.id}`,
+            tipo: 'produccion',
+            tipo_evento: 'paso_completado',
+            descripcion: 'Paso completado',
+            orden_numero: paso.ordenes_trabajo_items.ordenes_trabajo.numero_orden,
+            orden_id: paso.ordenes_trabajo_items.ordenes_trabajo.id,
+            usuario_nombre: paso.profiles?.full_name || null,
+            tiempo_relativo: formatTiempoRelativo(paso.fecha_fin),
+            created_at: paso.fecha_fin,
+            detalle_extra: paso.paso_nombre,
+          });
+        });
+      }
+
+      const { data: pausasRecientes } = await supabase
+        .from('ordenes_items_rutas_pausas')
+        .select(`
+          id,
+          fecha_inicio_pausa,
+          fecha_fin_pausa,
+          ordenes_trabajo_items_rutas!inner (
+            paso_nombre,
+            ordenes_trabajo_items!inner (
+              ordenes_trabajo!inner (
+                numero_orden,
+                id,
+                company_id
+              )
+            )
+          ),
+          pasos_motivos_pausa (
+            nombre
+          ),
+          pausado_por_profile:pausado_por (
+            full_name
+          ),
+          reanudado_por_profile:reanudado_por (
+            full_name
+          )
+        `)
+        .eq('ordenes_trabajo_items_rutas.ordenes_trabajo_items.ordenes_trabajo.company_id', companyId)
+        .gte('fecha_inicio_pausa', hace7Dias.toISOString())
+        .order('fecha_inicio_pausa', { ascending: false })
+        .limit(10);
+
+      if (pausasRecientes) {
+        pausasRecientes.forEach((pausa: any) => {
+          actividadesProduccion.push({
+            id: `pausa-ini-${pausa.id}`,
+            tipo: 'produccion',
+            tipo_evento: 'paso_pausado',
+            descripcion: 'Paso pausado',
+            orden_numero: pausa.ordenes_trabajo_items_rutas.ordenes_trabajo_items.ordenes_trabajo.numero_orden,
+            orden_id: pausa.ordenes_trabajo_items_rutas.ordenes_trabajo_items.ordenes_trabajo.id,
+            usuario_nombre: pausa.pausado_por_profile?.full_name || null,
+            tiempo_relativo: formatTiempoRelativo(pausa.fecha_inicio_pausa),
+            created_at: pausa.fecha_inicio_pausa,
+            detalle_extra: `${pausa.ordenes_trabajo_items_rutas.paso_nombre} - ${pausa.pasos_motivos_pausa?.nombre || 'Sin motivo'}`,
+          });
+
+          if (pausa.fecha_fin_pausa) {
+            actividadesProduccion.push({
+              id: `pausa-fin-${pausa.id}`,
+              tipo: 'produccion',
+              tipo_evento: 'paso_reanudado',
+              descripcion: 'Paso reanudado',
+              orden_numero: pausa.ordenes_trabajo_items_rutas.ordenes_trabajo_items.ordenes_trabajo.numero_orden,
+              orden_id: pausa.ordenes_trabajo_items_rutas.ordenes_trabajo_items.ordenes_trabajo.id,
+              usuario_nombre: pausa.reanudado_por_profile?.full_name || null,
+              tiempo_relativo: formatTiempoRelativo(pausa.fecha_fin_pausa),
+              created_at: pausa.fecha_fin_pausa,
+              detalle_extra: pausa.ordenes_trabajo_items_rutas.paso_nombre,
+            });
+          }
+        });
+      }
+
+      const todasActividades = [...actividadesOrdenes, ...actividadesProduccion]
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        .slice(0, 15);
+
+      setActividadReciente(todasActividades);
     } catch (err) {
       console.error('Error loading actividad reciente:', err);
     }

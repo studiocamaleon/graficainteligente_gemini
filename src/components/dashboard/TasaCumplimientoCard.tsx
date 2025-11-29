@@ -43,7 +43,7 @@ export function TasaCumplimientoCard({ data, loading }: TasaCumplimientoCardProp
   let textColor = 'text-red-700';
   let accentColor = 'text-red-600';
   let Icon = TrendingDown;
-  let mensaje = 'Necesitamos mejorar. ¡Todos a enfocarse!';
+  let mensaje = 'Necesitamos mejorar';
 
   if (tasa >= meta) {
     bgColor = 'bg-green-50';
@@ -51,14 +51,14 @@ export function TasaCumplimientoCard({ data, loading }: TasaCumplimientoCardProp
     textColor = 'text-green-700';
     accentColor = 'text-green-600';
     Icon = CheckCircle;
-    mensaje = '¡Excelente trabajo! Meta alcanzada';
+    mensaje = 'Meta alcanzada';
   } else if (tasa >= 85) {
     bgColor = 'bg-yellow-50';
     borderColor = 'border-yellow-200';
     textColor = 'text-yellow-700';
     accentColor = 'text-yellow-600';
     Icon = TrendingUp;
-    mensaje = 'Cerca de la meta. ¡Sigamos mejorando!';
+    mensaje = 'Cerca de la meta';
   }
 
   return (

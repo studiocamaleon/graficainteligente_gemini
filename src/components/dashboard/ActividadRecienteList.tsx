@@ -1,16 +1,17 @@
 import { motion } from 'framer-motion';
-import { Activity, Plus, ArrowRight, CheckCircle, Truck, XCircle } from 'lucide-react';
+import { Activity, Plus, ArrowRight, CheckCircle, Truck, XCircle, Play, Pause } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '../ui/Card';
 import { ActividadReciente } from '../../types/dashboard';
 import { TipoEventoHistorial } from '../../types/database';
+import { TipoEventoProduccion } from '../../types/dashboard';
 
 interface ActividadRecienteListProps {
   actividades: ActividadReciente[];
   loading?: boolean;
 }
 
-const eventosIcons: Record<TipoEventoHistorial, { icon: typeof Activity; color: string }> = {
+const eventosIcons: Record<TipoEventoHistorial | TipoEventoProduccion, { icon: typeof Activity; color: string }> = {
   creacion: { icon: Plus, color: 'text-blue-600' },
   modificacion: { icon: ArrowRight, color: 'text-gray-600' },
   cambio_estado: { icon: ArrowRight, color: 'text-orange-600' },
@@ -22,6 +23,10 @@ const eventosIcons: Record<TipoEventoHistorial, { icon: typeof Activity; color: 
   cotizacion_enviada: { icon: Truck, color: 'text-purple-600' },
   orden_confirmada: { icon: CheckCircle, color: 'text-green-600' },
   orden_cancelada: { icon: XCircle, color: 'text-red-600' },
+  paso_iniciado: { icon: Play, color: 'text-blue-600' },
+  paso_completado: { icon: CheckCircle, color: 'text-green-600' },
+  paso_pausado: { icon: Pause, color: 'text-orange-600' },
+  paso_reanudado: { icon: Play, color: 'text-blue-600' },
 };
 
 export function ActividadRecienteList({ actividades, loading }: ActividadRecienteListProps) {
@@ -97,6 +102,9 @@ export function ActividadRecienteList({ actividades, loading }: ActividadRecient
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-gray-900 mb-1">
                     {actividad.descripcion}
+                    {actividad.detalle_extra && (
+                      <span className="font-semibold text-gray-700"> • {actividad.detalle_extra}</span>
+                    )}
                   </p>
                   <div className="flex items-center gap-2 text-xs text-gray-500">
                     <span className="font-mono font-semibold text-blue-600">

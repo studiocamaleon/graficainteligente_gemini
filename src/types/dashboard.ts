@@ -19,15 +19,19 @@ export interface ProximaEntrega {
   pasos_completados: number;
 }
 
+export type TipoEventoProduccion = 'paso_iniciado' | 'paso_completado' | 'paso_pausado' | 'paso_reanudado';
+
 export interface ActividadReciente {
   id: string;
-  tipo_evento: TipoEventoHistorial;
+  tipo: 'orden' | 'produccion';
+  tipo_evento: TipoEventoHistorial | TipoEventoProduccion;
   descripcion: string;
   orden_numero: string;
   orden_id: string;
   usuario_nombre: string | null;
   tiempo_relativo: string;
   created_at: string;
+  detalle_extra?: string;
 }
 
 export interface DashboardData {
