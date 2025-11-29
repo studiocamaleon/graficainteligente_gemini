@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Trash2, Edit2 } from 'lucide-react';
+import { Plus, Trash2, Edit2, Package } from 'lucide-react';
 import { Card } from '../../ui/Card';
 import { Button } from '../../ui/Button';
 import { Input } from '../../ui/Input';
@@ -151,12 +151,15 @@ export function MaterialesUVEditor({ productoUvId }: MaterialesUVEditorProps) {
 
       {materiales.length === 0 ? (
         <EmptyState
+          icon={Package}
           title="No hay materiales configurados"
           description="Agregue materiales del catálogo con sus precios para este producto"
-          action={{
-            label: 'Agregar Material',
-            onClick: () => handleOpenModal(),
-          }}
+          action={
+            <Button onClick={() => handleOpenModal()}>
+              <Plus className="w-4 h-4 mr-2" />
+              Agregar Material
+            </Button>
+          }
         />
       ) : (
         <div className="grid grid-cols-1 gap-4">

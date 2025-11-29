@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Trash2, Save } from 'lucide-react';
+import { Plus, Trash2, Save, DollarSign } from 'lucide-react';
 import { Card } from '../../ui/Card';
 import { Button } from '../../ui/Button';
 import { Input } from '../../ui/Input';
@@ -167,12 +167,15 @@ export function PreciosUVMatrizEditor({ productoUvId }: PreciosUVMatrizEditorPro
 
       {precios.length === 0 ? (
         <EmptyState
+          icon={DollarSign}
           title="No hay precios configurados"
           description="Agregue rangos de precios por m² para diferentes configuraciones de tinta"
-          action={{
-            label: 'Agregar Rango',
-            onClick: handleOpenModal,
-          }}
+          action={
+            <Button onClick={handleOpenModal}>
+              <Plus className="w-4 h-4 mr-2" />
+              Agregar Rango
+            </Button>
+          }
         />
       ) : (
         <div className="space-y-6">
