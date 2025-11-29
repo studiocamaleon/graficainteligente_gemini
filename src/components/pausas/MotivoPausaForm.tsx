@@ -33,7 +33,7 @@ const colores = [
 ];
 
 export function MotivoPausaForm({ isOpen, onClose, motivo, onSuccess }: MotivoPausaFormProps) {
-  const { showToast } = useToast();
+  const { showSuccess, showError } = useToast();
   const [submitting, setSubmitting] = useState(false);
 
   const [nombre, setNombre] = useState('');
@@ -62,7 +62,7 @@ export function MotivoPausaForm({ isOpen, onClose, motivo, onSuccess }: MotivoPa
     e.preventDefault();
 
     if (!nombre.trim()) {
-      showToast('Ingresa un nombre para el motivo', 'error');
+      showError('Ingresa un nombre para el motivo');
       return;
     }
 
@@ -83,7 +83,7 @@ export function MotivoPausaForm({ isOpen, onClose, motivo, onSuccess }: MotivoPa
           .eq('id', motivo.id);
 
         if (error) throw error;
-        showToast('Motivo actualizado correctamente', 'success');
+        showSuccess('Motivo actualizado correctamente');
       } else {
         const { error } = await supabase
           .from('pasos_motivos_pausa')
@@ -98,16 +98,15 @@ export function MotivoPausaForm({ isOpen, onClose, motivo, onSuccess }: MotivoPa
           });
 
         if (error) throw error;
-        showToast('Motivo creado correctamente', 'success');
+        showSuccess('Motivo creado correctamente');
       }
 
       onSuccess();
       handleClose();
     } catch (error) {
       console.error('Error guardando motivo:', error);
-      showToast(
-        error instanceof Error ? error.message : 'Error guardando motivo',
-        'error'
+      showError(
+        error instanceof Error ? error.message : 'Error guardando motivo'
       );
     } finally {
       setSubmitting(false);

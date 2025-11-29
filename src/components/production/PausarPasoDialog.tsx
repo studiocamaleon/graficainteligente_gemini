@@ -22,7 +22,7 @@ export function PausarPasoDialog({
   onSuccess,
 }: PausarPasoDialogProps) {
   const { motivos, loading: loadingMotivos } = useMotivosPausa();
-  const { showToast } = useToast();
+  const { showSuccess, showError } = useToast();
   const [motivoSeleccionado, setMotivoSeleccionado] = useState('');
   const [descripcion, setDescripcion] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -34,12 +34,12 @@ export function PausarPasoDialog({
     e.preventDefault();
 
     if (!motivoSeleccionado) {
-      showToast('Selecciona un motivo de pausa', 'error');
+      showError('Selecciona un motivo de pausa');
       return;
     }
 
     if (requiereDescripcion && !descripcion.trim()) {
-      showToast('Este motivo requiere una descripción', 'error');
+      showError('Este motivo requiere una descripción');
       return;
     }
 
@@ -58,14 +58,13 @@ export function PausarPasoDialog({
         throw new Error(data?.error || 'Error pausando paso');
       }
 
-      showToast('Paso pausado correctamente', 'success');
+      showSuccess('Paso pausado correctamente');
       onSuccess?.();
       handleClose();
     } catch (error) {
       console.error('Error pausando paso:', error);
-      showToast(
-        error instanceof Error ? error.message : 'Error pausando paso',
-        'error'
+      showError(
+        error instanceof Error ? error.message : 'Error pausando paso'
       );
     } finally {
       setSubmitting(false);

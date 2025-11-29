@@ -19,7 +19,7 @@ const categoriasConfig: Record<string, { label: string; emoji: string }> = {
 
 export function MotivosPausaList() {
   const { motivos, loading, recargar } = useMotivosPausa();
-  const { showToast } = useToast();
+  const { showSuccess, showError } = useToast();
   const { showConfirm } = useConfirmDialog();
 
   const [showForm, setShowForm] = useState(false);
@@ -54,13 +54,12 @@ export function MotivosPausaList() {
 
       if (error) throw error;
 
-      showToast('Motivo eliminado correctamente', 'success');
+      showSuccess('Motivo eliminado correctamente');
       recargar();
     } catch (error) {
       console.error('Error eliminando motivo:', error);
-      showToast(
-        error instanceof Error ? error.message : 'Error eliminando motivo',
-        'error'
+      showError(
+        error instanceof Error ? error.message : 'Error eliminando motivo'
       );
     }
   };
@@ -74,16 +73,14 @@ export function MotivosPausaList() {
 
       if (error) throw error;
 
-      showToast(
-        `Motivo ${motivo.is_active ? 'desactivado' : 'activado'} correctamente`,
-        'success'
+      showSuccess(
+        `Motivo ${motivo.is_active ? 'desactivado' : 'activado'} correctamente`
       );
       recargar();
     } catch (error) {
       console.error('Error actualizando estado:', error);
-      showToast(
-        error instanceof Error ? error.message : 'Error actualizando estado',
-        'error'
+      showError(
+        error instanceof Error ? error.message : 'Error actualizando estado'
       );
     }
   };

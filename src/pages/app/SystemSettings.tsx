@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Wrench, Pause, Building } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { Tabs } from '../../components/ui/Tabs';
@@ -10,7 +11,16 @@ type TabId = 'general' | 'pausas';
 
 export function SystemSettings() {
   usePageHeader('Configuración del Sistema');
-  const [activeTab, setActiveTab] = useState<TabId>('pausas');
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState<TabId>('general');
+
+  useEffect(() => {
+    if (location.pathname.includes('/pausas')) {
+      setActiveTab('pausas');
+    } else {
+      setActiveTab('general');
+    }
+  }, [location.pathname]);
 
   const tabs = [
     {

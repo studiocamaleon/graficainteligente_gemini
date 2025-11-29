@@ -129,6 +129,7 @@ function AppRoutes() {
                 <Route path="integrations" element={<Integrations />} />
                 <Route path="integrations/whatsapp" element={<WhatsAppIntegration />} />
                 <Route path="settings" element={<SystemSettings />} />
+                <Route path="settings/pausas" element={<SystemSettings />} />
                 <Route path="settings/locations" element={<Locations />} />
                 <Route path="settings/medios-cobro" element={<MediosCobro />} />
                 <Route path="settings/cajas" element={<Cajas />} />

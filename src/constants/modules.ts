@@ -37,6 +37,7 @@ import {
   BarChart3,
   Wallet,
   MessageSquare,
+  Pause,
 } from 'lucide-react';
 
 export interface SubModule {
@@ -375,6 +376,13 @@ export const MODULES: Module[] = [
         description: 'Gestión de pasarelas, medios bancarios y efectivo',
         path: '/app/settings/medios-cobro',
         icon: CreditCard,
+      },
+      {
+        id: 'settings-pausas',
+        name: 'Motivos de Pausa',
+        description: 'Gestión de motivos de pausa en producción',
+        path: '/app/settings/pausas',
+        icon: Pause,
       },
     ],
   },
