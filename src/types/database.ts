@@ -1337,6 +1337,7 @@ export interface OrdenTrabajo {
   estado: EstadoOrdenTrabajo;
   fecha_creacion: string;
   fecha_estimada_entrega: string | null;
+  fecha_completado: string | null;
   notas_internas: string | null;
   subtotal: number;
   total_descuentos: number;
@@ -2067,4 +2068,28 @@ export interface OrdenParaLiquidar {
   fecha_completado: string;
   total: number;
   descripcion: string;
+}
+
+// =====================================================
+// TIPOS PARA TASA DE CUMPLIMIENTO
+// =====================================================
+
+export interface TasaCumplimiento {
+  total_ordenes_evaluadas: number;
+  ordenes_a_tiempo: number;
+  ordenes_retrasadas: number;
+  tasa_cumplimiento: number;
+  promedio_dias_adelanto: number;
+  promedio_dias_retraso: number;
+  ordenes_sin_fecha_estimada: number;
+}
+
+export interface EvolutivoTasaCumplimiento {
+  periodo: string;
+  periodo_label: string;
+  total_ordenes: number;
+  ordenes_a_tiempo: number;
+  ordenes_retrasadas: number;
+  tasa_cumplimiento: number;
+  tendencia: 'up' | 'down' | 'neutral';
 }

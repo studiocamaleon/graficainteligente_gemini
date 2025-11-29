@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
+import type { TasaCumplimiento, EvolutivoTasaCumplimiento } from '../types/database';
 
 export interface KpiGenerales {
   total_ordenes_completadas: number;
@@ -114,6 +115,10 @@ export function useProductivityMetrics(dateRange?: DateRange) {
   const [cuellosBottella, setCuellosBottella] = useState<CuelloBottella[]>([]);
   const [tendencias, setTendencias] = useState<TendenciaTemporal[]>([]);
 
+  // Tasa de cumplimiento
+  const [tasaCumplimiento, setTasaCumplimiento] = useState<TasaCumplimiento | null>(null);
+  const [evolutivoTasa, setEvolutivoTasa] = useState<EvolutivoTasaCumplimiento[]>([]);
+
   // Obtener companyId desde profile o company
   const companyId = profile?.company_id || company?.id;
 
@@ -158,6 +163,8 @@ export function useProductivityMetrics(dateRange?: DateRange) {
         loadOrdenesCompletadas(fechaDesde, fechaHasta),
         loadCuellosBottella(fechaDesde, fechaHasta),
         loadTendencias(fechaDesde, fechaHasta),
+        loadTasaCumplimiento(fechaDesde, fechaHasta),
+        loadEvolutivoTasa(fechaDesde, fechaHasta),
       ]);
 
       // Verificar si hubo errores
@@ -346,6 +353,53 @@ export function useProductivityMetrics(dateRange?: DateRange) {
     }
   };
 
+  const loadTasaCumplimiento = async (fechaDesde: string | null, fechaHasta: string | null) => {
+    try {
+      console.log('[Productivity] Loading tasa de cumplimiento...');
+      const { data, error } = await supabase.rpc('fn_tasa_cumplimiento', {
+        p_company_id: companyId,
+        p_fecha_desde: fechaDesde,
+        p_fecha_hasta: fechaHasta,
+      });
+
+      if (error) {
+        console.error('[Productivity] Error loading tasa cumplimiento:', error);
+        return;
+      }
+      console.log('[Productivity] Tasa cumplimiento loaded:', data);
+      if (data && data.length > 0) {
+        setTasaCumplimiento(data[0]);
+      }
+    } catch (err) {
+      console.error('[Productivity] Unexpected error in loadTasaCumplimiento:', err);
+    }
+  };
+
+  const loadEvolutivoTasa = async (fechaDesde: string | null, fechaHasta: string | null) => {
+    try {
+      console.log('[Productivity] Loading evolutivo tasa cumplimiento...');
+      // Si no hay rango, usar últimos 90 días
+      const desde = fechaDesde || new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+      const hasta = fechaHasta || new Date().toISOString();
+
+      const { data, error } = await supabase.rpc('fn_evolutivo_tasa_cumplimiento', {
+        p_company_id: companyId,
+        p_fecha_desde: desde,
+        p_fecha_hasta: hasta,
+        p_intervalo: 'week',
+      });
+
+      if (error) {
+        console.error('[Productivity] Error loading evolutivo tasa:', error);
+        return;
+      }
+      console.log('[Productivity] Evolutivo tasa loaded:', data?.length || 0, 'items');
+      setEvolutivoTasa(data || []);
+    } catch (err) {
+      console.error('[Productivity] Unexpected error in loadEvolutivoTasa:', err);
+    }
+  };
+
   useEffect(() => {
     console.log('[Productivity] useEffect triggered');
     if (companyId) {
@@ -373,6 +427,8 @@ export function useProductivityMetrics(dateRange?: DateRange) {
     ordenesCompletadas,
     cuellosBottella,
     tendencias,
+    tasaCumplimiento,
+    evolutivoTasa,
     refresh,
   };
 }

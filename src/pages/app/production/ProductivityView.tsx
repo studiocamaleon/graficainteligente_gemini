@@ -7,6 +7,9 @@ import { StepPerformanceChart } from '../../../components/productivity/StepPerfo
 import { BottleneckAlert } from '../../../components/productivity/BottleneckAlert';
 import { OperatorRanking } from '../../../components/productivity/OperatorRanking';
 import { DateRangeSelector } from '../../../components/productivity/DateRangeSelector';
+import { ComplianceRateCard } from '../../../components/productivity/ComplianceRateCard';
+import { ComplianceEvolutionChart } from '../../../components/productivity/ComplianceEvolutionChart';
+import { ComplianceDetailsTable } from '../../../components/productivity/ComplianceDetailsTable';
 import { Button } from '../../../components/ui/Button';
 import {
   Clock,
@@ -17,6 +20,7 @@ import {
   TrendingUp,
   Users,
   AlertTriangle,
+  Target,
 } from 'lucide-react';
 import { EmptyState } from '../../../components/ui/EmptyState';
 
@@ -38,6 +42,8 @@ export function ProductivityView() {
     metricasPorEtapa,
     metricasPorOperario,
     cuellosBottella,
+    tasaCumplimiento,
+    evolutivoTasa,
     refresh,
   } = useProductivityMetrics(dateRange);
 
@@ -145,8 +151,23 @@ export function ProductivityView() {
       {/* Alertas de Cuellos de Botella */}
       <BottleneckAlert data={cuellosBottella} loading={loading} />
 
+      {/* Sección de Tasa de Cumplimiento */}
+      <div className="mt-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Target className="w-5 h-5 text-gray-700" />
+          <h2 className="text-xl font-semibold text-gray-900">Cumplimiento de Plazos</h2>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <ComplianceRateCard data={tasaCumplimiento!} loading={loading} />
+          <ComplianceEvolutionChart data={evolutivoTasa} loading={loading} />
+        </div>
+
+        <ComplianceDetailsTable data={tasaCumplimiento} loading={loading} />
+      </div>
+
       {/* Sección de Análisis */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
         <StageDistributionChart data={metricasPorEtapa} loading={loading} />
         <StepPerformanceChart data={metricasPorPaso} loading={loading} limit={8} />
       </div>
