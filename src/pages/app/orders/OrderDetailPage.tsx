@@ -67,7 +67,7 @@ export function OrderDetailPage() {
   const [showPagoModal, setShowPagoModal] = useState(false);
   const [editingPago, setEditingPago] = useState<any>(null);
 
-  const isAdmin = profile?.role === 'superadmin' || profile?.role === 'admin';
+  const isAdmin = profile?.role === 'super_admin' || profile?.role === 'admin';
 
   usePageHeader(orden ? `Orden ${orden.numero_orden}` : 'Cargando orden...');
 
