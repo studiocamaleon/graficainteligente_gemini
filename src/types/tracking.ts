@@ -1,8 +1,17 @@
 export type TrackingEstadoOrden = 'pendiente' | 'en_proceso' | 'finalizada' | 'entregada' | 'cancelada';
 
-export type TrackingEstadoPaso = 'pendiente' | 'en_proceso' | 'completado' | 'omitido';
+export type TrackingEstadoPaso = 'pendiente' | 'en_proceso' | 'completado' | 'omitido' | 'pausado';
 
-export type TrackingTipoEtapa = 'pre_prensa' | 'principal' | 'post_prensa';
+export type TrackingTipoEtapa = 'pre_prensa' | 'principal' | 'post_prensa' | 'instalacion';
+
+export type CategoriaPausa = 'cliente' | 'materiales' | 'maquinaria' | 'personal' | 'externo' | 'otro';
+
+export interface PausaInfo {
+  esta_pausado: boolean;
+  categoria_motivo?: CategoriaPausa;
+  fecha_inicio_pausa?: string;
+  tiempo_pausado_horas?: number;
+}
 
 export interface TrackingPaso {
   id: string;
@@ -12,7 +21,8 @@ export interface TrackingPaso {
   estado_paso: TrackingEstadoPaso;
   fecha_inicio: string | null;
   fecha_fin: string | null;
-  comentario_vendedor: string | null;
+  cantidad_pausas?: number;
+  pausa_info?: PausaInfo;
 }
 
 export interface TrackingItem {
@@ -74,6 +84,7 @@ export function getEstadoPasoLabel(estado: TrackingEstadoPaso): string {
     en_proceso: 'En Proceso',
     completado: 'Completado',
     omitido: 'Omitido',
+    pausado: 'Pausado',
   };
   return labels[estado];
 }
@@ -83,8 +94,33 @@ export function getEtapaLabel(etapa: TrackingTipoEtapa): string {
     pre_prensa: 'Pre-prensa',
     principal: 'Producción',
     post_prensa: 'Terminación',
+    instalacion: 'Instalación',
   };
   return labels[etapa];
+}
+
+export function getCategoriaPausaLabel(categoria: CategoriaPausa): string {
+  const labels: Record<CategoriaPausa, string> = {
+    cliente: 'Esperando respuesta del cliente',
+    materiales: 'Esperando materiales',
+    maquinaria: 'Problema con maquinaria',
+    personal: 'Problema de personal',
+    externo: 'Factor externo',
+    otro: 'Motivo de pausa',
+  };
+  return labels[categoria];
+}
+
+export function getCategoriaPausaIcon(categoria: CategoriaPausa): string {
+  const icons: Record<CategoriaPausa, string> = {
+    cliente: '👤',
+    materiales: '📦',
+    maquinaria: '⚙️',
+    personal: '👥',
+    externo: '🌐',
+    otro: '⏸️',
+  };
+  return icons[categoria];
 }
 
 export function calculateItemProgress(pasos: TrackingPaso[]): {

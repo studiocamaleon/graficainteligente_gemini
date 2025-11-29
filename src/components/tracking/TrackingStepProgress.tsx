@@ -1,6 +1,6 @@
-import { Check, Loader2, Circle, X } from 'lucide-react';
+import { Check, Loader2, Circle, X, Pause, Clock } from 'lucide-react';
 import type { TrackingPaso } from '../../types/tracking';
-import { getEstadoPasoLabel, getEtapaLabel } from '../../types/tracking';
+import { getEstadoPasoLabel, getEtapaLabel, getCategoriaPausaLabel, getCategoriaPausaIcon } from '../../types/tracking';
 import dayjs from 'dayjs';
 
 interface TrackingStepProgressProps {
@@ -22,6 +22,8 @@ export function TrackingStepProgress({ pasos }: TrackingStepProgressProps) {
         return <Check className="w-5 h-5 text-green-400" />;
       case 'en_proceso':
         return <Loader2 className="w-5 h-5 text-cyan-400 animate-spin" />;
+      case 'pausado':
+        return <Pause className="w-5 h-5 text-orange-400 animate-pulse" />;
       case 'omitido':
         return <X className="w-5 h-5 text-red-400" />;
       default:
@@ -35,6 +37,8 @@ export function TrackingStepProgress({ pasos }: TrackingStepProgressProps) {
         return 'border-green-500 bg-green-500/10 shadow-green-500/30';
       case 'en_proceso':
         return 'border-cyan-500 bg-cyan-500/10 shadow-cyan-500/30 animate-pulse';
+      case 'pausado':
+        return 'border-orange-500 bg-orange-500/10 shadow-orange-500/30 animate-pulse';
       case 'omitido':
         return 'border-red-500 bg-red-500/10 shadow-red-500/30';
       default:
@@ -48,6 +52,8 @@ export function TrackingStepProgress({ pasos }: TrackingStepProgressProps) {
         return 'bg-gradient-to-b from-green-500 to-green-600';
       case 'en_proceso':
         return 'bg-gradient-to-b from-cyan-500 to-cyan-600';
+      case 'pausado':
+        return 'bg-gradient-to-b from-orange-500 to-orange-600';
       default:
         return 'bg-gray-700';
     }
@@ -92,6 +98,8 @@ export function TrackingStepProgress({ pasos }: TrackingStepProgressProps) {
                         ? 'bg-green-500/20 text-green-300'
                         : paso.estado_paso === 'en_proceso'
                         ? 'bg-cyan-500/20 text-cyan-300'
+                        : paso.estado_paso === 'pausado'
+                        ? 'bg-orange-500/20 text-orange-300 animate-pulse'
                         : paso.estado_paso === 'omitido'
                         ? 'bg-red-500/20 text-red-300'
                         : 'bg-gray-500/20 text-gray-400'
@@ -100,6 +108,33 @@ export function TrackingStepProgress({ pasos }: TrackingStepProgressProps) {
                     {getEstadoPasoLabel(paso.estado_paso)}
                   </span>
                 </div>
+
+                {/* Mensaje contextual de pausa */}
+                {paso.estado_paso === 'pausado' && paso.pausa_info?.esta_pausado && paso.pausa_info.categoria_motivo && (
+                  <div className="mb-3 bg-orange-500/10 border border-orange-500/30 rounded-lg p-3">
+                    <div className="flex items-start gap-2">
+                      <span className="text-2xl">{getCategoriaPausaIcon(paso.pausa_info.categoria_motivo)}</span>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-orange-300 mb-1">
+                          {getCategoriaPausaLabel(paso.pausa_info.categoria_motivo)}
+                        </p>
+                        {paso.pausa_info.tiempo_pausado_horas !== undefined && (
+                          <div className="flex items-center gap-1.5 text-xs text-orange-400">
+                            <Clock className="w-3 h-3" />
+                            <span>
+                              Pausado hace{' '}
+                              {paso.pausa_info.tiempo_pausado_horas < 1
+                                ? `${Math.round(paso.pausa_info.tiempo_pausado_horas * 60)} minutos`
+                                : paso.pausa_info.tiempo_pausado_horas < 24
+                                ? `${Math.floor(paso.pausa_info.tiempo_pausado_horas)} horas`
+                                : `${Math.floor(paso.pausa_info.tiempo_pausado_horas / 24)} días`}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {paso.fecha_inicio && (
                   <div className="text-sm text-gray-400 mb-2">
@@ -112,6 +147,16 @@ export function TrackingStepProgress({ pasos }: TrackingStepProgressProps) {
                         {dayjs(paso.fecha_fin).format('DD/MM/YYYY HH:mm')}
                       </>
                     )}
+                  </div>
+                )}
+
+                {/* Indicador de pausas previas */}
+                {paso.cantidad_pausas && paso.cantidad_pausas > 0 && paso.estado_paso !== 'pausado' && (
+                  <div className="mt-2 text-xs text-gray-500 flex items-center gap-1">
+                    <Pause className="w-3 h-3" />
+                    <span>
+                      Este paso fue pausado {paso.cantidad_pausas} {paso.cantidad_pausas === 1 ? 'vez' : 'veces'}
+                    </span>
                   </div>
                 )}
               </div>
