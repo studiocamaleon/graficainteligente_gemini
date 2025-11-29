@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { usePageHeader } from '../../../hooks/usePageHeader';
 import { Tabs } from '../../../components/ui/Tabs';
 import { JobsView } from './JobsView';
@@ -10,16 +10,18 @@ import { useProductionJobs } from '../../../hooks/useProductionJobs';
 import { useProductionStations } from '../../../hooks/useProductionStations';
 import { Layers, Boxes, Activity, TrendingUp, Pause } from 'lucide-react';
 import { Card } from '../../../components/ui/Card';
+import { useAuth } from '../../../hooks/useAuth';
 
 type TabId = 'jobs' | 'estaciones' | 'productividad' | 'actividad' | 'pausas';
 
 export function ProductionPage() {
   usePageHeader('Control de Producción y Seguimiento');
   const [activeTab, setActiveTab] = useState<TabId>('jobs');
+  const { profile } = useAuth();
   const { totalJobs } = useProductionJobs();
   const { totalActivePasos } = useProductionStations();
 
-  const tabs = [
+  const allTabs = [
     {
       id: 'jobs' as TabId,
       label: 'Jobs',
@@ -49,6 +51,20 @@ export function ProductionPage() {
     },
   ];
 
+  const tabs = useMemo(() => {
+    const allowedRoles = ['super_admin', 'admin', 'manager'];
+    if (profile?.role && allowedRoles.includes(profile.role)) {
+      return allTabs;
+    }
+    // operador_diseno y operador_taller solo ven jobs y estaciones
+    return allTabs.filter(tab => ['jobs', 'estaciones'].includes(tab.id));
+  }, [profile?.role, totalJobs, totalActivePasos]);
+
+  const canAccessTab = (tabId: TabId): boolean => {
+    const allowedRoles = ['super_admin', 'admin', 'manager'];
+    return profile?.role ? allowedRoles.includes(profile.role) : false;
+  };
+
   return (
     <div className="space-y-6">
       <Card padding="none">
@@ -63,11 +79,11 @@ export function ProductionPage() {
 
           {activeTab === 'estaciones' && <StationsView />}
 
-          {activeTab === 'productividad' && <ProductivityView />}
+          {activeTab === 'productividad' && canAccessTab('productividad') && <ProductivityView />}
 
-          {activeTab === 'actividad' && <ActivityView />}
+          {activeTab === 'actividad' && canAccessTab('actividad') && <ActivityView />}
 
-          {activeTab === 'pausas' && <PausasView />}
+          {activeTab === 'pausas' && canAccessTab('pausas') && <PausasView />}
         </div>
       </Card>
     </div>

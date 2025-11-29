@@ -4,6 +4,8 @@ import { Card } from '../../../components/ui/Card';
 import { Button } from '../../../components/ui/Button';
 import { Tabs } from '../../../components/ui/Tabs';
 import { usePageHeader } from '../../../hooks/usePageHeader';
+import { useAuth } from '../../../hooks/useAuth';
+import { usePermissions } from '../../../hooks/usePermissions';
 import { ProductosSellosTab } from './sellos/ProductosSellosTab';
 import { PreciosSellosTab } from './sellos/PreciosSellosTab';
 
@@ -12,13 +14,17 @@ type TabType = 'productos' | 'precios';
 export function Sellos() {
   const [activeTab, setActiveTab] = useState<TabType>('productos');
   const [triggerCreate, setTriggerCreate] = useState(0);
+  const { profile } = useAuth();
+  const { canCreate } = usePermissions();
+
+  const canCreateProduct = canCreate('productos-sellos');
 
   const handleOpenCreateModal = () => {
     setTriggerCreate((prev) => prev + 1);
   };
 
   const headerAction = useMemo(() => {
-    if (activeTab === 'productos') {
+    if (activeTab === 'productos' && canCreateProduct) {
       return (
         <Button onClick={handleOpenCreateModal}>
           <Plus className="w-4 h-4 mr-2" />
@@ -27,7 +33,7 @@ export function Sellos() {
       );
     }
     return undefined;
-  }, [activeTab]);
+  }, [activeTab, canCreateProduct]);
 
   usePageHeader('Gestiona los productos de sellos y accesorios disponibles', headerAction);
 

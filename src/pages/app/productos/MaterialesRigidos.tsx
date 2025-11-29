@@ -4,6 +4,8 @@ import { Card } from '../../../components/ui/Card';
 import { Button } from '../../../components/ui/Button';
 import { Tabs } from '../../../components/ui/Tabs';
 import { usePageHeader } from '../../../hooks/usePageHeader';
+import { useAuth } from '../../../hooks/useAuth';
+import { usePermissions } from '../../../hooks/usePermissions';
 import { ProductosMaterialesRigidosTab } from './materiales-rigidos/ProductosMaterialesRigidosTab';
 import { PreciosMaterialesRigidosTab } from './materiales-rigidos/PreciosMaterialesRigidosTab';
 
@@ -12,13 +14,17 @@ type TabType = 'productos' | 'precios';
 export function MaterialesRigidos() {
   const [activeTab, setActiveTab] = useState<TabType>('productos');
   const [triggerCreate, setTriggerCreate] = useState(0);
+  const { profile } = useAuth();
+  const { canCreate } = usePermissions();
+
+  const canCreateProduct = canCreate('productos-materiales-rigidos');
 
   const handleOpenCreateModal = () => {
     setTriggerCreate((prev) => prev + 1);
   };
 
   const headerAction = useMemo(() => {
-    if (activeTab === 'productos') {
+    if (activeTab === 'productos' && canCreateProduct) {
       return (
         <Button onClick={handleOpenCreateModal}>
           <Plus className="w-4 h-4 mr-2" />
@@ -27,7 +33,7 @@ export function MaterialesRigidos() {
       );
     }
     return undefined;
-  }, [activeTab]);
+  }, [activeTab, canCreateProduct]);
 
   usePageHeader('Gestiona los productos de materiales rígidos disponibles', headerAction);
 
