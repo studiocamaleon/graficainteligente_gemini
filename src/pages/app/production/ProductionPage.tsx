@@ -5,12 +5,13 @@ import { JobsView } from './JobsView';
 import { StationsView } from './StationsView';
 import { ProductivityView } from './ProductivityView';
 import { ActivityView } from './ActivityView';
+import { PausasView } from './PausasView';
 import { useProductionJobs } from '../../../hooks/useProductionJobs';
 import { useProductionStations } from '../../../hooks/useProductionStations';
-import { Layers, Boxes, Activity, TrendingUp } from 'lucide-react';
+import { Layers, Boxes, Activity, TrendingUp, Pause } from 'lucide-react';
 import { Card } from '../../../components/ui/Card';
 
-type TabId = 'jobs' | 'estaciones' | 'productividad' | 'actividad';
+type TabId = 'jobs' | 'estaciones' | 'productividad' | 'actividad' | 'pausas';
 
 export function ProductionPage() {
   usePageHeader('Control de Producción y Seguimiento');
@@ -41,6 +42,11 @@ export function ProductionPage() {
       label: 'Actividad',
       icon: Activity,
     },
+    {
+      id: 'pausas' as TabId,
+      label: 'Pausas',
+      icon: Pause,
+    },
   ];
 
   return (
@@ -60,6 +66,8 @@ export function ProductionPage() {
           {activeTab === 'productividad' && <ProductivityView />}
 
           {activeTab === 'actividad' && <ActivityView />}
+
+          {activeTab === 'pausas' && <PausasView />}
         </div>
       </Card>
     </div>
