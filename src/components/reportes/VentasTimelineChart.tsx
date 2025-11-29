@@ -25,6 +25,8 @@ export function VentasTimelineChart({ data, loading }: VentasTimelineChartProps)
   const maxVentas = Math.max(...data.map(d => d.total_ventas));
   const maxOrdenes = Math.max(...data.map(d => d.total_ordenes));
 
+  const CHART_HEIGHT = 288; // 72px * 4 = h-72 en píxeles
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-center gap-6 text-sm mb-4">
@@ -38,21 +40,29 @@ export function VentasTimelineChart({ data, loading }: VentasTimelineChartProps)
         </div>
       </div>
 
-      <div className="relative h-80">
-        <div className="absolute inset-0 flex flex-col justify-between pr-16">
+      <div className="relative" style={{ height: `${CHART_HEIGHT + 40}px` }}>
+        {/* Escala de ventas (izquierda) */}
+        <div className="absolute left-0 top-0 flex flex-col justify-between w-20" style={{ height: `${CHART_HEIGHT}px` }}>
           {[0, 1, 2, 3, 4].map((i) => (
-            <div key={i} className="flex items-center gap-2">
-              <span className="text-xs text-gray-500 w-20 text-right">
+            <div key={i} className="flex items-center justify-end">
+              <span className="text-xs text-gray-500">
                 ${((maxVentas / 4) * (4 - i)).toFixed(0)}
               </span>
-              <div className="flex-1 border-t border-gray-200"></div>
             </div>
           ))}
         </div>
 
-        <div className="absolute inset-0 flex flex-col justify-between pl-24">
+        {/* Líneas de guía horizontales */}
+        <div className="absolute left-24 right-16 top-0 flex flex-col justify-between pointer-events-none" style={{ height: `${CHART_HEIGHT}px` }}>
+          {[0, 1, 2, 3, 4].map((i) => (
+            <div key={i} className="border-t border-gray-200"></div>
+          ))}
+        </div>
+
+        {/* Escala de órdenes (derecha) */}
+        <div className="absolute right-0 top-0 flex flex-col justify-between w-12" style={{ height: `${CHART_HEIGHT}px` }}>
           {[0, 1, 2, 3, 4].reverse().map((i) => (
-            <div key={i} className="flex items-center justify-end gap-2">
+            <div key={i} className="flex items-center justify-start">
               <span className="text-xs text-green-600 font-medium">
                 {Math.ceil((maxOrdenes / 4) * i)}
               </span>
@@ -60,23 +70,31 @@ export function VentasTimelineChart({ data, loading }: VentasTimelineChartProps)
           ))}
         </div>
 
-        <div className="absolute inset-0 flex items-end gap-2 px-24 pb-4">
+        {/* Área de barras */}
+        <div className="absolute left-24 right-16 top-0 bottom-10 flex items-end gap-2">
           {data.map((item, index) => {
-            const ventasHeight = maxVentas > 0 ? (item.total_ventas / maxVentas) * 100 : 0;
-            const ordenesHeight = maxOrdenes > 0 ? (item.total_ordenes / maxOrdenes) * 100 : 0;
+            const ventasHeightPx = maxVentas > 0 ? (item.total_ventas / maxVentas) * CHART_HEIGHT : 0;
+            const ordenesHeightPx = maxOrdenes > 0 ? (item.total_ordenes / maxOrdenes) * CHART_HEIGHT : 0;
 
             return (
               <div
                 key={index}
                 className="flex-1 flex items-end justify-center gap-1 group cursor-pointer relative"
+                style={{ height: `${CHART_HEIGHT}px` }}
               >
                 <div
                   className="w-full bg-gradient-to-t from-blue-600 to-blue-400 rounded-t hover:from-blue-700 hover:to-blue-500 transition-all"
-                  style={{ height: `${ventasHeight}%`, minHeight: ventasHeight > 0 ? '4px' : '0' }}
+                  style={{
+                    height: `${ventasHeightPx}px`,
+                    minHeight: ventasHeightPx > 0 ? '4px' : '0'
+                  }}
                 ></div>
                 <div
                   className="w-full bg-gradient-to-t from-green-600 to-green-400 rounded-t hover:from-green-700 hover:to-green-500 transition-all"
-                  style={{ height: `${ordenesHeight}%`, minHeight: ordenesHeight > 0 ? '4px' : '0' }}
+                  style={{
+                    height: `${ordenesHeightPx}px`,
+                    minHeight: ordenesHeightPx > 0 ? '4px' : '0'
+                  }}
                 ></div>
 
                 <div className="absolute -top-20 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-900 text-white text-xs rounded px-3 py-2 whitespace-nowrap z-10 shadow-lg">
@@ -99,14 +117,15 @@ export function VentasTimelineChart({ data, loading }: VentasTimelineChartProps)
             );
           })}
         </div>
-      </div>
 
-      <div className="flex items-center justify-center gap-2 overflow-x-auto text-xs text-gray-600 pt-4 border-t">
-        {data.map((item, index) => (
-          <span key={index} className="flex-shrink-0 px-2">
-            {new Date(item.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' })}
-          </span>
-        ))}
+        {/* Etiquetas de fecha (abajo) */}
+        <div className="absolute left-24 right-16 bottom-0 flex items-center justify-center gap-2 text-xs text-gray-600">
+          {data.map((item, index) => (
+            <span key={index} className="flex-1 text-center">
+              {new Date(item.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' })}
+            </span>
+          ))}
+        </div>
       </div>
     </div>
   );
