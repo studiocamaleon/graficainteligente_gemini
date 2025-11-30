@@ -384,6 +384,13 @@ export const MODULES: Module[] = [
         path: '/app/settings/pausas',
         icon: Pause,
       },
+      {
+        id: 'settings-tipos-egreso',
+        name: 'Tipos de Egreso',
+        description: 'Gestión de categorías de egresos y gastos',
+        path: '/app/settings/tipos-egreso',
+        icon: Tag,
+      },
     ],
   },
 ];
