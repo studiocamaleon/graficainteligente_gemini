@@ -149,8 +149,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const isAllowed = restrictions.some((r) => r.ip_address === userIP);
 
           if (!isAllowed) {
-            await supabase.auth.signOut();
-
+            // Registrar intento en audit_log ANTES de cerrar sesión
             await supabase.from('audit_log').insert({
               company_id: data.user.user_metadata?.company_id || null,
               user_id: data.user.id,
@@ -164,9 +163,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               },
             });
 
+            // Cerrar sesión
+            await supabase.auth.signOut();
+
+            // Retornar error con mensaje descriptivo
             return {
               error: new Error(
-                'Acceso denegado. Tu ubicación no está autorizada para acceder a esta cuenta. Contacta al administrador.'
+                'Acceso denegado desde tu ubicación actual. Tu dirección IP no está autorizada para acceder a esta cuenta. Por favor, contacta al administrador del sistema.'
               ),
             };
           }
@@ -175,6 +178,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       return { error: null };
     } catch (error) {
+      console.error('Error en signIn:', error);
       return { error: error as Error };
     }
   };

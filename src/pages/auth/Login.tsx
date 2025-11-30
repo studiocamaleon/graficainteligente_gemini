@@ -31,18 +31,31 @@ export function Login() {
 
     setLoading(true);
 
-    const { error } = await signIn(formData.email, formData.password);
+    try {
+      const { error } = await signIn(formData.email, formData.password);
 
-    setLoading(false);
+      setLoading(false);
 
-    if (error) {
-      if (error.message.includes('ubicación no está autorizada')) {
-        setErrors({ submit: error.message });
+      if (error) {
+        // Detectar si es un error de restricción de IP
+        if (
+          error.message.includes('ubicación') ||
+          error.message.includes('IP no está autorizada') ||
+          error.message.includes('Acceso denegado')
+        ) {
+          setErrors({ submit: error.message });
+        } else if (error.message.includes('Invalid login credentials')) {
+          setErrors({ submit: 'Email o contraseña incorrectos' });
+        } else {
+          setErrors({ submit: error.message || 'Error al iniciar sesión' });
+        }
       } else {
-        setErrors({ submit: 'Email o contraseña incorrectos' });
+        navigate('/app/dashboard');
       }
-    } else {
-      navigate('/app/dashboard');
+    } catch (error) {
+      setLoading(false);
+      console.error('Error en handleSubmit:', error);
+      setErrors({ submit: 'Ocurrió un error inesperado. Por favor intenta de nuevo.' });
     }
   };
 
@@ -93,9 +106,32 @@ export function Login() {
             />
 
             {errors.submit && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-                {errors.submit}
-              </div>
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="p-4 bg-red-50 border-l-4 border-red-500 rounded-lg"
+              >
+                <div className="flex items-start">
+                  <div className="flex-shrink-0">
+                    <svg
+                      className="h-5 w-5 text-red-500"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </div>
+                  <div className="ml-3 flex-1">
+                    <p className="text-sm font-medium text-red-800">
+                      {errors.submit}
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
             )}
 
             <Button type="submit" variant="primary" className="w-full" isLoading={loading}>
