@@ -19,7 +19,7 @@ interface RegistrarEgresoModalProps {
 }
 
 export function RegistrarEgresoModal({ isOpen, onClose, onSuccess, onSubmit }: RegistrarEgresoModalProps) {
-  const { showToast } = useToast();
+  const { showSuccess, showError } = useToast();
   const { cajas } = useCajas();
   const { tipos } = useTiposEgreso();
   const { providers } = useProviders({ isActive: true });
@@ -62,12 +62,12 @@ export function RegistrarEgresoModal({ isOpen, onClose, onSuccess, onSubmit }: R
     setLoading(true);
     try {
       await onSubmit(formData);
-      showToast('Egreso registrado correctamente', 'success');
+      showSuccess('Egreso registrado correctamente');
       onSuccess();
       handleClose();
     } catch (error: any) {
       console.error('Error al registrar egreso:', error);
-      showToast(error.message || 'Error al registrar el egreso', 'error');
+      showError(error.message || 'Error al registrar el egreso');
     } finally {
       setLoading(false);
     }

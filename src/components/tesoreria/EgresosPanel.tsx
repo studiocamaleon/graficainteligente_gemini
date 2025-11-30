@@ -16,7 +16,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 export function EgresosPanel() {
-  const { showToast } = useToast();
+  const { showSuccess, showError } = useToast();
   const { confirm } = useConfirmDialog();
   const { cajas } = useCajas();
   const { tipos } = useTiposEgreso();
@@ -43,9 +43,9 @@ export function EgresosPanel() {
     if (confirmed) {
       try {
         await deleteEgreso(id);
-        showToast('Egreso eliminado correctamente', 'success');
+        showSuccess('Egreso eliminado correctamente');
       } catch (error: any) {
-        showToast(error.message || 'Error al eliminar el egreso', 'error');
+        showError(error.message || 'Error al eliminar el egreso');
       }
     }
   };
