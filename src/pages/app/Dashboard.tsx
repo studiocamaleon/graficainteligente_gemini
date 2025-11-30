@@ -74,7 +74,6 @@ export function Dashboard() {
           icon={TrendingUp}
           color={getTasaColor()}
           bgColor={getTasaBgColor()}
-          subtitle="Meta: 95%"
           loading={loading}
         />
         <DashboardStatCard
