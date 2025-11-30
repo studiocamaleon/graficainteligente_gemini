@@ -111,7 +111,7 @@ export default function TiposEgreso() {
   const columns = [
     {
       key: 'icono',
-      label: '',
+      header: '',
       render: (tipo: TipoEgreso) => {
         const IconComponent = (Icons as any)[tipo.icono] || Icons.Circle;
         return (
@@ -126,7 +126,7 @@ export default function TiposEgreso() {
     },
     {
       key: 'nombre',
-      label: 'Nombre',
+      header: 'Nombre',
       render: (tipo: TipoEgreso) => (
         <div>
           <div className="font-medium text-gray-900">{tipo.nombre}</div>
@@ -138,14 +138,14 @@ export default function TiposEgreso() {
     },
     {
       key: 'codigo',
-      label: 'Código',
+      header: 'Código',
       render: (tipo: TipoEgreso) => (
         <Badge variant="outline">{tipo.codigo}</Badge>
       ),
     },
     {
       key: 'color',
-      label: 'Color',
+      header: 'Color',
       render: (tipo: TipoEgreso) => (
         <div className="flex items-center gap-2">
           <div
@@ -158,7 +158,7 @@ export default function TiposEgreso() {
     },
     {
       key: 'actions',
-      label: '',
+      header: '',
       render: (tipo: TipoEgreso) => (
         <div className="flex items-center gap-2">
           <Button
@@ -232,7 +232,11 @@ export default function TiposEgreso() {
             </div>
           </div>
         ) : (
-          <Table columns={columns} data={tipos} />
+          <Table
+            columns={columns}
+            data={tipos}
+            keyExtractor={(tipo) => tipo.id}
+          />
         )}
       </Card>
 
