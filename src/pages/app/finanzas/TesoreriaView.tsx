@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { RefreshCw, Wallet, TrendingUp, DollarSign } from 'lucide-react';
+import { RefreshCw, Wallet, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { Tabs } from '../../../components/ui/Tabs';
 import { ResumenCajas } from '../../../components/tesoreria/ResumenCajas';
 import { IngresosPanel } from '../../../components/tesoreria/IngresosPanel';
+import { EgresosPanel } from '../../../components/tesoreria/EgresosPanel';
 import { DineroPorCobrarPanel } from '../../../components/tesoreria/DineroPorCobrarPanel';
 import { useCajas } from '../../../hooks/useCajas';
 
@@ -21,6 +22,7 @@ export default function TesoreriaView() {
   const tabs = [
     { id: 'cajas', label: 'Cajas y Saldos', icon: Wallet },
     { id: 'ingresos', label: 'Ingresos', icon: TrendingUp },
+    { id: 'egresos', label: 'Egresos', icon: TrendingDown },
     { id: 'por-cobrar', label: 'Por Cobrar', icon: DollarSign },
   ];
 
@@ -60,6 +62,8 @@ export default function TesoreriaView() {
         )}
 
         {activeTab === 'ingresos' && <IngresosPanel />}
+
+        {activeTab === 'egresos' && <EgresosPanel />}
 
         {activeTab === 'por-cobrar' && <DineroPorCobrarPanel />}
       </div>

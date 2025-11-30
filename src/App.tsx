@@ -24,6 +24,7 @@ import { SystemSettings } from './pages/app/SystemSettings';
 import { Locations } from './pages/app/settings/Locations';
 import MediosCobro from './pages/app/settings/MediosCobro';
 import Cajas from './pages/app/settings/Cajas';
+import TiposEgreso from './pages/app/settings/TiposEgreso';
 import { Estaciones } from './pages/app/abm-core/Estaciones';
 import { Tecnologias } from './pages/app/abm-core/Tecnologias';
 import { Materiales } from './pages/app/abm-core/Materiales';
@@ -382,6 +383,14 @@ function AppRoutes() {
                   element={
                     <ProtectedModuleRoute moduleId="settings-cajas">
                       <Cajas />
+                    </ProtectedModuleRoute>
+                  }
+                />
+                <Route
+                  path="settings/tipos-egreso"
+                  element={
+                    <ProtectedModuleRoute moduleId="settings-tipos-egreso">
+                      <TiposEgreso />
                     </ProtectedModuleRoute>
                   }
                 />
