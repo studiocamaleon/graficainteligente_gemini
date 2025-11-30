@@ -35,9 +35,19 @@ export function useReporteGeneral(
       const fechaInicioCalc = rangoFechas[0].fecha_inicio;
       const fechaFinCalc = rangoFechas[0].fecha_fin;
 
+      // Determinar granularidad según rango de fechas
+      const diffDays = Math.ceil((new Date(fechaFinCalc).getTime() - new Date(fechaInicioCalc).getTime()) / (1000 * 60 * 60 * 24));
+      let granularidad = 'dia';
+      if (diffDays > 90) {
+        granularidad = 'mes';
+      } else if (diffDays > 30) {
+        granularidad = 'semana';
+      }
+
       const [
         kpisResult,
         timelineResult,
+        ingresosEgresosResult,
         canalResult,
         categoriaResult,
         productosResult,
@@ -56,6 +66,12 @@ export function useReporteGeneral(
           p_fecha_inicio: fechaInicioCalc,
           p_fecha_fin: fechaFinCalc,
           p_granularidad: 'dia',
+        }),
+        supabase.rpc('fn_reporte_ingresos_egresos', {
+          p_company_id: company.id,
+          p_fecha_inicio: fechaInicioCalc,
+          p_fecha_fin: fechaFinCalc,
+          p_granularidad: granularidad,
         }),
         supabase.rpc('fn_reporte_ventas_por_canal', {
           p_company_id: company.id,
@@ -98,6 +114,7 @@ export function useReporteGeneral(
 
       if (kpisResult.error) throw kpisResult.error;
       if (timelineResult.error) throw timelineResult.error;
+      if (ingresosEgresosResult.error) throw ingresosEgresosResult.error;
       if (canalResult.error) throw canalResult.error;
       if (categoriaResult.error) throw categoriaResult.error;
       if (productosResult.error) throw productosResult.error;
@@ -109,6 +126,7 @@ export function useReporteGeneral(
       setData({
         kpis: kpisResult.data && kpisResult.data.length > 0 ? kpisResult.data[0] : null,
         timeline: timelineResult.data || [],
+        ingresosEgresos: ingresosEgresosResult.data || [],
         porCanal: canalResult.data || [],
         porCategoria: categoriaResult.data || [],
         topProductos: productosResult.data || [],
