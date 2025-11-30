@@ -84,9 +84,18 @@ export interface TopProducto {
   ticket_promedio: number;
 }
 
+export interface IngresosEgresosData {
+  fecha: string;
+  periodo_label: string;
+  ingresos: number;
+  egresos: number;
+  balance: number;
+}
+
 export interface ReporteGeneralData {
   kpis: ReporteGeneralKPIs | null;
   timeline: TimelineData[];
+  ingresosEgresos: IngresosEgresosData[];
   porCanal: VentasPorCanal[];
   porCategoria: VentasPorCategoria[];
   topProductos: TopProducto[];

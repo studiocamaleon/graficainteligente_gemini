@@ -6,6 +6,7 @@ import { Select } from '../../../../components/ui/Select';
 import { DatePicker } from '../../../../components/ui/DatePicker';
 import { VentasKPICards } from '../../../../components/reportes/VentasKPICards';
 import { VentasTimelineChart } from '../../../../components/reportes/VentasTimelineChart';
+import { IngresosEgresosChart } from '../../../../components/reportes/IngresosEgresosChart';
 import { VentasPorCanalChart } from '../../../../components/reportes/VentasPorCanalChart';
 import { VentasPorCategoriaChart } from '../../../../components/reportes/VentasPorCategoriaChart';
 import { TopProductosChart } from '../../../../components/reportes/TopProductosChart';
@@ -91,6 +92,15 @@ export default function ReporteGeneral() {
       </Card>
 
       <VentasKPICards data={data?.kpis} loading={loading} />
+
+      <Card>
+        <div className="p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            Flujo de Caja: Ingresos vs Egresos
+          </h3>
+          <IngresosEgresosChart data={data?.ingresosEgresos} loading={loading} />
+        </div>
+      </Card>
 
       <Card>
         <div className="p-6">
