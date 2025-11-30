@@ -62,7 +62,7 @@ export function EgresosPanel() {
   const columns = [
     {
       key: 'fecha',
-      label: 'Fecha',
+      header: 'Fecha',
       render: (egreso: any) => (
         <div className="flex items-center gap-2">
           <Calendar className="w-4 h-4 text-gray-400" />
@@ -74,7 +74,7 @@ export function EgresosPanel() {
     },
     {
       key: 'concepto',
-      label: 'Concepto',
+      header: 'Concepto',
       render: (egreso: any) => (
         <div>
           <div className="font-medium text-gray-900">{egreso.concepto}</div>
@@ -89,7 +89,7 @@ export function EgresosPanel() {
     },
     {
       key: 'tipo',
-      label: 'Tipo',
+      header: 'Tipo',
       render: (egreso: any) => (
         <Badge
           variant="outline"
@@ -104,7 +104,7 @@ export function EgresosPanel() {
     },
     {
       key: 'caja',
-      label: 'Caja',
+      header: 'Caja',
       render: (egreso: any) => (
         <div className="text-sm">
           <div className="font-medium">{egreso.caja?.nombre}</div>
@@ -114,7 +114,7 @@ export function EgresosPanel() {
     },
     {
       key: 'monto',
-      label: 'Monto',
+      header: 'Monto',
       render: (egreso: any) => (
         <div className="flex items-center gap-2 text-red-600 font-semibold">
           <DollarSign className="w-4 h-4" />
@@ -126,7 +126,7 @@ export function EgresosPanel() {
     },
     {
       key: 'comprobante',
-      label: 'Comprobante',
+      header: 'Comprobante',
       render: (egreso: any) => (
         egreso.numero_comprobante ? (
           <div className="flex items-center gap-1 text-sm text-gray-600">
@@ -140,7 +140,7 @@ export function EgresosPanel() {
     },
     {
       key: 'actions',
-      label: '',
+      header: '',
       render: (egreso: any) => (
         <Button
           variant="ghost"
@@ -266,7 +266,7 @@ export function EgresosPanel() {
             </Button>
           </div>
         ) : (
-          <Table columns={columns} data={egresos} />
+          <Table columns={columns} data={egresos} keyExtractor={(egreso) => egreso.id} />
         )}
       </Card>
 
