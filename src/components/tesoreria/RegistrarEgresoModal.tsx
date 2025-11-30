@@ -104,7 +104,7 @@ export function RegistrarEgresoModal({ isOpen, onClose, onSuccess, onSubmit }: R
             </label>
             <Select
               value={formData.caja_id}
-              onChange={(e) => setFormData({ ...formData, caja_id: e.target.value })}
+              onChange={(value) => setFormData({ ...formData, caja_id: value })}
               error={errors.caja_id}
             >
               <option value="">Seleccionar caja</option>
@@ -133,7 +133,7 @@ export function RegistrarEgresoModal({ isOpen, onClose, onSuccess, onSubmit }: R
             </label>
             <Select
               value={formData.tipo_egreso_id}
-              onChange={(e) => setFormData({ ...formData, tipo_egreso_id: e.target.value })}
+              onChange={(value) => setFormData({ ...formData, tipo_egreso_id: value })}
               error={errors.tipo_egreso_id}
             >
               <option value="">Seleccionar tipo</option>
@@ -200,7 +200,7 @@ export function RegistrarEgresoModal({ isOpen, onClose, onSuccess, onSubmit }: R
             </label>
             <Select
               value={formData.medio_pago || ''}
-              onChange={(e) => setFormData({ ...formData, medio_pago: e.target.value as any })}
+              onChange={(value) => setFormData({ ...formData, medio_pago: value as any })}
             >
               <option value="">Seleccionar medio</option>
               <option value="efectivo">Efectivo</option>
