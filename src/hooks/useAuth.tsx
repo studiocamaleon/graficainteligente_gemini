@@ -11,6 +11,7 @@ interface AuthContextType {
   company: Company | null;
   plan: SubscriptionPlan | null;
   loading: boolean;
+  isAuthenticating: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string, fullName: string, companyName: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
@@ -29,6 +30,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [company, setCompany] = useState<Company | null>(null);
   const [plan, setPlan] = useState<SubscriptionPlan | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
 
   const loadUserData = async (currentUser: User) => {
     try {
@@ -126,6 +128,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
+    setIsAuthenticating(true);
+
     try {
       const userIP = await getPublicIP();
 
@@ -135,6 +139,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (error) {
+        setIsAuthenticating(false);
         return { error };
       }
 
@@ -166,6 +171,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             // Cerrar sesión
             await supabase.auth.signOut();
 
+            // Limpiar flag antes de retornar error
+            setIsAuthenticating(false);
+
             // Retornar error con mensaje descriptivo
             return {
               error: new Error(
@@ -176,9 +184,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
 
+      setIsAuthenticating(false);
       return { error: null };
     } catch (error) {
       console.error('Error en signIn:', error);
+      setIsAuthenticating(false);
       return { error: error as Error };
     }
   };
@@ -352,6 +362,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         company,
         plan,
         loading,
+        isAuthenticating,
         signIn,
         signUp,
         signOut,

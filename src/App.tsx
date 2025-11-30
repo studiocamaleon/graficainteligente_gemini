@@ -50,7 +50,7 @@ import { OrderTracking } from './pages/public/OrderTracking';
 import { JobsMonitor } from './pages/public/JobsMonitor';
 
 function AppRoutes() {
-  const { user, loading } = useAuth();
+  const { user, loading, isAuthenticating } = useAuth();
 
   if (loading) {
     return (
@@ -67,15 +67,15 @@ function AppRoutes() {
     <Routes>
       <Route
         path="/"
-        element={user ? <Navigate to="/app/dashboard" replace /> : <Landing />}
+        element={user && !isAuthenticating ? <Navigate to="/app/dashboard" replace /> : <Landing />}
       />
       <Route
         path="/login"
-        element={user ? <Navigate to="/app/dashboard" replace /> : <Login />}
+        element={user && !isAuthenticating ? <Navigate to="/app/dashboard" replace /> : <Login />}
       />
       <Route
         path="/register"
-        element={user ? <Navigate to="/app/dashboard" replace /> : <Register />}
+        element={user && !isAuthenticating ? <Navigate to="/app/dashboard" replace /> : <Register />}
       />
 
       <Route path="/track/:token" element={<OrderTracking />} />
