@@ -93,10 +93,10 @@ export function EgresosPanel() {
       key: 'proveedor',
       header: 'Proveedor',
       render: (egreso: any) => (
-        egreso.proveedor_nombre ? (
+        egreso.proveedor?.nombre_fantasia || egreso.proveedor_nombre ? (
           <div className="text-sm text-gray-700 flex items-center gap-1">
             <User className="w-4 h-4 text-gray-400" />
-            {egreso.proveedor_nombre}
+            {egreso.proveedor?.nombre_fantasia || egreso.proveedor_nombre}
           </div>
         ) : (
           <span className="text-gray-400 text-sm">-</span>
@@ -315,10 +315,15 @@ export function EgresosPanel() {
                 <label className="text-sm font-medium text-gray-500">Detalle</label>
                 <p className="mt-1 text-gray-900">{detalleEgreso.concepto}</p>
               </div>
-              {detalleEgreso.proveedor_nombre && (
+              {(detalleEgreso.proveedor?.nombre_fantasia || detalleEgreso.proveedor_nombre) && (
                 <div>
                   <label className="text-sm font-medium text-gray-500">Proveedor</label>
-                  <p className="mt-1 text-gray-900">{detalleEgreso.proveedor_nombre}</p>
+                  <p className="mt-1 text-gray-900">
+                    {detalleEgreso.proveedor?.nombre_fantasia || detalleEgreso.proveedor_nombre}
+                  </p>
+                  {detalleEgreso.proveedor?.razon_social && (
+                    <p className="text-sm text-gray-500">{detalleEgreso.proveedor.razon_social}</p>
+                  )}
                 </div>
               )}
               {detalleEgreso.numero_comprobante && (

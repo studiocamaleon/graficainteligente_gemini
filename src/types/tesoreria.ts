@@ -20,6 +20,7 @@ export interface Egreso {
   concepto: string;
   fecha: string;
   numero_comprobante: string | null;
+  proveedor_id: string | null;
   proveedor_nombre: string | null;
   medio_pago: 'efectivo' | 'transferencia' | 'cheque' | 'tarjeta' | 'debito' | 'otro' | null;
   notas: string | null;
@@ -38,6 +39,10 @@ export interface Egreso {
     color: string;
     icono: string;
   };
+  proveedor?: {
+    nombre_fantasia: string;
+    razon_social: string;
+  };
   created_by_profile?: {
     full_name: string;
   };
@@ -50,7 +55,7 @@ export interface CreateEgresoData {
   concepto: string;
   fecha: string;
   numero_comprobante?: string;
-  proveedor_nombre?: string;
+  proveedor_id?: string;
   medio_pago?: 'efectivo' | 'transferencia' | 'cheque' | 'tarjeta' | 'debito' | 'otro';
   notas?: string;
 }
@@ -60,7 +65,7 @@ export interface UpdateEgresoData {
   concepto?: string;
   fecha?: string;
   numero_comprobante?: string;
-  proveedor_nombre?: string;
+  proveedor_id?: string;
   medio_pago?: 'efectivo' | 'transferencia' | 'cheque' | 'tarjeta' | 'debito' | 'otro';
   notas?: string;
 }

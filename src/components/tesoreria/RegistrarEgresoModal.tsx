@@ -4,9 +4,11 @@ import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
+import { SearchableSelect } from '../ui/SearchableSelect';
 import { useToast } from '../../contexts/ToastContext';
 import { useCajas } from '../../hooks/useCajas';
 import { useTiposEgreso } from '../../hooks/useTiposEgreso';
+import { useProviders } from '../../hooks/useProviders';
 import { CreateEgresoData } from '../../types/tesoreria';
 
 interface RegistrarEgresoModalProps {
@@ -20,6 +22,7 @@ export function RegistrarEgresoModal({ isOpen, onClose, onSuccess, onSubmit }: R
   const { showToast } = useToast();
   const { cajas } = useCajas();
   const { tipos } = useTiposEgreso();
+  const { providers } = useProviders({ isActive: true });
 
   const [formData, setFormData] = useState<CreateEgresoData>({
     caja_id: '',
@@ -176,10 +179,15 @@ export function RegistrarEgresoModal({ isOpen, onClose, onSuccess, onSubmit }: R
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Proveedor
             </label>
-            <Input
-              value={formData.proveedor_nombre || ''}
-              onChange={(e) => setFormData({ ...formData, proveedor_nombre: e.target.value })}
-              placeholder="Nombre del proveedor"
+            <SearchableSelect
+              value={formData.proveedor_id || ''}
+              onChange={(value) => setFormData({ ...formData, proveedor_id: value })}
+              options={providers.map(p => ({
+                value: p.id,
+                label: p.nombre_fantasia
+              }))}
+              placeholder="Buscar proveedor..."
+              emptyMessage="No se encontraron proveedores"
             />
           </div>
 

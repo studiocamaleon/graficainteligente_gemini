@@ -27,6 +27,7 @@ export function useEgresos(filters?: FetchEgresosFilters) {
           *,
           caja:cajas(nombre, moneda, tipo),
           tipo_egreso:tipos_egreso(nombre, color, icono),
+          proveedor:providers(nombre_fantasia, razon_social),
           created_by_profile:profiles!egresos_created_by_fkey(full_name)
         `)
         .eq('company_id', company.id)
@@ -73,7 +74,8 @@ export function useEgresos(filters?: FetchEgresosFilters) {
       .select(`
         *,
         caja:cajas(nombre, moneda, tipo),
-        tipo_egreso:tipos_egreso(nombre, color, icono)
+        tipo_egreso:tipos_egreso(nombre, color, icono),
+        proveedor:providers(nombre_fantasia, razon_social)
       `)
       .single();
 
