@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Filter, Trash2, Calendar, DollarSign, User, FileText } from 'lucide-react';
+import { Plus, Filter, Trash2, Calendar, DollarSign, User, FileText, Eye, X } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { Badge } from '../ui/Badge';
@@ -59,6 +59,8 @@ export function EgresosPanel() {
     });
   };
 
+  const [detalleEgreso, setDetalleEgreso] = useState<any>(null);
+
   const columns = [
     {
       key: 'fecha',
@@ -76,21 +78,6 @@ export function EgresosPanel() {
       key: 'concepto',
       header: 'Concepto',
       render: (egreso: any) => (
-        <div>
-          <div className="font-medium text-gray-900">{egreso.concepto}</div>
-          {egreso.proveedor_nombre && (
-            <div className="text-sm text-gray-500 flex items-center gap-1">
-              <User className="w-3 h-3" />
-              {egreso.proveedor_nombre}
-            </div>
-          )}
-        </div>
-      ),
-    },
-    {
-      key: 'tipo',
-      header: 'Tipo',
-      render: (egreso: any) => (
         <Badge
           variant="outline"
           style={{
@@ -100,6 +87,20 @@ export function EgresosPanel() {
         >
           {egreso.tipo_egreso?.nombre}
         </Badge>
+      ),
+    },
+    {
+      key: 'proveedor',
+      header: 'Proveedor',
+      render: (egreso: any) => (
+        egreso.proveedor_nombre ? (
+          <div className="text-sm text-gray-700 flex items-center gap-1">
+            <User className="w-4 h-4 text-gray-400" />
+            {egreso.proveedor_nombre}
+          </div>
+        ) : (
+          <span className="text-gray-400 text-sm">-</span>
+        )
       ),
     },
     {
@@ -136,6 +137,20 @@ export function EgresosPanel() {
         ) : (
           <span className="text-gray-400 text-sm">-</span>
         )
+      ),
+    },
+    {
+      key: 'detalle',
+      header: 'Detalle',
+      render: (egreso: any) => (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setDetalleEgreso(egreso)}
+          className="text-blue-600 hover:bg-blue-50"
+        >
+          <Eye className="w-4 h-4" />
+        </Button>
       ),
     },
     {
@@ -210,7 +225,7 @@ export function EgresosPanel() {
               </label>
               <Select
                 value={filters.caja_id}
-                onChange={(e) => setFilters({ ...filters, caja_id: e.target.value })}
+                onChange={(value) => setFilters({ ...filters, caja_id: value })}
               >
                 <option value="">Todas</option>
                 {cajas.map((caja) => (
@@ -222,11 +237,11 @@ export function EgresosPanel() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Tipo
+                Concepto
               </label>
               <Select
                 value={filters.tipo_egreso_id}
-                onChange={(e) => setFilters({ ...filters, tipo_egreso_id: e.target.value })}
+                onChange={(value) => setFilters({ ...filters, tipo_egreso_id: value })}
               >
                 <option value="">Todos</option>
                 {tipos.map((tipo) => (
@@ -270,13 +285,77 @@ export function EgresosPanel() {
         )}
       </Card>
 
-      {/* Modal */}
+      {/* Modal Registro */}
       <RegistrarEgresoModal
         isOpen={showModal}
         onClose={() => setShowModal(false)}
         onSuccess={refetch}
         onSubmit={createEgreso}
       />
+
+      {/* Modal Detalle */}
+      {detalleEgreso && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-lg w-full">
+            <div className="flex items-center justify-between p-6 border-b">
+              <h3 className="text-lg font-semibold text-gray-900">Detalle del Egreso</h3>
+              <button
+                onClick={() => setDetalleEgreso(null)}
+                className="text-gray-400 hover:text-gray-600 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="text-sm font-medium text-gray-500">Concepto</label>
+                <p className="mt-1 text-gray-900 font-medium">{detalleEgreso.tipo_egreso?.nombre}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">Detalle</label>
+                <p className="mt-1 text-gray-900">{detalleEgreso.concepto}</p>
+              </div>
+              {detalleEgreso.proveedor_nombre && (
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Proveedor</label>
+                  <p className="mt-1 text-gray-900">{detalleEgreso.proveedor_nombre}</p>
+                </div>
+              )}
+              {detalleEgreso.numero_comprobante && (
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Comprobante</label>
+                  <p className="mt-1 text-gray-900">{detalleEgreso.numero_comprobante}</p>
+                </div>
+              )}
+              {detalleEgreso.medio_pago && (
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Medio de Pago</label>
+                  <p className="mt-1 text-gray-900 capitalize">{detalleEgreso.medio_pago}</p>
+                </div>
+              )}
+              {detalleEgreso.notas && (
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Notas</label>
+                  <p className="mt-1 text-gray-900">{detalleEgreso.notas}</p>
+                </div>
+              )}
+              <div className="pt-4 border-t">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-gray-500">Monto</span>
+                  <span className="text-2xl font-bold text-red-600">
+                    -${Number(detalleEgreso.monto).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end p-6 border-t">
+              <Button variant="secondary" onClick={() => setDetalleEgreso(null)}>
+                Cerrar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

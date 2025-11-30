@@ -39,9 +39,9 @@ export function RegistrarEgresoModal({ isOpen, onClose, onSuccess, onSubmit }: R
     const newErrors: Record<string, string> = {};
 
     if (!formData.caja_id) newErrors.caja_id = 'Selecciona una caja';
-    if (!formData.tipo_egreso_id) newErrors.tipo_egreso_id = 'Selecciona un tipo de egreso';
+    if (!formData.tipo_egreso_id) newErrors.tipo_egreso_id = 'Selecciona un concepto';
     if (!formData.monto || formData.monto <= 0) newErrors.monto = 'Ingresa un monto válido';
-    if (!formData.concepto?.trim()) newErrors.concepto = 'Ingresa un concepto';
+    if (!formData.concepto?.trim()) newErrors.concepto = 'Ingresa un detalle';
     if (!formData.fecha) newErrors.fecha = 'Selecciona una fecha';
 
     if (selectedCaja && formData.monto > selectedCaja.saldo_actual) {
@@ -129,14 +129,14 @@ export function RegistrarEgresoModal({ isOpen, onClose, onSuccess, onSubmit }: R
 
           <div className="col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Tipo de Egreso *
+              Concepto *
             </label>
             <Select
               value={formData.tipo_egreso_id}
               onChange={(value) => setFormData({ ...formData, tipo_egreso_id: value })}
               error={errors.tipo_egreso_id}
             >
-              <option value="">Seleccionar tipo</option>
+              <option value="">Seleccionar concepto</option>
               {tipos.map((tipo) => (
                 <option key={tipo.id} value={tipo.id}>
                   {tipo.nombre}
@@ -162,13 +162,13 @@ export function RegistrarEgresoModal({ isOpen, onClose, onSuccess, onSubmit }: R
 
           <div className="col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Concepto *
+              Detalle *
             </label>
             <Input
               value={formData.concepto}
               onChange={(e) => setFormData({ ...formData, concepto: e.target.value })}
               error={errors.concepto}
-              placeholder="Descripción del gasto"
+              placeholder="Descripción detallada del egreso"
             />
           </div>
 
