@@ -1,7 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
-import { getPublicIP } from '../lib/ipUtils';
 import { updateFavicon, updateDocumentTitle } from '../utils/favicon';
 import type { Profile, Company, SubscriptionPlan } from '../types/database';
 
@@ -127,8 +126,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
-      const userIP = await getPublicIP();
-
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -136,41 +133,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (error) {
         return { error };
-      }
-
-      if (data.user && userIP) {
-        const { data: restrictions, error: restrictionsError } = await supabase
-          .from('user_ip_restrictions')
-          .select('ip_address')
-          .eq('user_id', data.user.id)
-          .eq('is_active', true);
-
-        if (!restrictionsError && restrictions && restrictions.length > 0) {
-          const isAllowed = restrictions.some((r) => r.ip_address === userIP);
-
-          if (!isAllowed) {
-            await supabase.auth.signOut();
-
-            await supabase.from('audit_log').insert({
-              company_id: data.user.user_metadata?.company_id || null,
-              user_id: data.user.id,
-              action: 'login_blocked_ip',
-              resource_type: 'auth',
-              resource_id: data.user.id,
-              details: {
-                email,
-                blocked_ip: userIP,
-                reason: 'IP no autorizada',
-              },
-            });
-
-            return {
-              error: new Error(
-                'Acceso denegado. Tu ubicación no está autorizada para acceder a esta cuenta. Contacta al administrador.'
-              ),
-            };
-          }
-        }
       }
 
       return { error: null };

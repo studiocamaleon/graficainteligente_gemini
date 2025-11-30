@@ -36,7 +36,11 @@ export function Login() {
     setLoading(false);
 
     if (error) {
-      setErrors({ submit: 'Email o contraseña incorrectos' });
+      if (error.message.includes('ubicación no está autorizada')) {
+        setErrors({ submit: error.message });
+      } else {
+        setErrors({ submit: 'Email o contraseña incorrectos' });
+      }
     } else {
       navigate('/app/dashboard');
     }
