@@ -15,7 +15,11 @@ import { useConfirmDialog } from '../../hooks/useConfirmDialog';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
-export function EgresosPanel() {
+interface EgresosPanelProps {
+  onEgresoRegistrado?: () => void;
+}
+
+export function EgresosPanel({ onEgresoRegistrado }: EgresosPanelProps = {}) {
   const { showSuccess, showError } = useToast();
   const { confirm } = useConfirmDialog();
   const { cajas } = useCajas();
@@ -43,6 +47,7 @@ export function EgresosPanel() {
     if (confirmed) {
       try {
         await deleteEgreso(id);
+        onEgresoRegistrado?.();
         showSuccess('Egreso eliminado correctamente');
       } catch (error: any) {
         showError(error.message || 'Error al eliminar el egreso');
@@ -289,7 +294,10 @@ export function EgresosPanel() {
       <RegistrarEgresoModal
         isOpen={showModal}
         onClose={() => setShowModal(false)}
-        onSuccess={refetch}
+        onSuccess={() => {
+          refetch();
+          onEgresoRegistrado?.();
+        }}
         onSubmit={createEgreso}
       />
 

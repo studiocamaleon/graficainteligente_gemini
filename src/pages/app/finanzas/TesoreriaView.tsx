@@ -61,9 +61,9 @@ export default function TesoreriaView() {
           />
         )}
 
-        {activeTab === 'ingresos' && <IngresosPanel />}
+        {activeTab === 'ingresos' && <IngresosPanel onIngresoRegistrado={refetch} />}
 
-        {activeTab === 'egresos' && <EgresosPanel />}
+        {activeTab === 'egresos' && <EgresosPanel onEgresoRegistrado={refetch} />}
 
         {activeTab === 'por-cobrar' && <DineroPorCobrarPanel />}
       </div>

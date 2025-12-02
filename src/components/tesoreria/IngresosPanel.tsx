@@ -8,7 +8,11 @@ import { useIngresosPeriodo } from '../../hooks/useTesoreria';
 import { useIngresos } from '../../hooks/useIngresos';
 import { RegistrarIngresoModal } from './RegistrarIngresoModal';
 
-export function IngresosPanel() {
+interface IngresosPanelProps {
+  onIngresoRegistrado?: () => void;
+}
+
+export function IngresosPanel({ onIngresoRegistrado }: IngresosPanelProps = {}) {
   const hoy = new Date();
   hoy.setHours(0, 0, 0, 0);
 
@@ -274,6 +278,7 @@ export function IngresosPanel() {
         onClose={() => setShowRegistrarModal(false)}
         onSuccess={() => {
           refetch();
+          onIngresoRegistrado?.();
           setShowRegistrarModal(false);
         }}
         onSubmit={async (data) => {
