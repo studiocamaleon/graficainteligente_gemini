@@ -407,10 +407,13 @@ Se corrigió que los mensajes de presupuesto mostraban "Total: $ 0" porque el tr
 
 ### **3. Error NaN en Paginación**
 
-Se corrigió warning en consola por NaN en el componente de paginación.
+Se corrigió warning en consola y texto "Mostrando NaN a NaN de resultados" en la vista de presupuestos.
+
+**Causa**: Componente `Pagination` no recibía props `totalItems` e `itemsPerPage` requeridas.
 
 **Solución**:
 - Agregado fallback: `const totalPages = Math.ceil((total || 0) / pagination.limit)`
+- Pasadas todas las props al componente `Pagination`
 - Sin cambios en base de datos, solo frontend
 
 ---

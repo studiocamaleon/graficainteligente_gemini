@@ -242,19 +242,15 @@ export default function PresupuestosListPage() {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex justify-center pt-6">
-              <Pagination
-                currentPage={pagination.page}
-                totalPages={totalPages}
-                onPageChange={handlePageChange}
-              />
-            </div>
+            <Pagination
+              currentPage={pagination.page}
+              totalPages={totalPages}
+              totalItems={total}
+              itemsPerPage={pagination.limit}
+              onPageChange={handlePageChange}
+              showItemsPerPage={false}
+            />
           )}
-
-          {/* Results info */}
-          <div className="text-sm text-gray-500 text-center">
-            Mostrando {presupuestos.length} de {total} presupuestos
-          </div>
         </>
       )}
     </div>

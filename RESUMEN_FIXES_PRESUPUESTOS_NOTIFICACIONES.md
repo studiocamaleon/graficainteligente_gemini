@@ -67,18 +67,32 @@ Tu presupuesto PRES-2025-0020 esta listo!
 Warning: Received NaN for the `children` attribute
 ```
 
-**Causa**: El cálculo de `totalPages` se hacía con `total` que podía ser `undefined` durante la carga inicial:
-```typescript
-const totalPages = Math.ceil(total / pagination.limit); // NaN si total es undefined
+Y también al final de la vista:
+```
+Mostrando NaN a NaN de resultados
 ```
 
+**Causa Raíz**: El componente `Pagination` requiere 4 props obligatorias (`totalItems` e `itemsPerPage`), pero solo se estaban pasando 2. Esto causaba que `startItem` y `endItem` se calcularan como `NaN`.
+
 **Solución**:
-- ✅ Agregado fallback en `PresupuestosListPage.tsx`:
+1. ✅ Agregado fallback en cálculo de `totalPages`:
 ```typescript
 const totalPages = Math.ceil((total || 0) / pagination.limit);
 ```
 
-**Resultado**: No más warnings de NaN, paginación funciona correctamente desde el inicio.
+2. ✅ Pasadas todas las props requeridas al componente:
+```typescript
+<Pagination
+  currentPage={pagination.page}
+  totalPages={totalPages}
+  totalItems={total}              // ✅ Agregado
+  itemsPerPage={pagination.limit}  // ✅ Agregado
+  onPageChange={handlePageChange}
+  showItemsPerPage={false}
+/>
+```
+
+**Resultado**: No más warnings de NaN, paginación funciona correctamente con "Mostrando 1 a 12 de 25 resultados".
 
 ---
 
