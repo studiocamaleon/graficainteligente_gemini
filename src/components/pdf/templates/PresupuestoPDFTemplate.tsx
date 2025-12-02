@@ -67,8 +67,8 @@ export function PresupuestoPDFTemplate({
           {presupuesto.cliente?.email && (
             <p className="text-sm text-gray-600">{presupuesto.cliente.email}</p>
           )}
-          {presupuesto.cliente?.telefono && (
-            <p className="text-sm text-gray-600">{presupuesto.cliente.telefono}</p>
+          {presupuesto.cliente?.whatsapp && (
+            <p className="text-sm text-gray-600">{presupuesto.cliente.whatsapp}</p>
           )}
           {presupuesto.cliente?.direccion && (
             <p className="text-sm text-gray-600">{presupuesto.cliente.direccion}</p>

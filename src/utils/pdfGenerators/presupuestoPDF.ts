@@ -86,7 +86,7 @@ export async function generarPresupuestoPDF(
   const clienteInfo = [
     presupuesto.cliente?.razon_social || 'Sin cliente',
     presupuesto.cliente?.email || '',
-    presupuesto.cliente?.telefono || '',
+    presupuesto.cliente?.whatsapp || '',
     presupuesto.cliente?.direccion || '',
   ].filter(Boolean);
 

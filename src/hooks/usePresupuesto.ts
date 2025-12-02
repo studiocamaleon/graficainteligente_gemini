@@ -39,7 +39,7 @@ export function usePresupuesto(id: string | undefined) {
             razon_social,
             nombre_fantasia,
             email,
-            telefono,
+            whatsapp,
             cuit,
             direccion
           ),
