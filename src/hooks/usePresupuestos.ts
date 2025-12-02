@@ -15,7 +15,7 @@ export function usePresupuestos(
   filters?: PresupuestosFilters,
   pagination?: PresupuestosPaginacion
 ) {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [presupuestos, setPresupuestos] = useState<PresupuestoConRelaciones[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -142,6 +142,7 @@ export function usePresupuestos(
         .from('presupuestos')
         .insert({
           ...data,
+          company_id: profile?.company_id,
           estado: data.estado || 'borrador',
           created_by: user?.id,
         })
