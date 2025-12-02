@@ -445,6 +445,23 @@ export function CreateOrderPage() {
               console.error('[CreateOrderPage] Error procesando orden de copiado:', err);
             }
           }
+
+          // IMPORTANTE: Recalcular total de la orden de trabajo para incluir órdenes de copiado
+          // El trigger SQL debería hacerlo automáticamente, pero lo hacemos manualmente por seguridad
+          console.log('[CreateOrderPage] Recalculando total de orden de trabajo con órdenes de copiado...');
+          try {
+            const { data: recalculoResult, error: recalculoError } = await supabase
+              .rpc('fn_recalcular_total_orden_trabajo', { p_orden_trabajo_id: result.id });
+
+            if (recalculoError) {
+              console.error('[CreateOrderPage] Error recalculando total:', recalculoError);
+              showError('Advertencia: Puede haber un error en el total consolidado. Recarga la página.');
+            } else {
+              console.log('[CreateOrderPage] Total recalculado exitosamente:', recalculoResult);
+            }
+          } catch (recalculoErr) {
+            console.error('[CreateOrderPage] Excepción recalculando total:', recalculoErr);
+          }
         }
 
         // Limpiar sessionStorage
