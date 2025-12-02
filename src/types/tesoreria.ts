@@ -69,3 +69,74 @@ export interface UpdateEgresoData {
   medio_pago?: 'efectivo' | 'transferencia' | 'cheque' | 'tarjeta' | 'debito' | 'otro';
   notas?: string;
 }
+
+export interface TipoIngreso {
+  id: string;
+  company_id: string;
+  nombre: string;
+  descripcion: string | null;
+  codigo: string;
+  color: string;
+  icono: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Ingreso {
+  id: string;
+  company_id: string;
+  caja_id: string;
+  tipo_ingreso_id: string;
+  monto: number;
+  concepto: string;
+  fecha: string;
+  numero_comprobante: string | null;
+  origen: string | null;
+  medio_cobro_id: string | null;
+  notas: string | null;
+  movimiento_id: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  // Relaciones
+  caja?: {
+    nombre: string;
+    moneda: string;
+    tipo: string;
+  };
+  tipo_ingreso?: {
+    nombre: string;
+    color: string;
+    icono: string;
+  };
+  medio_cobro?: {
+    nombre: string;
+    categoria: string;
+  };
+  created_by_profile?: {
+    full_name: string;
+  };
+}
+
+export interface CreateIngresoData {
+  caja_id: string;
+  tipo_ingreso_id: string;
+  monto: number;
+  concepto: string;
+  fecha: string;
+  numero_comprobante?: string;
+  origen?: string;
+  medio_cobro_id?: string;
+  notas?: string;
+}
+
+export interface UpdateIngresoData {
+  monto?: number;
+  concepto?: string;
+  fecha?: string;
+  numero_comprobante?: string;
+  origen?: string;
+  medio_cobro_id?: string;
+  notas?: string;
+}

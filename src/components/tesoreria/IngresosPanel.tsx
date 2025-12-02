@@ -1,9 +1,12 @@
 import { useState, useMemo } from 'react';
-import { TrendingUp, Calendar } from 'lucide-react';
+import { TrendingUp, Calendar, Plus } from 'lucide-react';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { DatePicker } from '../ui/DatePicker';
+import { Badge } from '../ui/Badge';
 import { useIngresosPeriodo } from '../../hooks/useTesoreria';
+import { useIngresos } from '../../hooks/useIngresos';
+import { RegistrarIngresoModal } from './RegistrarIngresoModal';
 
 export function IngresosPanel() {
   const hoy = new Date();
@@ -11,6 +14,7 @@ export function IngresosPanel() {
 
   const [fechaDesde, setFechaDesde] = useState<Date>(hoy);
   const [fechaHasta, setFechaHasta] = useState<Date>(hoy);
+  const [showRegistrarModal, setShowRegistrarModal] = useState(false);
 
   const fechaDesdeStr = useMemo(() => {
     return fechaDesde instanceof Date && !isNaN(fechaDesde.getTime())
@@ -24,10 +28,12 @@ export function IngresosPanel() {
       : new Date().toISOString().split('T')[0];
   }, [fechaHasta]);
 
-  const { ingresos, totalIngresos, totalComisiones, loading } = useIngresosPeriodo(
+  const { ingresos, totalIngresos, totalComisiones, loading, refetch } = useIngresosPeriodo(
     fechaDesdeStr,
     fechaHastaStr
   );
+
+  const { createIngreso } = useIngresos();
 
   const setHoy = () => {
     const today = new Date();
@@ -62,43 +68,65 @@ export function IngresosPanel() {
     setFechaHasta(today);
   };
 
+  const getTipoIngresoBadge = (ingreso: any) => {
+    if (ingreso.referencia_tipo === 'ingreso_manual') {
+      return (
+        <Badge variant="success" className="bg-green-100 text-green-700 border-green-300">
+          {ingreso.tipo_ingreso_nombre || 'Ingreso Manual'}
+        </Badge>
+      );
+    }
+    return (
+      <Badge variant="info" className="bg-blue-100 text-blue-700 border-blue-300">
+        Pago de Venta
+      </Badge>
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* Filtros y Atajos */}
       <div className="space-y-4">
         {/* Botones de atajos de fecha */}
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={setHoy}
-            className="text-xs"
-          >
-            Hoy
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={setAyer}
-            className="text-xs"
-          >
-            Ayer
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={setUltimaSemana}
-            className="text-xs"
-          >
-            Última Semana
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={setUltimoMes}
-            className="text-xs"
-          >
-            Último Mes
+        <div className="flex flex-wrap gap-2 items-center justify-between">
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={setHoy}
+              className="text-xs"
+            >
+              Hoy
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={setAyer}
+              className="text-xs"
+            >
+              Ayer
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={setUltimaSemana}
+              className="text-xs"
+            >
+              Última Semana
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={setUltimoMes}
+              className="text-xs"
+            >
+              Último Mes
+            </Button>
+          </div>
+
+          <Button onClick={() => setShowRegistrarModal(true)} className="flex items-center gap-2">
+            <Plus className="w-4 h-4" />
+            Registrar Ingreso
           </Button>
         </div>
 
@@ -160,6 +188,7 @@ export function IngresosPanel() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Concepto</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Caja</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Medio</th>
@@ -170,13 +199,13 @@ export function IngresosPanel() {
             <tbody className="bg-white divide-y divide-gray-200">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
                     Cargando ingresos...
                   </td>
                 </tr>
               ) : ingresos.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
                     No hay ingresos en este período
                   </td>
                 </tr>
@@ -185,6 +214,9 @@ export function IngresosPanel() {
                   <tr key={ingreso.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {new Date(ingreso.fecha).toLocaleDateString('es-AR')}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {getTipoIngresoBadge(ingreso)}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900">
                       {ingreso.concepto}
@@ -220,7 +252,7 @@ export function IngresosPanel() {
             {ingresos.length > 0 && (
               <tfoot className="bg-gray-50 font-semibold">
                 <tr>
-                  <td colSpan={4} className="px-6 py-3 text-right text-sm text-gray-900">
+                  <td colSpan={5} className="px-6 py-3 text-right text-sm text-gray-900">
                     Total:
                   </td>
                   <td className="px-6 py-3 text-right text-sm text-green-600">
@@ -235,6 +267,19 @@ export function IngresosPanel() {
           </table>
         </div>
       </Card>
+
+      {/* Modal de Registro */}
+      <RegistrarIngresoModal
+        isOpen={showRegistrarModal}
+        onClose={() => setShowRegistrarModal(false)}
+        onSuccess={() => {
+          refetch();
+          setShowRegistrarModal(false);
+        }}
+        onSubmit={async (data) => {
+          await createIngreso(data);
+        }}
+      />
     </div>
   );
 }
