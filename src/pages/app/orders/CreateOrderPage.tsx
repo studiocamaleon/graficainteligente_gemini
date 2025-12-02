@@ -25,7 +25,6 @@ import { useOrdenArchivos } from '../../../hooks/useOrdenArchivos';
 import { useOrdenLinks } from '../../../hooks/useOrdenLinks';
 import { useCentroCopiadoOrdenes } from '../../../hooks/useCentroCopiadoOrdenes';
 import type { CanalVenta } from '../../../types/database';
-import { enviarNotificacion } from '../../../lib/whatsappNotifications';
 
 interface PagoTemporal {
   id: string;
@@ -489,20 +488,23 @@ export function CreateOrderPage() {
 
         showSuccess(mensajeExito);
 
-        // Enviar notificación de WhatsApp de forma asíncrona (no bloqueante)
-        if (profile?.company_id && clienteId && result.id) {
-          enviarNotificacion({
-            companyId: profile.company_id,
-            clienteId: clienteId,
-            ordenId: result.id,
-            tipo: 'nueva_orden_trabajo',
-            ordenTipo: 'trabajo'
-          }).then((resultado) => {
-            if (resultado.success) {
+        // Enviar notificación de WhatsApp vía Edge Function (no bloqueante)
+        if (profile?.company_id && result.id) {
+          supabase.functions.invoke('enviar-notificacion-orden', {
+            body: {
+              orden_id: result.id,
+              company_id: profile.company_id,
+              tipo: 'nueva_orden_trabajo',
+              orden_tipo: 'trabajo'
+            }
+          }).then(({ data, error }) => {
+            if (error) {
+              console.error('[CreateOrderPage] Error al enviar notificación:', error);
+            } else if (data?.success) {
               showSuccess('Notificación de WhatsApp enviada al cliente');
             }
           }).catch((err) => {
-            console.error('[CreateOrderPage] Error al enviar notificación:', err);
+            console.error('[CreateOrderPage] Error al invocar Edge Function:', err);
           });
         }
 

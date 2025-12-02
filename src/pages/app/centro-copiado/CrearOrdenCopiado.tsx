@@ -21,7 +21,6 @@ import { useCentroCopiadoOrdenPagos } from '../../../hooks/useCentroCopiadoOrden
 import { useInfoDialog } from '../../../hooks/useInfoDialog';
 import { InfoDialog } from '../../../components/ui/InfoDialog';
 import { supabase } from '../../../lib/supabase';
-import { enviarNotificacion } from '../../../lib/whatsappNotifications';
 import { useAuth } from '../../../hooks/useAuth';
 
 interface ItemWithId {
@@ -349,18 +348,21 @@ export function CrearOrdenCopiado() {
 
       // Enviar notificación solo si es orden independiente (no asociada a orden de trabajo)
       if (profile?.company_id && clienteId && !ordenTrabajoIdParam) {
-        enviarNotificacion({
-          companyId: profile.company_id,
-          clienteId: clienteId,
-          ordenId: ordenIdFinal,
-          tipo: 'nueva_orden_copiado',
-          ordenTipo: 'copiado'
-        }).then((resultado) => {
-          if (resultado.success) {
-            console.log('Notificación enviada exitosamente');
+        supabase.functions.invoke('enviar-notificacion-orden', {
+          body: {
+            orden_id: ordenIdFinal,
+            company_id: profile.company_id,
+            tipo: 'nueva_orden_copiado',
+            orden_tipo: 'copiado'
+          }
+        }).then(({ data, error }) => {
+          if (error) {
+            console.error('[CrearOrdenCopiado] Error al enviar notificación:', error);
+          } else if (data?.success) {
+            console.log('[CrearOrdenCopiado] Notificación enviada exitosamente');
           }
         }).catch((err) => {
-          console.error('Error al enviar notificación:', err);
+          console.error('[CrearOrdenCopiado] Error al invocar Edge Function:', err);
         });
       }
 
