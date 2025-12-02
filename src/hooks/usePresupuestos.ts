@@ -373,6 +373,33 @@ export function usePresupuestos(
     }
   };
 
+  const enviarNotificacionPresupuesto = async (
+    presupuestoId: string,
+    tipoNotificacion: 'presupuesto_listo' | 'presupuesto_aprobado' | 'presupuesto_vencido'
+  ): Promise<boolean> => {
+    try {
+      setError(null);
+
+      const { data, error: functionError } = await supabase.functions.invoke(
+        'notify-presupuesto',
+        {
+          body: {
+            presupuesto_id: presupuestoId,
+            tipo_notificacion: tipoNotificacion,
+          },
+        }
+      );
+
+      if (functionError) throw functionError;
+
+      return data?.success || false;
+    } catch (err: any) {
+      console.error('Error enviando notificación:', err);
+      setError(err.message);
+      return false;
+    }
+  };
+
   return {
     presupuestos,
     loading,
@@ -387,5 +414,6 @@ export function usePresupuestos(
     enviarPresupuesto,
     aprobarPresupuesto,
     rechazarPresupuesto,
+    enviarNotificacionPresupuesto,
   };
 }

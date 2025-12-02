@@ -22,7 +22,7 @@ export default function DetallePresupuesto() {
   const { showConfirm } = useConfirmDialog();
 
   const { presupuesto, loading, error } = usePresupuesto(id || '');
-  const { deletePresupuesto, duplicarPresupuesto, enviarPresupuesto } = usePresupuestos();
+  const { deletePresupuesto, duplicarPresupuesto, enviarPresupuesto, enviarNotificacionPresupuesto } = usePresupuestos();
   const { company } = useCompany();
 
   const [activeTab, setActiveTab] = useState<TabId>('items');
@@ -93,7 +93,7 @@ export default function DetallePresupuesto() {
 
     const confirmed = await showConfirm({
       title: 'Enviar presupuesto',
-      message: `¿Deseas marcar "${presupuesto.numero_presupuesto}" como enviado? Esto generará el tracking público.`,
+      message: `¿Deseas marcar "${presupuesto.numero_presupuesto}" como enviado? Esto generará el tracking público y enviará una notificación por WhatsApp al cliente.`,
       confirmText: 'Enviar',
       cancelText: 'Cancelar',
     });
@@ -101,7 +101,7 @@ export default function DetallePresupuesto() {
     if (confirmed) {
       const success = await enviarPresupuesto(presupuesto.id);
       if (success) {
-        showSuccess('Presupuesto marcado como enviado');
+        showSuccess('Presupuesto enviado. Notificación WhatsApp programada.');
       } else {
         showError('Error al enviar presupuesto');
       }

@@ -103,7 +103,7 @@ export default function PresupuestosListPage() {
 
     const confirmed = await showConfirm({
       title: 'Enviar presupuesto',
-      message: `¿Deseas marcar "${presupuesto.numero_presupuesto}" como enviado? Esto generará el tracking público.`,
+      message: `¿Deseas marcar "${presupuesto.numero_presupuesto}" como enviado? Esto generará el tracking público y enviará una notificación por WhatsApp al cliente.`,
       confirmText: 'Enviar',
       cancelText: 'Cancelar',
     });
@@ -111,7 +111,7 @@ export default function PresupuestosListPage() {
     if (confirmed) {
       const success = await enviarPresupuesto(id);
       if (success) {
-        showSuccess('Presupuesto marcado como enviado');
+        showSuccess('Presupuesto enviado. Notificación WhatsApp programada.');
       }
     }
   };
