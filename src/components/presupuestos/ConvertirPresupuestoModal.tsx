@@ -4,7 +4,15 @@ import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { MedioCobroSelector } from '../medios-cobro/MedioCobroSelector';
+import { ConfigurarRutasPresupuestoModal } from './ConfigurarRutasPresupuestoModal';
 import type { PresupuestoConRelaciones } from '../../types/presupuestos';
+
+interface RutaStep {
+  etapa: string;
+  paso_id: string;
+  paso_nombre: string;
+  orden: number;
+}
 
 interface ConvertirPresupuestoModalProps {
   isOpen: boolean;
@@ -17,6 +25,7 @@ interface ConvertirPresupuestoModalProps {
     montoPago?: number;
     medioCobroId?: string;
     referenciaPago?: string;
+    rutasPersonalizadas?: Record<string, RutaStep[]>;
   }) => Promise<void>;
 }
 
@@ -37,16 +46,29 @@ export function ConvertirPresupuestoModal({
   const [medioCobroId, setMedioCobroId] = useState<string>('');
   const [referenciaPago, setReferenciaPago] = useState('');
 
+  // Estados para configurar rutas de items personalizados
+  const [showConfigurarRutas, setShowConfigurarRutas] = useState(false);
+  const [rutasPersonalizadas, setRutasPersonalizadas] = useState<Record<string, RutaStep[]>>({});
+
   // Contar items personalizados
-  const itemsPersonalizados = presupuesto.items?.filter(
+  const itemsPersonalizadosArray = presupuesto.items?.filter(
     (item) => item.tipo_item === 'item_personalizado'
-  ).length || 0;
+  ) || [];
+
+  const itemsPersonalizados = itemsPersonalizadosArray.length;
 
   const itemsSistema = presupuesto.items?.filter(
     (item) => item.tipo_item === 'producto_sistema'
   ).length || 0;
 
   const handleSubmit = async () => {
+    // Si hay items personalizados y no tienen rutas configuradas, mostrar modal
+    if (itemsPersonalizados > 0 && Object.keys(rutasPersonalizadas).length === 0) {
+      setShowConfigurarRutas(true);
+      return;
+    }
+
+    // Proceder con la conversión
     try {
       setSubmitting(true);
       await onConvertir({
@@ -56,6 +78,31 @@ export function ConvertirPresupuestoModal({
         montoPago: registrarPago && montoPago ? parseFloat(montoPago) : undefined,
         medioCobroId: registrarPago && medioCobroId ? medioCobroId : undefined,
         referenciaPago: registrarPago && referenciaPago ? referenciaPago : undefined,
+        rutasPersonalizadas: Object.keys(rutasPersonalizadas).length > 0 ? rutasPersonalizadas : undefined,
+      });
+      onClose();
+    } catch (error) {
+      console.error('Error convirtiendo:', error);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleRutasConfiguradas = async (rutas: Record<string, RutaStep[]>) => {
+    setRutasPersonalizadas(rutas);
+    setShowConfigurarRutas(false);
+
+    // Proceder con la conversión
+    try {
+      setSubmitting(true);
+      await onConvertir({
+        fechaEntrega: fechaEntrega || undefined,
+        notasAdicionales: notasAdicionales || undefined,
+        copiarArchivos,
+        montoPago: registrarPago && montoPago ? parseFloat(montoPago) : undefined,
+        medioCobroId: registrarPago && medioCobroId ? medioCobroId : undefined,
+        referenciaPago: registrarPago && referenciaPago ? referenciaPago : undefined,
+        rutasPersonalizadas: rutas,
       });
       onClose();
     } catch (error) {
@@ -83,6 +130,7 @@ export function ConvertirPresupuestoModal({
   const pagoValido = !registrarPago || (montoNumerico > 0 && montoNumerico <= presupuesto.total && medioCobroId);
 
   return (
+    <>
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
@@ -272,8 +320,8 @@ export function ConvertirPresupuestoModal({
             <li>• Referencia al presupuesto original</li>
           </ul>
           {itemsPersonalizados > 0 && (
-            <p className="text-sm text-orange-600 font-medium mt-2">
-              ⚠️ Recuerda agregar manualmente los {itemsPersonalizados} item(s) personalizado(s)
+            <p className="text-sm text-blue-600 font-medium mt-2">
+              ✓ Se configurarán rutas de producción para {itemsPersonalizados} item(s) personalizado(s)
             </p>
           )}
         </div>
@@ -297,5 +345,18 @@ export function ConvertirPresupuestoModal({
         </div>
       </div>
     </Modal>
+
+    {/* Modal para configurar rutas de items personalizados */}
+    <ConfigurarRutasPresupuestoModal
+      isOpen={showConfigurarRutas}
+      onClose={() => setShowConfigurarRutas(false)}
+      itemsPersonalizados={itemsPersonalizadosArray.map(item => ({
+        id: item.id,
+        producto_nombre: item.producto_nombre,
+        descripcion: item.descripcion || '',
+      }))}
+      onConfirm={handleRutasConfiguradas}
+    />
+  </>
   );
 }

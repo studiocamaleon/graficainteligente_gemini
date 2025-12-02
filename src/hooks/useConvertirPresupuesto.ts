@@ -2,6 +2,13 @@ import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
 
+interface RutaStep {
+  etapa: string;
+  paso_id: string;
+  paso_nombre: string;
+  orden: number;
+}
+
 interface ConvertirPresupuestoParams {
   presupuesto_id: string;
   fecha_entrega_estimada?: string;
@@ -10,6 +17,7 @@ interface ConvertirPresupuestoParams {
   monto_pago?: number;
   medio_cobro_id?: string;
   referencia_pago?: string;
+  rutas_personalizadas?: Record<string, RutaStep[]>;
 }
 
 interface ConvertirPresupuestoResult {
@@ -48,6 +56,7 @@ export function useConvertirPresupuesto() {
           p_monto_pago: params.monto_pago || null,
           p_medio_cobro_id: params.medio_cobro_id || null,
           p_referencia_pago: params.referencia_pago || null,
+          p_rutas_personalizadas: params.rutas_personalizadas || null,
         }
       );
 
