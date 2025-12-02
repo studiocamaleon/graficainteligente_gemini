@@ -391,6 +391,13 @@ export const MODULES: Module[] = [
         path: '/app/settings/tipos-egreso',
         icon: Tag,
       },
+      {
+        id: 'settings-tipos-ingreso',
+        name: 'Tipos de Ingreso',
+        description: 'Gestión de categorías de ingresos manuales',
+        path: '/app/settings/tipos-ingreso',
+        icon: TrendingUp,
+      },
     ],
   },
 ];

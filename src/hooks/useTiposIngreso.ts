@@ -60,8 +60,19 @@ export function useTiposIngreso() {
   const deleteTipo = async (id: string) => {
     const { error } = await supabase
       .from('tipos_ingreso')
-      .delete()
+      .update({ is_active: false })
       .eq('id', id);
+
+    if (error) throw error;
+    await fetchTipos();
+  };
+
+  const seedDefaultTipos = async () => {
+    if (!profile?.company_id) return;
+
+    const { error } = await supabase.rpc('fn_seed_tipos_ingreso_default', {
+      p_company_id: profile.company_id,
+    });
 
     if (error) throw error;
     await fetchTipos();
@@ -73,6 +84,7 @@ export function useTiposIngreso() {
     createTipo,
     updateTipo,
     deleteTipo,
+    seedDefaultTipos,
     refetch: fetchTipos,
   };
 }
