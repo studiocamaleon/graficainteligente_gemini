@@ -221,10 +221,12 @@ export default function CondicionesComerciales() {
           title="No hay condiciones comerciales"
           description="Crea tu primera condición comercial para empezar a utilizarla en tus presupuestos"
           icon={AlertCircle}
-          action={{
-            label: 'Crear Condición',
-            onClick: handleCreate,
-          }}
+          action={
+            <Button onClick={handleCreate}>
+              <Plus className="w-5 h-5 mr-2" />
+              Crear Condición
+            </Button>
+          }
         />
       )}
 
