@@ -199,10 +199,12 @@ export default function PresupuestosListPage() {
           title="No hay presupuestos"
           description="Crea tu primer presupuesto para empezar a cotizar productos"
           icon={AlertCircle}
-          action={{
-            label: 'Crear Presupuesto',
-            onClick: handleCreate,
-          }}
+          action={
+            <Button onClick={handleCreate}>
+              <Plus className="w-5 h-5 mr-2" />
+              Crear Presupuesto
+            </Button>
+          }
         />
       )}
 
@@ -212,10 +214,11 @@ export default function PresupuestosListPage() {
           title="No se encontraron resultados"
           description="Intenta ajustar los filtros de búsqueda"
           icon={AlertCircle}
-          action={{
-            label: 'Limpiar filtros',
-            onClick: handleResetFilters,
-          }}
+          action={
+            <Button variant="secondary" onClick={handleResetFilters}>
+              Limpiar filtros
+            </Button>
+          }
         />
       )}
 

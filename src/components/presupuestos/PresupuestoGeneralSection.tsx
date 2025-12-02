@@ -45,7 +45,7 @@ export function PresupuestoGeneralSection({
   const clienteOptions = clients.map((client) => ({
     value: client.id,
     label: client.razon_social,
-    subtitle: client.email || client.telefono || undefined,
+    subtitle: client.email || client.whatsapp || undefined,
   }));
 
   const vendedorOptions = [
@@ -122,10 +122,10 @@ export function PresupuestoGeneralSection({
                   <span>{clienteSeleccionado.email}</span>
                 </div>
               )}
-              {clienteSeleccionado.telefono && (
+              {clienteSeleccionado.whatsapp && (
                 <div className="flex items-center gap-2 text-sm text-gray-600">
                   <Phone className="w-4 h-4" />
-                  <span>{clienteSeleccionado.telefono}</span>
+                  <span>{clienteSeleccionado.whatsapp}</span>
                 </div>
               )}
               {clienteSeleccionado.direccion && (

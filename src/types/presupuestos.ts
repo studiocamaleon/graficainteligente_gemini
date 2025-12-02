@@ -87,7 +87,7 @@ export interface PresupuestoConRelaciones extends Presupuesto {
     razon_social: string;
     nombre_fantasia?: string;
     email?: string;
-    telefono?: string;
+    whatsapp?: string;
   };
   vendedor?: {
     id: string;

@@ -43,7 +43,7 @@ export function usePresupuestos(
             razon_social,
             nombre_fantasia,
             email,
-            telefono
+            whatsapp
           ),
           vendedor:profiles!vendedor_id (
             id,
