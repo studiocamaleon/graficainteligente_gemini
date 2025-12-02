@@ -5,7 +5,7 @@
 2. [Análisis de Impacto](#análisis-de-impacto)
 3. [Estructura de Base de Datos](#estructura-de-base-de-datos)
 4. [Fases de Implementación](#fases-de-implementación)
-5. [Mejoras y Agregados Propuestos](#mejoras-y-agregados-propuestos)
+5. [Mejporas y Agregados Propuestos](#mejoras-y-agregados-propuestos)
 
 ---
 
