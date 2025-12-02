@@ -132,7 +132,7 @@ export function AddPasoManualModal({
           </label>
           <Select
             value={formData.etapa}
-            onChange={(e) => setFormData({ ...formData, etapa: e.target.value })}
+            onChange={(value) => setFormData({ ...formData, etapa: value })}
             error={errors.etapa}
           >
             <option value="">Selecciona una etapa...</option>
@@ -153,7 +153,7 @@ export function AddPasoManualModal({
           </label>
           <Select
             value={formData.paso_id}
-            onChange={(e) => setFormData({ ...formData, paso_id: e.target.value })}
+            onChange={(value) => setFormData({ ...formData, paso_id: value })}
             error={errors.paso_id}
             disabled={loadingPasos}
           >
