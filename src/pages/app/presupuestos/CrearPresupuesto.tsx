@@ -20,7 +20,7 @@ type TabId = 'general' | 'items' | 'condiciones' | 'resumen';
 export default function CrearPresupuesto() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { createPresupuesto } = usePresupuestos();
+  const { createPresupuesto, enviarNotificacionPresupuesto } = usePresupuestos();
   const { clients } = useClients();
 
   const [activeTab, setActiveTab] = useState<TabId>('general');
@@ -193,6 +193,17 @@ export default function CrearPresupuesto() {
           total: totales.total,
         })
         .eq('id', presupuesto.id);
+
+      // Si se creó con estado "enviado", enviar notificación de WhatsApp
+      if (enviar) {
+        try {
+          await enviarNotificacionPresupuesto(presupuesto.id, 'presupuesto_listo');
+          console.log('[CrearPresupuesto] Notificación de WhatsApp enviada');
+        } catch (notifError) {
+          console.warn('[CrearPresupuesto] Error enviando notificación (no crítico):', notifError);
+          // No fallar la creación si falla la notificación
+        }
+      }
 
       setSuccessMessage(
         enviar
