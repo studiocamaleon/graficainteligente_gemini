@@ -5,6 +5,7 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { MedioCobroSelector } from '../medios-cobro/MedioCobroSelector';
 import { ConfigurarRutasPresupuestoModalV2 } from './ConfigurarRutasPresupuestoModalV2';
+import { useMediosCobro } from '../../hooks/useMediosCobro';
 import type { PresupuestoConRelaciones } from '../../types/presupuestos';
 
 interface RutaStep {
@@ -45,6 +46,9 @@ export function ConvertirPresupuestoModal({
   const [montoPago, setMontoPago] = useState<string>('');
   const [medioCobroId, setMedioCobroId] = useState<string>('');
   const [referenciaPago, setReferenciaPago] = useState('');
+
+  // Cargar medios de cobro
+  const { mediosCobro } = useMediosCobro();
 
   // Estados para configurar rutas de items personalizados
   const [showConfigurarRutas, setShowConfigurarRutas] = useState(false);
@@ -278,7 +282,8 @@ export function ConvertirPresupuestoModal({
                 <MedioCobroSelector
                   value={medioCobroId}
                   onChange={setMedioCobroId}
-                  placeholder="Seleccionar medio de cobro..."
+                  medios={mediosCobro}
+                  required
                 />
               </div>
 

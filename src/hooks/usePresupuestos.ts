@@ -423,6 +423,7 @@ export function usePresupuestos(
       montoPago?: number;
       medioCobroId?: string;
       referenciaPago?: string;
+      rutasPersonalizadas?: Record<string, any[]>;
     }
   ): Promise<string | null> => {
     try {
@@ -438,6 +439,7 @@ export function usePresupuestos(
           p_monto_pago: params.montoPago || null,
           p_medio_cobro_id: params.medioCobroId || null,
           p_referencia_pago: params.referenciaPago || null,
+          p_rutas_personalizadas: params.rutasPersonalizadas || null,
         }
       );
 

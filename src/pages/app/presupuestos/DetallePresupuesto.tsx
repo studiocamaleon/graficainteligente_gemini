@@ -126,6 +126,10 @@ export default function DetallePresupuesto() {
     fechaEntrega?: string;
     notasAdicionales?: string;
     copiarArchivos: boolean;
+    montoPago?: number;
+    medioCobroId?: string;
+    referenciaPago?: string;
+    rutasPersonalizadas?: Record<string, any[]>;
   }) => {
     if (!presupuesto) return;
 

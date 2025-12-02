@@ -13,12 +13,15 @@ interface MedioCobroSelectorProps {
 export function MedioCobroSelector({
   value,
   onChange,
-  medios,
+  medios = [],
   required = false,
   disabled = false,
   showDetails = false,
 }: MedioCobroSelectorProps) {
-  const mediosPorTipo = medios.reduce((acc, medio) => {
+  // Validar que medios sea un array
+  const mediosArray = Array.isArray(medios) ? medios : [];
+
+  const mediosPorTipo = mediosArray.reduce((acc, medio) => {
     if (!acc[medio.tipo]) {
       acc[medio.tipo] = [];
     }
@@ -37,7 +40,7 @@ export function MedioCobroSelector({
     }
   };
 
-  const selectedMedio = medios.find((m) => m.id === value);
+  const selectedMedio = mediosArray.find((m) => m.id === value);
 
   return (
     <div>
