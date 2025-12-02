@@ -27,7 +27,7 @@ Deno.serve(async (req: Request) => {
 
     // Obtener datos del presupuesto
     const presupuestoResponse = await fetch(
-      `${supabaseUrl}/rest/v1/presupuestos?id=eq.${presupuesto_id}&select=*,cliente:clientes(*),vendedor:profiles(*),company:companies(*)`,
+      `${supabaseUrl}/rest/v1/presupuestos?id=eq.${presupuesto_id}&select=*,cliente:clients(*),vendedor:profiles(*),company:companies(*)`,
       {
         headers: {
           "apikey": supabaseServiceKey,
@@ -45,10 +45,10 @@ Deno.serve(async (req: Request) => {
     const company = presupuesto.company;
     const cliente = presupuesto.cliente;
 
-    if (!cliente?.telefono) {
-      console.log("Cliente sin teléfono, no se envía notificación");
+    if (!cliente?.whatsapp) {
+      console.log("Cliente sin WhatsApp, no se envía notificación");
       return new Response(
-        JSON.stringify({ success: false, message: "Cliente sin teléfono" }),
+        JSON.stringify({ success: false, message: "Cliente sin WhatsApp" }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
           status: 400,
@@ -80,7 +80,7 @@ Deno.serve(async (req: Request) => {
         "apikey": company.whatsapp_api_key,
       },
       body: JSON.stringify({
-        number: cliente.telefono,
+        number: cliente.whatsapp,
         text: mensaje,
       }),
     });
@@ -102,7 +102,7 @@ Deno.serve(async (req: Request) => {
         company_id: company.id,
         presupuesto_id: presupuesto.id,
         tipo_notificacion,
-        telefono_destino: cliente.telefono,
+        telefono_destino: cliente.whatsapp,
         mensaje_enviado: mensaje,
         estado: "enviado",
       }),
