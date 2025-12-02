@@ -143,7 +143,7 @@ export default function PresupuestosListPage() {
     setPagination({ ...pagination, page });
   };
 
-  const totalPages = Math.ceil(total / pagination.limit);
+  const totalPages = Math.ceil((total || 0) / pagination.limit);
 
   return (
     <div className="space-y-6">

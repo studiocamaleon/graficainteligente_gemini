@@ -385,18 +385,41 @@ La Edge Function usa `SUPABASE_SERVICE_ROLE_KEY` para:
 
 ---
 
-## **Fix Adicional: Conversión de Presupuestos**
+## **Fixes Adicionales Aplicados**
+
+### **1. Conversión de Presupuestos**
 
 Se detectó y corrigió que al convertir presupuestos a órdenes no se enviaban notificaciones.
 
-**Solución aplicada**:
+**Solución**:
 - Migración: `fix_convertir_presupuesto_add_edge_function_call.sql`
 - Actualizada `fn_convertir_presupuesto_a_orden` para llamar a Edge Function
 - Ahora envía notificación idéntica a órdenes creadas desde frontend
 
-Ver detalles en: `FIX_NOTIFICACIONES_CONVERTIR_PRESUPUESTO.md`
+### **2. Total $0 en Mensajes de Presupuesto**
+
+Se corrigió que los mensajes de presupuesto mostraban "Total: $ 0" porque el trigger se disparaba antes de insertar los items.
+
+**Solución**:
+- Migración: `fix_trigger_presupuesto_validar_total.sql`
+- Triggers ahora verifican: `estado = 'enviado' AND total > 0`
+- No se envía notificación hasta que el presupuesto tenga items y total calculado
+
+### **3. Error NaN en Paginación**
+
+Se corrigió warning en consola por NaN en el componente de paginación.
+
+**Solución**:
+- Agregado fallback: `const totalPages = Math.ceil((total || 0) / pagination.limit)`
+- Sin cambios en base de datos, solo frontend
+
+---
+
+**Ver detalles completos en**:
+- `FIX_NOTIFICACIONES_CONVERTIR_PRESUPUESTO.md`
+- `RESUMEN_FIXES_PRESUPUESTOS_NOTIFICACIONES.md`
 
 ---
 
 _Documentación generada el 2 de diciembre de 2025_
-_Fix conversión presupuestos: 2 de diciembre de 2025_
+_Fixes aplicados: 2 de diciembre de 2025_
