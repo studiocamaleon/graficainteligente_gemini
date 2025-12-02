@@ -135,8 +135,9 @@ function construirMensaje(
     });
   };
 
+  const origin = Deno.env.get("FRONTEND_URL") || "https://app.pactto.com";
   const trackingUrl = presupuesto.tracking_token
-    ? `${Deno.env.get("FRONTEND_URL") || "https://app.pactto.com"}/tracking/presupuesto/${presupuesto.tracking_token}`
+    ? `${origin}/tracking/presupuesto/${presupuesto.tracking_token}`
     : null;
 
   const clienteNombre = presupuesto.cliente?.nombre_fantasia || presupuesto.cliente?.razon_social || "Cliente";
