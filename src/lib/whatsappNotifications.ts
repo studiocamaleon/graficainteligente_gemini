@@ -82,6 +82,20 @@ export function generateNuevaOrdenTrabajoMessage(
   company: any,
   ordenesCopiado: any[] = []
 ): string {
+  // DEBUG: Log de parámetro recibido
+  console.log('📨 generateNuevaOrdenTrabajoMessage llamada con:');
+  console.log('   - ordenesCopiado type:', typeof ordenesCopiado);
+  console.log('   - ordenesCopiado isArray:', Array.isArray(ordenesCopiado));
+  console.log('   - ordenesCopiado value:', JSON.stringify(ordenesCopiado, null, 2));
+
+  // CRÍTICO: Normalizar ordenesCopiado al inicio para evitar errores con relaciones 1:1 de Supabase
+  const ordenesArray = Array.isArray(ordenesCopiado)
+    ? ordenesCopiado
+    : (ordenesCopiado ? [ordenesCopiado] : []);
+
+  console.log('✅ ordenesArray normalizado:', JSON.stringify(ordenesArray, null, 2));
+  console.log('✅ ordenesArray.length:', ordenesArray.length);
+
   const nombreCliente = cliente.nombre_fantasia || cliente.razon_social;
   const trackingUrl = orden.tracking_token ? buildTrackingUrl(orden.tracking_token) : '';
 
@@ -124,10 +138,10 @@ export function generateNuevaOrdenTrabajoMessage(
   mensaje += `${itemsDetalle}\n\n`;
 
   // Incluir órdenes de copiado si existen
-  if (ordenesCopiado && ordenesCopiado.length > 0) {
+  if (ordenesArray && ordenesArray.length > 0) {
     mensaje += `📄 *SERVICIOS DE COPIADO INCLUIDOS:*\n\n`;
 
-    ordenesCopiado.forEach((oc, ocIndex) => {
+    ordenesArray.forEach((oc, ocIndex) => {
       mensaje += `*Orden de Copiado ${oc.numero_orden}:*\n\n`;
 
       const itemsCopiadoDetalle = (oc.items || [])
@@ -137,7 +151,7 @@ export function generateNuevaOrdenTrabajoMessage(
       mensaje += itemsCopiadoDetalle;
       mensaje += `\n\n*Total Orden Copiado:* $${parseFloat(oc.total || 0).toFixed(2)}\n`;
 
-      if (ocIndex < ordenesCopiado.length - 1) {
+      if (ocIndex < ordenesArray.length - 1) {
         mensaje += `\n`;
       }
     });
@@ -145,8 +159,7 @@ export function generateNuevaOrdenTrabajoMessage(
     mensaje += `\n${'―'.repeat(35)}\n\n`;
   }
 
-  // Calcular totales consolidados (validación defensiva)
-  const ordenesArray = Array.isArray(ordenesCopiado) ? ordenesCopiado : [];
+  // Calcular totales consolidados
   const totalOrdenesCopiado = ordenesArray.length > 0
     ? ordenesArray.reduce((sum, oc) => sum + parseFloat(oc.total || 0), 0)
     : 0;
@@ -455,13 +468,22 @@ export async function enviarNotificacion(
       orden.pagos_totales = pagosTotal;
 
       if (tipo === 'nueva_orden_trabajo') {
+        // DEBUG: Log del valor original de ordenesCopiado
+        console.log('🔍 DEBUG ordenesCopiado raw:', JSON.stringify(ordenData.ordenesCopiado, null, 2));
+        console.log('🔍 DEBUG ordenesCopiado type:', typeof ordenData.ordenesCopiado);
+        console.log('🔍 DEBUG ordenesCopiado isArray:', Array.isArray(ordenData.ordenesCopiado));
+
         // Normalizar ordenesCopiado a array (puede venir como objeto o array desde Supabase)
         let ordenesCopiado = ordenData.ordenesCopiado || [];
 
         // Si viene como objeto único (relación 1:1), convertir a array
         if (!Array.isArray(ordenesCopiado)) {
+          console.log('⚠️ ordenesCopiado NO es array, convirtiendo...');
           ordenesCopiado = ordenesCopiado ? [ordenesCopiado] : [];
         }
+
+        console.log('✅ ordenesCopiado normalizado:', JSON.stringify(ordenesCopiado, null, 2));
+        console.log('✅ ordenesCopiado.length:', ordenesCopiado.length);
 
         // Si hay órdenes de copiado, cargar nombres de archivos
         if (ordenesCopiado.length > 0) {
