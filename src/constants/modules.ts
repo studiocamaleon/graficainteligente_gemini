@@ -38,6 +38,8 @@ import {
   Wallet,
   MessageSquare,
   Pause,
+  Calculator,
+  FileCheck,
 } from 'lucide-react';
 
 export interface SubModule {
@@ -257,6 +259,37 @@ export const MODULES: Module[] = [
         description: 'Crear nueva orden de copiado',
         path: '/app/centro-copiado/ordenes/crear',
         icon: FilePlus,
+      },
+    ],
+  },
+  {
+    id: 'presupuestos',
+    name: 'Presupuestos',
+    description: 'Cotizaciones y negociación',
+    icon: Calculator,
+    path: '/app/presupuestos',
+    color: 'text-blue-600',
+    children: [
+      {
+        id: 'presupuestos-lista',
+        name: 'Presupuestos',
+        description: 'Gestión de presupuestos y cotizaciones',
+        path: '/app/presupuestos/lista',
+        icon: FileText,
+      },
+      {
+        id: 'presupuestos-crear',
+        name: 'Crear Presupuesto',
+        description: 'Nuevo presupuesto',
+        path: '/app/presupuestos/nuevo',
+        icon: FilePlus,
+      },
+      {
+        id: 'presupuestos-condiciones',
+        name: 'Condiciones Comerciales',
+        description: 'Templates de condiciones',
+        path: '/app/settings/condiciones-comerciales',
+        icon: FileCheck,
       },
     ],
   },

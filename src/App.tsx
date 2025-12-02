@@ -437,7 +437,7 @@ function AppRoutes() {
                 <Route
                   path="settings/condiciones-comerciales"
                   element={
-                    <ProtectedModuleRoute moduleId="settings-condiciones-comerciales">
+                    <ProtectedModuleRoute moduleId="presupuestos-condiciones">
                       <CondicionesComerciales />
                     </ProtectedModuleRoute>
                   }
