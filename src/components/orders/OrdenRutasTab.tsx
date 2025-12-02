@@ -1,17 +1,21 @@
-import { Route, AlertCircle, Loader2, Package, CheckCircle, Info, MessageSquare } from 'lucide-react';
+import { useState } from 'react';
+import { Route, AlertCircle, Loader2, Package, CheckCircle, Info, MessageSquare, Plus, AlertTriangle } from 'lucide-react';
 import { EmptyState } from '../ui/EmptyState';
 import { Badge } from '../ui/Badge';
+import { Button } from '../ui/Button';
 import { useGenerateProductionRoute, type GeneratedStep } from '../../hooks/useGenerateProductionRoute';
 import { StepCommentEditor } from './StepCommentEditor';
 import { StepCommentIndicator } from './StepCommentIndicator';
+import { AddPasoManualModal } from './AddPasoManualModal';
 
 interface OrdenRutasTabProps {
   items: any[];
+  setItems?: (items: any[]) => void;
   onUpdateStepComment?: (itemIndex: number, stepId: string, comment: string | null) => void;
   readOnly?: boolean;
 }
 
-export function OrdenRutasTab({ items, onUpdateStepComment, readOnly = false }: OrdenRutasTabProps) {
+export function OrdenRutasTab({ items, setItems, onUpdateStepComment, readOnly = false }: OrdenRutasTabProps) {
   if (items.length === 0) {
     return (
       <EmptyState
@@ -42,6 +46,8 @@ export function OrdenRutasTab({ items, onUpdateStepComment, readOnly = false }: 
             key={item.id || index}
             item={item}
             index={index}
+            items={items}
+            setItems={setItems}
             onUpdateStepComment={onUpdateStepComment}
             readOnly={readOnly}
           />
@@ -54,6 +60,8 @@ export function OrdenRutasTab({ items, onUpdateStepComment, readOnly = false }: 
 interface ItemRoutePreviewProps {
   item: any;
   index: number;
+  items?: any[];
+  setItems?: (items: any[]) => void;
   onUpdateStepComment?: (itemIndex: number, stepId: string, comment: string | null) => void;
   readOnly?: boolean;
 }
@@ -97,7 +105,9 @@ function normalizeEtapa(etapa: string): string {
   return etapa;
 }
 
-function ItemRoutePreview({ item, index, onUpdateStepComment, readOnly = false }: ItemRoutePreviewProps) {
+function ItemRoutePreview({ item, index, items, setItems, onUpdateStepComment, readOnly = false }: ItemRoutePreviewProps) {
+  const [showAddPasoModal, setShowAddPasoModal] = useState(false);
+  const isPersonalizado = item.tipo_item === 'personalizado';
   // Solo generar rutas si no existen previamente
   const shouldGenerate = !item.rutas_generadas || item.rutas_generadas.length === 0;
 
@@ -109,6 +119,51 @@ function ItemRoutePreview({ item, index, onUpdateStepComment, readOnly = false }
 
   // Usar rutas guardadas si existen, sino usar las generadas
   const stepsWithComments = item.rutas_generadas || steps;
+
+  const handleAddPasoManual = (paso: { etapa: string; paso_id: string; paso_nombre: string; orden: number }) => {
+    if (!items || !setItems) return;
+
+    const newStep = {
+      id: `temp-manual-${Date.now()}-${Math.random()}`,
+      etapa: paso.etapa,
+      paso_id: paso.paso_id,
+      paso_nombre: paso.paso_nombre,
+      orden: paso.orden,
+      es_obligatorio: true,
+      origen_plantilla_id: null,
+      comentario_vendedor: null,
+    };
+
+    const updatedItems = items.map((it, idx) => {
+      if (idx === index) {
+        return {
+          ...it,
+          rutas_generadas: [...(it.rutas_generadas || []), newStep],
+        };
+      }
+      return it;
+    });
+
+    setItems(updatedItems);
+    setShowAddPasoModal(false);
+  };
+
+  const handleRemovePasoManual = (stepId: string) => {
+    if (!items || !setItems) return;
+    if (!window.confirm('¿Eliminar este paso?')) return;
+
+    const updatedItems = items.map((it, idx) => {
+      if (idx === index) {
+        return {
+          ...it,
+          rutas_generadas: (it.rutas_generadas || []).filter((s: any) => s.id !== stepId),
+        };
+      }
+      return it;
+    });
+
+    setItems(updatedItems);
+  };
   const commentCount = stepsWithComments.filter((s: any) => s.comentario_vendedor && s.comentario_vendedor.trim().length > 0).length;
 
   // Agrupar pasos por etapa normalizada
@@ -164,6 +219,33 @@ function ItemRoutePreview({ item, index, onUpdateStepComment, readOnly = false }
           </div>
         </div>
       </div>
+
+      {/* Advertencia para items personalizados sin rutas */}
+      {isPersonalizado && totalPasos === 0 && !readOnly && setItems && (
+        <div className="px-4 py-3 bg-yellow-50 border-b border-yellow-200">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 flex-1">
+              <AlertTriangle className="w-5 h-5 text-yellow-600 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-yellow-800">
+                  Item personalizado sin ruta de producción
+                </p>
+                <p className="text-xs text-yellow-700 mt-0.5">
+                  Este item requiere configuración manual de los pasos de producción
+                </p>
+              </div>
+            </div>
+            <Button
+              size="sm"
+              onClick={() => setShowAddPasoModal(true)}
+              className="flex-shrink-0"
+            >
+              <Plus className="w-4 h-4" />
+              Agregar Paso
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Contenido de Rutas */}
       <div className="p-4">
@@ -261,6 +343,17 @@ function ItemRoutePreview({ item, index, onUpdateStepComment, readOnly = false }
           </div>
         )}
       </div>
+
+      {/* Modal para agregar pasos manuales */}
+      {!readOnly && setItems && (
+        <AddPasoManualModal
+          isOpen={showAddPasoModal}
+          onClose={() => setShowAddPasoModal(false)}
+          onAdd={handleAddPasoManual}
+          itemNombre={item.producto_nombre}
+          currentStepsCount={totalPasos}
+        />
+      )}
     </div>
   );
 }

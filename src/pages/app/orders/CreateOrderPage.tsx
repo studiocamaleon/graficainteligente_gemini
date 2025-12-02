@@ -641,6 +641,7 @@ export function CreateOrderPage() {
           <div className={activeTab === 'rutas' ? 'block' : 'hidden'}>
             <OrdenRutasTab
               items={items}
+              setItems={setItems}
               onUpdateStepComment={updateStepComment}
               readOnly={false}
             />
