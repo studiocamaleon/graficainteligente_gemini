@@ -145,10 +145,11 @@ export function generateNuevaOrdenTrabajoMessage(
     mensaje += `\n${'―'.repeat(35)}\n\n`;
   }
 
-  // Calcular totales consolidados
-  const totalOrdenesCopiado = ordenesCopiado.reduce((sum, oc) =>
-    sum + parseFloat(oc.total || 0), 0
-  );
+  // Calcular totales consolidados (validación defensiva)
+  const ordenesArray = Array.isArray(ordenesCopiado) ? ordenesCopiado : [];
+  const totalOrdenesCopiado = ordenesArray.length > 0
+    ? ordenesArray.reduce((sum, oc) => sum + parseFloat(oc.total || 0), 0)
+    : 0;
 
   // Mostrar desglose de totales
   mensaje += `💰 *Subtotal Items:* $${subtotalItems.toFixed(2)}\n`;
@@ -454,9 +455,15 @@ export async function enviarNotificacion(
       orden.pagos_totales = pagosTotal;
 
       if (tipo === 'nueva_orden_trabajo') {
-        // Si hay órdenes de copiado, cargar nombres de archivos
-        const ordenesCopiado = ordenData.ordenesCopiado || [];
+        // Normalizar ordenesCopiado a array (puede venir como objeto o array desde Supabase)
+        let ordenesCopiado = ordenData.ordenesCopiado || [];
 
+        // Si viene como objeto único (relación 1:1), convertir a array
+        if (!Array.isArray(ordenesCopiado)) {
+          ordenesCopiado = ordenesCopiado ? [ordenesCopiado] : [];
+        }
+
+        // Si hay órdenes de copiado, cargar nombres de archivos
         if (ordenesCopiado.length > 0) {
           for (const oc of ordenesCopiado) {
             const { data: archivos } = await supabase

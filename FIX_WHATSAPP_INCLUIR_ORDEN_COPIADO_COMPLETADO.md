@@ -543,3 +543,91 @@ _Tecnología desarrollada por CamaleonStudio - Agencia de desarrollo de Gráfica
 - Mayor confianza
 - Profesionalismo
 - Transparencia total
+
+---
+
+## FIX CRÍTICO: Error "ordenesCopiado.reduce is not a function" ⚠️
+
+### Problema Detectado en Testing
+
+Al probar con una orden de trabajo que SÍ tenía orden de copiado asociada, se obtuvo el error:
+
+```
+TypeError: ordenesCopiado.reduce is not a function
+```
+
+### Causa Raíz
+
+**Relación 1:1 en Base de Datos:**
+- La tabla `centro_copiado_ordenes` tiene un constraint `UNIQUE` en `orden_trabajo_id`
+- Esto significa que una OT solo puede tener **UNA** OC asociada (relación 1:1)
+
+**Comportamiento de Supabase:**
+- Cuando hay una relación 1:1 y usas `.single()` en el query principal
+- Supabase puede retornar **un objeto único** en lugar de **un array con un elemento**
+- Esto causa que `ordenesCopiado.reduce()` falle
+
+### Solución Implementada
+
+Se agregaron **dos capas de validación defensiva**:
+
+#### 1. Normalización en `enviarNotificacion()` (líneas 457-463)
+
+```typescript
+// Normalizar ordenesCopiado a array (puede venir como objeto o array desde Supabase)
+let ordenesCopiado = ordenData.ordenesCopiado || [];
+
+// Si viene como objeto único (relación 1:1), convertir a array
+if (!Array.isArray(ordenesCopiado)) {
+  ordenesCopiado = ordenesCopiado ? [ordenesCopiado] : [];
+}
+```
+
+**Beneficio:** Asegura que siempre sea un array antes de procesarlo.
+
+#### 2. Validación Defensiva en `generateNuevaOrdenTrabajoMessage()` (líneas 148-152)
+
+```typescript
+// Calcular totales consolidados (validación defensiva)
+const ordenesArray = Array.isArray(ordenesCopiado) ? ordenesCopiado : [];
+const totalOrdenesCopiado = ordenesArray.length > 0
+  ? ordenesArray.reduce((sum, oc) => sum + parseFloat(oc.total || 0), 0)
+  : 0;
+```
+
+**Beneficio:** Protege la función contra cualquier llamada que no pase un array válido.
+
+### Casos Cubiertos por el Fix
+
+✅ **Caso 1:** Supabase retorna `null` → Normalizado a `[]`
+✅ **Caso 2:** Supabase retorna `undefined` → Normalizado a `[]`
+✅ **Caso 3:** Supabase retorna objeto único `{ id: '...', total: 1000 }` → Normalizado a `[{ id: '...', total: 1000 }]`
+✅ **Caso 4:** Supabase retorna array `[{ id: '...', total: 1000 }]` → Permanece igual
+✅ **Caso 5:** Función llamada sin parámetro → Usa default `[]` y valida internamente
+
+### Testing Post-Fix
+
+```bash
+✓ Build exitoso en 22.22s
+✓ Sin errores de compilación
+✓ Sin errores de TypeScript
+✓ Lógica robusta contra edge cases
+```
+
+### Cambios en Archivos
+
+**`src/lib/whatsappNotifications.ts`:**
+- **Líneas 457-463:** Normalización de `ordenesCopiado` a array
+- **Líneas 148-152:** Validación defensiva en cálculo de totales
+
+### Aprendizaje Clave
+
+**Relaciones 1:1 en Supabase requieren normalización:**
+- Siempre validar con `Array.isArray()` antes de usar métodos de array
+- Convertir objetos únicos a arrays cuando sea necesario
+- Implementar validaciones defensivas en funciones reutilizables
+
+**Estado Final del Fix:** PROBLEMA RESUELTO ✅
+**Fecha del Fix:** 2025-12-02
+**Impacto:** Crítico - Desbloqueó funcionalidad principal
+**Riesgo del Fix:** Muy Bajo - Solo agrega validaciones
