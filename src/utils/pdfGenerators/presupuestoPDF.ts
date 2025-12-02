@@ -121,12 +121,12 @@ export async function generarPresupuestoPDF(
 
   yPosition += 8;
 
-  // Fecha con icono
+  // Fecha
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
   doc.setTextColor(...COLORS.text);
   doc.text(
-    `📅 ${new Date(presupuesto.fecha_creacion).toLocaleDateString('es-ES', {
+    `Fecha: ${new Date(presupuesto.fecha_creacion).toLocaleDateString('es-ES', {
       day: '2-digit',
       month: 'long',
       year: 'numeric'
@@ -148,11 +148,10 @@ export async function generarPresupuestoPDF(
   // Card Cliente (izquierda)
   drawModernCard(doc, margin, yPosition, cardWidth, cardHeight, {
     title: 'CLIENTE',
-    icon: '👤',
     lines: [
       presupuesto.cliente?.razon_social || 'Sin cliente',
       presupuesto.cliente?.email || '',
-      presupuesto.cliente?.whatsapp ? `📱 ${presupuesto.cliente.whatsapp}` : '',
+      presupuesto.cliente?.whatsapp ? `Tel: ${presupuesto.cliente.whatsapp}` : '',
       presupuesto.cliente?.domicilio || '',
     ].filter(Boolean),
   });
@@ -169,7 +168,6 @@ export async function generarPresupuestoPDF(
 
   drawModernCard(doc, pageWidth - margin - cardWidth, yPosition, cardWidth, cardHeight, {
     title: 'VALIDEZ',
-    icon: '⏰',
     lines: [
       presupuesto.fecha_validez
         ? new Date(presupuesto.fecha_validez).toLocaleDateString('es-ES', {
@@ -179,9 +177,9 @@ export async function generarPresupuestoPDF(
           })
         : 'No especificada',
       diasValidez > 0
-        ? `${diasValidez} días restantes`
+        ? `${diasValidez} dias restantes`
         : diasValidez === 0
-        ? '¡Vence hoy!'
+        ? 'Vence hoy'
         : 'Vencido',
     ],
     accent: validezColor,
@@ -331,7 +329,7 @@ export async function generarPresupuestoPDF(
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
     doc.setTextColor(...COLORS.dark);
-    doc.text('📋 CONDICIONES COMERCIALES', margin + 5, yPosition + 6.5);
+    doc.text('CONDICIONES COMERCIALES', margin + 5, yPosition + 6.5);
 
     yPosition += 15;
 
@@ -347,11 +345,9 @@ export async function generarPresupuestoPDF(
         yPosition = 20;
       }
 
-      // Bullet point moderno
+      // Bullet point con guion
       if (linea.trim()) {
-        doc.setFillColor(...COLORS.primary);
-        doc.circle(margin + 2, yPosition - 1, 0.8, 'F');
-        doc.text(linea.trim(), margin + 6, yPosition, {
+        doc.text(`- ${linea.trim()}`, margin + 3, yPosition, {
           maxWidth: pageWidth - 2 * margin - 10,
         });
         yPosition += 5;
@@ -382,7 +378,7 @@ export async function generarPresupuestoPDF(
     doc.setTextColor(...COLORS.textLight);
 
     doc.text(
-      `Presupuesto generado el ${new Date().toLocaleDateString('es-ES')} a las ${new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`,
+      `Generado: ${new Date().toLocaleDateString('es-ES')} ${new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`,
       margin,
       footerY
     );
@@ -418,12 +414,11 @@ function drawModernCard(
   height: number,
   config: {
     title: string;
-    icon?: string;
     lines: string[];
     accent?: [number, number, number];
   }
 ) {
-  const { title, icon, lines, accent } = config;
+  const { title, lines, accent } = config;
 
   // Sombra simulada (offset)
   doc.setFillColor(COLORS.bgCard[0], COLORS.bgCard[1], COLORS.bgCard[2]);
@@ -447,12 +442,11 @@ function drawModernCard(
     doc.roundedRect(x, y, width, 3, 3, 3, 'F');
   }
 
-  // Título con icono
+  // Título
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
   doc.setTextColor(...COLORS.textLight);
-  const titleText = icon ? `${icon} ${title}` : title;
-  doc.text(titleText, x + 5, y + 10);
+  doc.text(title, x + 5, y + 10);
 
   // Líneas de contenido
   doc.setFont('helvetica', 'normal');

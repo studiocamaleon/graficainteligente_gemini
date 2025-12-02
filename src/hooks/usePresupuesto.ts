@@ -64,11 +64,16 @@ export function usePresupuesto(id: string | undefined) {
 
       if (fetchError) throw fetchError;
 
-      // Obtener conteo de items
-      const { count: itemsCount } = await supabase
+      // Obtener items completos
+      const { data: items, error: itemsError } = await supabase
         .from('presupuestos_items')
-        .select('*', { count: 'exact', head: true })
-        .eq('presupuesto_id', id);
+        .select('*')
+        .eq('presupuesto_id', id)
+        .order('created_at', { ascending: true });
+
+      if (itemsError) {
+        console.error('Error fetching items:', itemsError);
+      }
 
       // Obtener conteo de archivos
       const { count: archivosCount } = await supabase
@@ -78,7 +83,8 @@ export function usePresupuesto(id: string | undefined) {
 
       setPresupuesto({
         ...(data as PresupuestoConRelaciones),
-        items_count: itemsCount || 0,
+        items: items || [],
+        items_count: items?.length || 0,
         archivos_count: archivosCount || 0,
       });
     } catch (err: any) {
