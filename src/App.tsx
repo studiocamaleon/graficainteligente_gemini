@@ -27,6 +27,7 @@ import Cajas from './pages/app/settings/Cajas';
 import TiposEgreso from './pages/app/settings/TiposEgreso';
 import TiposIngreso from './pages/app/settings/TiposIngreso';
 import CondicionesComerciales from './pages/app/settings/CondicionesComerciales';
+import PresupuestosListPage from './pages/app/presupuestos/PresupuestosListPage';
 import { Estaciones } from './pages/app/abm-core/Estaciones';
 import { Tecnologias } from './pages/app/abm-core/Tecnologias';
 import { Materiales } from './pages/app/abm-core/Materiales';
@@ -305,6 +306,15 @@ function AppRoutes() {
                   element={
                     <ProtectedModuleRoute moduleId="orders-lista">
                       <OrderDetailPage />
+                    </ProtectedModuleRoute>
+                  }
+                />
+                <Route path="presupuestos" element={<Navigate to="/app/presupuestos/lista" replace />} />
+                <Route
+                  path="presupuestos/lista"
+                  element={
+                    <ProtectedModuleRoute moduleId="presupuestos-lista">
+                      <PresupuestosListPage />
                     </ProtectedModuleRoute>
                   }
                 />
