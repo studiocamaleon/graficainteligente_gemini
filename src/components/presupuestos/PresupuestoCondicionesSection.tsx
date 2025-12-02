@@ -69,7 +69,7 @@ export function PresupuestoCondicionesSection({
         </label>
         <Select
           value={selectedTemplateId}
-          onChange={(e) => handleTemplateChange(e.target.value)}
+          onChange={(value) => handleTemplateChange(value)}
           options={templateOptions}
         />
       </div>

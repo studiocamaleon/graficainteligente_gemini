@@ -132,7 +132,7 @@ export function PresupuestoFilters({
                   ? localFilters.estado[0] || ''
                   : localFilters.estado || ''
               }
-              onChange={(e) => handleFilterChange('estado', e.target.value)}
+              onChange={(value) => handleFilterChange('estado', value)}
               options={estadoOptions}
             />
           </div>
@@ -148,7 +148,7 @@ export function PresupuestoFilters({
                   ? localFilters.canal_venta[0] || ''
                   : localFilters.canal_venta || ''
               }
-              onChange={(e) => handleFilterChange('canal_venta', e.target.value)}
+              onChange={(value) => handleFilterChange('canal_venta', value)}
               options={canalOptions}
             />
           </div>
@@ -160,7 +160,7 @@ export function PresupuestoFilters({
             </label>
             <Select
               value={localFilters.cliente_id || ''}
-              onChange={(e) => handleFilterChange('cliente_id', e.target.value)}
+              onChange={(value) => handleFilterChange('cliente_id', value)}
               options={clienteOptions}
             />
           </div>
@@ -172,7 +172,7 @@ export function PresupuestoFilters({
             </label>
             <Select
               value={localFilters.vendedor_id || ''}
-              onChange={(e) => handleFilterChange('vendedor_id', e.target.value)}
+              onChange={(value) => handleFilterChange('vendedor_id', value)}
               options={vendedorOptions}
             />
           </div>

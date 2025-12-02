@@ -147,7 +147,7 @@ export function PresupuestoGeneralSection({
           </label>
           <Select
             value={vendedorId}
-            onChange={(e) => onVendedorChange(e.target.value)}
+            onChange={(value) => onVendedorChange(value)}
             options={vendedorOptions}
           />
           {errors.vendedorId && (
@@ -162,7 +162,7 @@ export function PresupuestoGeneralSection({
           </label>
           <Select
             value={canalVenta}
-            onChange={(e) => onCanalVentaChange(e.target.value as CanalVenta)}
+            onChange={(value) => onCanalVentaChange(value as CanalVenta)}
             options={canalOptions}
           />
           {errors.canalVenta && (
