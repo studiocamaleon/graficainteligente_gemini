@@ -407,6 +407,9 @@ export function usePresupuestos(
       fechaEntrega?: string;
       notasAdicionales?: string;
       copiarArchivos: boolean;
+      montoPago?: number;
+      medioCobroId?: string;
+      referenciaPago?: string;
     }
   ): Promise<string | null> => {
     try {
@@ -419,6 +422,9 @@ export function usePresupuestos(
           p_fecha_entrega_estimada: params.fechaEntrega || null,
           p_notas_adicionales: params.notasAdicionales || null,
           p_copiar_archivos: params.copiarArchivos,
+          p_monto_pago: params.montoPago || null,
+          p_medio_cobro_id: params.medioCobroId || null,
+          p_referencia_pago: params.referenciaPago || null,
         }
       );
 
