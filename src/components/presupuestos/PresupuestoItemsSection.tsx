@@ -161,7 +161,7 @@ export function PresupuestoItemsSection({
         <UniversalAddItemWizard
           isOpen={showWizard}
           onClose={() => setShowWizard(false)}
-          onAddItem={(item) => {
+          onAgregar={async (item) => {
             onAddItemSistema(item);
             setShowWizard(false);
           }}

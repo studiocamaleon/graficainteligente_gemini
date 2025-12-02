@@ -65,7 +65,7 @@ export function useCondicionesComerciales() {
         .select('*')
         .eq('es_default', true)
         .eq('is_active', true)
-        .single();
+        .maybeSingle();
 
       if (fetchError) {
         // Si no hay default, retornar la primera activa
