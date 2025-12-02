@@ -55,13 +55,39 @@ export async function generarPresupuestoPDF(
   doc.setFillColor(...COLORS.primary);
   doc.rect(0, 0, pageWidth, 2, 'F');
 
-  // Logo (izquierda)
+  // Logo (izquierda) - Con aspect ratio preservado
   if (incluirLogo && companyData?.logo_url) {
     try {
       const logoFormat = companyData.logo_url.toLowerCase().includes('.png') ? 'PNG' :
                         companyData.logo_url.toLowerCase().includes('.jpg') ||
                         companyData.logo_url.toLowerCase().includes('.jpeg') ? 'JPEG' : 'PNG';
-      doc.addImage(companyData.logo_url, logoFormat, margin, yPosition + 5, 35, 17);
+
+      // Cargar imagen y obtener dimensiones
+      const imgDimensions = await loadImageDimensions(companyData.logo_url);
+
+      // Dimensiones máximas del logo
+      const maxWidth = 40;
+      const maxHeight = 20;
+
+      // Calcular dimensiones manteniendo aspect ratio
+      let logoWidth = maxWidth;
+      let logoHeight = maxHeight;
+
+      if (imgDimensions) {
+        const aspectRatio = imgDimensions.width / imgDimensions.height;
+
+        if (aspectRatio > maxWidth / maxHeight) {
+          // Logo más ancho que alto
+          logoWidth = maxWidth;
+          logoHeight = maxWidth / aspectRatio;
+        } else {
+          // Logo más alto que ancho
+          logoHeight = maxHeight;
+          logoWidth = maxHeight * aspectRatio;
+        }
+      }
+
+      doc.addImage(companyData.logo_url, logoFormat, margin, yPosition + 5, logoWidth, logoHeight);
     } catch (error) {
       console.error('Error cargando logo:', error);
     }
@@ -470,6 +496,20 @@ function drawModernCard(
 // ============================================================================
 // FUNCIONES AUXILIARES
 // ============================================================================
+
+function loadImageDimensions(url: string): Promise<{ width: number; height: number } | null> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      resolve({ width: img.width, height: img.height });
+    };
+    img.onerror = () => {
+      console.error('Error cargando imagen para obtener dimensiones');
+      resolve(null);
+    };
+    img.src = url;
+  });
+}
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat('es-AR', {
