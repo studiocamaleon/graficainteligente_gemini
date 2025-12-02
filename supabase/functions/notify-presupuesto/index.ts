@@ -1,130 +1,118 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from 'jsr:@supabase/supabase-js@2';
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Trigger-Secret',
 };
 
 interface PresupuestoNotification {
   presupuesto_id: string;
+  company_id: string;
   tipo_notificacion: 'presupuesto_listo' | 'presupuesto_aprobado' | 'presupuesto_vencido';
 }
 
-Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, {
-      status: 200,
-      headers: corsHeaders,
-    });
+function sanitizeMessage(message: string): string {
+  if (!message) return '';
+
+  let sanitized = message
+    .replace(/[\u0000-\u0009\u000B-\u001F\u007F-\u009F]/g, '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    .trim();
+
+  const maxLength = 4096;
+  if (sanitized.length > maxLength) {
+    sanitized = sanitized.substring(0, maxLength - 20) + '\n\n...mensaje truncado';
   }
+
+  return sanitized;
+}
+
+function formatPhoneNumber(phone: string): string {
+  if (!phone) return '';
+
+  let cleaned = phone.replace(/\D/g, '');
+
+  if (cleaned.startsWith('0')) {
+    cleaned = cleaned.substring(1);
+  }
+
+  if (cleaned.startsWith('9')) {
+    cleaned = cleaned.substring(1);
+  }
+
+  if (!cleaned.startsWith('54')) {
+    cleaned = '54' + cleaned;
+  }
+
+  return cleaned;
+}
+
+async function sendWhatsAppMessage(
+  companyId: string,
+  phoneNumber: string,
+  message: string
+): Promise<any> {
+  const whatsappBackendUrl = Deno.env.get('WHATSAPP_BACKEND_URL') || 'https://whatsapp-backend-w6ot.onrender.com';
+
+  console.log('[WhatsApp] Enviando mensaje a backend de Render:', {
+    backend: whatsappBackendUrl,
+    companyId,
+    phoneNumber,
+    messageLength: message.length
+  });
+
+  const response = await fetch(`${whatsappBackendUrl}/send`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      companyId,
+      to: phoneNumber,
+      message: message,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Error del backend de WhatsApp (${response.status}): ${errorText}`);
+  }
+
+  const responseData = await response.json();
+  console.log('[WhatsApp] Mensaje enviado exitosamente:', responseData);
+
+  return responseData;
+}
+
+async function checkWhatsAppConnection(companyId: string): Promise<boolean> {
+  const whatsappBackendUrl = Deno.env.get('WHATSAPP_BACKEND_URL') || 'https://whatsapp-backend-w6ot.onrender.com';
 
   try {
-    const { presupuesto_id, tipo_notificacion } = await req.json() as PresupuestoNotification;
+    console.log(`[WhatsApp] Verificando conexión para company: ${companyId}`);
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-    // Obtener datos del presupuesto
-    const presupuestoResponse = await fetch(
-      `${supabaseUrl}/rest/v1/presupuestos?id=eq.${presupuesto_id}&select=*,cliente:clients(*),vendedor:profiles(*),company:companies(*)`,
-      {
-        headers: {
-          "apikey": supabaseServiceKey,
-          "Authorization": `Bearer ${supabaseServiceKey}`,
-        },
-      }
-    );
-
-    const presupuestos = await presupuestoResponse.json();
-    if (!presupuestos || presupuestos.length === 0) {
-      throw new Error("Presupuesto no encontrado");
-    }
-
-    const presupuesto = presupuestos[0];
-    const company = presupuesto.company;
-    const cliente = presupuesto.cliente;
-
-    if (!cliente?.whatsapp) {
-      console.log("Cliente sin WhatsApp, no se envía notificación");
-      return new Response(
-        JSON.stringify({ success: false, message: "Cliente sin WhatsApp" }),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 400,
-        }
-      );
-    }
-
-    if (!company?.whatsapp_instance_name || !company?.whatsapp_api_key) {
-      console.log("WhatsApp no configurado para esta empresa");
-      return new Response(
-        JSON.stringify({ success: false, message: "WhatsApp no configurado" }),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 400,
-        }
-      );
-    }
-
-    // Construir mensaje según tipo
-    const mensaje = construirMensaje(presupuesto, tipo_notificacion, company);
-
-    // Enviar WhatsApp via Evolution API
-    const evolutionUrl = `https://evo.pactto.com/message/sendText/${company.whatsapp_instance_name}`;
-
-    const whatsappResponse = await fetch(evolutionUrl, {
-      method: "POST",
+    const statusResponse = await fetch(`${whatsappBackendUrl}/status/${companyId}`, {
+      method: 'GET',
       headers: {
-        "Content-Type": "application/json",
-        "apikey": company.whatsapp_api_key,
+        'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        number: cliente.whatsapp,
-        text: mensaje,
-      }),
     });
 
-    if (!whatsappResponse.ok) {
-      throw new Error(`Error enviando WhatsApp: ${whatsappResponse.statusText}`);
+    if (!statusResponse.ok) {
+      console.log('[WhatsApp] ⚠️ No se pudo verificar estado de WhatsApp');
+      return false;
     }
 
-    // Registrar notificación
-    await fetch(`${supabaseUrl}/rest/v1/whatsapp_notificaciones`, {
-      method: "POST",
-      headers: {
-        "apikey": supabaseServiceKey,
-        "Authorization": `Bearer ${supabaseServiceKey}`,
-        "Content-Type": "application/json",
-        "Prefer": "return=minimal",
-      },
-      body: JSON.stringify({
-        company_id: company.id,
-        presupuesto_id: presupuesto.id,
-        tipo_notificacion,
-        telefono_destino: cliente.whatsapp,
-        mensaje_enviado: mensaje,
-        estado: "enviado",
-      }),
-    });
+    const statusData = await statusResponse.json();
+    console.log('[WhatsApp] Estado de conexión:', statusData);
 
-    return new Response(
-      JSON.stringify({ success: true, message: "Notificación enviada" }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
+    return statusData.connected === true;
   } catch (error: any) {
-    console.error("Error en notify-presupuesto:", error);
-    return new Response(
-      JSON.stringify({ success: false, error: error.message }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 500,
-      }
-    );
+    console.error('[WhatsApp] ⚠️ Error verificando estado de WhatsApp:', error);
+    return false;
   }
-});
+}
 
 function construirMensaje(
   presupuesto: any,
@@ -151,45 +139,270 @@ function construirMensaje(
     ? `${Deno.env.get("FRONTEND_URL") || "https://app.pactto.com"}/tracking/presupuesto/${presupuesto.tracking_token}`
     : null;
 
-  const clienteNombre = presupuesto.cliente?.razon_social || "Cliente";
+  const clienteNombre = presupuesto.cliente?.nombre_fantasia || presupuesto.cliente?.razon_social || "Cliente";
 
   switch (tipo) {
     case "presupuesto_listo":
-      return `✅ *Tu presupuesto está listo!*
+      let mensaje = `Hola ${clienteNombre}!\n\n`;
+      mensaje += `Tu presupuesto *${presupuesto.numero_presupuesto}* esta listo!\n\n`;
+      mensaje += `*Total:* ${formatCurrency(presupuesto.total)}\n`;
+      mensaje += `*Valido hasta:* ${formatDate(presupuesto.fecha_validez)}\n\n`;
 
-📋 Presupuesto: *${presupuesto.numero_presupuesto}*
-💰 Total: *${formatCurrency(presupuesto.total)}*
-📅 Válido hasta: ${formatDate(presupuesto.fecha_validez)}
+      if (trackingUrl) {
+        mensaje += `Ver online:\n${trackingUrl}\n\n`;
+      }
 
-${trackingUrl ? `🔗 Ver online: ${trackingUrl}` : ''}
+      mensaje += `Desde el link podes aprobar el presupuesto directamente.\n\n`;
 
-Desde el link podés aprobar el presupuesto directamente.
+      if (company.contact_phone) {
+        mensaje += `Contacto: ${company.contact_phone}\n\n`;
+      }
 
-¿Dudas? ¡Contactanos!`;
+      mensaje += `Gracias por confiar en nosotros!\n\n`;
+      mensaje += `_Tecnologia desarrollada por CamaleonStudio - Agencia de desarrollo de Grafica Corporearte_`;
+
+      return mensaje;
 
     case "presupuesto_aprobado":
-      return `🎉 *Presupuesto aprobado!*
+      let mensajeAprobado = `Hola ${clienteNombre}!\n\n`;
+      mensajeAprobado += `Presupuesto aprobado!\n\n`;
+      mensajeAprobado += `Gracias por tu confirmacion. Ya comenzamos a procesar tu orden.\n\n`;
+      mensajeAprobado += `*Presupuesto:* ${presupuesto.numero_presupuesto}\n`;
 
-Gracias por tu confirmación. Ya comenzamos a procesar tu orden.
+      if (presupuesto.orden_trabajo_id) {
+        mensajeAprobado += `*Orden de Trabajo:* ${presupuesto.orden_trabajo?.numero_orden || 'En proceso'}\n\n`;
+      }
 
-📋 Presupuesto: ${presupuesto.numero_presupuesto}
-${presupuesto.orden_trabajo_id ? `🆔 Orden de Trabajo: ${presupuesto.orden_trabajo?.numero_orden || 'En proceso'}` : ''}
+      mensajeAprobado += `Te mantendremos informado del progreso.\n\n`;
+      mensajeAprobado += `_Tecnologia desarrollada por CamaleonStudio - Agencia de desarrollo de Grafica Corporearte_`;
 
-Te mantendremos informado del progreso.`;
+      return mensajeAprobado;
 
     case "presupuesto_vencido":
-      return `⏰ *Presupuesto vencido*
+      let mensajeVencido = `Hola ${clienteNombre}!\n\n`;
+      mensajeVencido += `El presupuesto *${presupuesto.numero_presupuesto}* ha vencido.\n\n`;
+      mensajeVencido += `Si aun te interesa, podemos:\n`;
+      mensajeVencido += `- Renovarlo\n`;
+      mensajeVencido += `- Ajustar precios actuales\n`;
+      mensajeVencido += `- Modificar lo que necesites\n\n`;
+      mensajeVencido += `Seguimos adelante? Escribinos!\n\n`;
 
-El presupuesto #${presupuesto.numero_presupuesto} ha vencido.
+      if (company.contact_phone) {
+        mensajeVencido += `Contacto: ${company.contact_phone}\n\n`;
+      }
 
-Si aún te interesa, podemos:
-- Renovarlo
-- Ajustar precios actuales
-- Modificar lo que necesites
+      mensajeVencido += `_Tecnologia desarrollada por CamaleonStudio - Agencia de desarrollo de Grafica Corporearte_`;
 
-¿Seguimos adelante? ¡Escribinos!`;
+      return mensajeVencido;
 
     default:
-      return `📋 Actualización de presupuesto ${presupuesto.numero_presupuesto}`;
+      return `Actualizacion de presupuesto ${presupuesto.numero_presupuesto}`;
   }
 }
+
+Deno.serve(async (req: Request) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, {
+      status: 200,
+      headers: corsHeaders,
+    });
+  }
+
+  if (req.method !== 'POST') {
+    return new Response(
+      JSON.stringify({ error: 'Método no permitido' }),
+      {
+        status: 405,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      }
+    );
+  }
+
+  try {
+    const triggerSecret = Deno.env.get('TRIGGER_SECRET_TOKEN');
+    const providedSecret = req.headers.get('X-Trigger-Secret');
+
+    if (!triggerSecret || providedSecret !== triggerSecret) {
+      console.error('[Security] Intento de acceso no autorizado');
+      return new Response(
+        JSON.stringify({ error: 'No autorizado' }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    const payload: PresupuestoNotification = await req.json();
+    const { presupuesto_id, company_id, tipo_notificacion } = payload;
+
+    console.log('[Notify Presupuesto] Payload recibido:', {
+      presupuesto_id,
+      company_id,
+      tipo_notificacion
+    });
+
+    if (!presupuesto_id || !company_id || !tipo_notificacion) {
+      return new Response(
+        JSON.stringify({ error: 'Parámetros inválidos' }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const { data: yaEnviado } = await supabase
+      .from('whatsapp_notificaciones')
+      .select('id')
+      .eq('presupuesto_id', presupuesto_id)
+      .eq('tipo_notificacion', tipo_notificacion)
+      .maybeSingle();
+
+    if (yaEnviado) {
+      console.log('[Notify Presupuesto] ⚠️ Ya se envió notificación. Skipping.');
+      return new Response(
+        JSON.stringify({ success: true, message: 'Notificación ya enviada previamente' }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    const { data: presupuesto, error: presupuestoError } = await supabase
+      .from('presupuestos')
+      .select(`
+        *,
+        cliente:cliente_id(*),
+        vendedor:vendedor_id(*),
+        orden_trabajo:orden_trabajo_id(numero_orden)
+      `)
+      .eq('id', presupuesto_id)
+      .single();
+
+    if (presupuestoError || !presupuesto) {
+      throw new Error('No se pudo obtener información del presupuesto');
+    }
+
+    const cliente = presupuesto.cliente;
+
+    if (!cliente) {
+      throw new Error('No se encontró información del cliente');
+    }
+
+    if (!cliente.whatsapp) {
+      console.log('[Notify Presupuesto] ⚠️ Cliente no tiene WhatsApp configurado. Skipping.');
+      return new Response(
+        JSON.stringify({ success: true, message: 'Cliente sin WhatsApp configurado' }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    const { data: company, error: companyError } = await supabase
+      .from('companies')
+      .select('*')
+      .eq('id', company_id)
+      .single();
+
+    if (companyError || !company) {
+      throw new Error('No se encontró información de la empresa');
+    }
+
+    const isConnected = await checkWhatsAppConnection(company_id);
+
+    if (!isConnected) {
+      console.log('[Notify Presupuesto] ⚠️ WhatsApp no está conectado para esta empresa. Skipping.');
+      return new Response(
+        JSON.stringify({ success: true, message: 'WhatsApp no está conectado' }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    console.log('[Notify Presupuesto] ✅ WhatsApp conectado, procediendo a enviar mensaje');
+
+    const mensaje = construirMensaje(presupuesto, tipo_notificacion, company);
+    console.log('[Notify Presupuesto] ✅ Mensaje generado, longitud:', mensaje.length);
+
+    const mensajeSanitizado = sanitizeMessage(mensaje);
+    const telefonoFormateado = formatPhoneNumber(cliente.whatsapp);
+
+    console.log('[Notify Presupuesto] Enviando mensaje:', {
+      numeroPresupuesto: presupuesto.numero_presupuesto,
+      clienteNombre: cliente.nombre_fantasia || cliente.razon_social,
+      telefono: telefonoFormateado,
+      messageLength: mensajeSanitizado.length
+    });
+
+    let respuestaBackend: any;
+    let estadoEnvio = 'enviado';
+    let errorMensaje: string | null = null;
+
+    try {
+      respuestaBackend = await sendWhatsAppMessage(company_id, telefonoFormateado, mensajeSanitizado);
+    } catch (error: any) {
+      console.error('[Notify Presupuesto] ❌ Error enviando mensaje:', error);
+      estadoEnvio = 'fallido';
+      errorMensaje = error.message;
+      respuestaBackend = { error: error.message };
+    }
+
+    const notificacionData = {
+      company_id: company_id,
+      presupuesto_id: presupuesto_id,
+      tipo_notificacion,
+      telefono_destino: telefonoFormateado,
+      mensaje_enviado: mensajeSanitizado,
+      estado_envio: estadoEnvio,
+      respuesta_backend: respuestaBackend,
+      error_mensaje: errorMensaje,
+    };
+
+    const { error: insertError } = await supabase
+      .from('whatsapp_notificaciones')
+      .insert(notificacionData);
+
+    if (insertError) {
+      console.error('[Notify Presupuesto] ❌ Error guardando notificación:', insertError);
+    } else {
+      console.log('[Notify Presupuesto] ✅ Notificación registrada en base de datos');
+    }
+
+    return new Response(
+      JSON.stringify({
+        success: estadoEnvio === 'enviado',
+        message: estadoEnvio === 'enviado'
+          ? 'Notificación enviada exitosamente'
+          : 'Error al enviar notificación',
+        error: errorMensaje
+      }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      }
+    );
+
+  } catch (error: any) {
+    console.error('[Notify Presupuesto] ❌ Error general:', error);
+    return new Response(
+      JSON.stringify({
+        error: error.message || 'Error interno del servidor',
+        success: false
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      }
+    );
+  }
+});
