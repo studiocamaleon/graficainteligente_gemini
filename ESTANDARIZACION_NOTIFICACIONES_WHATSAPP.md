@@ -380,7 +380,23 @@ La Edge Function usa `SUPABASE_SERVICE_ROLE_KEY` para:
 ✅ **Confiable**: Errores no bloquean operaciones
 
 **Build exitoso**: ✓ 3690 módulos transformados en 32.53s
+**Edge Function deployada**: ✅ `enviar-notificacion-orden` activa
+**Función SQL actualizada**: ✅ `fn_convertir_presupuesto_a_orden` con notificaciones
+
+---
+
+## **Fix Adicional: Conversión de Presupuestos**
+
+Se detectó y corrigió que al convertir presupuestos a órdenes no se enviaban notificaciones.
+
+**Solución aplicada**:
+- Migración: `fix_convertir_presupuesto_add_edge_function_call.sql`
+- Actualizada `fn_convertir_presupuesto_a_orden` para llamar a Edge Function
+- Ahora envía notificación idéntica a órdenes creadas desde frontend
+
+Ver detalles en: `FIX_NOTIFICACIONES_CONVERTIR_PRESUPUESTO.md`
 
 ---
 
 _Documentación generada el 2 de diciembre de 2025_
+_Fix conversión presupuestos: 2 de diciembre de 2025_
