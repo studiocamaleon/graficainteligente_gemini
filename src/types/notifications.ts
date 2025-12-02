@@ -8,13 +8,18 @@ export type TipoNotificacion =
   | 'paso_completado'
   | 'orden_finalizada'
   | 'alerta_produccion'
-  | 'sistema';
+  | 'sistema'
+  | 'presupuesto_aprobado'
+  | 'presupuesto_rechazado'
+  | 'presupuesto_por_vencer'
+  | 'presupuesto_vencido';
 
 export type ReferenciaNotificacion =
   | 'orden_trabajo'
   | 'orden_item'
   | 'ruta_paso'
-  | 'pausa';
+  | 'pausa'
+  | 'presupuesto';
 
 export interface NotificacionMetadata {
   orden_id?: string;
@@ -26,6 +31,13 @@ export interface NotificacionMetadata {
   categoria_motivo?: string;
   horas_pausado?: number;
   descripcion_pausa?: string;
+  presupuesto_id?: string;
+  numero_presupuesto?: string;
+  cliente_id?: string;
+  cliente_nombre?: string;
+  motivo_rechazo?: string;
+  observaciones?: string;
+  total?: number;
   [key: string]: any;
 }
 

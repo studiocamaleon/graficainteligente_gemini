@@ -1,9 +1,11 @@
-import { Bell, Check, CheckCheck, Clock, AlertTriangle, Package, X } from 'lucide-react';
+import { Bell, Check, CheckCheck, Clock, AlertTriangle, Package, X, FileText, XCircle, Calendar } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useNotificaciones } from '../../hooks/useNotificaciones';
 import { Badge } from '../ui/Badge';
 import type { TipoNotificacion } from '../../types/notifications';
 
 export function NotificationsPanel() {
+  const navigate = useNavigate();
   const {
     notificaciones,
     noLeidas,
@@ -12,6 +14,19 @@ export function NotificationsPanel() {
     marcarTodasComoLeidas,
     eliminarNotificacion,
   } = useNotificaciones();
+
+  const handleNotificationClick = (notif: any) => {
+    if (!notif.leida) {
+      marcarComoLeida(notif.id);
+    }
+
+    // Navegar según el tipo de notificación
+    if (notif.referencia_tipo === 'presupuesto' && notif.metadata?.presupuesto_id) {
+      navigate(`/app/presupuestos/${notif.metadata.presupuesto_id}`);
+    } else if (notif.referencia_tipo === 'orden_trabajo' && notif.metadata?.orden_id) {
+      navigate(`/app/orders/${notif.metadata.orden_id}`);
+    }
+  };
 
   const getIconByTipo = (tipo: TipoNotificacion) => {
     switch (tipo) {
@@ -23,6 +38,14 @@ export function NotificationsPanel() {
         return Package;
       case 'alerta_produccion':
         return AlertTriangle;
+      case 'presupuesto_aprobado':
+        return Check;
+      case 'presupuesto_rechazado':
+        return XCircle;
+      case 'presupuesto_por_vencer':
+        return Calendar;
+      case 'presupuesto_vencido':
+        return Clock;
       default:
         return Clock;
     }
@@ -38,6 +61,14 @@ export function NotificationsPanel() {
         return 'text-blue-500 bg-blue-50';
       case 'alerta_produccion':
         return 'text-red-500 bg-red-50';
+      case 'presupuesto_aprobado':
+        return 'text-green-500 bg-green-50';
+      case 'presupuesto_rechazado':
+        return 'text-red-500 bg-red-50';
+      case 'presupuesto_por_vencer':
+        return 'text-orange-500 bg-orange-50';
+      case 'presupuesto_vencido':
+        return 'text-gray-500 bg-gray-50';
       default:
         return 'text-gray-500 bg-gray-50';
     }
@@ -120,7 +151,7 @@ export function NotificationsPanel() {
                   className={`p-4 hover:bg-gray-50 cursor-pointer transition-colors relative group ${
                     !notif.leida ? 'bg-blue-50/50' : ''
                   }`}
-                  onClick={() => !notif.leida && marcarComoLeida(notif.id)}
+                  onClick={() => handleNotificationClick(notif)}
                 >
                   <div className="flex items-start gap-3">
                     {/* Icono */}
