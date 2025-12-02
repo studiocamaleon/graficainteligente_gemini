@@ -8,7 +8,7 @@ import type {
 } from '../types/presupuestos';
 
 export function useCondicionesComerciales() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [condiciones, setCondiciones] = useState<CondicionComercial[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -98,6 +98,7 @@ export function useCondicionesComerciales() {
         .from('presupuestos_condiciones_comerciales')
         .insert({
           ...data,
+          company_id: profile?.company_id,
           orden: data.orden ?? 0,
           is_active: data.is_active ?? true,
           es_default: data.es_default ?? false,
