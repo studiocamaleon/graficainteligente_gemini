@@ -74,7 +74,7 @@ export function PresupuestoFilters({
 
   const clienteOptions = [
     { value: '', label: 'Todos los clientes' },
-    ...clients.map((client) => ({
+    ...(clients || []).map((client) => ({
       value: client.id,
       label: client.razon_social,
     })),
@@ -82,7 +82,7 @@ export function PresupuestoFilters({
 
   const vendedorOptions = [
     { value: '', label: 'Todos los vendedores' },
-    ...teamMembers
+    ...(teamMembers || [])
       .filter((member) => ['vendedor', 'admin', 'super_admin'].includes(member.role))
       .map((member) => ({
         value: member.id,
