@@ -4,7 +4,7 @@ import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { MedioCobroSelector } from '../medios-cobro/MedioCobroSelector';
-import { ConfigurarRutasPresupuestoModal } from './ConfigurarRutasPresupuestoModal';
+import { ConfigurarRutasPresupuestoModalV2 } from './ConfigurarRutasPresupuestoModalV2';
 import type { PresupuestoConRelaciones } from '../../types/presupuestos';
 
 interface RutaStep {
@@ -347,14 +347,10 @@ export function ConvertirPresupuestoModal({
     </Modal>
 
     {/* Modal para configurar rutas de items personalizados */}
-    <ConfigurarRutasPresupuestoModal
+    <ConfigurarRutasPresupuestoModalV2
       isOpen={showConfigurarRutas}
       onClose={() => setShowConfigurarRutas(false)}
-      itemsPersonalizados={itemsPersonalizadosArray.map(item => ({
-        id: item.id,
-        producto_nombre: item.producto_nombre,
-        descripcion: item.descripcion || '',
-      }))}
+      items={presupuesto.items || []}
       onConfirm={handleRutasConfiguradas}
     />
   </>

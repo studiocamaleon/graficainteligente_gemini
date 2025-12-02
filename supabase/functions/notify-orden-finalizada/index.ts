@@ -10,6 +10,7 @@ interface WebhookPayload {
   orden_id: string;
   company_id: string;
   tipo_orden?: 'trabajo' | 'copiado'; // Opcional, se puede detectar automáticamente
+  tipo_notificacion?: 'nueva_orden_trabajo' | 'orden_finalizada'; // Tipo de notificación a enviar
 }
 
 function sanitizeMessage(message: string): string {
@@ -176,6 +177,32 @@ function formatItemCopiado(item: any): string {
   }
 
   return detalle;
+}
+
+function generateNuevaOrdenTrabajoMessage(
+  orden: any,
+  cliente: any,
+  company: any,
+  trackingUrl: string
+): string {
+  const nombreCliente = cliente.nombre_fantasia || cliente.razon_social;
+  const total = parseFloat(orden.total || 0).toFixed(2);
+
+  let mensaje = `Hola ${nombreCliente}!\n\n`;
+  mensaje += `🎉 Tu orden *${orden.numero_orden}* ha sido creada exitosamente!\n\n`;
+  mensaje += `💰 *Total:* $${total}\n\n`;
+  mensaje += `📊 *Podés seguir el estado de tu orden en tiempo real:*\n`;
+  mensaje += `${trackingUrl}\n\n`;
+  mensaje += `📍 *Dirección:* ${company.address || 'Consultar'}\n`;
+
+  if (company.contact_phone) {
+    mensaje += `📞 *Contacto:* ${company.contact_phone}\n\n`;
+  }
+
+  mensaje += `Gracias por confiar en nosotros! Te avisaremos cuando tu orden esté lista.\n\n`;
+  mensaje += `_Tecnología desarrollada por CamaleonStudio - Agencia de desarrollo de Gráfica Corporearte_`;
+
+  return mensaje;
 }
 
 function generateOrdenTrabajoFinalizadaMessage(
@@ -362,11 +389,13 @@ Deno.serve(async (req: Request) => {
     const payload: WebhookPayload = await req.json();
     const { orden_id, company_id } = payload;
     let tipo_orden = payload.tipo_orden;
+    const tipo_notificacion = payload.tipo_notificacion || 'orden_finalizada'; // Default a orden_finalizada para retrocompatibilidad
 
     console.log('[Notify] Payload recibido:', {
       orden_id,
       company_id,
-      tipo_orden_from_payload: tipo_orden
+      tipo_orden_from_payload: tipo_orden,
+      tipo_notificacion
     });
 
     if (!orden_id || !company_id) {
@@ -408,7 +437,7 @@ Deno.serve(async (req: Request) => {
       .from('whatsapp_notificaciones')
       .select('id')
       .eq(tipo_orden === 'trabajo' ? 'orden_trabajo_id' : 'orden_copiado_id', orden_id)
-      .eq('tipo_notificacion', 'orden_finalizada')
+      .eq('tipo_notificacion', tipo_notificacion)
       .maybeSingle();
 
     if (yaEnviado) {
@@ -547,19 +576,29 @@ Deno.serve(async (req: Request) => {
 
     const saldoPendiente = parseFloat(orden.total || 0) - pagosTotal;
 
-    console.log('[Notify] 📝 Generando mensaje para tipo:', tipo_orden);
+    console.log('[Notify] 📝 Generando mensaje para tipo:', tipo_orden, 'notificacion:', tipo_notificacion);
 
-    const mensaje = tipo_orden === 'trabajo'
-      ? generateOrdenTrabajoFinalizadaMessage(orden, cliente, company, saldoPendiente, horariosFormateados)
-      : generateOrdenCopiadoFinalizadaMessage(orden, cliente, company, saldoPendiente, horariosFormateados);
+    let mensaje: string;
+
+    if (tipo_notificacion === 'nueva_orden_trabajo') {
+      // Generar tracking URL
+      const trackingUrl = `${Deno.env.get('SUPABASE_URL')?.replace('/rest/v1', '')}/tracking/${orden.tracking_token}`;
+      mensaje = generateNuevaOrdenTrabajoMessage(orden, cliente, company, trackingUrl);
+    } else {
+      // Mensaje de orden finalizada (default)
+      mensaje = tipo_orden === 'trabajo'
+        ? generateOrdenTrabajoFinalizadaMessage(orden, cliente, company, saldoPendiente, horariosFormateados)
+        : generateOrdenCopiadoFinalizadaMessage(orden, cliente, company, saldoPendiente, horariosFormateados);
+    }
 
     console.log('[Notify] ✅ Mensaje generado, longitud:', mensaje.length);
 
     const mensajeSanitizado = sanitizeMessage(mensaje);
     const telefonoFormateado = formatPhoneNumber(cliente.whatsapp);
 
-    console.log('[Notify] Enviando mensaje de orden finalizada:', {
+    console.log('[Notify] Enviando mensaje:', {
       tipo_orden,
+      tipo_notificacion,
       numeroOrden: orden.numero_orden,
       clienteNombre: cliente.nombre_fantasia || cliente.razon_social,
       telefono: telefonoFormateado,
@@ -581,7 +620,7 @@ Deno.serve(async (req: Request) => {
 
     const notificacionData: any = {
       company_id: company_id,
-      tipo_notificacion: 'orden_finalizada',
+      tipo_notificacion: tipo_notificacion,
       telefono_destino: telefonoFormateado,
       mensaje_enviado: mensajeSanitizado,
       estado_envio: estadoEnvio,
