@@ -21,6 +21,7 @@ interface RequestBody {
   company_id: string;
   tipo: 'nueva_orden_trabajo' | 'nueva_orden_copiado' | 'orden_finalizada';
   orden_tipo: 'trabajo' | 'copiado';
+  frontend_origin?: string;
 }
 
 async function verificarWhatsAppDisponible(companyId: string): Promise<boolean> {
@@ -65,7 +66,7 @@ Deno.serve(async (req: Request) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const body: RequestBody = await req.json();
-    const { orden_id, company_id, tipo, orden_tipo } = body;
+    const { orden_id, company_id, tipo, orden_tipo, frontend_origin } = body;
 
     console.log('[Notificación] Procesando:', { orden_id, company_id, tipo, orden_tipo });
 
@@ -192,7 +193,7 @@ Deno.serve(async (req: Request) => {
           }
         }
 
-        const origin = new URL(req.url).origin;
+        const origin = frontend_origin || Deno.env.get('FRONTEND_URL') || 'https://www.graficainteligente.com';
         mensaje = generateNuevaOrdenTrabajoMessage(orden, cliente, items, company, ordenesCopiado, origin);
       } else if (tipo === 'orden_finalizada') {
         const saldoPendiente = parseFloat(orden.total || 0) - pagosTotal;

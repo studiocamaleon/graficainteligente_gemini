@@ -394,12 +394,18 @@ export function usePresupuestos(
     try {
       setError(null);
 
+      if (!profile?.company_id) {
+        throw new Error('No se encontró información de la empresa');
+      }
+
       const { data, error: functionError } = await supabase.functions.invoke(
         'notify-presupuesto',
         {
           body: {
             presupuesto_id: presupuestoId,
+            company_id: profile.company_id,
             tipo_notificacion: tipoNotificacion,
+            frontend_origin: window.location.origin,
           },
         }
       );

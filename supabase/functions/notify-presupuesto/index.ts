@@ -10,6 +10,7 @@ interface PresupuestoNotification {
   presupuesto_id: string;
   company_id: string;
   tipo_notificacion: 'presupuesto_listo' | 'presupuesto_aprobado' | 'presupuesto_vencido';
+  frontend_origin?: string;
 }
 
 function sanitizeMessage(message: string): string {
@@ -135,7 +136,7 @@ function construirMensaje(
     });
   };
 
-  const origin = Deno.env.get("FRONTEND_URL") || "https://app.pactto.com";
+  const origin = frontend_origin || Deno.env.get("FRONTEND_URL") || "https://www.graficainteligente.com";
   const trackingUrl = presupuesto.tracking_token
     ? `${origin}/tracking/presupuesto/${presupuesto.tracking_token}`
     : null;
@@ -235,7 +236,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const payload: PresupuestoNotification = await req.json();
-    const { presupuesto_id, company_id, tipo_notificacion } = payload;
+    const { presupuesto_id, company_id, tipo_notificacion, frontend_origin } = payload;
 
     console.log('[Notify Presupuesto] Payload recibido:', {
       presupuesto_id,

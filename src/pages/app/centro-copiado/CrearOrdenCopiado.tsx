@@ -353,7 +353,8 @@ export function CrearOrdenCopiado() {
             orden_id: ordenIdFinal,
             company_id: profile.company_id,
             tipo: 'nueva_orden_copiado',
-            orden_tipo: 'copiado'
+            orden_tipo: 'copiado',
+            frontend_origin: window.location.origin
           }
         }).then(({ data, error }) => {
           if (error) {

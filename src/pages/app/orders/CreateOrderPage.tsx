@@ -495,7 +495,8 @@ export function CreateOrderPage() {
               orden_id: result.id,
               company_id: profile.company_id,
               tipo: 'nueva_orden_trabajo',
-              orden_tipo: 'trabajo'
+              orden_tipo: 'trabajo',
+              frontend_origin: window.location.origin
             }
           }).then(({ data, error }) => {
             if (error) {
