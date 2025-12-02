@@ -58,16 +58,20 @@ interface UpdateOrdenData {
 }
 
 interface AddItemData {
-  producto_id: string;
+  tipo_item?: 'catalogo' | 'personalizado';
+  producto_id?: string | null;
   producto_nombre: string;
-  producto_categoria: string;
+  producto_categoria?: string | null;
+  descripcion?: string | null;
+  tiempo_produccion_dias?: number | null;
   cantidad: number;
-  configuracion: ItemConfiguracion;
+  configuracion?: ItemConfiguracion | null;
   precio_base: number;
   precio_servicios: number;
   precio_acabados: number;
   precio_unitario_final: number;
   precio_total: number;
+  rutas_generadas?: any[];
 }
 
 interface CreateOrdenConItemsData {
@@ -609,11 +613,14 @@ export function useOrdenTrabajo() {
       if (data.items.length > 0) {
         const itemsToInsert = data.items.map(item => ({
           orden_id: newOrden.id,
-          producto_id: item.producto_id,
+          tipo_item: item.tipo_item || 'catalogo',
+          producto_id: item.producto_id || null,
           producto_nombre: item.producto_nombre,
-          producto_categoria: item.producto_categoria,
+          producto_categoria: item.producto_categoria || null,
+          descripcion: item.descripcion || null,
+          tiempo_produccion_dias: item.tiempo_produccion_dias || null,
           cantidad: item.cantidad,
-          configuracion: item.configuracion,
+          configuracion: item.configuracion || null,
           precio_base: item.precio_base,
           precio_servicios: item.precio_servicios,
           precio_acabados: item.precio_acabados,
