@@ -128,9 +128,9 @@ export function PresupuestoGeneralSection({
                   <span>{clienteSeleccionado.whatsapp}</span>
                 </div>
               )}
-              {clienteSeleccionado.direccion && (
+              {clienteSeleccionado.domicilio && (
                 <div className="text-sm text-gray-600">
-                  {clienteSeleccionado.direccion}
+                  {clienteSeleccionado.domicilio}
                 </div>
               )}
             </div>

@@ -40,8 +40,9 @@ export function usePresupuesto(id: string | undefined) {
             nombre_fantasia,
             email,
             whatsapp,
-            cuit,
-            direccion
+            tipo_documento,
+            numero_documento,
+            domicilio
           ),
           vendedor:profiles!vendedor_id (
             id,
