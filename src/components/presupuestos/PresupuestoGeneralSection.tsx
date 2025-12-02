@@ -35,14 +35,14 @@ export function PresupuestoGeneralSection({
   errors = {},
 }: PresupuestoGeneralSectionProps) {
   const { clients } = useClients();
-  const { teamMembers } = useTeamMembers();
+  const { members: teamMembers } = useTeamMembers();
 
   // Obtener vendedores (admin, super_admin, vendedor)
-  const vendedores = teamMembers.filter((member) =>
+  const vendedores = (teamMembers || []).filter((member) =>
     ['vendedor', 'admin', 'super_admin'].includes(member.role)
   );
 
-  const clienteOptions = clients.map((client) => ({
+  const clienteOptions = (clients || []).map((client) => ({
     value: client.id,
     label: client.razon_social,
     subtitle: client.email || client.whatsapp || undefined,

@@ -174,7 +174,7 @@ export default function CrearPresupuesto() {
   };
 
   const clienteNombre =
-    clients.find((c) => c.id === formData.clienteId)?.razon_social || '';
+    (clients || []).find((c) => c.id === formData.clienteId)?.razon_social || '';
 
   return (
     <div className="space-y-6">

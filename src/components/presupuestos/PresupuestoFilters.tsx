@@ -20,7 +20,7 @@ export function PresupuestoFilters({
   onReset,
 }: PresupuestoFiltersProps) {
   const { clients } = useClients();
-  const { teamMembers } = useTeamMembers();
+  const { members: teamMembers } = useTeamMembers();
 
   const [localFilters, setLocalFilters] = useState<FiltersType>(filters);
   const [hasActiveFilters, setHasActiveFilters] = useState(false);
