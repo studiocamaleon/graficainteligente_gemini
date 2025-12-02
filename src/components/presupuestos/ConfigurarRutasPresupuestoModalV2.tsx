@@ -37,11 +37,11 @@ export function ConfigurarRutasPresupuestoModalV2({
 }: ConfigurarRutasPresupuestoModalV2Props) {
   const [itemsWithRoutes, setItemsWithRoutes] = useState<ItemPresupuesto[]>([]);
 
-  // Filtrar solo items personalizados
-  const itemsPersonalizados = items.filter(item => item.tipo_item === 'personalizado');
-
   useEffect(() => {
     if (isOpen) {
+      // Filtrar solo items personalizados (con guión bajo como en BD)
+      const itemsPersonalizados = items.filter(item => item.tipo_item === 'item_personalizado');
+
       // Inicializar items con rutas vacías si no existen
       setItemsWithRoutes(
         itemsPersonalizados.map(item => ({

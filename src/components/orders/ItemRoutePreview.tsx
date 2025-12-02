@@ -56,7 +56,8 @@ export function ItemRoutePreview({
   allowManualSteps = true
 }: ItemRoutePreviewProps) {
   const [showAddPasoModal, setShowAddPasoModal] = useState(false);
-  const isPersonalizado = item.tipo_item === 'personalizado';
+  // Soportar ambos formatos: 'personalizado' (órdenes) e 'item_personalizado' (presupuestos)
+  const isPersonalizado = item.tipo_item === 'personalizado' || item.tipo_item === 'item_personalizado';
   const shouldGenerate = !item.rutas_generadas || item.rutas_generadas.length === 0;
 
   const { steps, loading, error } = useGenerateProductionRoute({
