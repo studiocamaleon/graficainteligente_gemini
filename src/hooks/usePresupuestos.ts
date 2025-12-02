@@ -310,7 +310,20 @@ export function usePresupuestos(
   };
 
   const enviarPresupuesto = async (id: string): Promise<boolean> => {
-    return await cambiarEstado(id, 'enviado');
+    const resultado = await cambiarEstado(id, 'enviado');
+
+    // Como respaldo, llamar directamente a enviarNotificacionPresupuesto
+    // por si el trigger falla
+    if (resultado) {
+      try {
+        await enviarNotificacionPresupuesto(id, 'presupuesto_listo');
+      } catch (err) {
+        console.warn('Error enviando notificación de respaldo:', err);
+        // No fallar si la notificación falla
+      }
+    }
+
+    return resultado;
   };
 
   const aprobarPresupuesto = async (
