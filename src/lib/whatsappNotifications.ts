@@ -79,7 +79,8 @@ export function generateNuevaOrdenTrabajoMessage(
   orden: any,
   cliente: any,
   items: any[],
-  company: any
+  company: any,
+  ordenesCopiado: any[] = []
 ): string {
   const nombreCliente = cliente.nombre_fantasia || cliente.razon_social;
   const trackingUrl = orden.tracking_token ? buildTrackingUrl(orden.tracking_token) : '';
@@ -104,12 +105,12 @@ export function generateNuevaOrdenTrabajoMessage(
     return detalle;
   }).join('\n\n');
 
-  const subtotal = parseFloat(orden.subtotal || 0).toFixed(2);
-  const descuentos = parseFloat(orden.total_descuentos || 0).toFixed(2);
-  const total = parseFloat(orden.total || 0).toFixed(2);
+  const subtotalItems = parseFloat(orden.subtotal || 0);
+  const descuentos = parseFloat(orden.total_descuentos || 0);
+  const total = parseFloat(orden.total || 0);
 
   const pagosRealizados = orden.pagos_totales || 0;
-  const saldoPendiente = (parseFloat(orden.total || 0) - parseFloat(pagosRealizados)).toFixed(2);
+  const saldoPendiente = (total - parseFloat(pagosRealizados)).toFixed(2);
 
   const fechaEntrega = orden.fecha_estimada_entrega
     ? new Date(orden.fecha_estimada_entrega).toLocaleDateString('es-AR')
@@ -121,13 +122,46 @@ export function generateNuevaOrdenTrabajoMessage(
   mensaje += `📅 *Fecha de entrega:* ${fechaEntrega}\n\n`;
   mensaje += `*Detalle de tu pedido:*\n\n`;
   mensaje += `${itemsDetalle}\n\n`;
-  mensaje += `💰 *Subtotal:* $${subtotal}\n`;
 
-  if (parseFloat(descuentos) > 0) {
-    mensaje += `💰 *Descuentos:* -$${descuentos}\n`;
+  // Incluir órdenes de copiado si existen
+  if (ordenesCopiado && ordenesCopiado.length > 0) {
+    mensaje += `📄 *SERVICIOS DE COPIADO INCLUIDOS:*\n\n`;
+
+    ordenesCopiado.forEach((oc, ocIndex) => {
+      mensaje += `*Orden de Copiado ${oc.numero_orden}:*\n\n`;
+
+      const itemsCopiadoDetalle = (oc.items || [])
+        .map((item: any, itemIndex: number) => formatItemCopiadoParaNuevaOrden(item, itemIndex))
+        .join('\n\n');
+
+      mensaje += itemsCopiadoDetalle;
+      mensaje += `\n\n*Total Orden Copiado:* $${parseFloat(oc.total || 0).toFixed(2)}\n`;
+
+      if (ocIndex < ordenesCopiado.length - 1) {
+        mensaje += `\n`;
+      }
+    });
+
+    mensaje += `\n${'―'.repeat(35)}\n\n`;
   }
 
-  mensaje += `💰 *Total:* $${total}\n`;
+  // Calcular totales consolidados
+  const totalOrdenesCopiado = ordenesCopiado.reduce((sum, oc) =>
+    sum + parseFloat(oc.total || 0), 0
+  );
+
+  // Mostrar desglose de totales
+  mensaje += `💰 *Subtotal Items:* $${subtotalItems.toFixed(2)}\n`;
+
+  if (totalOrdenesCopiado > 0) {
+    mensaje += `💰 *Subtotal Copiado:* $${totalOrdenesCopiado.toFixed(2)}\n`;
+  }
+
+  if (descuentos > 0) {
+    mensaje += `💰 *Descuentos:* -$${descuentos.toFixed(2)}\n`;
+  }
+
+  mensaje += `💰 *TOTAL ORDEN:* $${total.toFixed(2)}\n`;
   mensaje += `💳 *Saldo pendiente:* $${saldoPendiente}\n\n`;
 
   if (trackingUrl) {
@@ -379,7 +413,29 @@ export async function enviarNotificacion(
               acabado:acabado_id(nombre)
             )
           ),
-          pagos:ordenes_trabajo_pagos(monto)
+          pagos:ordenes_trabajo_pagos(monto),
+          ordenesCopiado:centro_copiado_ordenes!orden_trabajo_id(
+            id,
+            numero_orden,
+            total,
+            items:centro_copiado_ordenes_items(
+              cantidad_unidades,
+              cantidad_hojas,
+              subtotal,
+              tipo_tinta,
+              cara_impresa,
+              tipo_anillado,
+              tipo_plastificado,
+              descripcion,
+              tamanio_papel:centro_copiado_tamanios_papel(nombre),
+              papel:centro_copiado_papeles(
+                variante_nombre,
+                espesor,
+                unidad_espesor,
+                material:material_id(nombre)
+              )
+            )
+          )
         `)
         .eq('id', ordenId)
         .single();
@@ -398,7 +454,33 @@ export async function enviarNotificacion(
       orden.pagos_totales = pagosTotal;
 
       if (tipo === 'nueva_orden_trabajo') {
-        mensaje = generateNuevaOrdenTrabajoMessage(orden, cliente, items, company);
+        // Si hay órdenes de copiado, cargar nombres de archivos
+        const ordenesCopiado = ordenData.ordenesCopiado || [];
+
+        if (ordenesCopiado.length > 0) {
+          for (const oc of ordenesCopiado) {
+            const { data: archivos } = await supabase
+              .from('centro_copiado_ordenes_archivos')
+              .select('nombre_archivo, item_generado_id')
+              .eq('orden_copiado_id', oc.id);
+
+            const archivosPorItem = new Map();
+            archivos?.forEach(archivo => {
+              if (archivo.item_generado_id) {
+                archivosPorItem.set(archivo.item_generado_id, archivo.nombre_archivo);
+              }
+            });
+
+            oc.items?.forEach((item: any) => {
+              const nombreArchivo = archivosPorItem.get(item.id);
+              if (nombreArchivo) {
+                item.nombre_archivo = nombreArchivo;
+              }
+            });
+          }
+        }
+
+        mensaje = generateNuevaOrdenTrabajoMessage(orden, cliente, items, company, ordenesCopiado);
       } else if (tipo === 'orden_finalizada') {
         const saldoPendiente = parseFloat(orden.total || 0) - pagosTotal;
         mensaje = generateOrdenFinalizadaMessage(orden, cliente, company, saldoPendiente);
