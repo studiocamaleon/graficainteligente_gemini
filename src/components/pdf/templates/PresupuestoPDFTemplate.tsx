@@ -42,10 +42,10 @@ export function PresupuestoPDFTemplate({
     <PDFLayout
       title="PRESUPUESTO"
       companyLogo={companyData?.logo_url}
-      companyName={companyData?.razon_social}
-      companyAddress={companyData?.direccion}
-      companyPhone={companyData?.telefono}
-      companyEmail={companyData?.email}
+      companyName={companyData?.legal_name || companyData?.name}
+      companyAddress={companyData?.address}
+      companyPhone={companyData?.contact_phone}
+      companyEmail={companyData?.contact_email || companyData?.email}
     >
       {/* Número y fecha */}
       <div className="text-center mb-6">

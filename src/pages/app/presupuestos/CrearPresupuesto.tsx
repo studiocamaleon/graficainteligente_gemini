@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, Send, CheckCircle, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuth';
 import { usePresupuestos } from '../../../hooks/usePresupuestos';
+import { usePresupuestoItems } from '../../../hooks/usePresupuestoItems';
 import { useClients } from '../../../hooks/useClients';
+import { supabase } from '../../../lib/supabase';
 import { Button } from '../../../components/ui/Button';
 import { PageHeader } from '../../../components/ui/PageHeader';
 import { Tabs } from '../../../components/ui/Tabs';
@@ -154,8 +156,43 @@ export default function CrearPresupuesto() {
         throw new Error('Error al crear presupuesto');
       }
 
-      // Agregar items (aquí se haría con el hook usePresupuestoItems)
-      // Por ahora solo navegamos
+      // Agregar todos los items al presupuesto
+      for (const item of items) {
+        const itemData: CreatePresupuestoItemData = {
+          presupuesto_id: presupuesto.id,
+          tipo_item: item.tipo_item,
+          producto_id: item.producto_id,
+          producto_nombre: item.producto_nombre,
+          producto_categoria: item.producto_categoria,
+          configuracion: item.configuracion,
+          cantidad: item.cantidad,
+          precio_base: item.precio_base,
+          precio_servicios: item.precio_servicios,
+          precio_acabados: item.precio_acabados,
+          precio_unitario_final: item.precio_unitario_final,
+          precio_total: item.precio_total,
+          descripcion: item.descripcion,
+          tiempo_produccion_dias: item.tiempo_produccion_dias,
+        };
+
+        const { error: itemError } = await supabase
+          .from('presupuestos_items')
+          .insert(itemData);
+
+        if (itemError) {
+          console.error('Error al agregar item:', itemError);
+          throw new Error(`Error al agregar item: ${itemError.message}`);
+        }
+      }
+
+      // Actualizar totales del presupuesto
+      await supabase
+        .from('presupuestos')
+        .update({
+          subtotal: totales.subtotal,
+          total: totales.total,
+        })
+        .eq('id', presupuesto.id);
 
       setSuccessMessage(
         enviar

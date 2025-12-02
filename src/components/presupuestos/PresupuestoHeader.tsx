@@ -15,6 +15,7 @@ import {
   DollarSign,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useToast } from '../../contexts/ToastContext';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import type { PresupuestoConRelaciones } from '../../types/presupuestos';
@@ -37,6 +38,7 @@ export function PresupuestoHeader({
   onConvertir,
 }: PresupuestoHeaderProps) {
   const navigate = useNavigate();
+  const { showSuccess } = useToast();
 
   const getEstadoBadge = () => {
     const estadoConfig = {
@@ -231,6 +233,7 @@ export function PresupuestoHeader({
                 onClick={() => {
                   const url = `${window.location.origin}/tracking/presupuesto/${presupuesto.tracking_token}`;
                   navigator.clipboard.writeText(url);
+                  showSuccess('Link copiado al portapapeles');
                 }}
               >
                 Copiar link

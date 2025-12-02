@@ -27,9 +27,14 @@ export async function generarPresupuestoPDF(
   // Header con logo y datos empresa
   if (incluirLogo && companyData?.logo_url) {
     try {
-      doc.addImage(companyData.logo_url, 'PNG', margin, yPosition, 40, 20);
+      // Intentar cargar el logo, detectando el formato automáticamente
+      const logoFormat = companyData.logo_url.toLowerCase().includes('.png') ? 'PNG' :
+                        companyData.logo_url.toLowerCase().includes('.jpg') ||
+                        companyData.logo_url.toLowerCase().includes('.jpeg') ? 'JPEG' : 'PNG';
+      doc.addImage(companyData.logo_url, logoFormat, margin, yPosition, 40, 20);
     } catch (error) {
       console.error('Error cargando logo:', error);
+      // Continuar sin logo
     }
   }
 
@@ -37,10 +42,10 @@ export async function generarPresupuestoPDF(
   doc.setFontSize(10);
   doc.setTextColor(...textColor);
   const companyInfo = [
-    companyData?.razon_social || 'Empresa',
-    companyData?.direccion || '',
-    companyData?.telefono ? `Tel: ${companyData.telefono}` : '',
-    companyData?.email ? `Email: ${companyData.email}` : '',
+    companyData?.legal_name || companyData?.name || 'Empresa',
+    companyData?.address || '',
+    companyData?.contact_phone ? `Tel: ${companyData.contact_phone}` : '',
+    companyData?.contact_email || companyData?.email || '',
   ].filter(Boolean);
 
   companyInfo.forEach((line, index) => {
