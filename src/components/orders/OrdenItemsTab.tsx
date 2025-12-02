@@ -9,6 +9,7 @@ import { EmptyState } from '../ui/EmptyState';
 import { Card } from '../ui/Card';
 import { UniversalAddItemWizard } from '../wizard/UniversalAddItemWizard';
 import { AsociarOrdenCopiadoModal } from './AsociarOrdenCopiadoModal';
+import { AddItemPersonalizadoOrdenModal } from './AddItemPersonalizadoOrdenModal';
 
 interface OrdenItem {
   id?: string;
@@ -49,6 +50,7 @@ export function OrdenItemsTab({
   onOrdenesCopiadoAsociadasChange,
 }: OrdenItemsTabProps) {
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showAddPersonalizadoModal, setShowAddPersonalizadoModal] = useState(false);
   const [showAsociarOCModal, setShowAsociarOCModal] = useState(false);
   const [ordenCopiadoEditando, setOrdenCopiadoEditando] = useState<any>(undefined);
   const [ordenesExpanded, setOrdenesExpanded] = useState<Record<string, boolean>>({});
@@ -72,6 +74,39 @@ export function OrdenItemsTab({
 
     setItems(prevItems => [...prevItems, nuevoItem]);
     setShowAddModal(false);
+  };
+
+  const handleAgregarItemPersonalizado = (itemData: {
+    producto_nombre: string;
+    descripcion: string;
+    cantidad: number;
+    precio_unitario_final: number;
+    tiempo_produccion_dias?: number;
+  }) => {
+    const nuevoItem: any = {
+      id: `temp-${Date.now()}-${Math.random()}`,
+      tipo_item: 'personalizado',
+      producto_id: null,
+      producto_nombre: itemData.producto_nombre,
+      producto_categoria: 'Personalizado',
+      descripcion: itemData.descripcion,
+      tiempo_produccion_dias: itemData.tiempo_produccion_dias,
+      cantidad: itemData.cantidad,
+      precio_base: 0,
+      precio_servicios: 0,
+      precio_acabados: 0,
+      precio_unitario_final: itemData.precio_unitario_final,
+      precio_total: itemData.cantidad * itemData.precio_unitario_final,
+      descuento_individual: 0,
+      rutas_generadas: [],
+      configuracion: {
+        tipo_item: 'personalizado',
+        descripcion: itemData.descripcion,
+      },
+    };
+
+    setItems(prevItems => [...prevItems, nuevoItem]);
+    setShowAddPersonalizadoModal(false);
   };
 
   const handleEliminarItem = (index: number) => {
@@ -312,10 +347,20 @@ export function OrdenItemsTab({
               <span className="text-sm text-gray-700">Requiere factura</span>
             </div>
           )}
-          <Button onClick={() => setShowAddModal(true)}>
-            <Plus className="w-4 h-4" />
-            Agregar Item
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button onClick={() => setShowAddModal(true)}>
+              <Plus className="w-4 h-4" />
+              Item de Catálogo
+            </Button>
+            <Button
+              onClick={() => setShowAddPersonalizadoModal(true)}
+              variant="outline"
+              className="border-dashed"
+            >
+              <Plus className="w-4 h-4" />
+              Item Personalizado
+            </Button>
+          </div>
           {clienteNombre && onOrdenesCopiadoAsociadasChange && (
             <Button
               onClick={() => {
@@ -487,6 +532,12 @@ export function OrdenItemsTab({
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
         onAgregar={handleAgregarItem}
+      />
+
+      <AddItemPersonalizadoOrdenModal
+        isOpen={showAddPersonalizadoModal}
+        onClose={() => setShowAddPersonalizadoModal(false)}
+        onAdd={handleAgregarItemPersonalizado}
       />
 
       {clienteNombre && onOrdenesCopiadoAsociadasChange && (
