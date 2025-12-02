@@ -2,7 +2,10 @@ import { useState } from 'react';
 import { Plus, CheckCircle, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { usePresupuestos } from '../../../hooks/usePresupuestos';
+import { usePresupuesto } from '../../../hooks/usePresupuesto';
 import { useConfirmDialog } from '../../../hooks/useConfirmDialog';
+import { useCompany } from '../../../hooks/useCompany';
+import { descargarPresupuestoPDF } from '../../../utils/pdfGenerators/presupuestoPDF';
 import { PresupuestoCard } from '../../../components/presupuestos/PresupuestoCard';
 import { PresupuestoFilters } from '../../../components/presupuestos/PresupuestoFilters';
 import { PresupuestosStats } from '../../../components/presupuestos/PresupuestosStats';
@@ -34,6 +37,7 @@ export default function PresupuestosListPage() {
     enviarPresupuesto,
   } = usePresupuestos(filters, pagination);
 
+  const { company } = useCompany();
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const showSuccess = (message: string) => {
@@ -112,10 +116,17 @@ export default function PresupuestosListPage() {
     }
   };
 
-  const handleGenerarPDF = (id: string) => {
-    // TODO: Implementar en Fase 7
-    console.log('Generar PDF:', id);
-    showSuccess('Función de PDF pendiente (Fase 7)');
+  const handleGenerarPDF = async (id: string) => {
+    const presupuesto = presupuestos.find((p) => p.id === id);
+    if (!presupuesto) return;
+
+    try {
+      await descargarPresupuestoPDF(presupuesto, company);
+      showSuccess('PDF descargado correctamente');
+    } catch (error) {
+      console.error('Error generando PDF:', error);
+      showSuccess('Error al generar PDF');
+    }
   };
 
   const handleFiltersChange = (newFilters: FiltersType) => {

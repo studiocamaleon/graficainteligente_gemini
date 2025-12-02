@@ -4,6 +4,8 @@ import { ArrowLeft, CheckCircle, AlertCircle } from 'lucide-react';
 import { usePresupuesto } from '../../../hooks/usePresupuesto';
 import { usePresupuestos } from '../../../hooks/usePresupuestos';
 import { useConfirmDialog } from '../../../hooks/useConfirmDialog';
+import { useCompany } from '../../../hooks/useCompany';
+import { descargarPresupuestoPDF } from '../../../utils/pdfGenerators/presupuestoPDF';
 import { Button } from '../../../components/ui/Button';
 import { Tabs } from '../../../components/ui/Tabs';
 import { Card } from '../../../components/ui/Card';
@@ -21,6 +23,7 @@ export default function DetallePresupuesto() {
 
   const { presupuesto, loading, error } = usePresupuesto(id || '');
   const { deletePresupuesto, duplicarPresupuesto, enviarPresupuesto } = usePresupuestos();
+  const { company } = useCompany();
 
   const [activeTab, setActiveTab] = useState<TabId>('items');
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -105,8 +108,16 @@ export default function DetallePresupuesto() {
     }
   };
 
-  const handleGenerarPDF = () => {
-    showSuccess('Generación de PDF pendiente (Fase 7)');
+  const handleGenerarPDF = async () => {
+    if (!presupuesto) return;
+
+    try {
+      await descargarPresupuestoPDF(presupuesto, company);
+      showSuccess('PDF descargado correctamente');
+    } catch (error) {
+      showError('Error al generar PDF');
+      console.error('Error generando PDF:', error);
+    }
   };
 
   if (loading) {
