@@ -398,12 +398,16 @@ Se detectó y corrigió que al convertir presupuestos a órdenes no se enviaban 
 
 ### **2. Total $0 en Mensajes de Presupuesto**
 
-Se corrigió que los mensajes de presupuesto mostraban "Total: $ 0" porque el trigger se disparaba antes de insertar los items.
+Se corrigió que los mensajes de presupuesto mostraban "Total: $ 0" y que las notificaciones no se enviaban.
+
+**Causa**: El trigger se disparaba antes de insertar los items (INSERT) o nunca se disparaba por validar total > 0.
 
 **Solución**:
-- Migración: `fix_trigger_presupuesto_validar_total.sql`
-- Triggers ahora verifican: `estado = 'enviado' AND total > 0`
-- No se envía notificación hasta que el presupuesto tenga items y total calculado
+- Migración 1: `fix_trigger_presupuesto_validar_total.sql` (detectó el problema)
+- Migración 2: `fix_trigger_presupuesto_enviar_en_update_total.sql` (solución final)
+- Eliminado trigger INSERT innecesario
+- Trigger UPDATE detecta cuando se calcula el total en presupuestos enviados
+- Notificación se envía cuando total cambia de 0 a >0 con estado='enviado'
 
 ### **3. Error NaN en Paginación**
 

@@ -36,18 +36,22 @@ Total: $ 0  ← Incorrecto
 4. UPDATE presupuesto con total calculado
 ```
 
-**Solución**:
-- ✅ Migración: `fix_trigger_presupuesto_validar_total.sql`
-- ✅ Triggers ahora verifican: `estado = 'enviado' AND total > 0`
-- ✅ No se envía notificación hasta que el presupuesto tenga items y total calculado
+**Solución Final**:
+- ✅ Migración 1: `fix_trigger_presupuesto_validar_total.sql` (detectó el problema)
+- ✅ Migración 2: `fix_trigger_presupuesto_enviar_en_update_total.sql` (solución correcta)
+- ✅ Eliminado trigger INSERT (no se necesita, total siempre es 0)
+- ✅ Trigger UPDATE ahora detecta **2 casos**:
+  - **CASO 1**: Cambió de borrador → enviado con total > 0
+  - **CASO 2**: Ya estaba enviado, total cambió de 0 → >0 (items agregados)
 
 **Flujo correcto**:
 ```
-1. INSERT presupuesto (total = 0)
-2. Trigger NO se dispara (total = 0) ⏭️
+1. INSERT presupuesto con estado='enviado' pero total=0
+2. Trigger INSERT NO existe más ⏭️
 3. INSERT items
 4. UPDATE presupuesto con total calculado
-5. Trigger se dispara → mensaje con total correcto ✅
+5. Trigger UPDATE detecta: estado='enviado' + total cambió 0→>0
+6. Envía mensaje con total correcto ✅
 ```
 
 **Resultado**: El mensaje ahora muestra el total correcto:
@@ -102,8 +106,13 @@ const totalPages = Math.ceil((total || 0) / pagination.limit);
    - Agrega llamada HTTP a Edge Function en `fn_convertir_presupuesto_a_orden`
 
 2. ✅ `fix_trigger_presupuesto_validar_total.sql`
-   - Actualiza triggers de presupuestos para validar `total > 0`
-   - Aplica a INSERT y UPDATE
+   - Primera iteración: Agregó validación `total > 0` (detectó el problema)
+   - **Problema**: Nunca se disparaba porque total siempre era 0 en INSERT
+
+3. ✅ `fix_trigger_presupuesto_enviar_en_update_total.sql` **[SOLUCIÓN FINAL]**
+   - Elimina trigger INSERT (innecesario)
+   - Actualiza trigger UPDATE para detectar cuando se calcula el total
+   - Maneja 2 casos: cambio de estado a enviado, o cálculo de total en presupuesto ya enviado
 
 ---
 
