@@ -400,6 +400,39 @@ export function usePresupuestos(
     }
   };
 
+  const convertirAOrden = async (
+    presupuestoId: string,
+    params: {
+      fechaEntrega?: string;
+      notasAdicionales?: string;
+      copiarArchivos: boolean;
+    }
+  ): Promise<string | null> => {
+    try {
+      setError(null);
+
+      const { data, error: rpcError } = await supabase.rpc(
+        'fn_convertir_presupuesto_a_orden',
+        {
+          p_presupuesto_id: presupuestoId,
+          p_fecha_entrega_estimada: params.fechaEntrega || null,
+          p_notas_adicionales: params.notasAdicionales || null,
+          p_copiar_archivos: params.copiarArchivos,
+        }
+      );
+
+      if (rpcError) throw rpcError;
+
+      await fetchPresupuestos();
+
+      return data as string;
+    } catch (err: any) {
+      console.error('Error convirtiendo presupuesto:', err);
+      setError(err.message);
+      return null;
+    }
+  };
+
   return {
     presupuestos,
     loading,
@@ -415,5 +448,6 @@ export function usePresupuestos(
     aprobarPresupuesto,
     rechazarPresupuesto,
     enviarNotificacionPresupuesto,
+    convertirAOrden,
   };
 }

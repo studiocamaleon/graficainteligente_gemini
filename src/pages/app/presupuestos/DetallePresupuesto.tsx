@@ -13,6 +13,7 @@ import { PresupuestoHeader } from '../../../components/presupuestos/PresupuestoH
 import { PresupuestoItemsTab } from '../../../components/presupuestos/PresupuestoItemsTab';
 import { PresupuestoArchivosTab } from '../../../components/presupuestos/PresupuestoArchivosTab';
 import { PresupuestoHistorialTab } from '../../../components/presupuestos/PresupuestoHistorialTab';
+import { ConvertirPresupuestoModal } from '../../../components/presupuestos/ConvertirPresupuestoModal';
 
 type TabId = 'items' | 'archivos' | 'historial';
 
@@ -22,12 +23,13 @@ export default function DetallePresupuesto() {
   const { showConfirm } = useConfirmDialog();
 
   const { presupuesto, loading, error } = usePresupuesto(id || '');
-  const { deletePresupuesto, duplicarPresupuesto, enviarPresupuesto, enviarNotificacionPresupuesto } = usePresupuestos();
+  const { deletePresupuesto, duplicarPresupuesto, enviarPresupuesto, enviarNotificacionPresupuesto, convertirAOrden } = usePresupuestos();
   const { company } = useCompany();
 
   const [activeTab, setActiveTab] = useState<TabId>('items');
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showConvertirModal, setShowConvertirModal] = useState(false);
 
   const tabs = [
     { id: 'items' as TabId, label: 'Items', icon: null },
@@ -120,6 +122,22 @@ export default function DetallePresupuesto() {
     }
   };
 
+  const handleConvertir = async (params: {
+    fechaEntrega?: string;
+    notasAdicionales?: string;
+    copiarArchivos: boolean;
+  }) => {
+    if (!presupuesto) return;
+
+    const ordenId = await convertirAOrden(presupuesto.id, params);
+    if (ordenId) {
+      showSuccess(`Orden creada desde presupuesto ${presupuesto.numero_presupuesto}`);
+      navigate(`/app/orders/${ordenId}`);
+    } else {
+      showError('Error al convertir presupuesto');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -182,6 +200,7 @@ export default function DetallePresupuesto() {
         onDuplicate={handleDuplicate}
         onEnviar={handleEnviar}
         onGenerarPDF={handleGenerarPDF}
+        onConvertir={() => setShowConvertirModal(true)}
       />
 
       {/* Tabs */}
@@ -206,6 +225,14 @@ export default function DetallePresupuesto() {
           )}
         </div>
       </Card>
+
+      {/* Modal Convertir */}
+      <ConvertirPresupuestoModal
+        isOpen={showConvertirModal}
+        onClose={() => setShowConvertirModal(false)}
+        presupuesto={presupuesto}
+        onConvertir={handleConvertir}
+      />
     </div>
   );
 }

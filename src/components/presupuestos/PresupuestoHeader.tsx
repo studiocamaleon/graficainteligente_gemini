@@ -25,6 +25,7 @@ interface PresupuestoHeaderProps {
   onDuplicate: () => void;
   onEnviar: () => void;
   onGenerarPDF: () => void;
+  onConvertir?: () => void;
 }
 
 export function PresupuestoHeader({
@@ -33,6 +34,7 @@ export function PresupuestoHeader({
   onDuplicate,
   onEnviar,
   onGenerarPDF,
+  onConvertir,
 }: PresupuestoHeaderProps) {
   const navigate = useNavigate();
 
@@ -76,6 +78,7 @@ export function PresupuestoHeader({
 
   const canEdit = ['borrador', 'pendiente'].includes(presupuesto.estado);
   const canEnviar = ['borrador', 'pendiente'].includes(presupuesto.estado);
+  const canConvertir = presupuesto.estado === 'aprobado' && !presupuesto.orden_trabajo_id;
 
   return (
     <div className="bg-white border-b border-gray-200">
@@ -111,6 +114,13 @@ export function PresupuestoHeader({
               <Button size="sm" onClick={onEnviar}>
                 <Send className="w-4 h-4 mr-2" />
                 Enviar
+              </Button>
+            )}
+
+            {canConvertir && onConvertir && (
+              <Button size="sm" onClick={onConvertir}>
+                <Package className="w-4 h-4 mr-2" />
+                Convertir a Orden
               </Button>
             )}
 
