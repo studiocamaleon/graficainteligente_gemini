@@ -1,6 +1,8 @@
-import { FileText, Upload, Eye } from 'lucide-react';
+import { useState } from 'react';
+import { FileText, Upload, Eye, FileDown } from 'lucide-react';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
+import { supabase } from '../../lib/supabase';
 import type { OrdenPendienteFacturacion } from '../../hooks/useFacturas';
 
 interface OrdenesPendientesTableProps {
@@ -14,6 +16,8 @@ export function OrdenesPendientesTable({
   onCargarFactura,
   onVerDetalle
 }: OrdenesPendientesTableProps) {
+  const [openingPdf, setOpeningPdf] = useState<string | null>(null);
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('es-AR', {
       style: 'currency',
@@ -35,6 +39,38 @@ export function OrdenesPendientesTable({
     if (dias <= 3) return { variant: 'success' as const, text: `${dias}d` };
     if (dias <= 7) return { variant: 'warning' as const, text: `${dias}d` };
     return { variant: 'error' as const, text: `${dias}d` };
+  };
+
+  const handleVerFactura = async (orden: OrdenPendienteFacturacion) => {
+    if (!orden.factura_storage_path) {
+      console.error('No hay ruta de factura para esta orden');
+      return;
+    }
+
+    setOpeningPdf(orden.id);
+
+    try {
+      // Generar URL firmada válida por 1 hora
+      const { data, error } = await supabase.storage
+        .from('facturas')
+        .createSignedUrl(orden.factura_storage_path, 3600);
+
+      if (error) {
+        console.error('Error al generar URL de factura:', error);
+        alert('Error al cargar la factura. Por favor, intenta nuevamente.');
+        return;
+      }
+
+      if (data?.signedUrl) {
+        // Abrir en nueva pestaña
+        window.open(data.signedUrl, '_blank');
+      }
+    } catch (error) {
+      console.error('Error inesperado al abrir factura:', error);
+      alert('Error al cargar la factura. Por favor, intenta nuevamente.');
+    } finally {
+      setOpeningPdf(null);
+    }
   };
 
   return (
@@ -146,9 +182,28 @@ export function OrdenesPendientesTable({
                         </Button>
                       )}
                       {orden.facturada ? (
-                        <Badge variant="success" size="sm">
-                          Facturada
-                        </Badge>
+                        <button
+                          onClick={() => handleVerFactura(orden)}
+                          disabled={openingPdf === orden.id || !orden.factura_storage_path}
+                          className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                            orden.factura_storage_path
+                              ? 'bg-green-100 text-green-700 hover:bg-green-200 hover:shadow-sm cursor-pointer'
+                              : 'bg-green-100 text-green-700 cursor-default'
+                          } ${openingPdf === orden.id ? 'opacity-50' : ''}`}
+                          title={orden.factura_storage_path ? `Ver factura ${orden.numero_factura || ''}` : 'No hay archivo disponible'}
+                        >
+                          {openingPdf === orden.id ? (
+                            <>
+                              <div className="w-3 h-3 border-2 border-green-700 border-t-transparent rounded-full animate-spin" />
+                              Abriendo...
+                            </>
+                          ) : (
+                            <>
+                              {orden.factura_storage_path && <FileDown className="w-3 h-3" />}
+                              {orden.numero_factura || 'Facturada'}
+                            </>
+                          )}
+                        </button>
                       ) : (
                         <Button
                           variant="primary"

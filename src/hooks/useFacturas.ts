@@ -19,6 +19,8 @@ export interface OrdenPendienteFacturacion {
   total: number;
   dias_pendiente: number;
   facturada: boolean;
+  numero_factura: string | null;
+  factura_storage_path: string | null;
 }
 
 export interface EstadisticasFacturacion {
