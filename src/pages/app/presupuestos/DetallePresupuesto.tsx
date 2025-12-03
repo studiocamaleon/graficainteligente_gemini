@@ -126,7 +126,7 @@ export default function DetallePresupuesto() {
   };
 
   const handleConvertir = async (params: {
-    fechaEntrega?: string;
+    fechaEntrega: string;
     notasAdicionales?: string;
     copiarArchivos: boolean;
     montoPago?: number;

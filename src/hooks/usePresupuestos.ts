@@ -423,7 +423,7 @@ export function usePresupuestos(
   const convertirAOrden = async (
     presupuestoId: string,
     params: {
-      fechaEntrega?: string;
+      fechaEntrega: string;
       notasAdicionales?: string;
       copiarArchivos: boolean;
       montoPago?: number;
@@ -439,7 +439,7 @@ export function usePresupuestos(
         'fn_convertir_presupuesto_a_orden',
         {
           p_presupuesto_id: presupuestoId,
-          p_fecha_entrega_estimada: params.fechaEntrega || null,
+          p_fecha_entrega_estimada: params.fechaEntrega,
           p_notas_adicionales: params.notasAdicionales || null,
           p_copiar_archivos: params.copiarArchivos,
           p_monto_pago: params.montoPago || null,

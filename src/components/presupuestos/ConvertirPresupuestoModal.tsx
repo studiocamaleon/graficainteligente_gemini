@@ -20,7 +20,7 @@ interface ConvertirPresupuestoModalProps {
   onClose: () => void;
   presupuesto: PresupuestoConRelaciones;
   onConvertir: (params: {
-    fechaEntrega?: string;
+    fechaEntrega: string;
     notasAdicionales?: string;
     copiarArchivos: boolean;
     montoPago?: number;
@@ -66,6 +66,11 @@ export function ConvertirPresupuestoModal({
   ).length || 0;
 
   const handleSubmit = async () => {
+    // Validar que haya fecha antes de continuar
+    if (!fechaEntrega) {
+      return;
+    }
+
     // Si hay items personalizados y no tienen rutas configuradas, mostrar modal
     if (itemsPersonalizados > 0 && Object.keys(rutasPersonalizadas).length === 0) {
       setShowConfigurarRutas(true);
@@ -76,7 +81,7 @@ export function ConvertirPresupuestoModal({
     try {
       setSubmitting(true);
       await onConvertir({
-        fechaEntrega: fechaEntrega || undefined,
+        fechaEntrega,
         notasAdicionales: notasAdicionales || undefined,
         copiarArchivos,
         montoPago: registrarPago && montoPago ? parseFloat(montoPago) : undefined,
@@ -93,6 +98,11 @@ export function ConvertirPresupuestoModal({
   };
 
   const handleRutasConfiguradas = async (rutas: Record<string, RutaStep[]>) => {
+    // Validar que haya fecha antes de continuar
+    if (!fechaEntrega) {
+      return;
+    }
+
     setRutasPersonalizadas(rutas);
     setShowConfigurarRutas(false);
 
@@ -100,7 +110,7 @@ export function ConvertirPresupuestoModal({
     try {
       setSubmitting(true);
       await onConvertir({
-        fechaEntrega: fechaEntrega || undefined,
+        fechaEntrega,
         notasAdicionales: notasAdicionales || undefined,
         copiarArchivos,
         montoPago: registrarPago && montoPago ? parseFloat(montoPago) : undefined,
@@ -132,6 +142,7 @@ export function ConvertirPresupuestoModal({
   const montoNumerico = montoPago ? parseFloat(montoPago) : 0;
   const saldoPendiente = presupuesto.total - montoNumerico;
   const pagoValido = !registrarPago || (montoNumerico > 0 && montoNumerico <= presupuesto.total && medioCobroId);
+  const formularioValido = fechaEntrega && pagoValido;
 
   return (
     <>
@@ -179,7 +190,7 @@ export function ConvertirPresupuestoModal({
         {/* Fecha de entrega */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Fecha de Entrega Estimada (opcional)
+            Fecha de Entrega Estimada *
           </label>
           <div className="relative">
             <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -189,11 +200,14 @@ export function ConvertirPresupuestoModal({
               onChange={(e) => setFechaEntrega(e.target.value)}
               className="pl-10"
               min={new Date().toISOString().split('T')[0]}
+              required
             />
           </div>
-          <p className="text-xs text-gray-500 mt-1">
-            Si no se especifica, se usará la fecha de validez del presupuesto o 7 días desde hoy
-          </p>
+          {!fechaEntrega && (
+            <p className="text-xs text-red-600 mt-1">
+              Este campo es obligatorio
+            </p>
+          )}
         </div>
 
         {/* Notas adicionales */}
@@ -335,7 +349,7 @@ export function ConvertirPresupuestoModal({
         <div className="flex gap-3">
           <Button
             onClick={handleSubmit}
-            disabled={submitting || !pagoValido}
+            disabled={submitting || !formularioValido}
             className="flex-1"
           >
             {submitting ? 'Convirtiendo...' : 'Convertir a Orden'}
