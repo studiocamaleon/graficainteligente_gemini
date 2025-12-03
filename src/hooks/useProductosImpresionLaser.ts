@@ -162,6 +162,8 @@ export function useProductoImpresionLaser(id?: string) {
       setIsLoading(true);
       setError(null);
 
+      console.log('[useProductoImpresionLaser] Fetching producto:', { id, companyId: profile?.company_id });
+
       const { data: productoData, error: productoError } = await supabase
         .from('productos_impresion_laser')
         .select(`
@@ -172,7 +174,17 @@ export function useProductoImpresionLaser(id?: string) {
         .eq('company_id', profile?.company_id)
         .maybeSingle();
 
-      if (productoError) throw productoError;
+      console.log('[useProductoImpresionLaser] Query result:', {
+        productoData,
+        productoError,
+        hasRangoPrecio: !!productoData?.rango_precio,
+        rangoPrecioId: productoData?.rango_precio_id,
+      });
+
+      if (productoError) {
+        console.error('[useProductoImpresionLaser] Error fetching producto:', productoError);
+        throw productoError;
+      }
       if (!productoData) throw new Error('Producto no encontrado');
 
       const [tecnologiasRes, materialesRes, serviciosRes, acabadosRes] = await Promise.all([

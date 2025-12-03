@@ -191,7 +191,61 @@ export function ProductoLaserPreciosSection({
 
   const cantidades = getCantidadesParaProducto();
 
-  if (producto.tipo_venta === 'unidades' && producto.rango_precio_id && producto.rango_precio) {
+  // Debug logs para diagnosticar el problema
+  console.log('[ProductoLaserPreciosSection] Debug Info:', {
+    productoNombre: producto.nombre,
+    tipoVenta: producto.tipo_venta,
+    rangoPrecioId: producto.rango_precio_id,
+    rangoPrecio: producto.rango_precio,
+    tieneTecnologias: producto.tecnologias.length > 0,
+    tintasDisponibles: producto.tecnologias[0]?.tintas.length || 0,
+  });
+
+  // Validación para productos con tipo_venta = 'unidades'
+  if (producto.tipo_venta === 'unidades') {
+    // Si no tiene rango_precio_id, mostrar mensaje de error
+    if (!producto.rango_precio_id) {
+      return (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+          <div className="flex items-center gap-3">
+            <Package className="w-5 h-5 text-red-600" />
+            <div>
+              <p className="text-sm font-medium text-red-800 mb-1">
+                Configuración incompleta
+              </p>
+              <p className="text-sm text-red-700">
+                Los productos con tipo de venta "Unidades" requieren tener un rango de precio asignado.
+                Por favor, edita el producto y asigna un rango de precio.
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Si tiene rango_precio_id pero no cargó la relación rango_precio
+    if (!producto.rango_precio) {
+      return (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+          <div className="flex items-center gap-3">
+            <Package className="w-5 h-5 text-yellow-600" />
+            <div>
+              <p className="text-sm font-medium text-yellow-800 mb-1">
+                Error al cargar rango de precios
+              </p>
+              <p className="text-sm text-yellow-700">
+                El producto tiene un rango de precio asignado (ID: {producto.rango_precio_id}),
+                pero no se pudo cargar la información del rango.
+                Esto puede deberse a que el rango fue eliminado o no existe.
+                Por favor, edita el producto y vuelve a asignar un rango de precio válido.
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Todo OK, mostrar matriz de rangos
     return (
       <div className="space-y-6">
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
