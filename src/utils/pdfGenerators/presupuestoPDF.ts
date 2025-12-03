@@ -98,7 +98,7 @@ export async function generarPresupuestoPDF(
   doc.setFontSize(14);
   doc.setTextColor(...COLORS.dark);
   doc.text(
-    companyData?.legal_name || companyData?.name || 'Tu Empresa',
+    companyData?.name || companyData?.legal_name || 'Tu Empresa',
     pageWidth - margin,
     yPosition + 10,
     { align: 'right' }

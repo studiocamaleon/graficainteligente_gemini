@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
+import { formatConfiguracionProducto } from '../../utils/formatPresupuestoConfig';
 
 interface PresupuestoTracking {
   id: string;
@@ -20,6 +21,7 @@ interface PresupuestoTracking {
   observaciones_cliente?: string;
   motivo_rechazo?: string;
   company: {
+    name: string;
     razon_social: string;
     logo_url?: string;
     telefono?: string;
@@ -37,6 +39,7 @@ interface PresupuestoTracking {
     producto_nombre: string;
     producto_categoria?: string;
     descripcion?: string;
+    configuracion?: any;
     cantidad: number;
     precio_unitario_final: number;
     precio_total: number;
@@ -232,7 +235,7 @@ export default function PresupuestoTracking() {
             />
           )}
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            {presupuesto.company.razon_social}
+            {presupuesto.company.name || presupuesto.company.razon_social}
           </h1>
           <p className="text-gray-600">{presupuesto.company.direccion}</p>
           <div className="flex flex-wrap gap-4 mt-4 text-sm text-gray-600">
@@ -282,25 +285,42 @@ export default function PresupuestoTracking() {
         <div className="bg-white rounded-lg shadow-xl p-6 md:p-8 mb-6">
           <h3 className="text-xl font-bold text-gray-900 mb-4">Items Cotizados</h3>
           <div className="space-y-4">
-            {presupuesto.items.map((item) => (
-              <div key={item.id} className="border border-gray-200 rounded-lg p-4">
-                <div className="flex justify-between items-start mb-2">
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-gray-900">{item.producto_nombre}</h4>
-                    {item.descripcion && (
-                      <p className="text-sm text-gray-600 mt-1">{item.descripcion}</p>
+            {presupuesto.items.map((item) => {
+              // Generar descripción desde configuración si no hay descripción manual
+              const configuracionFormateada = formatConfiguracionProducto(
+                item.configuracion,
+                item.producto_categoria
+              );
+              const descripcionFinal = item.descripcion || configuracionFormateada;
+
+              return (
+                <div key={item.id} className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-gray-900">{item.producto_nombre}</h4>
+                      {descripcionFinal && (
+                        <p className="text-sm text-gray-600 mt-1">{descripcionFinal}</p>
+                      )}
+                      {item.producto_categoria && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          Categoría: {item.producto_categoria}
+                        </p>
+                      )}
+                    </div>
+                    <span className="text-lg font-bold text-blue-600">
+                      {formatCurrency(item.precio_total)}
+                    </span>
+                  </div>
+                  <div className="flex gap-4 text-sm text-gray-600">
+                    <span>Cantidad: {item.cantidad}</span>
+                    <span>Precio unit.: {formatCurrency(item.precio_unitario_final)}</span>
+                    {item.tiempo_produccion_dias && (
+                      <span>⏱️ {item.tiempo_produccion_dias} días</span>
                     )}
                   </div>
-                  <span className="text-lg font-bold text-blue-600">
-                    {formatCurrency(item.precio_total)}
-                  </span>
                 </div>
-                <div className="flex gap-4 text-sm text-gray-600">
-                  <span>Cantidad: {item.cantidad}</span>
-                  <span>Precio unit.: {formatCurrency(item.precio_unitario_final)}</span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="mt-6 pt-6 border-t border-gray-200">

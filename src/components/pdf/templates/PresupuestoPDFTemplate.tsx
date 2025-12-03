@@ -42,7 +42,7 @@ export function PresupuestoPDFTemplate({
     <PDFLayout
       title="PRESUPUESTO"
       companyLogo={companyData?.logo_url}
-      companyName={companyData?.legal_name || companyData?.name}
+      companyName={companyData?.name || companyData?.legal_name}
       companyAddress={companyData?.address}
       companyPhone={companyData?.contact_phone}
       companyEmail={companyData?.contact_email || companyData?.email}

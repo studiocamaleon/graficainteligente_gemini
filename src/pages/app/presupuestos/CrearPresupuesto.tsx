@@ -14,6 +14,7 @@ import { PresupuestoItemsSection } from '../../../components/presupuestos/Presup
 import { PresupuestoCondicionesSection } from '../../../components/presupuestos/PresupuestoCondicionesSection';
 import { PresupuestoResumenSection } from '../../../components/presupuestos/PresupuestoResumenSection';
 import type { CanalVenta, PresupuestoItem, CreatePresupuestoItemData } from '../../../types/presupuestos';
+import { generarDescripcionCompleta } from '../../../utils/formatPresupuestoConfig';
 
 type TabId = 'general' | 'items' | 'condiciones' | 'resumen';
 
@@ -76,6 +77,14 @@ export default function CrearPresupuesto() {
   };
 
   const handleAddItemSistema = (item: any) => {
+    // Generar descripción automática desde configuración si no viene descripción
+    const descripcionFinal = generarDescripcionCompleta(
+      item.producto_nombre,
+      item.configuracion,
+      item.categoria,
+      item.descripcion
+    );
+
     const nuevoItem: PresupuestoItem = {
       id: `temp-${Date.now()}`,
       presupuesto_id: '',
@@ -90,7 +99,7 @@ export default function CrearPresupuesto() {
       precio_acabados: item.precio_acabados || 0,
       precio_unitario_final: item.precio_unitario_final,
       precio_total: item.precio_total,
-      descripcion: item.descripcion,
+      descripcion: descripcionFinal,
       tiempo_produccion_dias: item.tiempo_produccion_dias,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
