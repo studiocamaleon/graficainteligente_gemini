@@ -222,6 +222,7 @@ export interface CreatePresupuestoData {
   cliente_id: string;
   vendedor_id: string;
   canal_venta: CanalVenta;
+  fecha_entrega_estimada: string;
   fecha_validez?: string;
   condiciones_comerciales?: string;
   notas_internas?: string;

@@ -231,6 +231,18 @@ export function CrearOrdenCopiado() {
       return false;
     }
 
+    if (!fechaEntrega) {
+      openDialog('Error', 'La fecha de entrega es obligatoria');
+      return false;
+    }
+
+    // Validar que la fecha no sea anterior a hoy
+    const hoy = new Date().toISOString().split('T')[0];
+    if (fechaEntrega < hoy) {
+      openDialog('Error', 'La fecha de entrega no puede ser anterior a hoy');
+      return false;
+    }
+
     const itemsCompletos = items.filter(
       (item) =>
         item.config.tamanio_papel_id &&
@@ -257,9 +269,7 @@ export function CrearOrdenCopiado() {
     setGuardando(true);
 
     try {
-      const fechaEntregaCompleta = fechaEntrega
-        ? `${fechaEntrega}T00:00:00`
-        : undefined;
+      const fechaEntregaCompleta = `${fechaEntrega}T00:00:00`;
 
       // 1. Crear orden real
       const datosOrden = {
@@ -473,6 +483,7 @@ export function CrearOrdenCopiado() {
                       onChange={(date) => setFechaEntrega(date || '')}
                       minDate={new Date()}
                       placeholder="Seleccionar fecha"
+                      required
                     />
                   </div>
                 </div>

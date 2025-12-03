@@ -207,7 +207,9 @@ export function CreateOrderPage() {
       errores.items = 'Debe agregar al menos un item o una orden de copiado a la orden';
     }
 
-    if (fechaEntrega) {
+    if (!fechaEntrega) {
+      errores.fechaEntrega = 'La fecha de entrega es obligatoria';
+    } else {
       // Comparar fechas como strings en formato YYYY-MM-DD
       // Esto evita problemas de zona horaria y es lexicográficamente correcto
       const hoy = new Date();
@@ -250,7 +252,7 @@ export function CreateOrderPage() {
     const ordenData = {
       cliente_id: clienteId,
       canal_venta: canalVenta,
-      fecha_estimada_entrega: fechaEntrega || undefined,
+      fecha_estimada_entrega: fechaEntrega,
       notas_internas: notasInternas || undefined,
     };
 

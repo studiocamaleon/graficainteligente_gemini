@@ -117,6 +117,7 @@ export function OrdenGeneralSection({
           minDate={new Date()}
           error={errors.fechaEntrega}
           placeholder="Seleccionar fecha de entrega"
+          required
         />
       </div>
 

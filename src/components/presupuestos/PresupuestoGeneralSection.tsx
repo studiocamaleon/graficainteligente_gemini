@@ -3,6 +3,7 @@ import { User, UserCircle, Calendar, Phone } from 'lucide-react';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import { SearchableSelect } from '../ui/SearchableSelect';
+import { DatePicker } from '../ui/DatePicker';
 import { useClients } from '../../hooks/useClients';
 import { useTeamMembers } from '../../hooks/useTeamMembers';
 import type { CanalVenta } from '../../types/presupuestos';
@@ -11,11 +12,13 @@ interface PresupuestoGeneralSectionProps {
   clienteId: string;
   vendedorId: string;
   canalVenta: CanalVenta;
+  fechaEntregaEstimada: string;
   fechaValidez: string;
   notasInternas: string;
   onClienteChange: (id: string) => void;
   onVendedorChange: (id: string) => void;
   onCanalVentaChange: (canal: CanalVenta) => void;
+  onFechaEntregaEstimadaChange: (fecha: string) => void;
   onFechaValidezChange: (fecha: string) => void;
   onNotasInternasChange: (notas: string) => void;
   errors?: Record<string, string>;
@@ -25,11 +28,13 @@ export function PresupuestoGeneralSection({
   clienteId,
   vendedorId,
   canalVenta,
+  fechaEntregaEstimada,
   fechaValidez,
   notasInternas,
   onClienteChange,
   onVendedorChange,
   onCanalVentaChange,
+  onFechaEntregaEstimadaChange,
   onFechaValidezChange,
   onNotasInternasChange,
   errors = {},
@@ -169,6 +174,22 @@ export function PresupuestoGeneralSection({
             <p className="mt-1 text-sm text-red-600">{errors.canalVenta}</p>
           )}
         </div>
+      </div>
+
+      {/* Fecha de entrega estimada */}
+      <div>
+        <DatePicker
+          label="Fecha de Entrega Estimada"
+          value={fechaEntregaEstimada}
+          onChange={(date) => onFechaEntregaEstimadaChange(date || '')}
+          minDate={new Date()}
+          error={errors.fechaEntregaEstimada}
+          placeholder="Seleccionar fecha de entrega"
+          required
+        />
+        <p className="mt-1 text-xs text-gray-500">
+          Fecha estimada en que se completará el trabajo
+        </p>
       </div>
 
       {/* Fecha de validez */}

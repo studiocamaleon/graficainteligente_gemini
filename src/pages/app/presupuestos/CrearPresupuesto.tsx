@@ -33,6 +33,7 @@ export default function CrearPresupuesto() {
     clienteId: '',
     vendedorId: user?.id || '',
     canalVenta: '' as CanalVenta | '',
+    fechaEntregaEstimada: '',
     fechaValidez: '',
     notasInternas: '',
     condicionesComerciales: '',
@@ -53,6 +54,14 @@ export default function CrearPresupuesto() {
     if (!formData.clienteId) newErrors.clienteId = 'Selecciona un cliente';
     if (!formData.vendedorId) newErrors.vendedorId = 'Selecciona un vendedor';
     if (!formData.canalVenta) newErrors.canalVenta = 'Selecciona un canal';
+    if (!formData.fechaEntregaEstimada) {
+      newErrors.fechaEntregaEstimada = 'La fecha de entrega es obligatoria';
+    } else {
+      const hoy = new Date().toISOString().split('T')[0];
+      if (formData.fechaEntregaEstimada < hoy) {
+        newErrors.fechaEntregaEstimada = 'La fecha de entrega no puede ser anterior a hoy';
+      }
+    }
     if (!formData.fechaValidez) newErrors.fechaValidez = 'Selecciona una fecha';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -146,6 +155,7 @@ export default function CrearPresupuesto() {
         cliente_id: formData.clienteId,
         vendedor_id: formData.vendedorId,
         canal_venta: formData.canalVenta as CanalVenta,
+        fecha_entrega_estimada: formData.fechaEntregaEstimada,
         fecha_validez: formData.fechaValidez,
         condiciones_comerciales: formData.condicionesComerciales,
         notas_internas: formData.notasInternas,
@@ -251,11 +261,13 @@ export default function CrearPresupuesto() {
               clienteId={formData.clienteId}
               vendedorId={formData.vendedorId}
               canalVenta={formData.canalVenta}
+              fechaEntregaEstimada={formData.fechaEntregaEstimada}
               fechaValidez={formData.fechaValidez}
               notasInternas={formData.notasInternas}
               onClienteChange={(id) => setFormData({ ...formData, clienteId: id })}
               onVendedorChange={(id) => setFormData({ ...formData, vendedorId: id })}
               onCanalVentaChange={(canal) => setFormData({ ...formData, canalVenta: canal })}
+              onFechaEntregaEstimadaChange={(fecha) => setFormData({ ...formData, fechaEntregaEstimada: fecha })}
               onFechaValidezChange={(fecha) => setFormData({ ...formData, fechaValidez: fecha })}
               onNotasInternasChange={(notas) => setFormData({ ...formData, notasInternas: notas })}
               errors={errors}
