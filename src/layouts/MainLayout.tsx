@@ -203,9 +203,17 @@ function MainLayoutContent({ children }: MainLayoutProps) {
     );
   };
 
-  const { description, action } = usePageHeaderContext();
+  const pageHeaderContext = usePageHeaderContext();
+  const description = pageHeaderContext.description;
+  const action = pageHeaderContext.action;
+  const pageTitle = description;
 
   const getCurrentPageTitle = () => {
+    // Si hay un título configurado vía usePageHeader, usarlo
+    if (pageTitle) {
+      return pageTitle;
+    }
+
     // Detectar rutas dinámicas de detalle de orden
     if (location.pathname.match(/^\/app\/orders\/[a-f0-9-]+$/)) {
       return 'Detalle de Orden';
@@ -552,9 +560,6 @@ function MainLayoutContent({ children }: MainLayoutProps) {
                   <h1 className="text-2xl font-bold text-gray-900">
                     {getCurrentPageTitle()}
                   </h1>
-                  {description && (
-                    <p className="text-sm text-gray-600 mt-1">{description}</p>
-                  )}
                 </div>
               </div>
 
