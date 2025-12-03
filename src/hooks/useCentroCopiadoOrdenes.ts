@@ -34,6 +34,7 @@ interface OrdenCopiadoWithRelations extends CentroCopiadoOrden {
 
 interface CreateOrdenCopiadoData {
   cliente_id: string;
+  origen: 'WhatsApp' | 'Web' | 'Mostrador' | 'App Mobile';
   orden_trabajo_id?: string;
   fecha_entrega_estimada?: string;
   observaciones?: string;
@@ -171,6 +172,7 @@ export function useCentroCopiadoOrdenes(params: UseCentroCopiadoOrdenesParams = 
           company_id: profile.company_id,
           numero_orden: numeroOrden,
           cliente_id: data.cliente_id,
+          origen: data.origen,
           orden_trabajo_id: data.orden_trabajo_id || null,
           estado: 'pendiente' as EstadoOrdenCopiado,
           fecha_solicitud: new Date().toISOString(),
