@@ -26,6 +26,7 @@ export function VentasPorCanalChart({ data, loading }: VentasPorCanalChartProps)
     { bg: 'bg-blue-500', text: 'text-blue-600', border: 'border-blue-500' },
     { bg: 'bg-green-500', text: 'text-green-600', border: 'border-green-500' },
     { bg: 'bg-orange-500', text: 'text-orange-600', border: 'border-orange-500' },
+    { bg: 'bg-purple-500', text: 'text-purple-600', border: 'border-purple-500' },
   ];
 
   return (

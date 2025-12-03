@@ -1,4 +1,4 @@
-import { Globe, MessageCircle, Store } from 'lucide-react';
+import { Globe, MessageCircle, Store, Smartphone } from 'lucide-react';
 import type { CanalVenta } from '../../types/database';
 
 interface ChannelBadgeProps {
@@ -25,6 +25,11 @@ const canalConfig: Record<
     label: 'Mostrador',
     icon: Store,
     className: 'bg-purple-100 text-purple-700',
+  },
+  'App Mobile': {
+    label: 'App Mobile',
+    icon: Smartphone,
+    className: 'bg-orange-100 text-orange-700',
   },
 };
 
