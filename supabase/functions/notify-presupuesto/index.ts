@@ -1,4 +1,5 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { sanitizeMessage, formatPhoneNumber } from '../_shared/messageGenerators.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,37 +12,6 @@ interface PresupuestoNotification {
   company_id: string;
   tipo_notificacion: 'presupuesto_listo' | 'presupuesto_aprobado' | 'presupuesto_vencido';
   frontend_origin?: string;
-}
-
-function sanitizeMessage(message: string): string {
-  if (!message) return '';
-
-  let sanitized = message
-    .replace(/[\u0000-\u0009\u000B-\u001F\u007F-\u009F]/g, '')
-    .replace(/\r\n/g, '\n')
-    .replace(/\r/g, '\n')
-    .trim();
-
-  const maxLength = 4096;
-  if (sanitized.length > maxLength) {
-    sanitized = sanitized.substring(0, maxLength - 20) + '\n\n...mensaje truncado';
-  }
-
-  return sanitized;
-}
-
-function formatPhoneNumber(phone: string | null | undefined): string | null {
-  if (!phone) return null;
-
-  const cleaned = phone.replace(/\D/g, '');
-
-  if (cleaned.length === 0) return null;
-
-  if (!cleaned.startsWith('598')) {
-    return `598${cleaned}`;
-  }
-
-  return cleaned;
 }
 
 function generatePresupuestoListoMessage(
