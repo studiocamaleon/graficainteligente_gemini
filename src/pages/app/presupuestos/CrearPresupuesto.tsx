@@ -200,25 +200,9 @@ export default function CrearPresupuesto() {
           : 'Presupuesto guardado como borrador'
       );
 
-      // Enviar notificación de WhatsApp vía Edge Function (no bloqueante)
-      if (enviar && profile?.company_id && presupuesto.id) {
-        supabase.functions.invoke('notify-presupuesto', {
-          body: {
-            presupuesto_id: presupuesto.id,
-            company_id: profile.company_id,
-            tipo_notificacion: 'presupuesto_listo',
-            frontend_origin: window.location.origin
-          }
-        }).then(({ data, error }) => {
-          if (error) {
-            console.error('[CrearPresupuesto] Error al enviar notificación:', error);
-          } else if (data?.success) {
-            console.log('[CrearPresupuesto] Notificación de WhatsApp enviada exitosamente');
-          }
-        }).catch((err) => {
-          console.error('[CrearPresupuesto] Error al invocar Edge Function:', err);
-        });
-      }
+      // Nota: La notificación de WhatsApp se envía automáticamente
+      // mediante el trigger on_presupuesto_creado_enviado cuando
+      // el estado es 'enviado'
 
       setTimeout(() => {
         navigate(`/app/presupuestos/${presupuesto.id}`);
