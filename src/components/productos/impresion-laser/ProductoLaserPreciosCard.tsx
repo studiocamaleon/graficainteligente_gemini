@@ -2,8 +2,10 @@ import { useState, useCallback, useEffect } from 'react';
 import { Package } from 'lucide-react';
 import { Card } from '../../ui/Card';
 import { ProductoLaserPrecioMatriz } from './ProductoLaserPrecioMatriz';
+import { ProductoLaserPrecioMatrizRangos } from './ProductoLaserPrecioMatrizRangos';
 import type { ProductoLaserParaPrecios } from '../../../hooks/useAllProductosLaserPrecios';
 import type { PrecioInput } from '../../../hooks/useProductosImpresionLaserPrecios';
+import type { ProductoLaserConRelaciones } from '../../../hooks/useProductosImpresionLaser';
 
 interface Props {
   producto: ProductoLaserParaPrecios;
@@ -20,12 +22,15 @@ export function ProductoLaserPreciosCard({ producto, onPreciosChange, readonly =
   const [isInitialized, setIsInitialized] = useState(false);
   const [lastProductoId, setLastProductoId] = useState<string | null>(null);
 
+  // Check if product uses rangos
+  const usesRangos = producto.tipo_venta === 'unidades' && producto.rango_precio_id && producto.rango_precio;
+
   // Get cantidades based on tipo_venta
   const getCantidades = (): number[] => {
     if (producto.tipo_venta === 'cantidades_fijas') {
       return producto.cantidades_fijas || [];
     }
-    // For 'unidades' return [1]
+    // For 'unidades' without rangos, return [1]
     return [1];
   };
 
@@ -137,6 +142,64 @@ export function ProductoLaserPreciosCard({ producto, onPreciosChange, readonly =
           <p className="text-sm text-gray-500">
             Este producto no tiene configuraciones de medidas o tintas disponibles.
           </p>
+        </div>
+      </Card>
+    );
+  }
+
+  // If product uses rangos, render the rangos matrix component
+  if (usesRangos) {
+    const productoConRelaciones: ProductoLaserConRelaciones = {
+      ...producto,
+      id: producto.id,
+      company_id: '', // Not needed for display
+      nombre: producto.nombre,
+      medidas_disponibles: producto.medidas_disponibles,
+      caras_impresas: producto.caras_impresas,
+      producto_impreso: true,
+      tipo_venta: producto.tipo_venta,
+      cantidades_fijas: producto.cantidades_fijas,
+      impuesto_iva: 0,
+      ruta_produccion_id: null,
+      rango_precio_id: producto.rango_precio_id,
+      is_active: true,
+      created_at: '',
+      updated_at: '',
+      rango_precio: producto.rango_precio,
+      tecnologias: producto.tecnologias.map(t => ({
+        id: '',
+        tecnologia_id: t.tecnologia_id,
+        tecnologia_nombre: t.tecnologia_nombre,
+        tintas: t.tintas,
+      })),
+      materiales: producto.materiales.map(m => ({
+        id: '',
+        material_id: '',
+        material_nombre: m.material_nombre,
+        variante_nombre: m.variante_nombre,
+        espesor: m.espesor,
+        unidad_espesor: m.unidad_espesor,
+      })),
+      servicios: [],
+      acabados: [],
+    };
+
+    return (
+      <Card>
+        <div className="p-6">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <Package className="w-5 h-5 text-blue-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">{producto.nombre}</h3>
+              <p className="text-sm text-gray-500">
+                Tipo de venta: Unidades • Rango: {producto.rango_precio?.nombre}
+              </p>
+            </div>
+          </div>
+
+          <ProductoLaserPrecioMatrizRangos producto={productoConRelaciones} />
         </div>
       </Card>
     );

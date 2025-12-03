@@ -13,6 +13,16 @@ export interface ProductoLaserParaPrecios {
   caras_impresas: string[];
   tipo_venta: 'unidades' | 'cantidades_fijas';
   cantidades_fijas: number[];
+  rango_precio_id: string | null;
+  rango_precio?: {
+    id: string;
+    nombre: string;
+    unidad_medida: string;
+    rangos: Array<{
+      min: number;
+      max: number | null;
+    }>;
+  };
   tecnologias: Array<{
     tecnologia_id: string;
     tecnologia_nombre: string;
@@ -64,10 +74,13 @@ export function useAllProductosLaserPrecios() {
       setIsLoading(true);
       setError(null);
 
-      // 1. Fetch all active laser products
+      // 1. Fetch all active laser products with rango_precio relation
       const { data: productosData, error: productosError } = await supabase
         .from('productos_impresion_laser')
-        .select('*')
+        .select(`
+          *,
+          rango_precio:rangos_precio(id, nombre, unidad_medida, rangos)
+        `)
         .eq('company_id', profile.company_id)
         .eq('is_active', true)
         .order('created_at', { ascending: true });
@@ -158,6 +171,8 @@ export function useAllProductosLaserPrecios() {
           caras_impresas: producto.caras_impresas || [],
           tipo_venta: producto.tipo_venta,
           cantidades_fijas: producto.cantidades_fijas || [],
+          rango_precio_id: producto.rango_precio_id,
+          rango_precio: producto.rango_precio,
           tecnologias,
           materiales,
           precios_existentes: preciosByProducto.get(producto.id) || [],
