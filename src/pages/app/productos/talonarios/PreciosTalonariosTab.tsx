@@ -42,11 +42,11 @@ export function PreciosTalonariosTab() {
     return productos
       .filter(p => {
         // Verificar que tenga al menos un precio configurado
-        return p.precios && p.precios.some(precio => precio.precio > 0);
+        return p.precios_existentes && p.precios_existentes.some(precio => precio.precio > 0);
       })
       .map(p => {
         // Calcular precio promedio
-        const preciosValidos = p.precios.filter(precio => precio.precio > 0);
+        const preciosValidos = p.precios_existentes.filter(precio => precio.precio > 0);
         const precioPromedio = preciosValidos.length > 0
           ? preciosValidos.reduce((sum, precio) => sum + precio.precio, 0) / preciosValidos.length
           : 0;
