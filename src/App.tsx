@@ -55,6 +55,7 @@ import { OrderTracking } from './pages/public/OrderTracking';
 import { JobsMonitor } from './pages/public/JobsMonitor';
 import PresupuestoTracking from './pages/public/PresupuestoTracking';
 import { FacturaRedirect } from './pages/public/FacturaRedirect';
+import { ClienteRegistro } from './pages/public/ClienteRegistro';
 
 function AppRoutes() {
   const { user, loading, isAuthenticating } = useAuth();
@@ -89,6 +90,7 @@ function AppRoutes() {
       <Route path="/tracking/presupuesto/:token" element={<PresupuestoTracking />} />
       <Route path="/monitor/jobs/:companyId" element={<JobsMonitor />} />
       <Route path="/:companyId/facturas/:token" element={<FacturaRedirect />} />
+      <Route path="/registro/:companyId" element={<ClienteRegistro />} />
 
       <Route
         path="/app/*"
