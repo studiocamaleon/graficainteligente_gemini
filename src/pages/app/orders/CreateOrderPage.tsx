@@ -315,9 +315,12 @@ export function CreateOrderPage() {
     const result = await createOrdenConItems({
       ordenData,
       items: items.map(item => ({
+        tipo_item: item.tipo_item || 'catalogo',
         producto_id: item.producto_id,
         producto_nombre: item.producto_nombre,
         producto_categoria: item.producto_categoria || item.categoria || 'Sin categoría',
+        descripcion: item.descripcion || null,
+        tiempo_produccion_dias: item.tiempo_produccion_dias || null,
         cantidad: item.cantidad,
         configuracion: item.configuracion,
         precio_base: item.precio_base,
