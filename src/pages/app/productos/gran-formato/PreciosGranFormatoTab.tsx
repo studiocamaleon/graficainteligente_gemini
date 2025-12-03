@@ -64,9 +64,7 @@ export function PreciosGranFormatoTab() {
   const { profile } = useAuth();
   const { showToast } = useToast();
   const canEditPrecios = useMemo(() => {
-    const result = !['operador_diseno', 'operador_taller'].includes(profile?.role || '');
-    console.log('[Gran Formato] DEBUG - Role:', profile?.role, 'canEditPrecios:', result);
-    return result;
+    return !['operador_diseno', 'operador_taller'].includes(profile?.role || '');
   }, [profile?.role]);
 
   const {
@@ -345,7 +343,6 @@ export function PreciosGranFormatoTab() {
   }
 
   if (productos.length === 0) {
-    console.log('[Gran Formato] DEBUG - No hay productos');
     return (
       <Card>
         <div className="p-12">
@@ -358,8 +355,6 @@ export function PreciosGranFormatoTab() {
       </Card>
     );
   }
-
-  console.log('[Gran Formato] DEBUG - productos.length:', productos.length, 'tecnologiasAgrupadas.length:', tecnologiasAgrupadas.length, 'productosParaAumento.length:', productosParaAumento.length);
 
   if (tecnologiasAgrupadas.length === 0) {
     return (
@@ -379,18 +374,15 @@ export function PreciosGranFormatoTab() {
     <>
       <div className="space-y-6 pb-24">
         <div className="flex justify-end gap-3">
-          {canEditPrecios && productos.length > 0 && (() => {
-            console.log('[Gran Formato] DEBUG - Mostrando botón Aumento Masivo');
-            return (
-              <Button
-                variant="secondary"
-                onClick={() => setIsAumentoModalOpen(true)}
-              >
-                <Percent className="w-4 h-4 mr-2" />
-                Aumento Masivo
-              </Button>
-            );
-          })()}
+          {canEditPrecios && productos.length > 0 && (
+            <Button
+              variant="secondary"
+              onClick={() => setIsAumentoModalOpen(true)}
+            >
+              <Percent className="w-4 h-4 mr-2" />
+              Aumento Masivo
+            </Button>
+          )}
           <ExportPDFButtonGroup
             onPrint={handlePrint}
             onDownload={handleDownloadPDF}

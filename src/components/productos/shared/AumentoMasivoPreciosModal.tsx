@@ -56,7 +56,8 @@ export function AumentoMasivoPreciosModal({
       setMostrarPreview(false);
       resetError();
     }
-  }, [isOpen, resetError]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   // Filtrar productos por búsqueda
   const productosFiltrados = useMemo(() => {
