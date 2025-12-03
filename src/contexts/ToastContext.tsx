@@ -9,12 +9,15 @@ interface Toast {
   duration?: number;
 }
 
-interface ToastContextValue {
+export interface ToastContextType {
   showSuccess: (message: string, duration?: number) => void;
   showError: (message: string, duration?: number) => void;
   showWarning: (message: string, duration?: number) => void;
   showInfo: (message: string, duration?: number) => void;
+  showToast: (message: string, type: ToastType, duration?: number) => void;
 }
+
+interface ToastContextValue extends ToastContextType {}
 
 const ToastContext = createContext<ToastContextValue | undefined>(undefined);
 
@@ -60,8 +63,15 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     [addToast]
   );
 
+  const showToast = useCallback(
+    (message: string, type: ToastType, duration?: number) => {
+      addToast(type, message, duration);
+    },
+    [addToast]
+  );
+
   return (
-    <ToastContext.Provider value={{ showSuccess, showError, showWarning, showInfo }}>
+    <ToastContext.Provider value={{ showSuccess, showError, showWarning, showInfo, showToast }}>
       {children}
       <ToastContainer toasts={toasts} onClose={removeToast} />
     </ToastContext.Provider>
