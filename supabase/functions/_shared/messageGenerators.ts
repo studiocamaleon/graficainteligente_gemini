@@ -306,3 +306,34 @@ export function generateOrdenFinalizadaMessage(
 
   return mensaje;
 }
+
+export function generateFacturaDisponibleMessage(
+  clienteNombre: string,
+  numeroOrden: string,
+  numeroFactura: string,
+  facturaUrl: string,
+  companyName: string,
+  companyAddress: string | null,
+  companyPhone: string | null
+): string {
+  let mensaje = `Hola ${clienteNombre}!\n\n`;
+  mensaje += `📄 Tu factura *${numeroFactura}* para la orden *${numeroOrden}* ya está disponible.\n\n`;
+  mensaje += `📥 *Descargar factura:*\n`;
+  mensaje += `${facturaUrl}\n\n`;
+  mensaje += `ℹ️ Este link es válido por 30 días.\n\n`;
+
+  if (companyAddress) {
+    mensaje += `📍 *${companyName}*\n`;
+    mensaje += `${companyAddress}\n`;
+  }
+
+  if (companyPhone) {
+    mensaje += `📞 ${companyPhone}\n\n`;
+  }
+
+  mensaje += `Si tienes alguna consulta, no dudes en contactarnos.\n\n`;
+  mensaje += `Gracias por tu confianza!\n\n`;
+  mensaje += `_Tecnología desarrollada por CamaleonStudio - Agencia de desarrollo de Gráfica Corporearte_`;
+
+  return mensaje;
+}

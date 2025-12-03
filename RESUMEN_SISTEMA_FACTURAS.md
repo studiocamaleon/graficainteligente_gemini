@@ -2,7 +2,7 @@
 
 **Sistema**: Gestión completa de facturas para órdenes de trabajo
 **Plan completo**: 7 fases (Base de Datos → Frontend → Integración)
-**Progreso**: ✅ 4/7 Fases completadas (57%)
+**Progreso**: ✅ 5/7 Fases completadas (71%)
 
 ---
 
@@ -13,7 +13,7 @@ Implementar un sistema completo para gestionar facturas de órdenes de trabajo, 
 
 ## 📊 Estado Actual
 
-### ✅ COMPLETADO (Fase 1, 2, 3 y 4):
+### ✅ COMPLETADO (Fase 1, 2, 3, 4 y 5):
 - ✅ **Base de Datos**: Schema completo con 6 campos nuevos
 - ✅ **Tabla `facturas_historial`**: Auditoría completa
 - ✅ **Storage bucket `facturas`**: Privado con RLS
@@ -26,11 +26,13 @@ Implementar un sistema completo para gestionar facturas de órdenes de trabajo, 
 - ✅ **Módulo Facturas**: Vista con KPIs, filtros y gestión
 - ✅ **Upload de PDFs**: Sistema funcional con validaciones
 - ✅ **Integración**: Menú Finanzas → Facturas operativo
+- ✅ **Edge function WhatsApp**: Notificaciones automáticas con Render
+- ✅ **Signed URLs**: Links temporales de 30 días
+- ✅ **Backend Render**: Integración completa (NO Evolution API directo)
 
-### ⏳ PENDIENTE (Fase 5-7):
-- ⏳ Edge function para notificaciones WhatsApp
-- ⏳ Testing y optimizaciones
-- ⏳ Documentación de usuario
+### ⏳ PENDIENTE (Fase 6-7):
+- ⏳ Testing E2E y optimizaciones
+- ⏳ Documentación de usuario final
 
 ---
 
@@ -328,7 +330,7 @@ supabase functions new notify-factura-disponible
 | **Fase 2** | ✅ Completada | Base de Datos - Funciones | `FASE_2_SISTEMA_FACTURAS_COMPLETADA.md` |
 | **Fase 3** | ✅ Completada | Frontend - Persistencia | `FASE_3_SISTEMA_FACTURAS_COMPLETADA.md` |
 | **Fase 4** | ✅ Completada | Frontend - Módulo Facturas | `FASE_4_SISTEMA_FACTURAS_COMPLETADA.md` |
-| **Fase 5** | ⏳ Pendiente | Notificaciones WhatsApp | Edge Function + Mensajes |
+| **Fase 5** | ✅ Completada | Notificaciones WhatsApp | `FASE_5_SISTEMA_FACTURAS_COMPLETADA.md` |
 | **Fase 6** | ⏳ Pendiente | Testing y Optimizaciones | Tests E2E + Performance |
 | **Fase 7** | ⏳ Pendiente | Documentación Usuario | Manual + Capacitación |
 
@@ -360,21 +362,33 @@ supabase functions new notify-factura-disponible
 - Integración en menú Finanzas → Facturas
 - Archivos creados: 7
 
-### ⏳ Siguiente: Fase 5 - Notificaciones WhatsApp
-**Objetivo**: Enviar factura automáticamente al cliente vía WhatsApp
+### ✅ Fase 5: Notificaciones WhatsApp (COMPLETADA)
+- Edge function `notify-factura-disponible` completa
+- Signed URLs temporales (30 días de validez)
+- Mensajes personalizados con link de descarga
+- Integración con backend Render (NO Evolution API directo)
+- Sanitización de mensajes y formato de teléfonos
+- Verificación de conexión WhatsApp
+- Registro en whatsapp_notificaciones
+- Deduplicación automática
+- Manejo de errores sin bloqueo
+- Archivos creados: 1 edge function
+- Archivos modificados: 1 (messageGenerators)
+
+### ⏳ Siguiente: Fase 6 - Testing y Optimizaciones
+**Objetivo**: Asegurar calidad y rendimiento del sistema
 
 **Tareas**:
-1. Edge function `notify-factura-disponible`
-2. Generación de signed URLs (30 días)
-3. Mensajes personalizados con link de descarga
-4. Integración con Evolution API
+1. Tests E2E del flujo completo
+2. Tests unitarios de funciones
+3. Performance testing de queries
+4. Optimización de carga de componentes
 
-**Archivos a crear**: 1 edge function
-**Tiempo estimado**: 1-2 horas
+**Tiempo estimado**: 2-3 horas
 
 ---
 
 **Documento de referencia para implementación del Sistema de Facturas**
-Versión: 4.0 (Actualizado con progreso de Fase 1, 2, 3 y 4)
+Versión: 5.0 (Actualizado con progreso de Fase 1, 2, 3, 4 y 5)
 Última actualización: 2025-12-03
-**Progreso**: 57% completado (4/7 fases)
+**Progreso**: 71% completado (5/7 fases)
