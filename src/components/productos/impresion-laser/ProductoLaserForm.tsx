@@ -7,6 +7,7 @@ import { TecnologiaTintasSelector } from './TecnologiaTintasSelector';
 import { CarasImpresasSelector } from './CarasImpresasSelector';
 import { MaterialCascadeSelector } from './MaterialCascadeSelector';
 import { TipoVentaSelector } from './TipoVentaSelector';
+import { RangoPrecioSelectorLaser } from './RangoPrecioSelectorLaser';
 import { ServiciosSelector } from '../shared/ServiciosSelector';
 import { CATEGORIA_IMPRESION_LASER_ID } from '../../../constants/categorias';
 import { AcabadosSelector } from '../shared/AcabadosSelector';
@@ -32,6 +33,7 @@ interface FormErrors {
   espesor?: string;
   tipoVenta?: string;
   cantidadesFijas?: string;
+  rangoPrecioId?: string;
   impuesto?: string;
 }
 
@@ -52,6 +54,7 @@ export function ProductoLaserForm({
   const [espesor, setEspesor] = useState<number | undefined>(undefined);
   const [tipoVenta, setTipoVenta] = useState<'unidades' | 'cantidades_fijas'>('unidades');
   const [cantidadesFijas, setCantidadesFijas] = useState<number[]>([]);
+  const [rangoPrecioId, setRangoPrecioId] = useState<string | undefined>(undefined);
   const [servicios, setServicios] = useState<string[]>([]);
   const [acabados, setAcabados] = useState<string[]>([]);
   const [impuesto, setImpuesto] = useState(21);
@@ -79,6 +82,7 @@ export function ProductoLaserForm({
       setCarasImpresas(producto.caras_impresas);
       setTipoVenta(producto.tipo_venta);
       setCantidadesFijas(producto.cantidades_fijas);
+      setRangoPrecioId(producto.rango_precio_id || undefined);
       setImpuesto(producto.impuesto_iva);
 
       const rutaId = producto.ruta_produccion_id || '';
@@ -141,6 +145,10 @@ export function ProductoLaserForm({
       newErrors.cantidadesFijas = 'Debe agregar al menos una cantidad';
     }
 
+    if (tipoVenta === 'unidades' && !rangoPrecioId) {
+      newErrors.rangoPrecioId = 'Debe seleccionar un rango de precios';
+    }
+
     if (!impuesto) {
       newErrors.impuesto = 'Debe seleccionar un impuesto';
     }
@@ -173,6 +181,7 @@ export function ProductoLaserForm({
       cantidades_fijas: tipoVenta === 'cantidades_fijas' ? cantidadesFijas : [],
       impuesto_iva: impuesto,
       ruta_produccion_id: rutaProduccionId || undefined,
+      rango_precio_id: tipoVenta === 'unidades' ? rangoPrecioId : undefined,
       tecnologia_id: tecnologiaId,
       tintas,
       material_id: materialId,
@@ -302,6 +311,22 @@ export function ProductoLaserForm({
           />
         </div>
       </Card>
+
+      {tipoVenta === 'unidades' && (
+        <Card>
+          <div className="p-6">
+            <RangoPrecioSelectorLaser
+              rangoSeleccionado={rangoPrecioId}
+              onChange={(id) => {
+                setRangoPrecioId(id);
+                onFormChange?.();
+              }}
+              required={true}
+              error={errors.rangoPrecioId}
+            />
+          </div>
+        </Card>
+      )}
 
       <Card>
         <div className="p-6">

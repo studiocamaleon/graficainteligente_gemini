@@ -29,3 +29,32 @@ export function formatRangoValue(min: number, max: number, unidadLabel: string):
 
   return `${min}-${max} ${unidadLabel}`;
 }
+
+export interface RangoDetalle {
+  min: number;
+  max: number | null;
+}
+
+export function findRangoForQuantity(
+  cantidad: number,
+  rangos: RangoDetalle[]
+): RangoDetalle | null {
+  const rangosOrdenados = [...rangos].sort((a, b) => a.min - b.min);
+
+  for (let i = 0; i < rangosOrdenados.length; i++) {
+    const rango = rangosOrdenados[i];
+    const esUltimoRango = i === rangosOrdenados.length - 1;
+
+    if (rango.max === null) {
+      if (cantidad >= rango.min) return rango;
+    }
+    else if (esUltimoRango) {
+      if (cantidad >= rango.min && cantidad <= rango.max) return rango;
+    }
+    else {
+      if (cantidad >= rango.min && cantidad < rango.max) return rango;
+    }
+  }
+
+  return null;
+}

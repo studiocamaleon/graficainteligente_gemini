@@ -19,7 +19,7 @@ export function TipoVentaSelector({
   errors,
 }: TipoVentaSelectorProps) {
   const opciones = [
-    { value: 'unidades', label: 'Por Unidades', descripcion: 'Venta por cantidad de piezas' },
+    { value: 'unidades', label: 'Por Unidades', descripcion: 'Venta por cantidad de piezas (requiere asociar rango de precios)' },
     {
       value: 'cantidades_fijas',
       label: 'Por Cantidades Fijas',

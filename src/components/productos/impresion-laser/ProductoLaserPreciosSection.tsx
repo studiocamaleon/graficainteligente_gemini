@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Package } from 'lucide-react';
 import { ProductoLaserPrecioTable } from './ProductoLaserPrecioTable';
+import { ProductoLaserPrecioMatrizRangos } from './ProductoLaserPrecioMatrizRangos';
 import { useProductoImpresionLaser } from '../../../hooks/useProductosImpresionLaser';
 import { useProductosImpresionLaserPrecios } from '../../../hooks/useProductosImpresionLaserPrecios';
 import { useTecnologiasTintasPasos } from '../../../hooks/useTecnologiasTintasPasos';
@@ -189,6 +190,33 @@ export function ProductoLaserPreciosSection({
   }
 
   const cantidades = getCantidadesParaProducto();
+
+  if (producto.tipo_venta === 'unidades' && producto.rango_precio_id && producto.rango_precio) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <h3 className="text-base font-semibold text-blue-900 mb-2">{producto.nombre}</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm text-blue-800">
+            <div>
+              <span className="font-medium">Medidas:</span> {producto.medidas_disponibles.length}
+            </div>
+            <div>
+              <span className="font-medium">Tintas:</span>{' '}
+              {producto.tecnologias[0]?.tintas.length || 0}
+            </div>
+            <div>
+              <span className="font-medium">Caras:</span> {producto.caras_impresas.length}
+            </div>
+          </div>
+          <div className="mt-2 text-sm text-blue-800">
+            <span className="font-medium">Rango:</span> {producto.rango_precio.nombre}
+          </div>
+        </div>
+
+        <ProductoLaserPrecioMatrizRangos producto={producto} />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

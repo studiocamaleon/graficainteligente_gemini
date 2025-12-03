@@ -18,12 +18,22 @@ export interface ProductoImpresionLaser {
   cantidades_fijas: number[];
   impuesto_iva: number;
   ruta_produccion_id: string | null;
+  rango_precio_id: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
 }
 
 export interface ProductoLaserConRelaciones extends ProductoImpresionLaser {
+  rango_precio?: {
+    id: string;
+    nombre: string;
+    unidad_medida: string;
+    rangos: Array<{
+      min: number;
+      max: number | null;
+    }>;
+  };
   tecnologias: Array<{
     id: string;
     tecnologia_id: string;
@@ -61,6 +71,7 @@ export interface CreateProductoLaserData {
   cantidades_fijas: number[];
   impuesto_iva: number;
   ruta_produccion_id?: string;
+  rango_precio_id?: string;
   tecnologia_id: string;
   tintas: string[];
   material_id: string;
@@ -153,7 +164,10 @@ export function useProductoImpresionLaser(id?: string) {
 
       const { data: productoData, error: productoError } = await supabase
         .from('productos_impresion_laser')
-        .select('*')
+        .select(`
+          *,
+          rango_precio:rangos_precio(id, nombre, unidad_medida, rangos)
+        `)
         .eq('id', id)
         .eq('company_id', profile?.company_id)
         .maybeSingle();
@@ -246,6 +260,7 @@ export function useProductoImpresionLaser(id?: string) {
           cantidades_fijas: data.cantidades_fijas,
           impuesto_iva: data.impuesto_iva,
           ruta_produccion_id: data.ruta_produccion_id || null,
+          rango_precio_id: data.rango_precio_id || null,
         })
         .select()
         .single();
@@ -354,6 +369,7 @@ export function useProductoImpresionLaser(id?: string) {
           cantidades_fijas: data.cantidades_fijas,
           impuesto_iva: data.impuesto_iva,
           ruta_produccion_id: data.ruta_produccion_id || null,
+          rango_precio_id: data.rango_precio_id || null,
         })
         .eq('id', id)
         .eq('company_id', profile?.company_id);
