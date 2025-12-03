@@ -1,17 +1,22 @@
-import { useEffect, useMemo } from 'react';
-import { Package, Loader2 } from 'lucide-react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
+import { Package, Loader2, Percent } from 'lucide-react';
 import { Card } from '../../../../components/ui/Card';
+import { Button } from '../../../../components/ui/Button';
 import { EmptyState } from '../../../../components/ui/EmptyState';
 import { ExportPDFButtonGroup } from '../../../../components/ui/ExportPDFButtonGroup';
 import { MaterialesRigidosPreciosTable } from '../../../../components/productos/materiales-rigidos/MaterialesRigidosPreciosTable';
 import { FloatingPreciosSaveButton } from '../../../../components/productos/impresion-laser/FloatingPreciosSaveButton';
+import { AumentoMasivoPreciosModal } from '../../../../components/productos/shared/AumentoMasivoPreciosModal';
 import { useAllProductosMaterialesRigidosPrecios } from '../../../../hooks/useAllProductosMaterialesRigidosPrecios';
 import { usePDFExport } from '../../../../hooks/usePDFExport';
 import { MaterialesRigidosPDFTemplate } from '../../../../components/pdf/templates/MaterialesRigidosPDFTemplate';
 import { useAuth } from '../../../../hooks/useAuth';
+import { useToast } from '../../../../contexts/ToastContext';
 
 export function PreciosMaterialesRigidosTab() {
   const { profile } = useAuth();
+  const { showToast } = useToast();
+  const [isAumentoModalOpen, setIsAumentoModalOpen] = useState(false);
   const canEditPrecios = useMemo(() => {
     return !['operador_diseno', 'operador_taller'].includes(profile?.role || '');
   }, [profile?.role]);
@@ -46,6 +51,37 @@ export function PreciosMaterialesRigidosTab() {
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [hasUnsavedChanges]);
+
+  // Preparar datos para el modal de aumento masivo
+  const productosParaAumento = useMemo(() => {
+    const productosConPrecios = Object.values(productosAgrupados)
+      .flat()
+      .filter(p => p.precio_actual && p.precio_actual.precio_placa > 0);
+
+    // Agrupar por producto único
+    const productosMap = new Map<string, { nombre: string; precioSum: number; count: number }>();
+
+    productosConPrecios.forEach(p => {
+      const key = p.producto_materiales_rigidos_id;
+      if (!productosMap.has(key)) {
+        productosMap.set(key, { nombre: p.nombre, precioSum: 0, count: 0 });
+      }
+      const prod = productosMap.get(key)!;
+      prod.precioSum += p.precio_actual!.precio_placa;
+      prod.count += 1;
+    });
+
+    return Array.from(productosMap.entries()).map(([id, data]) => ({
+      id,
+      nombre: data.nombre,
+      precio: Math.round((data.precioSum / data.count) * 100) / 100,
+      isActive: true,
+    }));
+  }, [productosAgrupados]);
+
+  const handleAumentoSuccess = useCallback(async () => {
+    window.location.reload();
+  }, []);
 
   if (isLoading) {
     return (
@@ -93,7 +129,16 @@ export function PreciosMaterialesRigidosTab() {
   return (
     <>
       <div className="space-y-6 pb-24">
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-3">
+          {canEditPrecios && productosParaAumento.length > 0 && (
+            <Button
+              variant="secondary"
+              onClick={() => setIsAumentoModalOpen(true)}
+            >
+              <Percent className="w-4 h-4 mr-2" />
+              Aumento Masivo
+            </Button>
+          )}
           <ExportPDFButtonGroup
             onPrint={handlePrint}
             onDownload={handleDownloadPDF}
@@ -142,6 +187,18 @@ export function PreciosMaterialesRigidosTab() {
           productosAgrupados={productosAgrupados}
         />
       </div>
+
+      {isAumentoModalOpen && (
+        <AumentoMasivoPreciosModal
+          isOpen={isAumentoModalOpen}
+          onClose={() => setIsAumentoModalOpen(false)}
+          categoria="materiales_rigidos"
+          productos={productosParaAumento}
+          onSuccess={handleAumentoSuccess}
+          showToast={showToast}
+          tituloCategoria="Materiales Rígidos"
+        />
+      )}
     </>
   );
 }

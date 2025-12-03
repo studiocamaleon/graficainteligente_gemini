@@ -1,16 +1,19 @@
 import { useEffect, useCallback, useState, useMemo } from 'react';
-import { Package, Loader2 } from 'lucide-react';
+import { Package, Loader2, Percent } from 'lucide-react';
 import { Card } from '../../../../components/ui/Card';
+import { Button } from '../../../../components/ui/Button';
 import { EmptyState } from '../../../../components/ui/EmptyState';
 import { ExportPDFButtonGroup } from '../../../../components/ui/ExportPDFButtonGroup';
 import { GranFormatoTecnologiaSection } from '../../../../components/productos/gran-formato/GranFormatoTecnologiaSection';
 import { FloatingPreciosSaveButton } from '../../../../components/productos/impresion-laser/FloatingPreciosSaveButton';
+import { AumentoMasivoPreciosModal } from '../../../../components/productos/shared/AumentoMasivoPreciosModal';
 import { useAllProductosGranFormatoPrecios } from '../../../../hooks/useAllProductosGranFormatoPrecios';
 import { supabase } from '../../../../lib/supabase';
 import type { PrecioGFInput } from '../../../../hooks/useAllProductosGranFormatoPrecios';
 import { usePDFExport } from '../../../../hooks/usePDFExport';
 import { GranFormatoPDFTemplate } from '../../../../components/pdf/templates/GranFormatoPDFTemplate';
 import { useAuth } from '../../../../hooks/useAuth';
+import { useToast } from '../../../../contexts/ToastContext';
 
 interface PreciosSnapshot {
   [key: string]: number;
@@ -59,6 +62,7 @@ const getChangedPrecios = (
 
 export function PreciosGranFormatoTab() {
   const { profile } = useAuth();
+  const { showToast } = useToast();
   const canEditPrecios = useMemo(() => {
     return !['operador_diseno', 'operador_taller'].includes(profile?.role || '');
   }, [profile?.role]);
@@ -78,6 +82,7 @@ export function PreciosGranFormatoTab() {
   >(new Map());
   const [preciosSnapshot, setPreciosSnapshot] = useState<PreciosSnapshot>({});
   const [isLoadingSnapshot, setIsLoadingSnapshot] = useState(true);
+  const [isAumentoModalOpen, setIsAumentoModalOpen] = useState(false);
 
   const { componentRef, isGenerating, handlePrint, handleDownloadPDF } = usePDFExport({
     filename: `Lista_Precios_Gran_Formato_${new Date().toISOString().split('T')[0]}.pdf`,
@@ -270,6 +275,48 @@ export function PreciosGranFormatoTab() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [hasUnsavedChangesLocal]);
 
+  // Preparar datos para el modal de aumento masivo
+  const productosParaAumento = useMemo(() => {
+    // Crear un mapa de productos únicos con su precio promedio
+    const productosMap = new Map<string, { id: string; nombre: string; precio: number; count: number; sum: number }>();
+
+    tecnologiasAgrupadas.forEach((tecnologia) => {
+      tecnologia.productos.forEach((producto) => {
+        producto.tintas.forEach((tinta) => {
+          tinta.rangos.forEach((rango) => {
+            if (rango.precio > 0) {
+              if (!productosMap.has(producto.id)) {
+                productosMap.set(producto.id, {
+                  id: producto.id,
+                  nombre: producto.nombre,
+                  precio: 0,
+                  count: 0,
+                  sum: 0,
+                });
+              }
+              const p = productosMap.get(producto.id)!;
+              p.sum += rango.precio;
+              p.count += 1;
+              p.precio = p.sum / p.count;
+            }
+          });
+        });
+      });
+    });
+
+    return Array.from(productosMap.values()).map((p) => ({
+      id: p.id,
+      nombre: p.nombre,
+      precio: Math.round(p.precio * 100) / 100,
+      isActive: true,
+    }));
+  }, [tecnologiasAgrupadas]);
+
+  const handleAumentoSuccess = useCallback(async () => {
+    // Recargar la página completa para obtener los precios actualizados
+    window.location.reload();
+  }, []);
+
   if (isLoading || isLoadingSnapshot) {
     return (
       <Card>
@@ -326,7 +373,16 @@ export function PreciosGranFormatoTab() {
   return (
     <>
       <div className="space-y-6 pb-24">
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-3">
+          {canEditPrecios && productosParaAumento.length > 0 && (
+            <Button
+              variant="secondary"
+              onClick={() => setIsAumentoModalOpen(true)}
+            >
+              <Percent className="w-4 h-4 mr-2" />
+              Aumento Masivo
+            </Button>
+          )}
           <ExportPDFButtonGroup
             onPrint={handlePrint}
             onDownload={handleDownloadPDF}
@@ -367,6 +423,18 @@ export function PreciosGranFormatoTab() {
           tecnologias={tecnologiasAgrupadas}
         />
       </div>
+
+      {isAumentoModalOpen && (
+        <AumentoMasivoPreciosModal
+          isOpen={isAumentoModalOpen}
+          onClose={() => setIsAumentoModalOpen(false)}
+          categoria="gran_formato"
+          productos={productosParaAumento}
+          onSuccess={handleAumentoSuccess}
+          showToast={showToast}
+          tituloCategoria="Gran Formato"
+        />
+      )}
     </>
   );
 }

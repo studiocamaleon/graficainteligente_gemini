@@ -1,17 +1,21 @@
-import { useEffect, useMemo } from 'react';
-import { Package, Loader2 } from 'lucide-react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
+import { Package, Loader2, Percent } from 'lucide-react';
 import { Card } from '../../../../components/ui/Card';
+import { Button } from '../../../../components/ui/Button';
 import { EmptyState } from '../../../../components/ui/EmptyState';
 import { ExportPDFButtonGroup } from '../../../../components/ui/ExportPDFButtonGroup';
 import { ProductoLaserPreciosCard } from '../../../../components/productos/impresion-laser/ProductoLaserPreciosCard';
 import { FloatingPreciosSaveButton } from '../../../../components/productos/impresion-laser/FloatingPreciosSaveButton';
+import { AumentoMasivoPreciosModal } from '../../../../components/productos/shared/AumentoMasivoPreciosModal';
 import { useAllProductosLaserPrecios } from '../../../../hooks/useAllProductosLaserPrecios';
 import { usePDFExport } from '../../../../hooks/usePDFExport';
 import { ImpresionLaserPDFTemplate } from '../../../../components/pdf/templates/ImpresionLaserPDFTemplate';
 import { useAuth } from '../../../../hooks/useAuth';
+import { useToast } from '../../../../contexts/ToastContext';
 
 export function PreciosLaserTab() {
   const { profile } = useAuth();
+  const { showToast } = useToast();
   const canEditPrecios = useMemo(() => {
     return !['operador_diseno', 'operador_taller'].includes(profile?.role || '');
   }, [profile?.role]);
@@ -26,6 +30,8 @@ export function PreciosLaserTab() {
     getPreciosModificadosCount,
     hasUnsavedChanges,
   } = useAllProductosLaserPrecios();
+
+  const [isAumentoModalOpen, setIsAumentoModalOpen] = useState(false);
 
   const { componentRef, isGenerating, handlePrint, handleDownloadPDF } = usePDFExport({
     filename: `Lista_Precios_Impresion_Laser_${new Date().toISOString().split('T')[0]}.pdf`,
@@ -43,6 +49,26 @@ export function PreciosLaserTab() {
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [hasUnsavedChanges]);
+
+  // Preparar datos para el modal de aumento masivo
+  const productosParaAumento = useMemo(() => {
+    return productos
+      .filter(p => p.preciosExistentes && p.preciosExistentes.length > 0)
+      .map(producto => {
+        // Calcular precio promedio de todas las configuraciones
+        const precioPromedio = producto.preciosExistentes.reduce((sum, p) => sum + (p.precio || 0), 0) / producto.preciosExistentes.length;
+        return {
+          id: producto.id,
+          nombre: producto.nombre,
+          precio: Math.round(precioPromedio * 100) / 100,
+          isActive: true,
+        };
+      });
+  }, [productos]);
+
+  const handleAumentoSuccess = useCallback(async () => {
+    window.location.reload();
+  }, []);
 
   if (isLoading) {
     return (
@@ -86,7 +112,16 @@ export function PreciosLaserTab() {
   return (
     <>
       <div className="space-y-6 pb-24">
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-3">
+          {canEditPrecios && productosParaAumento.length > 0 && (
+            <Button
+              variant="secondary"
+              onClick={() => setIsAumentoModalOpen(true)}
+            >
+              <Percent className="w-4 h-4 mr-2" />
+              Aumento Masivo
+            </Button>
+          )}
           <ExportPDFButtonGroup
             onPrint={handlePrint}
             onDownload={handleDownloadPDF}
@@ -127,6 +162,18 @@ export function PreciosLaserTab() {
           productos={productos}
         />
       </div>
+
+      {isAumentoModalOpen && (
+        <AumentoMasivoPreciosModal
+          isOpen={isAumentoModalOpen}
+          onClose={() => setIsAumentoModalOpen(false)}
+          categoria="impresion_laser"
+          productos={productosParaAumento}
+          onSuccess={handleAumentoSuccess}
+          showToast={showToast}
+          tituloCategoria="Impresión Láser"
+        />
+      )}
     </>
   );
 }
