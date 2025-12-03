@@ -4,9 +4,10 @@
 
 Se ha limpiado completamente la base de datos de todos los datos transaccionales de prueba, dejando el sistema listo para comenzar a trabajar con datos de producción reales.
 
-## Migración Aplicada
+## Migraciones Aplicadas
 
-**Archivo**: `20251203120000_limpiar_datos_prueba_completo.sql`
+1. **Limpieza inicial**: `20251203120000_limpiar_datos_prueba_completo.sql`
+2. **Corrección de saldos**: `20251202003659_fix_saldos_cajas_trigger_y_recalculo.sql`
 
 ## Datos Eliminados
 
@@ -48,7 +49,8 @@ Se limpiaron todos los movimientos financieros de prueba:
 - ✅ Movimientos de cuentas corrientes
 - ✅ Ingresos manuales registrados
 - ✅ Egresos/gastos registrados
-- ✅ Movimientos de cajas relacionados con pagos
+- ✅ **TODOS los movimientos de cajas** (corrección aplicada)
+- ✅ **Saldos de cajas reseteados a 0** (corrección aplicada)
 
 ### 6. Notificaciones
 - ✅ Notificaciones de WhatsApp enviadas
@@ -173,9 +175,11 @@ El sistema está completamente limpio y listo para comenzar a trabajar con:
 
 3. **Integridad mantenida**: Todas las relaciones de claves foráneas y constraints se mantienen intactas.
 
-4. **Triggers activos**: Todos los triggers de auditoría y automatización están activos y funcionando.
+4. **Triggers activos y mejorados**: Todos los triggers de auditoría y automatización están activos. Se agregó un nuevo trigger para recalcular saldos de cajas automáticamente al eliminar movimientos.
 
 5. **Storage limpio**: Se recomienda también limpiar manualmente los buckets de storage si hubiera archivos huérfanos, aunque el sistema de links no los utiliza.
+
+6. **Corrección de saldos aplicada**: Se detectó y corrigió un problema donde los saldos de cajas no se reseteaban correctamente. Ahora todas las cajas tienen saldo 0 y el sistema recalcula saldos automáticamente tanto al agregar como al eliminar movimientos.
 
 ## Próximos Pasos Recomendados
 
@@ -192,6 +196,48 @@ Diciembre 3, 2025
 ## Ejecutado Por
 
 Sistema de migraciones de Supabase
+
+---
+
+## Corrección Aplicada: Saldos de Cajas
+
+### Problema Detectado
+
+Después de ejecutar la limpieza inicial, se detectó que algunas cajas mantenían saldos positivos:
+- "Efectivo ARS": $25,000
+- "Mercado Pago": $139,487.97
+
+### Causa Raíz
+
+1. **Movimientos no completamente eliminados**: La primera migración de limpieza solo eliminó movimientos con `referencia_tipo IN ('pago', 'ingreso', 'egreso')`, pero había otros tipos como `pago_orden`, `pago_copiado`, `ingreso_manual` que no se eliminaron.
+
+2. **Trigger solo en INSERT**: El trigger original `actualizar_saldo_caja()` solo se ejecutaba al insertar movimientos, no al eliminarlos, por lo que los saldos no se recalculaban automáticamente.
+
+3. **Movimientos huérfanos**: Quedaron 11 movimientos huérfanos en la tabla que sumaban a esos saldos incorrectos.
+
+### Solución Implementada
+
+Se creó la migración `20251202003659_fix_saldos_cajas_trigger_y_recalculo.sql` que:
+
+1. ✅ Eliminó TODOS los movimientos de cajas usando `TRUNCATE TABLE cajas_movimientos CASCADE`
+2. ✅ Actualizó todos los saldos de cajas a 0 mediante `UPDATE cajas SET saldo_actual = 0`
+3. ✅ Creó un nuevo trigger `actualizar_saldo_caja_on_delete()` que recalcula saldos al eliminar movimientos
+4. ✅ Agregó el trigger `trigger_actualizar_saldo_caja_on_delete` para eventos DELETE
+
+### Verificación
+
+Después de la corrección:
+- Movimientos totales: **0**
+- Cajas con saldo != 0: **0**
+- Suma total de saldos: **$0**
+
+### Mejora Permanente
+
+Ahora el sistema recalcula los saldos de las cajas automáticamente en los siguientes eventos:
+- ✅ **INSERT**: Al agregar un nuevo movimiento (trigger original)
+- ✅ **DELETE**: Al eliminar un movimiento (trigger nuevo)
+
+Esto previene que vuelva a ocurrir el mismo problema en el futuro y garantiza que los saldos siempre estén sincronizados con los movimientos registrados.
 
 ---
 
