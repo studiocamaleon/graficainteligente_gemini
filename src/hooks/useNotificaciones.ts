@@ -12,16 +12,27 @@ export function useNotificaciones() {
   // Cargar notificaciones
   const cargarNotificaciones = useCallback(async () => {
     try {
+      // Obtener el usuario actual
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) {
+        setNotificaciones([]);
+        setNoLeidas(0);
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('notificaciones_internas')
         .select('*')
+        .eq('usuario_id', user.id)
         .order('created_at', { ascending: false })
         .limit(50);
 
       if (error) throw error;
 
       setNotificaciones(data || []);
-      setNoLeidas((data || []).filter((n) => !n.leida).length);
+      // El contador se recalculará automáticamente por el useEffect
     } catch (error) {
       console.error('Error cargando notificaciones:', error);
     } finally {
@@ -39,6 +50,7 @@ export function useNotificaciones() {
 
       if (error) throw error;
 
+      // Actualizar estado local inmediatamente para mejor UX
       setNotificaciones((prev) =>
         prev.map((n) =>
           n.id === notificacionId
@@ -46,7 +58,7 @@ export function useNotificaciones() {
             : n
         )
       );
-      setNoLeidas((prev) => Math.max(0, prev - 1));
+      // El contador se recalculará automáticamente por el useEffect
     } catch (error) {
       console.error('Error marcando notificación:', error);
     }
@@ -62,6 +74,7 @@ export function useNotificaciones() {
 
       if (error) throw error;
 
+      // Actualizar estado local inmediatamente para mejor UX
       setNotificaciones((prev) =>
         prev.map((n) => ({
           ...n,
@@ -69,7 +82,7 @@ export function useNotificaciones() {
           leida_at: new Date().toISOString(),
         }))
       );
-      setNoLeidas(0);
+      // El contador se recalculará automáticamente por el useEffect
     } catch (error) {
       console.error('Error marcando todas:', error);
     }
@@ -85,17 +98,19 @@ export function useNotificaciones() {
 
       if (error) throw error;
 
-      setNotificaciones((prev) => {
-        const notif = prev.find((n) => n.id === notificacionId);
-        if (notif && !notif.leida) {
-          setNoLeidas((count) => Math.max(0, count - 1));
-        }
-        return prev.filter((n) => n.id !== notificacionId);
-      });
+      // Actualizar estado local inmediatamente para mejor UX
+      setNotificaciones((prev) => prev.filter((n) => n.id !== notificacionId));
+      // El contador se recalculará automáticamente por el useEffect
     } catch (error) {
       console.error('Error eliminando notificación:', error);
     }
   }, []);
+
+  // Recalcular notificaciones no leídas cada vez que cambie el array de notificaciones
+  useEffect(() => {
+    const contadorNoLeidas = notificaciones.filter((n) => !n.leida).length;
+    setNoLeidas(contadorNoLeidas);
+  }, [notificaciones]);
 
   // Suscripción realtime
   useEffect(() => {
@@ -116,7 +131,6 @@ export function useNotificaciones() {
 
           // Agregar al inicio de la lista
           setNotificaciones((prev) => [nuevaNotif, ...prev]);
-          setNoLeidas((prev) => prev + 1);
 
           // Mostrar notificación del navegador si tiene permiso
           if ('Notification' in window && Notification.permission === 'granted') {
@@ -138,15 +152,11 @@ export function useNotificaciones() {
         (payload) => {
           const notifActualizada = payload.new as Notificacion;
 
+          // Actualizar la notificación en el estado
           setNotificaciones((prev) =>
             prev.map((n) => (n.id === notifActualizada.id ? notifActualizada : n))
           );
-
-          // Recalcular no leídas
-          setNotificaciones((prev) => {
-            setNoLeidas(prev.filter((n) => !n.leida).length);
-            return prev;
-          });
+          // El contador se recalculará automáticamente por el useEffect
         }
       )
       .subscribe();
