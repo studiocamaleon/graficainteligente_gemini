@@ -7,6 +7,7 @@ interface UseClientsParams {
   searchTerm?: string;
   isActive?: boolean | null;
   hasCuentaCorriente?: boolean | null;
+  statusAprobacion?: 'pending' | 'approved' | 'rejected' | null;
   page?: number;
   itemsPerPage?: number;
 }
@@ -15,6 +16,7 @@ export function useClients({
   searchTerm = '',
   isActive = null,
   hasCuentaCorriente = null,
+  statusAprobacion = null,
   page = 1,
   itemsPerPage = 25,
 }: UseClientsParams = {}) {
@@ -42,6 +44,10 @@ export function useClients({
 
       if (hasCuentaCorriente !== null) {
         query = query.eq('tiene_cuenta_corriente', hasCuentaCorriente);
+      }
+
+      if (statusAprobacion !== null) {
+        query = query.eq('status_aprobacion', statusAprobacion);
       }
 
       if (searchTerm) {

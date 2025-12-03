@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { Users, Plus, Eye, Edit2, Power, Check, X as XIcon } from 'lucide-react';
+import { Users, Plus, Eye, Edit2, Power, Check, X as XIcon, CheckCircle2, XCircle } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { usePageHeader } from '../../hooks/usePageHeader';
@@ -11,24 +11,33 @@ import { Modal } from '../../components/ui/Modal';
 import { Badge } from '../../components/ui/Badge';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { ClientForm, ClientFormData } from '../../components/clients/ClientForm';
+import { ClienteStatusBadge } from '../../components/clients/ClienteStatusBadge';
+import { AprobarClienteModal } from '../../components/clients/AprobarClienteModal';
+import { RechazarClienteModal } from '../../components/clients/RechazarClienteModal';
+import { DetalleClienteModal } from '../../components/clients/DetalleClienteModal';
 import { useClients } from '../../hooks/useClients';
 import { useClient } from '../../hooks/useClient';
 import { useAuth } from '../../hooks/useAuth';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useConfirmDialog } from '../../hooks/useConfirmDialog';
+import { useToast } from '../../contexts/ToastContext';
 import type { Client } from '../../types/database';
 
 export function Clients() {
   const { profile } = useAuth();
+  const { showToast } = useToast();
   const canEdit = profile?.role && ['super_admin', 'admin', 'manager', 'operador_diseno'].includes(profile.role);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [statusAprobacionFilter, setStatusAprobacionFilter] = useState<string>('all');
   const [cuentaCorrienteFilter, setCuentaCorrienteFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(25);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [isAprobarModalOpen, setIsAprobarModalOpen] = useState(false);
+  const [isRechazarModalOpen, setIsRechazarModalOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
 
@@ -55,11 +64,13 @@ export function Clients() {
 
   const isActiveFilter = statusFilter === 'all' ? null : statusFilter === 'active';
   const hasCuentaCorrienteFilter = cuentaCorrienteFilter === 'all' ? null : cuentaCorrienteFilter === 'yes';
+  const statusAprobacionFilterValue = statusAprobacionFilter === 'all' ? null : (statusAprobacionFilter as 'pending' | 'approved' | 'rejected');
 
   const { clients, totalCount, loading, refetch } = useClients({
     searchTerm: debouncedSearch,
     isActive: isActiveFilter,
     hasCuentaCorriente: hasCuentaCorrienteFilter,
+    statusAprobacion: statusAprobacionFilterValue,
     page: currentPage,
     itemsPerPage,
   });
@@ -130,6 +141,23 @@ export function Clients() {
     }
   };
 
+  const handleAprobar = (client: Client) => {
+    setSelectedClient(client);
+    setIsAprobarModalOpen(true);
+  };
+
+  const handleRechazar = (client: Client) => {
+    setSelectedClient(client);
+    setIsRechazarModalOpen(true);
+  };
+
+  const handleAprobacionSuccess = () => {
+    showToast('Operación realizada exitosamente', 'success');
+    refetch();
+  };
+
+  const pendingCount = clients.filter(c => c.status_aprobacion === 'pending').length;
+
   const columns = [
     {
       key: 'nombre_fantasia',
@@ -154,6 +182,14 @@ export function Clients() {
           <span className="font-mono text-gray-900">{client.numero_documento}</span>
         </div>
       ),
+    },
+    {
+      key: 'status_aprobacion',
+      header: 'Estado Registro',
+      render: (client: Client) => (
+        <ClienteStatusBadge status={client.status_aprobacion || 'approved'} />
+      ),
+      width: '150px',
     },
     {
       key: 'cuenta_corriente',
@@ -192,6 +228,25 @@ export function Clients() {
             <Eye className="w-4 h-4" />
           </button>
 
+          {canEdit && client.status_aprobacion === 'pending' && (
+            <>
+              <button
+                onClick={() => handleAprobar(client)}
+                className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                title="Aprobar"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => handleRechazar(client)}
+                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                title="Rechazar"
+              >
+                <XCircle className="w-4 h-4" />
+              </button>
+            </>
+          )}
+
           {canEdit && (
             <>
               <button
@@ -218,7 +273,7 @@ export function Clients() {
           )}
         </div>
       ),
-      width: '150px',
+      width: '200px',
     },
   ];
 
@@ -226,6 +281,30 @@ export function Clients() {
     <div>
       <Card padding="none">
         <div className="p-6 border-b border-gray-200 space-y-4">
+          {pendingCount > 0 && (
+            <div className="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-4 flex items-center gap-3">
+              <div className="bg-yellow-100 p-2 rounded-lg">
+                <Users className="h-5 w-5 text-yellow-700" />
+              </div>
+              <div className="flex-1">
+                <p className="font-semibold text-yellow-900">
+                  {pendingCount} {pendingCount === 1 ? 'cliente pendiente' : 'clientes pendientes'} de aprobación
+                </p>
+                <p className="text-sm text-yellow-700">
+                  Revisa y aprueba los nuevos registros
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setStatusAprobacionFilter('pending')}
+                className="border-yellow-400 text-yellow-700 hover:bg-yellow-100"
+              >
+                Ver pendientes
+              </Button>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-2">
               <SearchInput
@@ -245,7 +324,18 @@ export function Clients() {
             />
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-4">
+            <Select
+              value={statusAprobacionFilter}
+              onChange={setStatusAprobacionFilter}
+              options={[
+                { value: 'all', label: 'Todas las aprobaciones' },
+                { value: 'pending', label: 'Pendientes' },
+                { value: 'approved', label: 'Aprobados' },
+                { value: 'rejected', label: 'Rechazados' },
+              ]}
+            />
+
             <Select
               value={cuentaCorrienteFilter}
               onChange={setCuentaCorrienteFilter}
@@ -298,92 +388,29 @@ export function Clients() {
         />
       </Modal>
 
-      <Modal
+      <DetalleClienteModal
         isOpen={isDetailModalOpen}
         onClose={() => setIsDetailModalOpen(false)}
-        title="Detalles del Cliente"
-        size="md"
-      >
-        {selectedClient && (
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">Información Fiscal</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-gray-500">Nombre de Fantasía</p>
-                  <p className="font-medium">{selectedClient.nombre_fantasia}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Razón Social</p>
-                  <p className="font-medium">{selectedClient.razon_social}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Documento</p>
-                  <p className="font-medium">
-                    {selectedClient.tipo_documento}: {selectedClient.numero_documento}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Estado</p>
-                  <Badge variant={selectedClient.is_active ? 'primary' : 'secondary'}>
-                    {selectedClient.is_active ? 'Activo' : 'Inactivo'}
-                  </Badge>
-                </div>
-              </div>
-            </div>
+        cliente={selectedClient}
+      />
 
-            <div>
-              <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">Contacto</h3>
-              <div className="grid grid-cols-2 gap-4">
-                {selectedClient.whatsapp && (
-                  <div>
-                    <p className="text-sm text-gray-500">WhatsApp</p>
-                    <p className="font-medium">{selectedClient.whatsapp}</p>
-                  </div>
-                )}
-                {selectedClient.email && (
-                  <div>
-                    <p className="text-sm text-gray-500">Email</p>
-                    <p className="font-medium">{selectedClient.email}</p>
-                  </div>
-                )}
-              </div>
-            </div>
+      {selectedClient && (
+        <>
+          <AprobarClienteModal
+            isOpen={isAprobarModalOpen}
+            onClose={() => setIsAprobarModalOpen(false)}
+            cliente={selectedClient}
+            onSuccess={handleAprobacionSuccess}
+          />
 
-            {selectedClient.domicilio && (
-              <div>
-                <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">Ubicación</h3>
-                <div className="space-y-2">
-                  <p className="font-medium">{selectedClient.domicilio}</p>
-                  {selectedClient.codigo_postal && (
-                    <p className="text-sm text-gray-600">CP: {selectedClient.codigo_postal}</p>
-                  )}
-                </div>
-              </div>
-            )}
-
-            <div>
-              <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">Cuenta Corriente</h3>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <p className="text-sm text-gray-600">Estado:</p>
-                  {selectedClient.tiene_cuenta_corriente ? (
-                    <Badge variant="primary" size="sm">Habilitada</Badge>
-                  ) : (
-                    <Badge variant="secondary" size="sm">No tiene</Badge>
-                  )}
-                </div>
-                {selectedClient.tiene_cuenta_corriente && selectedClient.acuerdo_pago && (
-                  <div>
-                    <p className="text-sm text-gray-600">Acuerdo de Pago:</p>
-                    <p className="font-medium">{selectedClient.acuerdo_pago}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-      </Modal>
+          <RechazarClienteModal
+            isOpen={isRechazarModalOpen}
+            onClose={() => setIsRechazarModalOpen(false)}
+            cliente={selectedClient}
+            onSuccess={handleAprobacionSuccess}
+          />
+        </>
+      )}
 
       <ConfirmDialog
         isOpen={dialogState.isOpen}
