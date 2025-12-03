@@ -1,17 +1,23 @@
-import { useEffect, useMemo } from 'react';
-import { Package, Loader2 } from 'lucide-react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
+import { Package, Loader2, Percent } from 'lucide-react';
 import { Card } from '../../../../components/ui/Card';
+import { Button } from '../../../../components/ui/Button';
 import { EmptyState } from '../../../../components/ui/EmptyState';
 import { ExportPDFButtonGroup } from '../../../../components/ui/ExportPDFButtonGroup';
 import { ProductoTalonarioPreciosCard } from '../../../../components/productos/talonarios/ProductoTalonarioPreciosCard';
 import { FloatingPreciosSaveButton } from '../../../../components/productos/talonarios/FloatingPreciosSaveButton';
+import { AumentoMasivoPreciosModal } from '../../../../components/productos/shared/AumentoMasivoPreciosModal';
 import { useAllProductosTalonariosPrecios } from '../../../../hooks/useAllProductosTalonariosPrecios';
 import { usePDFExport } from '../../../../hooks/usePDFExport';
 import { TalonariosPDFTemplate } from '../../../../components/pdf/templates/TalonariosPDFTemplate';
 import { useAuth } from '../../../../hooks/useAuth';
+import { useToast } from '../../../../contexts/ToastContext';
 
 export function PreciosTalonariosTab() {
   const { profile } = useAuth();
+  const { showToast } = useToast();
+  const [isAumentoModalOpen, setIsAumentoModalOpen] = useState(false);
+
   const canEditPrecios = useMemo(() => {
     return !['operador_diseno', 'operador_taller'].includes(profile?.role || '');
   }, [profile?.role]);
@@ -30,6 +36,34 @@ export function PreciosTalonariosTab() {
   const { componentRef, isGenerating, handlePrint, handleDownloadPDF } = usePDFExport({
     filename: `Lista_Precios_Impresion_Talonario_${new Date().toISOString().split('T')[0]}.pdf`,
   });
+
+  // Preparar datos para el modal de aumento masivo
+  const productosParaAumento = useMemo(() => {
+    return productos
+      .filter(p => {
+        // Verificar que tenga al menos un precio configurado
+        return p.precios && p.precios.some(precio => precio.precio > 0);
+      })
+      .map(p => {
+        // Calcular precio promedio
+        const preciosValidos = p.precios.filter(precio => precio.precio > 0);
+        const precioPromedio = preciosValidos.length > 0
+          ? preciosValidos.reduce((sum, precio) => sum + precio.precio, 0) / preciosValidos.length
+          : 0;
+
+        return {
+          id: p.id,
+          nombre: p.nombre,
+          precio: Math.round(precioPromedio * 100) / 100,
+          descripcion: p.descripcion || '',
+        };
+      });
+  }, [productos]);
+
+  const handleAumentoSuccess = useCallback(() => {
+    // Refrescar datos después de aplicar aumento
+    window.location.reload();
+  }, []);
 
   // Warn user before leaving with unsaved changes
   useEffect(() => {
@@ -86,7 +120,16 @@ export function PreciosTalonariosTab() {
   return (
     <>
       <div className="space-y-6 pb-24">
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-3">
+          {canEditPrecios && productos.length > 0 && (
+            <Button
+              variant="secondary"
+              onClick={() => setIsAumentoModalOpen(true)}
+            >
+              <Percent className="w-4 h-4 mr-2" />
+              Aumento Masivo
+            </Button>
+          )}
           <ExportPDFButtonGroup
             onPrint={handlePrint}
             onDownload={handleDownloadPDF}
@@ -127,6 +170,18 @@ export function PreciosTalonariosTab() {
           productos={productos}
         />
       </div>
+
+      {isAumentoModalOpen && (
+        <AumentoMasivoPreciosModal
+          isOpen={isAumentoModalOpen}
+          onClose={() => setIsAumentoModalOpen(false)}
+          categoria="talonarios"
+          productos={productosParaAumento}
+          onSuccess={handleAumentoSuccess}
+          showToast={showToast}
+          tituloCategoria="Talonarios"
+        />
+      )}
     </>
   );
 }
