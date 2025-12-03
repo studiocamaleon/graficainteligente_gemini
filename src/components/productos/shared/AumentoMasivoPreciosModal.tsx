@@ -42,8 +42,9 @@ export function AumentoMasivoPreciosModal({
   const [searchTerm, setSearchTerm] = useState('');
   const [confirmarCambios, setConfirmarCambios] = useState(false);
   const [mostrarPreview, setMostrarPreview] = useState(false);
+  const [conteoPreciosReales, setConteoPreciosReales] = useState<Map<string, number>>(new Map());
 
-  const { aplicarAumento, previsualizarAumento, isLoading, error, resetError } = useAumentoMasivoPreciosProductos();
+  const { aplicarAumento, previsualizarAumento, contarPreciosReales, isLoading, error, resetError } = useAumentoMasivoPreciosProductos();
 
   // Resetear estado al abrir/cerrar modal
   useEffect(() => {
@@ -87,7 +88,8 @@ export function AumentoMasivoPreciosModal({
   const stats = useMemo(() => {
     if (preview.length === 0) {
       return {
-        total: 0,
+        totalProductos: 0,
+        totalRegistros: 0,
         promedioActual: 0,
         promedioNuevo: 0,
         diferenciaTotal: 0,
@@ -98,13 +100,21 @@ export function AumentoMasivoPreciosModal({
     const promedioNuevo = preview.reduce((sum, p) => sum + p.precioNuevo, 0) / preview.length;
     const diferenciaTotal = preview.reduce((sum, p) => sum + p.diferencia, 0);
 
+    // Calcular total de registros que se actualizarán
+    let totalRegistros = 0;
+    preview.forEach(p => {
+      const conteo = conteoPreciosReales.get(p.id) || 1;
+      totalRegistros += conteo;
+    });
+
     return {
-      total: preview.length,
+      totalProductos: preview.length,
+      totalRegistros,
       promedioActual,
       promedioNuevo,
       diferenciaTotal,
     };
-  }, [preview]);
+  }, [preview, conteoPreciosReales]);
 
   const handleToggleProducto = (id: string) => {
     const newSet = new Set(productosSeleccionados);
@@ -124,7 +134,7 @@ export function AumentoMasivoPreciosModal({
     setProductosSeleccionados(new Set());
   };
 
-  const handleGenerarPreview = () => {
+  const handleGenerarPreview = async () => {
     const porcentajeNum = parseFloat(porcentaje);
 
     if (!porcentaje || isNaN(porcentajeNum)) {
@@ -151,6 +161,11 @@ export function AumentoMasivoPreciosModal({
       showToast('No hay productos con precios configurados. Configura precios primero antes de aplicar aumentos masivos.', 'error');
       return;
     }
+
+    // Cargar conteo de precios reales
+    const productosIds = productosConPrecios.map(p => p.id);
+    const conteo = await contarPreciosReales(categoria, productosIds);
+    setConteoPreciosReales(conteo);
 
     setMostrarPreview(true);
   };
@@ -341,11 +356,22 @@ export function AumentoMasivoPreciosModal({
             <div className="bg-gradient-to-r from-green-50 to-emerald-50 px-6 py-4 border-b border-green-200">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Vista Previa de Cambios</h3>
 
+              {/* Nota informativa */}
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  <strong>Nota:</strong> Los precios mostrados son promedios por producto. Se actualizarán <strong>todas las configuraciones de precio</strong> de cada producto (medidas, cantidades, tintas, etc.).
+                </p>
+              </div>
+
               {/* Estadísticas */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 <div className="bg-white p-4 rounded-lg border border-green-200">
-                  <p className="text-sm text-gray-600">Total Productos</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+                  <p className="text-sm text-gray-600">Productos</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.totalProductos}</p>
+                </div>
+                <div className="bg-white p-4 rounded-lg border border-green-200">
+                  <p className="text-sm text-gray-600">Registros a Actualizar</p>
+                  <p className="text-2xl font-bold text-blue-700">{stats.totalRegistros}</p>
                 </div>
                 <div className="bg-white p-4 rounded-lg border border-green-200">
                   <p className="text-sm text-gray-600">Precio Prom. Actual</p>
@@ -372,11 +398,14 @@ export function AumentoMasivoPreciosModal({
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                       Producto
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
-                      Precio Actual
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">
+                      Configs.
                     </th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
-                      Precio Nuevo
+                      Precio Prom. Actual
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                      Precio Prom. Nuevo
                     </th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
                       Diferencia
@@ -384,27 +413,35 @@ export function AumentoMasivoPreciosModal({
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {preview.slice(0, 10).map((item) => (
-                    <tr key={item.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 text-sm text-gray-900 truncate max-w-xs">
-                        {item.nombre}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-right text-gray-600">
-                        {formatPrecio(item.precioActual)}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-right font-semibold text-green-700">
-                        {formatPrecio(item.precioNuevo)}
-                      </td>
-                      <td className={`px-6 py-4 text-sm text-right font-medium ${item.diferencia >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-                        {item.diferencia >= 0 ? '+' : ''}{formatPrecio(item.diferencia)}
-                      </td>
-                    </tr>
-                  ))}
+                  {preview.slice(0, 10).map((item) => {
+                    const cantidadPrecios = conteoPreciosReales.get(item.id) || 1;
+                    return (
+                      <tr key={item.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 text-sm text-gray-900 truncate max-w-xs">
+                          {item.nombre}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-center">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {cantidadPrecios}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-right text-gray-600">
+                          {formatPrecio(item.precioActual)}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-right font-semibold text-green-700">
+                          {formatPrecio(item.precioNuevo)}
+                        </td>
+                        <td className={`px-6 py-4 text-sm text-right font-medium ${item.diferencia >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                          {item.diferencia >= 0 ? '+' : ''}{formatPrecio(item.diferencia)}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
               {preview.length > 10 && (
                 <div className="px-6 py-3 bg-gray-50 border-t border-gray-200 text-center text-sm text-gray-500">
-                  Mostrando 10 de {preview.length} productos. Todos serán actualizados.
+                  Mostrando 10 de {stats.totalProductos} productos ({stats.totalRegistros} registros de precios). Todos serán actualizados.
                 </div>
               )}
             </div>
@@ -419,7 +456,7 @@ export function AumentoMasivoPreciosModal({
               <div className="flex-1">
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">Confirmar Cambios</h3>
                 <p className="text-sm text-gray-700 mb-4">
-                  Esta acción actualizará {stats.total} registros de precios y <strong>no se puede deshacer</strong>.
+                  Esta acción actualizará <strong>{stats.totalRegistros} registros de precios</strong> en {stats.totalProductos} productos y <strong>no se puede deshacer</strong>.
                   Por favor, revisa cuidadosamente la vista previa antes de continuar.
                 </p>
 

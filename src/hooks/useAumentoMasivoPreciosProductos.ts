@@ -17,13 +17,14 @@ interface AumentoMasivoResult {
   porcentaje_aplicado: number;
 }
 
-interface ProductoPreview {
+export interface ProductoPreview {
   id: string;
   nombre: string;
   precioActual: number;
   precioNuevo: number;
   diferencia: number;
   diferenciaPorcentaje: number;
+  cantidadPrecios?: number;
 }
 
 export function useAumentoMasivoPreciosProductos() {
@@ -119,6 +120,78 @@ export function useAumentoMasivoPreciosProductos() {
     });
   };
 
+  const contarPreciosReales = async (
+    categoria: CategoriaProducto,
+    productosIds: string[]
+  ): Promise<Map<string, number>> => {
+    const conteoMap = new Map<string, number>();
+
+    if (productosIds.length === 0) {
+      return conteoMap;
+    }
+
+    try {
+      let tableName = '';
+      let columnName = '';
+
+      // Determinar tabla y columna según categoría
+      switch (categoria) {
+        case 'impresion_laser':
+          tableName = 'productos_impresion_laser_precios';
+          columnName = 'producto_laser_id';
+          break;
+        case 'gran_formato':
+          tableName = 'productos_gran_formato_precios';
+          columnName = 'producto_gran_formato_id';
+          break;
+        case 'materiales_rigidos':
+          tableName = 'productos_materiales_rigidos_precios';
+          columnName = 'producto_materiales_rigidos_id';
+          break;
+        case 'plotter_corte':
+          tableName = 'productos_plotter_corte_precios';
+          columnName = 'producto_id';
+          break;
+        case 'portabanners':
+          tableName = 'productos_portabanners_precios';
+          columnName = 'producto_id';
+          break;
+        case 'sellos':
+          tableName = 'productos_sellos_precios';
+          columnName = 'producto_id';
+          break;
+        case 'talonarios':
+          tableName = 'productos_talonarios_precios';
+          columnName = 'producto_talonario_id';
+          break;
+        default:
+          return conteoMap;
+      }
+
+      // Consultar conteo de precios por producto
+      const { data, error } = await supabase
+        .from(tableName)
+        .select(`${columnName}`)
+        .in(columnName, productosIds);
+
+      if (error) {
+        console.error('Error contando precios:', error);
+        return conteoMap;
+      }
+
+      // Contar ocurrencias por producto
+      data?.forEach((row: any) => {
+        const productoId = row[columnName];
+        conteoMap.set(productoId, (conteoMap.get(productoId) || 0) + 1);
+      });
+
+      return conteoMap;
+    } catch (error) {
+      console.error('Error en contarPreciosReales:', error);
+      return conteoMap;
+    }
+  };
+
   const resetError = () => setError(null);
   const resetLastResult = () => setLastResult(null);
 
@@ -126,6 +199,7 @@ export function useAumentoMasivoPreciosProductos() {
     aplicarAumento,
     previsualizarAumento,
     calcularPreviewPorcentaje,
+    contarPreciosReales,
     isLoading,
     error,
     lastResult,
