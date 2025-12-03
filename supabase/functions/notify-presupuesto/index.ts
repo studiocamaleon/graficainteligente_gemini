@@ -52,7 +52,7 @@ function generatePresupuestoListoMessage(
   origin: string
 ): string {
   const trackingUrl = `${origin}/tracking/presupuesto/${presupuesto.tracking_token}`;
-  const empresa = company.nombre_empresa || 'Nuestra empresa';
+  const empresa = company.name || 'Nuestra empresa';
 
   let mensaje = `¡Hola ${cliente.nombre_fantasia || cliente.razon_social}! 👋\n\n`;
   mensaje += `Tu presupuesto ${presupuesto.numero_presupuesto} ya está listo. 📋\n\n`;
@@ -80,7 +80,7 @@ function generatePresupuestoAprobadoMessage(
   cliente: any,
   company: any
 ): string {
-  const empresa = company.nombre_empresa || 'Nuestra empresa';
+  const empresa = company.name || 'Nuestra empresa';
 
   let mensaje = `¡Gracias ${cliente.nombre_fantasia || cliente.razon_social}! 🎉\n\n`;
   mensaje += `Confirmamos la aprobación del presupuesto ${presupuesto.numero_presupuesto}.\n\n`;
@@ -97,7 +97,7 @@ function generatePresupuestoVencidoMessage(
   origin: string
 ): string {
   const trackingUrl = `${origin}/tracking/presupuesto/${presupuesto.tracking_token}`;
-  const empresa = company.nombre_empresa || 'Nuestra empresa';
+  const empresa = company.name || 'Nuestra empresa';
 
   let mensaje = `Hola ${cliente.nombre_fantasia || cliente.razon_social},\n\n`;
   mensaje += `Te recordamos que el presupuesto ${presupuesto.numero_presupuesto} está próximo a vencer.\n\n`;
@@ -129,9 +129,6 @@ Deno.serve(async (req: Request) => {
   try {
     const payload: PresupuestoNotification = await req.json();
 
-    // Verificación de seguridad:
-    // - Llamadas desde triggers SQL: requieren X-Trigger-Secret
-    // - Llamadas desde frontend: requieren Authorization + company_id en payload
     const triggerSecret = Deno.env.get('TRIGGER_SECRET_TOKEN');
     const providedSecret = req.headers.get('X-Trigger-Secret');
     const authHeader = req.headers.get('Authorization');
@@ -140,7 +137,7 @@ Deno.serve(async (req: Request) => {
     const isFrontendCall = authHeader && authHeader.startsWith('Bearer ');
 
     if (!isTriggerCall && !isFrontendCall) {
-      console.error('[Security] Intento de acceso no autorizado - no trigger secret ni auth header');
+      console.error('[Security] Intento de acceso no autorizado');
       return new Response(
         JSON.stringify({ error: 'No autorizado' }),
         {
@@ -181,7 +178,7 @@ Deno.serve(async (req: Request) => {
       .maybeSingle();
 
     if (yaEnviado) {
-      console.log('[Notify Presupuesto] ⚠️ Ya se envió notificación. Skipping.');
+      console.log('[Notify Presupuesto] Ya se envió notificación. Skipping.');
       return new Response(
         JSON.stringify({ success: true, message: 'Ya se envió previamente' }),
         {
@@ -218,11 +215,11 @@ Deno.serve(async (req: Request) => {
 
     const { data: company } = await supabase
       .from('companies')
-      .select('nombre_empresa, whatsapp_instance_id, whatsapp_notifications_enabled')
+      .select('name, whatsapp_notifications_enabled')
       .eq('id', company_id)
       .single();
 
-    if (!company?.whatsapp_notifications_enabled || !company?.whatsapp_instance_id) {
+    if (!company?.whatsapp_notifications_enabled) {
       console.log('[Notify Presupuesto] WhatsApp deshabilitado para esta empresa');
       return new Response(
         JSON.stringify({ success: false, message: 'WhatsApp no configurado' }),
@@ -278,7 +275,7 @@ Deno.serve(async (req: Request) => {
 
     const mensajeSanitizado = sanitizeMessage(mensaje);
 
-    console.log('[Notify Presupuesto] 📤 Enviando mensaje a:', clienteWhatsapp);
+    console.log('[Notify Presupuesto] Enviando mensaje a:', clienteWhatsapp);
 
     const WHATSAPP_BACKEND_URL = Deno.env.get('WHATSAPP_BACKEND_URL') || 'https://whatsapp-backend-w6ot.onrender.com';
 
@@ -286,7 +283,7 @@ Deno.serve(async (req: Request) => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        companyId: company.whatsapp_instance_id,
+        companyId: company_id,
         to: clienteWhatsapp,
         message: mensajeSanitizado,
       }),
@@ -295,7 +292,7 @@ Deno.serve(async (req: Request) => {
     const whatsappResult = await whatsappResponse.json();
 
     if (!whatsappResponse.ok) {
-      console.error('[Notify Presupuesto] ❌ Error enviando WhatsApp:', whatsappResult);
+      console.error('[Notify Presupuesto] Error enviando WhatsApp:', whatsappResult);
       throw new Error(`Error de WhatsApp: ${whatsappResult.error || 'Desconocido'}`);
     }
 
@@ -308,7 +305,7 @@ Deno.serve(async (req: Request) => {
       estado: 'enviado',
     });
 
-    console.log('[Notify Presupuesto] ✅ Notificación enviada exitosamente');
+    console.log('[Notify Presupuesto] Notificación enviada exitosamente');
 
     return new Response(
       JSON.stringify({ success: true, message: 'Notificación enviada' }),
@@ -318,7 +315,7 @@ Deno.serve(async (req: Request) => {
       }
     );
   } catch (error: any) {
-    console.error('[Notify Presupuesto] ❌ Error:', error);
+    console.error('[Notify Presupuesto] Error:', error);
     return new Response(
       JSON.stringify({ error: error.message || 'Error interno' }),
       {
