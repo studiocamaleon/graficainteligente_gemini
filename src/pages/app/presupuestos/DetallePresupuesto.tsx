@@ -5,6 +5,7 @@ import { usePresupuesto } from '../../../hooks/usePresupuesto';
 import { usePresupuestos } from '../../../hooks/usePresupuestos';
 import { useConfirmDialog } from '../../../hooks/useConfirmDialog';
 import { useCompany } from '../../../hooks/useCompany';
+import { usePageHeader } from '../../../hooks/usePageHeader';
 import { descargarPresupuestoPDF } from '../../../utils/pdfGenerators/presupuestoPDF';
 import { Button } from '../../../components/ui/Button';
 import { Tabs } from '../../../components/ui/Tabs';
@@ -25,6 +26,8 @@ export default function DetallePresupuesto() {
   const { presupuesto, loading, error } = usePresupuesto(id || '');
   const { deletePresupuesto, duplicarPresupuesto, enviarPresupuesto, enviarNotificacionPresupuesto, convertirAOrden } = usePresupuestos();
   const { company } = useCompany();
+
+  usePageHeader(presupuesto ? `Presupuesto ${presupuesto.numero_presupuesto}` : 'Cargando presupuesto...');
 
   const [activeTab, setActiveTab] = useState<TabId>('items');
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
