@@ -67,6 +67,18 @@ export function useAumentoMasivoPreciosProductos() {
 
       if (rpcError) {
         console.error('Error en RPC:', rpcError);
+
+        // Detectar error específico de precios huérfanos en materiales rígidos
+        if (rpcError.message?.includes('PRECIOS_HUERFANOS')) {
+          const match = rpcError.message.match(/Se encontraron (\d+) precios/);
+          const cantidad = match ? match[1] : 'algunos';
+          throw new Error(
+            `Se encontraron ${cantidad} precios sin configuración válida de material. ` +
+            `Esto puede ocurrir si se eliminaron materiales o variantes después de configurar precios. ` +
+            `Por favor, contacta al administrador del sistema para corregir estos datos antes de aplicar aumentos masivos.`
+          );
+        }
+
         throw new Error(rpcError.message || 'Error al aplicar el aumento de precios');
       }
 
@@ -192,6 +204,60 @@ export function useAumentoMasivoPreciosProductos() {
     }
   };
 
+  const diagnosticarPreciosHuerfanos = async (): Promise<any[]> => {
+    try {
+      const { data, error } = await supabase.rpc('fn_diagnosticar_precios_huerfanos_mr');
+
+      if (error) {
+        console.error('Error diagnosticando precios huérfanos:', error);
+        throw new Error(error.message);
+      }
+
+      return data || [];
+    } catch (err) {
+      console.error('Error en diagnosticarPreciosHuerfanos:', err);
+      throw err;
+    }
+  };
+
+  const recrearCombinacionesFaltantes = async (): Promise<{ success: boolean; registros_creados: number; mensaje: string }> => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase.rpc('fn_recrear_combinaciones_faltantes_mr');
+
+      if (error) {
+        console.error('Error recreando combinaciones:', error);
+        throw new Error(error.message);
+      }
+
+      return data as { success: boolean; registros_creados: number; mensaje: string };
+    } catch (err) {
+      console.error('Error en recrearCombinacionesFaltantes:', err);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const eliminarPreciosHuerfanos = async (): Promise<{ success: boolean; registros_eliminados: number; mensaje: string }> => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase.rpc('fn_eliminar_precios_huerfanos_mr');
+
+      if (error) {
+        console.error('Error eliminando precios huérfanos:', error);
+        throw new Error(error.message);
+      }
+
+      return data as { success: boolean; registros_eliminados: number; mensaje: string };
+    } catch (err) {
+      console.error('Error en eliminarPreciosHuerfanos:', err);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const resetError = () => setError(null);
   const resetLastResult = () => setLastResult(null);
 
@@ -200,6 +266,9 @@ export function useAumentoMasivoPreciosProductos() {
     previsualizarAumento,
     calcularPreviewPorcentaje,
     contarPreciosReales,
+    diagnosticarPreciosHuerfanos,
+    recrearCombinacionesFaltantes,
+    eliminarPreciosHuerfanos,
     isLoading,
     error,
     lastResult,
