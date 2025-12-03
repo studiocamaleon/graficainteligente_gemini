@@ -629,19 +629,49 @@ export function OrderDetailPage() {
 
                 {canViewPrices && (
                   <div className="border-t border-gray-200 pt-4 mt-6">
-                    <div className="flex justify-end items-center gap-8">
-                      <div className="text-right">
-                        <p className="text-sm text-gray-600">Subtotal</p>
-                        <p className="text-lg font-semibold text-gray-900">
+                    <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                      {/* Subtotal */}
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-600">Subtotal</span>
+                        <span className="text-sm font-medium text-gray-900">
                           ${Number(orden.subtotal).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                        </p>
+                        </span>
                       </div>
 
-                      <div className="text-right">
-                        <p className="text-sm text-gray-600">Total</p>
-                        <p className="text-2xl font-bold text-blue-600">
+                      {/* Descuentos (si hay) */}
+                      {Number(orden.total_descuentos || 0) > 0 && (
+                        <>
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-gray-600">Descuento</span>
+                            <span className="text-sm font-medium text-red-600">
+                              -${Number(orden.total_descuentos).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center pt-1 border-t border-gray-200">
+                            <span className="text-sm text-gray-600">Base Imponible</span>
+                            <span className="text-sm font-medium text-gray-900">
+                              ${(Number(orden.subtotal) - Number(orden.total_descuentos)).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                            </span>
+                          </div>
+                        </>
+                      )}
+
+                      {/* IVA (si requiere factura) */}
+                      {orden.requiere_factura && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-600">IVA 21%</span>
+                          <span className="text-sm font-medium text-blue-600">
+                            +${Number(orden.subtotal_iva || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Total (destacado) */}
+                      <div className="flex justify-between items-center pt-3 border-t-2 border-gray-300">
+                        <span className="text-base font-semibold text-gray-900">Total</span>
+                        <span className="text-2xl font-bold text-blue-600">
                           ${Number(orden.total).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                        </p>
+                        </span>
                       </div>
                     </div>
                   </div>

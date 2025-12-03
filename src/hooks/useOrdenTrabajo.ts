@@ -710,11 +710,15 @@ export function useOrdenTrabajo() {
           }
         }
 
-        // 4. Actualizar totales
+        // 4. Actualizar totales recalculando desde items pero manteniendo descuentos e IVA
         const subtotal = data.items.reduce((sum, item) => sum + item.precio_total, 0);
+        const totalDescuentos = newOrden.total_descuentos || 0;
+        const subtotalIva = newOrden.subtotal_iva || 0;
+        const total = subtotal - totalDescuentos + subtotalIva;
+
         await supabase
           .from('ordenes_trabajo')
-          .update({ subtotal, total: subtotal })
+          .update({ subtotal, total })
           .eq('id', newOrden.id);
       }
 
