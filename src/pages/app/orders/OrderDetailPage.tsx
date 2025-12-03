@@ -542,17 +542,32 @@ export function OrderDetailPage() {
                               {item.producto_categoria}
                             </Badge>
                           )}
+                          {item.tipo_item === 'personalizado' && (
+                            <Badge variant="purple" className="text-xs">
+                              Personalizado
+                            </Badge>
+                          )}
                         </div>
 
-                        {/* Línea 2: Material */}
-                        {materialStr && (
+                        {/* Para items personalizados: mostrar descripción */}
+                        {item.tipo_item === 'personalizado' && item.descripcion && (
+                          <div className="mb-2 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                            <p className="text-sm font-medium text-purple-900 mb-1">Descripción:</p>
+                            <p className="text-sm text-purple-800 whitespace-pre-wrap">
+                              {item.descripcion}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Para items del catálogo: mostrar material */}
+                        {item.tipo_item !== 'personalizado' && materialStr && (
                           <p className="text-sm text-gray-600 mb-1">
                             <span className="font-medium">Material:</span> {materialStr}
                           </p>
                         )}
 
-                        {/* Línea 3: Servicios y Acabados */}
-                        {(servicios || acabados) && (
+                        {/* Para items del catálogo: mostrar servicios y acabados */}
+                        {item.tipo_item !== 'personalizado' && (servicios || acabados) && (
                           <p className="text-sm text-gray-600 mb-2">
                             {servicios && (
                               <>

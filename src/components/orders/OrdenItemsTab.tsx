@@ -13,9 +13,12 @@ import { AddItemPersonalizadoOrdenModal } from './AddItemPersonalizadoOrdenModal
 
 interface OrdenItem {
   id?: string;
-  producto_id: string;
+  tipo_item?: 'catalogo' | 'personalizado';
+  producto_id: string | null;
   producto_nombre: string;
   producto_categoria?: string;
+  descripcion?: string;
+  tiempo_produccion_dias?: number;
   cantidad: number;
   configuracion: any;
   precio_base: number;
@@ -267,8 +270,19 @@ export function OrdenItemsTab({
       header: 'Item y Configuración',
       render: (item: OrdenItem) => (
         <div>
-          <div className="font-medium text-gray-900 mb-1">{item.producto_nombre}</div>
-          {renderConfiguracion(item.configuracion)}
+          <div className="flex items-center gap-2 mb-1">
+            <div className="font-medium text-gray-900">{item.producto_nombre}</div>
+            {item.tipo_item === 'personalizado' && (
+              <Badge variant="purple" size="sm">Personalizado</Badge>
+            )}
+          </div>
+          {item.tipo_item === 'personalizado' && item.descripcion ? (
+            <div className="text-sm text-gray-600 whitespace-pre-wrap">
+              {item.descripcion}
+            </div>
+          ) : (
+            renderConfiguracion(item.configuracion)
+          )}
         </div>
       ),
     },
