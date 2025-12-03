@@ -19,8 +19,8 @@ type TabId = 'general' | 'items' | 'condiciones' | 'resumen';
 
 export default function CrearPresupuesto() {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const { createPresupuesto, enviarNotificacionPresupuesto } = usePresupuestos();
+  const { user, profile } = useAuth();
+  const { createPresupuesto } = usePresupuestos();
   const { clients } = useClients();
 
   const [activeTab, setActiveTab] = useState<TabId>('general');
@@ -194,22 +194,31 @@ export default function CrearPresupuesto() {
         })
         .eq('id', presupuesto.id);
 
-      // Si se creó con estado "enviado", enviar notificación de WhatsApp
-      if (enviar) {
-        try {
-          await enviarNotificacionPresupuesto(presupuesto.id, 'presupuesto_listo');
-          console.log('[CrearPresupuesto] Notificación de WhatsApp enviada');
-        } catch (notifError) {
-          console.warn('[CrearPresupuesto] Error enviando notificación (no crítico):', notifError);
-          // No fallar la creación si falla la notificación
-        }
-      }
-
       setSuccessMessage(
         enviar
           ? 'Presupuesto creado y enviado correctamente'
           : 'Presupuesto guardado como borrador'
       );
+
+      // Enviar notificación de WhatsApp vía Edge Function (no bloqueante)
+      if (enviar && profile?.company_id && presupuesto.id) {
+        supabase.functions.invoke('notify-presupuesto', {
+          body: {
+            presupuesto_id: presupuesto.id,
+            company_id: profile.company_id,
+            tipo_notificacion: 'presupuesto_listo',
+            frontend_origin: window.location.origin
+          }
+        }).then(({ data, error }) => {
+          if (error) {
+            console.error('[CrearPresupuesto] Error al enviar notificación:', error);
+          } else if (data?.success) {
+            console.log('[CrearPresupuesto] Notificación de WhatsApp enviada exitosamente');
+          }
+        }).catch((err) => {
+          console.error('[CrearPresupuesto] Error al invocar Edge Function:', err);
+        });
+      }
 
       setTimeout(() => {
         navigate(`/app/presupuestos/${presupuesto.id}`);
