@@ -173,23 +173,67 @@ async function getPrecioImpresionLaser(
     return null;
   }
 
-  const { data, error } = await supabase
-    .from('productos_impresion_laser_precios')
-    .select('precio')
-    .eq('producto_laser_id', productId)
-    .eq('medida_ancho', config.medida_ancho)
-    .eq('medida_alto', config.medida_alto)
-    .eq('tinta', config.tinta)
-    .eq('cantidad', config.cantidad)
-    .eq('cara_impresa', config.cara_impresa)
+  // Primero consultar el producto para verificar si usa rangos
+  const { data: producto, error: productoError } = await supabase
+    .from('productos_impresion_laser')
+    .select('rango_precio_id')
+    .eq('id', productId)
     .maybeSingle();
 
-  if (error) {
-    console.error('Error buscando precio laser:', error);
+  if (productoError) {
+    console.error('Error consultando producto laser:', productoError);
     return null;
   }
 
-  return data?.precio || null;
+  const usaRangos = producto?.rango_precio_id !== null;
+
+  if (usaRangos) {
+    // Buscar precios con rangos
+    const { data: precios, error } = await supabase
+      .from('productos_impresion_laser_precios')
+      .select('precio, rango_precio_min, rango_precio_max')
+      .eq('producto_laser_id', productId)
+      .eq('medida_ancho', config.medida_ancho)
+      .eq('medida_alto', config.medida_alto)
+      .eq('tinta', config.tinta)
+      .eq('cara_impresa', config.cara_impresa);
+
+    if (error) {
+      console.error('Error buscando precio laser con rangos:', error);
+      return null;
+    }
+
+    if (!precios || precios.length === 0) return null;
+
+    // Buscar en qué rango cae la cantidad
+    const precioEnRango = precios.find(p => {
+      if (p.rango_precio_max === null) {
+        return config.cantidad >= p.rango_precio_min;
+      }
+      return config.cantidad >= p.rango_precio_min && config.cantidad <= p.rango_precio_max;
+    });
+
+    return precioEnRango?.precio || null;
+  } else {
+    // Buscar precio por cantidad exacta (comportamiento original)
+    const { data, error } = await supabase
+      .from('productos_impresion_laser_precios')
+      .select('precio')
+      .eq('producto_laser_id', productId)
+      .eq('medida_ancho', config.medida_ancho)
+      .eq('medida_alto', config.medida_alto)
+      .eq('tinta', config.tinta)
+      .eq('cantidad', config.cantidad)
+      .eq('cara_impresa', config.cara_impresa)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Error buscando precio laser por cantidad exacta:', error);
+      return null;
+    }
+
+    return data?.precio || null;
+  }
 }
 
 async function getPrecioGranFormato(
