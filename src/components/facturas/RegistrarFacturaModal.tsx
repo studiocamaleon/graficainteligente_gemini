@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Upload, FileText, X, Loader2, AlertCircle } from 'lucide-react';
+import { Upload, FileText, X, Loader2, AlertCircle, CheckCircle, Info } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
+import { supabase } from '../../lib/supabase';
 import type { OrdenPendienteFacturacion } from '../../hooks/useFacturas';
 
 interface RegistrarFacturaModalProps {
@@ -24,8 +25,10 @@ export function RegistrarFacturaModal({
   const [archivo, setArchivo] = useState<File | null>(null);
   const [observaciones, setObservaciones] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [extrayendo, setExtrayendo] = useState(false);
+  const [numeroAutoDetectado, setNumeroAutoDetectado] = useState(false);
 
-  const handleArchivoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleArchivoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       if (file.type !== 'application/pdf') {
@@ -40,6 +43,53 @@ export function RegistrarFacturaModal({
       }
       setError(null);
       setArchivo(file);
+      setNumeroAutoDetectado(false);
+
+      // Intentar extraer el número de factura automáticamente
+      await extraerNumeroFactura(file);
+    }
+  };
+
+  const extraerNumeroFactura = async (file: File) => {
+    try {
+      setExtrayendo(true);
+      setError(null);
+
+      console.log('[RegistrarFactura] Extrayendo número de factura del PDF...');
+
+      // Crear FormData con el archivo
+      const formData = new FormData();
+      formData.append('file', file);
+
+      // Llamar a la Edge Function
+      const { data, error: functionError } = await supabase.functions.invoke(
+        'extract-invoice-number',
+        {
+          body: formData,
+        }
+      );
+
+      if (functionError) {
+        console.warn('[RegistrarFactura] Error llamando a Edge Function:', functionError);
+        // No mostrar error al usuario, solo logging
+        return;
+      }
+
+      console.log('[RegistrarFactura] Respuesta de Edge Function:', data);
+
+      if (data?.success && data?.numeroFactura) {
+        setNumeroFactura(data.numeroFactura);
+        setNumeroAutoDetectado(true);
+        console.log('[RegistrarFactura] ✅ Número de factura detectado:', data.numeroFactura);
+      } else {
+        console.log('[RegistrarFactura] ⚠️ No se pudo detectar el número de factura');
+        setNumeroAutoDetectado(false);
+      }
+    } catch (err: any) {
+      console.error('[RegistrarFactura] Error extrayendo número:', err);
+      // No mostrar error al usuario, es una función auxiliar
+    } finally {
+      setExtrayendo(false);
     }
   };
 
@@ -73,6 +123,8 @@ export function RegistrarFacturaModal({
     setArchivo(null);
     setObservaciones('');
     setError(null);
+    setExtrayendo(false);
+    setNumeroAutoDetectado(false);
     onClose();
   };
 
@@ -119,13 +171,28 @@ export function RegistrarFacturaModal({
           <Input
             type="text"
             value={numeroFactura}
-            onChange={(e) => setNumeroFactura(e.target.value)}
-            placeholder="Ej: FC-001-00000123"
-            disabled={loading}
+            onChange={(e) => {
+              setNumeroFactura(e.target.value);
+              setNumeroAutoDetectado(false); // Si edita manualmente, ya no es auto-detectado
+            }}
+            placeholder="Ej: 00002-00000300"
+            disabled={loading || extrayendo}
             required
           />
+          {numeroAutoDetectado && (
+            <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
+              <CheckCircle className="w-4 h-4" />
+              <span>Número detectado automáticamente</span>
+            </div>
+          )}
+          {!extrayendo && !numeroAutoDetectado && archivo && (
+            <div className="flex items-center gap-2 mt-2 text-sm text-blue-600">
+              <Info className="w-4 h-4" />
+              <span>Complete el número manualmente</span>
+            </div>
+          )}
           <p className="text-xs text-gray-500 mt-1">
-            Ingrese el número fiscal de la factura emitida
+            El número se detecta automáticamente del PDF o puede ingresarlo manualmente
           </p>
         </div>
 
@@ -140,7 +207,7 @@ export function RegistrarFacturaModal({
               onChange={handleArchivoChange}
               className="hidden"
               id="archivo-factura"
-              disabled={loading}
+              disabled={loading || extrayendo}
             />
             <label
               htmlFor="archivo-factura"
@@ -148,7 +215,7 @@ export function RegistrarFacturaModal({
                 flex items-center justify-center gap-2 p-4 border-2 border-dashed rounded-lg
                 cursor-pointer transition-colors
                 ${archivo ? 'border-green-300 bg-green-50' : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50'}
-                ${loading ? 'opacity-50 cursor-not-allowed' : ''}
+                ${loading || extrayendo ? 'opacity-50 cursor-not-allowed' : ''}
               `}
             >
               {archivo ? (
@@ -164,6 +231,14 @@ export function RegistrarFacturaModal({
               )}
             </label>
           </div>
+
+          {extrayendo && (
+            <div className="flex items-center gap-2 mt-2 text-sm text-blue-600">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>Leyendo número de factura del PDF...</span>
+            </div>
+          )}
+
           <p className="text-xs text-gray-500 mt-1">
             Solo archivos PDF. Tamaño máximo: 10MB
           </p>
