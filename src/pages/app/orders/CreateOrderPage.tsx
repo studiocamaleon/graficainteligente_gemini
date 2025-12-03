@@ -21,7 +21,6 @@ import { OrdenHistorialTab } from '../../../components/orders/OrdenHistorialTab'
 import { OrdenAdjuntosTab } from '../../../components/orders/OrdenAdjuntosTab';
 import { OrdenFooterTotales } from '../../../components/orders/OrdenFooterTotales';
 import { PagoFormModal } from '../../../components/orders/PagoFormModal';
-import { useOrdenArchivos } from '../../../hooks/useOrdenArchivos';
 import { useOrdenLinks } from '../../../hooks/useOrdenLinks';
 import { useCentroCopiadoOrdenes } from '../../../hooks/useCentroCopiadoOrdenes';
 import type { CanalVenta } from '../../../types/database';
@@ -44,19 +43,6 @@ export function CreateOrderPage() {
 
   usePageHeader('Crear nueva orden de trabajo');
 
-  const [ordenTemporalId] = useState(() => {
-    // Intentar recuperar UUID existente para mantener adjuntos al cambiar de tab
-    const existingId = sessionStorage.getItem('ordenTemporalCreacion');
-
-    if (existingId) {
-      return existingId;
-    }
-
-    // Si no existe, generar nuevo UUID
-    const newId = crypto.randomUUID();
-    sessionStorage.setItem('ordenTemporalCreacion', newId);
-    return newId;
-  });
 
   const [activeTab, setActiveTab] = useState('items');
   const [clienteId, setClienteId] = useState('');
@@ -83,9 +69,6 @@ export function CreateOrderPage() {
     setItems,
   });
 
-  // Hooks para adjuntos temporales
-  const archivosTemp = useOrdenArchivos({ ordenTemporalId });
-  const linksTemp = useOrdenLinks({ ordenTemporalId });
 
   // Hook para obtener clientes
   const { clients } = useClients({ page: 1, itemsPerPage: 1000 });
@@ -120,16 +103,6 @@ export function CreateOrderPage() {
         // Mostrar prompt nativo del navegador
         e.preventDefault();
         e.returnValue = '';
-
-        // Intentar cleanup asíncrono en background
-        Promise.all([
-          archivosTemp.limpiarTemporales(),
-          linksTemp.limpiarTemporales()
-        ]).then(() => {
-          sessionStorage.removeItem('ordenTemporalCreacion');
-        }).catch(err => {
-          console.error('[Cleanup] Error limpiando al cerrar:', err);
-        });
       }
     };
 
@@ -138,29 +111,9 @@ export function CreateOrderPage() {
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-  }, [ordenCreada, archivosTemp, linksTemp]);
+  }, [ordenCreada]);
 
-  // Cleanup al desmontar componente (navegación)
-  // IMPORTANTE: Usar useRef para rastrear si estamos creando orden
   const isCreatingOrderRef = useRef(false);
-
-  useEffect(() => {
-    return () => {
-      // Solo limpiar si:
-      // 1. La orden NO fue creada exitosamente
-      // 2. NO estamos en proceso de crear la orden
-      if (!ordenCreada && !isCreatingOrderRef.current) {
-        Promise.all([
-          archivosTemp.limpiarTemporales(),
-          linksTemp.limpiarTemporales()
-        ]).then(() => {
-          sessionStorage.removeItem('ordenTemporalCreacion');
-        }).catch(err => {
-          console.error('[Cleanup] Error limpiando al desmontar:', err);
-        });
-      }
-    };
-  }, []);
 
   const formularioTieneDatos = () => {
     return clienteId !== '' || items.length > 0 || notasInternas !== '' || fechaEntrega !== '' || ordenesCopiadoAsociadas.length > 0;
@@ -174,16 +127,6 @@ export function CreateOrderPage() {
   const handleVolver = async () => {
     if (formularioTieneDatos() && !ordenCreada) {
       showPrompt(async () => {
-        // Limpiar adjuntos temporales
-        try {
-          await Promise.all([
-            archivosTemp.limpiarTemporales(),
-            linksTemp.limpiarTemporales()
-          ]);
-          sessionStorage.removeItem('ordenTemporalCreacion');
-        } catch (err) {
-          console.error('Error limpiando temporales:', err);
-        }
         navigate('/app/orders/ordenes');
       });
       return;
@@ -337,25 +280,7 @@ export function CreateOrderPage() {
       console.log('[CreateOrderPage] Orden creada exitosamente:', result.id);
 
       try {
-        console.log('[CreateOrderPage] Iniciando asociación de adjuntos con función SQL...');
-
-        // La función SQL maneja todo: archivos + links + archivos producción
-        // Solo necesitamos llamarla una vez desde cualquier hook
-        const resultAsociacion = await archivosTemp.asociarConOrden(
-          result.id,
-          ordenTemporalId,
-          profile.company_id
-        );
-
-        console.log('[CreateOrderPage] Adjuntos asociados exitosamente:', {
-          archivos: resultAsociacion.count,
-          archivosProduccion: resultAsociacion.countProduccion,
-          links: resultAsociacion.countLinks
-        });
-
-        const totalAdjuntos = (resultAsociacion.count || 0) +
-                              (resultAsociacion.countProduccion || 0) +
-                              (resultAsociacion.countLinks || 0);
+        console.log('[CreateOrderPage] Orden creada, ahora se pueden agregar links desde el detalle de la orden');
 
         // Insertar pagos si existen
         if (pagos.length > 0) {
@@ -483,10 +408,6 @@ export function CreateOrderPage() {
           if (saldoPendiente > 0) {
             mensajeExito += ` (Saldo pendiente: $${saldoPendiente.toFixed(2)})`;
           }
-        }
-
-        if (totalAdjuntos > 0) {
-          mensajeExito += ` y ${totalAdjuntos} adjunto(s)`;
         }
 
         showSuccess(mensajeExito);

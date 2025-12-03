@@ -4,8 +4,7 @@ import { useAuth } from './useAuth';
 
 interface Link {
   id: string;
-  orden_id: string | null;
-  orden_temporal_id: string | null;
+  orden_id: string;
   company_id: string;
   titulo: string;
   url: string;
@@ -29,15 +28,7 @@ interface UpdateLinkData {
   descripcion?: string;
 }
 
-interface UseOrdenLinksParams {
-  ordenId?: string;
-  ordenTemporalId?: string;
-}
-
-export function useOrdenLinks(params: string | UseOrdenLinksParams) {
-  const ordenId = typeof params === 'string' ? params : params.ordenId;
-  const ordenTemporalId = typeof params === 'string' ? undefined : params.ordenTemporalId;
-  const modoTemporal = !!ordenTemporalId && !ordenId;
+export function useOrdenLinks(ordenId: string) {
   const [links, setLinks] = useState<Link[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -45,7 +36,7 @@ export function useOrdenLinks(params: string | UseOrdenLinksParams) {
 
   // Cargar links
   const loadLinks = useCallback(async () => {
-    if (!ordenId && !ordenTemporalId) {
+    if (!ordenId) {
       setLoading(false);
       return;
     }
@@ -54,20 +45,14 @@ export function useOrdenLinks(params: string | UseOrdenLinksParams) {
       setLoading(true);
       setError(null);
 
-      let query = supabase
+      const { data, error: fetchError } = await supabase
         .from('ordenes_trabajo_links')
         .select(`
           *,
           creator:created_by(full_name)
-        `);
-
-      if (modoTemporal && ordenTemporalId) {
-        query = query.eq('orden_temporal_id', ordenTemporalId);
-      } else if (ordenId) {
-        query = query.eq('orden_id', ordenId);
-      }
-
-      const { data, error: fetchError } = await query.order('created_at', { ascending: false });
+        `)
+        .eq('orden_id', ordenId)
+        .order('created_at', { ascending: false });
 
       if (fetchError) throw fetchError;
 
@@ -78,7 +63,7 @@ export function useOrdenLinks(params: string | UseOrdenLinksParams) {
     } finally {
       setLoading(false);
     }
-  }, [ordenId, ordenTemporalId, modoTemporal]);
+  }, [ordenId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -97,7 +82,6 @@ export function useOrdenLinks(params: string | UseOrdenLinksParams) {
 
   // Validar URL - Aceptar cualquier URL válida
   const validateUrl = (url: string): { valid: boolean; error?: string } => {
-    // Si está vacío, no es válido
     if (!url || !url.trim()) {
       return {
         valid: false,
@@ -114,10 +98,8 @@ export function useOrdenLinks(params: string | UseOrdenLinksParams) {
     }
 
     try {
-      // Intentar crear objeto URL para validar formato básico
       const urlObj = new URL(urlToValidate);
 
-      // Verificar que tenga al menos un hostname
       if (!urlObj.hostname) {
         return {
           valid: false,
@@ -125,7 +107,6 @@ export function useOrdenLinks(params: string | UseOrdenLinksParams) {
         };
       }
 
-      // Aceptar cualquier protocolo común (http, https, ftp, file, etc.)
       return { valid: true };
     } catch {
       return {
@@ -141,8 +122,8 @@ export function useOrdenLinks(params: string | UseOrdenLinksParams) {
       throw new Error('No se pudo obtener el ID de la empresa');
     }
 
-    if (!ordenId && !ordenTemporalId) {
-      throw new Error('Se requiere ordenId u ordenTemporalId');
+    if (!ordenId) {
+      throw new Error('Se requiere ordenId');
     }
 
     // Validar URL
@@ -160,24 +141,16 @@ export function useOrdenLinks(params: string | UseOrdenLinksParams) {
     try {
       setError(null);
 
-      const insertData: any = {
-        company_id: profile.company_id,
-        titulo: linkData.titulo.trim(),
-        url: normalizedUrl,
-        descripcion: linkData.descripcion?.trim() || null,
-        created_by: profile.id
-      };
-
-      if (modoTemporal && ordenTemporalId) {
-        insertData.orden_temporal_id = ordenTemporalId;
-        insertData.temporal_creado_en = new Date().toISOString();
-      } else {
-        insertData.orden_id = ordenId;
-      }
-
       const { data, error: insertError } = await supabase
         .from('ordenes_trabajo_links')
-        .insert(insertData)
+        .insert({
+          orden_id: ordenId,
+          company_id: profile.company_id,
+          titulo: linkData.titulo.trim(),
+          url: normalizedUrl,
+          descripcion: linkData.descripcion?.trim() || null,
+          created_by: profile.id
+        })
         .select()
         .single();
 
@@ -210,7 +183,6 @@ export function useOrdenLinks(params: string | UseOrdenLinksParams) {
       const updateData: any = {};
       if (updates.titulo !== undefined) updateData.titulo = updates.titulo.trim();
       if (updates.url !== undefined) {
-        // Normalizar URL: agregar https:// si no tiene protocolo
         let normalizedUrl = updates.url.trim();
         if (!normalizedUrl.includes('://')) {
           normalizedUrl = 'https://' + normalizedUrl;
@@ -294,102 +266,10 @@ export function useOrdenLinks(params: string | UseOrdenLinksParams) {
     }
   };
 
-  // Asociar links temporales con orden real
-  const asociarConOrden = async (
-    ordenIdReal: string,
-    tempId?: string,
-    companyId?: string
-  ) => {
-    const efectivoTempId = tempId || ordenTemporalId;
-    const efectivoCompanyId = companyId || profile?.company_id;
-
-    console.log('[useOrdenLinks.asociarConOrden] Iniciando asociación con función SQL:', {
-      ordenIdReal,
-      tempId: efectivoTempId,
-      companyId: efectivoCompanyId,
-      profileExists: !!profile
-    });
-
-    if (!efectivoTempId) {
-      const error = new Error('ordenTemporalId no disponible');
-      console.error('[useOrdenLinks.asociarConOrden] ERROR:', error);
-      throw error;
-    }
-
-    if (!efectivoCompanyId) {
-      const error = new Error('company_id no disponible');
-      console.error('[useOrdenLinks.asociarConOrden] ERROR:', error);
-      throw error;
-    }
-
-    try {
-      // Usar función SQL con SECURITY DEFINER (bypass RLS automático)
-      // La misma función maneja archivos, archivos de producción y links
-      console.log('[useOrdenLinks.asociarConOrden] Llamando fn_asociar_adjuntos_temporales...');
-
-      const { data, error: rpcError } = await supabase
-        .rpc('fn_asociar_adjuntos_temporales', {
-          p_orden_temporal_id: efectivoTempId,
-          p_orden_id: ordenIdReal,
-          p_company_id: efectivoCompanyId
-        });
-
-      if (rpcError) {
-        console.error('[useOrdenLinks.asociarConOrden] Error en función SQL:', rpcError);
-        throw rpcError;
-      }
-
-      const resultado = data?.[0] || { archivos_asociados: 0, archivos_produccion_asociados: 0, links_asociados: 0 };
-
-      console.log('[useOrdenLinks.asociarConOrden] Resultado de función SQL:', {
-        archivos: resultado.archivos_asociados,
-        archivosProduccion: resultado.archivos_produccion_asociados,
-        links: resultado.links_asociados
-      });
-
-      return {
-        success: true,
-        count: resultado.links_asociados,
-        countArchivos: resultado.archivos_asociados,
-        countProduccion: resultado.archivos_produccion_asociados
-      };
-    } catch (err: any) {
-      console.error('[useOrdenLinks.asociarConOrden] ERROR:', err);
-      throw err;
-    }
-  };
-
-  // Limpiar links temporales
-  const limpiarTemporales = async () => {
-    if (!ordenTemporalId || !profile?.company_id) {
-      return { success: true, count: 0 };
-    }
-
-    try {
-      const { count } = await supabase
-        .from('ordenes_trabajo_links')
-        .select('*', { count: 'exact', head: true })
-        .eq('orden_temporal_id', ordenTemporalId)
-        .eq('company_id', profile.company_id);
-
-      await supabase
-        .from('ordenes_trabajo_links')
-        .delete()
-        .eq('orden_temporal_id', ordenTemporalId)
-        .eq('company_id', profile.company_id);
-
-      return { success: true, count: count || 0 };
-    } catch (err: any) {
-      console.error('Error limpiando links temporales:', err);
-      throw err;
-    }
-  };
-
   return {
     links,
     loading,
     error,
-    modoTemporal,
     createLink,
     updateLink,
     deleteLink,
@@ -397,8 +277,6 @@ export function useOrdenLinks(params: string | UseOrdenLinksParams) {
     copyLink,
     validateUrl,
     getServiceType,
-    asociarConOrden,
-    limpiarTemporales,
     refresh: loadLinks
   };
 }
