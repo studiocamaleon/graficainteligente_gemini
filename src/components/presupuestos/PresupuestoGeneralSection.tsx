@@ -66,6 +66,7 @@ export function PresupuestoGeneralSection({
     { value: 'Web', label: '🌐 Web' },
     { value: 'WhatsApp', label: '💬 WhatsApp' },
     { value: 'Mostrador', label: '🏪 Mostrador' },
+    { value: 'App Mobile', label: '📱 App Mobile' },
   ];
 
   // Cliente seleccionado

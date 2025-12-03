@@ -1,4 +1,4 @@
-import { MessageSquare, Globe, Store, User } from 'lucide-react';
+import { MessageSquare, Globe, Store, User, Smartphone } from 'lucide-react';
 import { SearchableSelect } from '../ui/SearchableSelect';
 import { DatePicker } from '../ui/DatePicker';
 import { Tooltip } from '../ui/Tooltip';
@@ -40,6 +40,7 @@ export function OrdenGeneralSection({
     { value: 'WhatsApp', label: 'WhatsApp', icon: MessageSquare },
     { value: 'Web', label: 'Web', icon: Globe },
     { value: 'Mostrador', label: 'Mostrador', icon: Store },
+    { value: 'App Mobile', label: 'App Mobile', icon: Smartphone },
   ];
 
   const clientesOptions = clients.map(c => ({

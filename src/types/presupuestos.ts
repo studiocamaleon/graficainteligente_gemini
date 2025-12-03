@@ -15,7 +15,7 @@ export type EstadoPresupuesto =
   | 'convertido'
   | 'vencido';
 
-export type CanalVenta = 'Web' | 'WhatsApp' | 'Mostrador';
+export type CanalVenta = 'Web' | 'WhatsApp' | 'Mostrador' | 'App Mobile';
 
 export type TipoItemPresupuesto = 'producto_sistema' | 'item_personalizado';
 

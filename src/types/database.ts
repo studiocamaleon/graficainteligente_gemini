@@ -1205,7 +1205,7 @@ export interface PedidoRutaResuelta {
   updated_at: string;
 }
 
-export type CanalVenta = 'Web' | 'WhatsApp' | 'Mostrador';
+export type CanalVenta = 'Web' | 'WhatsApp' | 'Mostrador' | 'App Mobile';
 
 export type EstadoOrdenTrabajo = 'pendiente' | 'en_proceso' | 'finalizada' | 'entregada' | 'cancelada';
 
