@@ -348,6 +348,13 @@ export const MODULES: Module[] = [
         icon: DollarSign,
       },
       {
+        id: 'finance-facturas',
+        name: 'Facturas',
+        description: 'Gestión de facturas de órdenes de trabajo',
+        path: '/app/finanzas/facturas',
+        icon: FileCheck,
+      },
+      {
         id: 'finance-reportes',
         name: 'Reportes',
         description: 'Reportes de gerencia y análisis de ventas',

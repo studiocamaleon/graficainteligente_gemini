@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import TesoreriaView from './finanzas/TesoreriaView';
 import CuentasCorrientesView from './finanzas/CuentasCorrientesView';
 import ReportesView from './finanzas/ReportesView';
+import { FacturasView } from './finanzas/FacturasView';
 import { usePageHeader } from '../../hooks/usePageHeader';
 import { ProtectedModuleRoute } from '../../components/auth/ProtectedModuleRoute';
 
@@ -25,6 +26,14 @@ export default function Finanzas() {
           element={
             <ProtectedModuleRoute moduleId="finance-cuentas-corrientes">
               <CuentasCorrientesView />
+            </ProtectedModuleRoute>
+          }
+        />
+        <Route
+          path="/facturas"
+          element={
+            <ProtectedModuleRoute moduleId="finance-facturas">
+              <FacturasView />
             </ProtectedModuleRoute>
           }
         />

@@ -2,7 +2,7 @@
 
 **Sistema**: Gestión completa de facturas para órdenes de trabajo
 **Plan completo**: 7 fases (Base de Datos → Frontend → Integración)
-**Progreso**: ✅ 3/7 Fases completadas (43%)
+**Progreso**: ✅ 4/7 Fases completadas (57%)
 
 ---
 
@@ -13,7 +13,7 @@ Implementar un sistema completo para gestionar facturas de órdenes de trabajo, 
 
 ## 📊 Estado Actual
 
-### ✅ COMPLETADO (Fase 1, 2 y 3):
+### ✅ COMPLETADO (Fase 1, 2, 3 y 4):
 - ✅ **Base de Datos**: Schema completo con 6 campos nuevos
 - ✅ **Tabla `facturas_historial`**: Auditoría completa
 - ✅ **Storage bucket `facturas`**: Privado con RLS
@@ -22,12 +22,15 @@ Implementar un sistema completo para gestionar facturas de órdenes de trabajo, 
 - ✅ **Tipos TypeScript**: Interfaz OrdenTrabajo actualizada
 - ✅ **Persistencia frontend**: Crear y ver órdenes con facturación
 - ✅ **Badges visuales**: Estado de facturación visible
+- ✅ **Hook `useFacturas`**: Gestión completa de facturas
+- ✅ **Módulo Facturas**: Vista con KPIs, filtros y gestión
+- ✅ **Upload de PDFs**: Sistema funcional con validaciones
+- ✅ **Integración**: Menú Finanzas → Facturas operativo
 
-### ⏳ PENDIENTE (Fase 4-7):
-- ⏳ Módulo "Facturas" en Finanzas (hook + página + componentes)
-- ⏳ Sistema de carga de archivos PDF
-- ⏳ Notificaciones WhatsApp automáticas
-- ⏳ Testing y documentación
+### ⏳ PENDIENTE (Fase 5-7):
+- ⏳ Edge function para notificaciones WhatsApp
+- ⏳ Testing y optimizaciones
+- ⏳ Documentación de usuario
 
 ---
 
@@ -324,10 +327,10 @@ supabase functions new notify-factura-disponible
 | **Fase 1** | ✅ Completada | Base de Datos - Schema | `FASE_1_SISTEMA_FACTURAS_COMPLETADA.md` |
 | **Fase 2** | ✅ Completada | Base de Datos - Funciones | `FASE_2_SISTEMA_FACTURAS_COMPLETADA.md` |
 | **Fase 3** | ✅ Completada | Frontend - Persistencia | `FASE_3_SISTEMA_FACTURAS_COMPLETADA.md` |
-| **Fase 4** | ⏳ Pendiente | Frontend - Módulo Facturas | Hook + Página + Componentes |
-| **Fase 5** | ⏳ Pendiente | Upload de PDFs | FileUpload + Storage |
-| **Fase 6** | ⏳ Pendiente | Notificaciones WhatsApp | Trigger + Edge Function |
-| **Fase 7** | ⏳ Pendiente | Testing y Documentación | Tests + Docs + Capacitación |
+| **Fase 4** | ✅ Completada | Frontend - Módulo Facturas | `FASE_4_SISTEMA_FACTURAS_COMPLETADA.md` |
+| **Fase 5** | ⏳ Pendiente | Notificaciones WhatsApp | Edge Function + Mensajes |
+| **Fase 6** | ⏳ Pendiente | Testing y Optimizaciones | Tests E2E + Performance |
+| **Fase 7** | ⏳ Pendiente | Documentación Usuario | Manual + Capacitación |
 
 ### ✅ Fase 1: Base de Datos - Schema (COMPLETADA)
 - 6 campos nuevos en `ordenes_trabajo`
@@ -349,21 +352,29 @@ supabase functions new notify-factura-disponible
 - `OrderDetailPage.tsx` muestra badges y datos de factura
 - Archivos modificados: 3
 
-### ⏳ Siguiente: Fase 4 - Módulo de Facturas
-**Objetivo**: Crear módulo completo para gestionar facturas en Finanzas
+### ✅ Fase 4: Frontend - Módulo Facturas (COMPLETADA)
+- Hook `useFacturas.ts` con 5 métodos principales
+- Vista `FacturasView.tsx` con KPIs y listado
+- 4 componentes UI: KPICards, Filters, OrdenCard, Modal
+- Upload de PDFs con validaciones (tipo, tamaño)
+- Integración en menú Finanzas → Facturas
+- Archivos creados: 7
+
+### ⏳ Siguiente: Fase 5 - Notificaciones WhatsApp
+**Objetivo**: Enviar factura automáticamente al cliente vía WhatsApp
 
 **Tareas**:
-1. Hook `useFacturas.ts` - Consumir funciones BD
-2. Página `FacturasView.tsx` - Lista de pendientes
-3. Componentes UI (Cards, KPIs, Filtros)
-4. Modal `RegistrarFacturaModal.tsx`
+1. Edge function `notify-factura-disponible`
+2. Generación de signed URLs (30 días)
+3. Mensajes personalizados con link de descarga
+4. Integración con Evolution API
 
-**Archivos a crear**: 5-6
-**Tiempo estimado**: 3-4 horas
+**Archivos a crear**: 1 edge function
+**Tiempo estimado**: 1-2 horas
 
 ---
 
 **Documento de referencia para implementación del Sistema de Facturas**
-Versión: 3.0 (Actualizado con progreso de Fase 1, 2 y 3)
+Versión: 4.0 (Actualizado con progreso de Fase 1, 2, 3 y 4)
 Última actualización: 2025-12-03
-**Progreso**: 43% completado (3/7 fases)
+**Progreso**: 57% completado (4/7 fases)
