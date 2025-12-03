@@ -3,7 +3,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Trigger-Secret',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, X-Trigger-Secret, Apikey',
 };
 
 interface PresupuestoNotification {
@@ -30,176 +30,82 @@ function sanitizeMessage(message: string): string {
   return sanitized;
 }
 
-function formatPhoneNumber(phone: string): string {
-  if (!phone) return '';
+function formatPhoneNumber(phone: string | null | undefined): string | null {
+  if (!phone) return null;
 
-  let cleaned = phone.replace(/\D/g, '');
+  const cleaned = phone.replace(/\D/g, '');
 
-  if (cleaned.startsWith('0')) {
-    cleaned = cleaned.substring(1);
-  }
+  if (cleaned.length === 0) return null;
 
-  if (cleaned.startsWith('9')) {
-    cleaned = cleaned.substring(1);
-  }
-
-  if (!cleaned.startsWith('54')) {
-    cleaned = '54' + cleaned;
+  if (!cleaned.startsWith('598')) {
+    return `598${cleaned}`;
   }
 
   return cleaned;
 }
 
-async function sendWhatsAppMessage(
-  companyId: string,
-  phoneNumber: string,
-  message: string
-): Promise<any> {
-  const whatsappBackendUrl = Deno.env.get('WHATSAPP_BACKEND_URL') || 'https://whatsapp-backend-w6ot.onrender.com';
-
-  console.log('[WhatsApp] Enviando mensaje a backend de Render:', {
-    backend: whatsappBackendUrl,
-    companyId,
-    phoneNumber,
-    messageLength: message.length
-  });
-
-  const response = await fetch(`${whatsappBackendUrl}/send`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      companyId,
-      to: phoneNumber,
-      message: message,
-    }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Error del backend de WhatsApp (${response.status}): ${errorText}`);
-  }
-
-  const responseData = await response.json();
-  console.log('[WhatsApp] Mensaje enviado exitosamente:', responseData);
-
-  return responseData;
-}
-
-async function checkWhatsAppConnection(companyId: string): Promise<boolean> {
-  const whatsappBackendUrl = Deno.env.get('WHATSAPP_BACKEND_URL') || 'https://whatsapp-backend-w6ot.onrender.com';
-
-  try {
-    console.log(`[WhatsApp] Verificando conexión para company: ${companyId}`);
-
-    const statusResponse = await fetch(`${whatsappBackendUrl}/status/${companyId}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!statusResponse.ok) {
-      console.log('[WhatsApp] ⚠️ No se pudo verificar estado de WhatsApp');
-      return false;
-    }
-
-    const statusData = await statusResponse.json();
-    console.log('[WhatsApp] Estado de conexión:', statusData);
-
-    return statusData.connected === true;
-  } catch (error: any) {
-    console.error('[WhatsApp] ⚠️ Error verificando estado de WhatsApp:', error);
-    return false;
-  }
-}
-
-function construirMensaje(
+function generatePresupuestoListoMessage(
   presupuesto: any,
-  tipo: string,
+  cliente: any,
+  items: any[],
+  company: any,
+  origin: string
+): string {
+  const trackingUrl = `${origin}/tracking/presupuesto/${presupuesto.tracking_token}`;
+  const empresa = company.nombre_empresa || 'Nuestra empresa';
+
+  let mensaje = `¡Hola ${cliente.nombre_fantasia || cliente.razon_social}! 👋\n\n`;
+  mensaje += `Tu presupuesto ${presupuesto.numero_presupuesto} ya está listo. 📋\n\n`;
+
+  mensaje += `*Resumen:*\n`;
+  mensaje += `Total: $${presupuesto.total?.toLocaleString('es-UY') || '0'}\n`;
+  mensaje += `Cantidad de ítems: ${items.length}\n\n`;
+
+  if (presupuesto.fecha_validez) {
+    const fechaValidez = new Date(presupuesto.fecha_validez);
+    mensaje += `⏰ Válido hasta: ${fechaValidez.toLocaleDateString('es-UY')}\n\n`;
+  }
+
+  mensaje += `Podés ver el detalle completo y el estado de tu presupuesto en:\n`;
+  mensaje += `${trackingUrl}\n\n`;
+
+  mensaje += `Cualquier consulta, estamos a las órdenes.\n\n`;
+  mensaje += `Saludos,\n${empresa}`;
+
+  return mensaje;
+}
+
+function generatePresupuestoAprobadoMessage(
+  presupuesto: any,
+  cliente: any,
   company: any
 ): string {
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('es-AR', {
-      style: 'currency',
-      currency: 'ARS',
-      minimumFractionDigits: 0,
-    }).format(value);
-  };
+  const empresa = company.nombre_empresa || 'Nuestra empresa';
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('es-ES', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
-  };
+  let mensaje = `¡Gracias ${cliente.nombre_fantasia || cliente.razon_social}! 🎉\n\n`;
+  mensaje += `Confirmamos la aprobación del presupuesto ${presupuesto.numero_presupuesto}.\n\n`;
+  mensaje += `En breve comenzaremos con la producción. Te mantendremos informado del progreso.\n\n`;
+  mensaje += `Saludos,\n${empresa}`;
 
-  const origin = frontend_origin || Deno.env.get("FRONTEND_URL") || "https://www.graficainteligente.com";
-  const trackingUrl = presupuesto.tracking_token
-    ? `${origin}/tracking/presupuesto/${presupuesto.tracking_token}`
-    : null;
+  return mensaje;
+}
 
-  const clienteNombre = presupuesto.cliente?.nombre_fantasia || presupuesto.cliente?.razon_social || "Cliente";
+function generatePresupuestoVencidoMessage(
+  presupuesto: any,
+  cliente: any,
+  company: any,
+  origin: string
+): string {
+  const trackingUrl = `${origin}/tracking/presupuesto/${presupuesto.tracking_token}`;
+  const empresa = company.nombre_empresa || 'Nuestra empresa';
 
-  switch (tipo) {
-    case "presupuesto_listo":
-      let mensaje = `Hola ${clienteNombre}!\n\n`;
-      mensaje += `Tu presupuesto *${presupuesto.numero_presupuesto}* esta listo!\n\n`;
-      mensaje += `*Total:* ${formatCurrency(presupuesto.total)}\n`;
-      mensaje += `*Valido hasta:* ${formatDate(presupuesto.fecha_validez)}\n\n`;
+  let mensaje = `Hola ${cliente.nombre_fantasia || cliente.razon_social},\n\n`;
+  mensaje += `Te recordamos que el presupuesto ${presupuesto.numero_presupuesto} está próximo a vencer.\n\n`;
+  mensaje += `Si aún te interesa, podemos renovarlo. Consultanos sin compromiso.\n\n`;
+  mensaje += `Ver presupuesto: ${trackingUrl}\n\n`;
+  mensaje += `Saludos,\n${empresa}`;
 
-      if (trackingUrl) {
-        mensaje += `Ver online:\n${trackingUrl}\n\n`;
-      }
-
-      mensaje += `Desde el link podes aprobar el presupuesto directamente.\n\n`;
-
-      if (company.contact_phone) {
-        mensaje += `Contacto: ${company.contact_phone}\n\n`;
-      }
-
-      mensaje += `Gracias por confiar en nosotros!\n\n`;
-      mensaje += `_Tecnologia desarrollada por CamaleonStudio - Agencia de desarrollo de Grafica Corporearte_`;
-
-      return mensaje;
-
-    case "presupuesto_aprobado":
-      let mensajeAprobado = `Hola ${clienteNombre}!\n\n`;
-      mensajeAprobado += `Presupuesto aprobado!\n\n`;
-      mensajeAprobado += `Gracias por tu confirmacion. Ya comenzamos a procesar tu orden.\n\n`;
-      mensajeAprobado += `*Presupuesto:* ${presupuesto.numero_presupuesto}\n`;
-
-      if (presupuesto.orden_trabajo_id) {
-        mensajeAprobado += `*Orden de Trabajo:* ${presupuesto.orden_trabajo?.numero_orden || 'En proceso'}\n\n`;
-      }
-
-      mensajeAprobado += `Te mantendremos informado del progreso.\n\n`;
-      mensajeAprobado += `_Tecnologia desarrollada por CamaleonStudio - Agencia de desarrollo de Grafica Corporearte_`;
-
-      return mensajeAprobado;
-
-    case "presupuesto_vencido":
-      let mensajeVencido = `Hola ${clienteNombre}!\n\n`;
-      mensajeVencido += `El presupuesto *${presupuesto.numero_presupuesto}* ha vencido.\n\n`;
-      mensajeVencido += `Si aun te interesa, podemos:\n`;
-      mensajeVencido += `- Renovarlo\n`;
-      mensajeVencido += `- Ajustar precios actuales\n`;
-      mensajeVencido += `- Modificar lo que necesites\n\n`;
-      mensajeVencido += `Seguimos adelante? Escribinos!\n\n`;
-
-      if (company.contact_phone) {
-        mensajeVencido += `Contacto: ${company.contact_phone}\n\n`;
-      }
-
-      mensajeVencido += `_Tecnologia desarrollada por CamaleonStudio - Agencia de desarrollo de Grafica Corporearte_`;
-
-      return mensajeVencido;
-
-    default:
-      return `Actualizacion de presupuesto ${presupuesto.numero_presupuesto}`;
-  }
+  return mensaje;
 }
 
 Deno.serve(async (req: Request) => {
@@ -221,11 +127,20 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
+    const payload: PresupuestoNotification = await req.json();
+
+    // Verificación de seguridad:
+    // - Llamadas desde triggers SQL: requieren X-Trigger-Secret
+    // - Llamadas desde frontend: requieren Authorization + company_id en payload
     const triggerSecret = Deno.env.get('TRIGGER_SECRET_TOKEN');
     const providedSecret = req.headers.get('X-Trigger-Secret');
+    const authHeader = req.headers.get('Authorization');
 
-    if (!triggerSecret || providedSecret !== triggerSecret) {
-      console.error('[Security] Intento de acceso no autorizado');
+    const isTriggerCall = providedSecret && triggerSecret && providedSecret === triggerSecret;
+    const isFrontendCall = authHeader && authHeader.startsWith('Bearer ');
+
+    if (!isTriggerCall && !isFrontendCall) {
+      console.error('[Security] Intento de acceso no autorizado - no trigger secret ni auth header');
       return new Response(
         JSON.stringify({ error: 'No autorizado' }),
         {
@@ -235,7 +150,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const payload: PresupuestoNotification = await req.json();
+    console.log('[Notify Presupuesto] Llamada desde:', isTriggerCall ? 'Trigger SQL' : 'Frontend');
     const { presupuesto_id, company_id, tipo_notificacion, frontend_origin } = payload;
 
     console.log('[Notify Presupuesto] Payload recibido:', {
@@ -268,7 +183,7 @@ Deno.serve(async (req: Request) => {
     if (yaEnviado) {
       console.log('[Notify Presupuesto] ⚠️ Ya se envió notificación. Skipping.');
       return new Response(
-        JSON.stringify({ success: true, message: 'Notificación ya enviada previamente' }),
+        JSON.stringify({ success: true, message: 'Ya se envió previamente' }),
         {
           status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -280,50 +195,37 @@ Deno.serve(async (req: Request) => {
       .from('presupuestos')
       .select(`
         *,
-        cliente:cliente_id(*),
-        vendedor:vendedor_id(*),
-        orden_trabajo:orden_trabajo_id(numero_orden)
+        cliente:clients!cliente_id(
+          id,
+          razon_social,
+          nombre_fantasia,
+          whatsapp
+        )
       `)
       .eq('id', presupuesto_id)
       .single();
 
     if (presupuestoError || !presupuesto) {
-      throw new Error('No se pudo obtener información del presupuesto');
-    }
-
-    const cliente = presupuesto.cliente;
-
-    if (!cliente) {
-      throw new Error('No se encontró información del cliente');
-    }
-
-    if (!cliente.whatsapp) {
-      console.log('[Notify Presupuesto] ⚠️ Cliente no tiene WhatsApp configurado. Skipping.');
+      console.error('[Notify Presupuesto] Error obteniendo presupuesto:', presupuestoError);
       return new Response(
-        JSON.stringify({ success: true, message: 'Cliente sin WhatsApp configurado' }),
+        JSON.stringify({ error: 'Presupuesto no encontrado' }),
         {
-          status: 200,
+          status: 404,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       );
     }
 
-    const { data: company, error: companyError } = await supabase
+    const { data: company } = await supabase
       .from('companies')
-      .select('*')
+      .select('nombre_empresa, whatsapp_instance_id, whatsapp_notifications_enabled')
       .eq('id', company_id)
       .single();
 
-    if (companyError || !company) {
-      throw new Error('No se encontró información de la empresa');
-    }
-
-    const isConnected = await checkWhatsAppConnection(company_id);
-
-    if (!isConnected) {
-      console.log('[Notify Presupuesto] ⚠️ WhatsApp no está conectado para esta empresa. Skipping.');
+    if (!company?.whatsapp_notifications_enabled || !company?.whatsapp_instance_id) {
+      console.log('[Notify Presupuesto] WhatsApp deshabilitado para esta empresa');
       return new Response(
-        JSON.stringify({ success: true, message: 'WhatsApp no está conectado' }),
+        JSON.stringify({ success: false, message: 'WhatsApp no configurado' }),
         {
           status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -331,76 +233,94 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    console.log('[Notify Presupuesto] ✅ WhatsApp conectado, procediendo a enviar mensaje');
+    const clienteWhatsapp = formatPhoneNumber(presupuesto.cliente?.whatsapp);
+    if (!clienteWhatsapp) {
+      console.log('[Notify Presupuesto] Cliente sin WhatsApp');
+      return new Response(
+        JSON.stringify({ success: false, message: 'Cliente sin WhatsApp' }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
 
-    const mensaje = construirMensaje(presupuesto, tipo_notificacion, company);
-    console.log('[Notify Presupuesto] ✅ Mensaje generado, longitud:', mensaje.length);
+    const origin = frontend_origin || Deno.env.get("FRONTEND_URL") || "https://www.graficainteligente.com";
+    let mensaje = '';
+
+    if (tipo_notificacion === 'presupuesto_listo') {
+      const { data: items } = await supabase
+        .from('presupuestos_items')
+        .select('*')
+        .eq('presupuesto_id', presupuesto_id);
+
+      mensaje = generatePresupuestoListoMessage(
+        presupuesto,
+        presupuesto.cliente,
+        items || [],
+        company,
+        origin
+      );
+    } else if (tipo_notificacion === 'presupuesto_aprobado') {
+      mensaje = generatePresupuestoAprobadoMessage(
+        presupuesto,
+        presupuesto.cliente,
+        company
+      );
+    } else if (tipo_notificacion === 'presupuesto_vencido') {
+      mensaje = generatePresupuestoVencidoMessage(
+        presupuesto,
+        presupuesto.cliente,
+        company,
+        origin
+      );
+    }
 
     const mensajeSanitizado = sanitizeMessage(mensaje);
-    const telefonoFormateado = formatPhoneNumber(cliente.whatsapp);
 
-    console.log('[Notify Presupuesto] Enviando mensaje:', {
-      numeroPresupuesto: presupuesto.numero_presupuesto,
-      clienteNombre: cliente.nombre_fantasia || cliente.razon_social,
-      telefono: telefonoFormateado,
-      messageLength: mensajeSanitizado.length
+    console.log('[Notify Presupuesto] 📤 Enviando mensaje a:', clienteWhatsapp);
+
+    const WHATSAPP_BACKEND_URL = Deno.env.get('WHATSAPP_BACKEND_URL') || 'https://whatsapp-backend-w6ot.onrender.com';
+
+    const whatsappResponse = await fetch(`${WHATSAPP_BACKEND_URL}/send`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        companyId: company.whatsapp_instance_id,
+        to: clienteWhatsapp,
+        message: mensajeSanitizado,
+      }),
     });
 
-    let respuestaBackend: any;
-    let estadoEnvio = 'enviado';
-    let errorMensaje: string | null = null;
+    const whatsappResult = await whatsappResponse.json();
 
-    try {
-      respuestaBackend = await sendWhatsAppMessage(company_id, telefonoFormateado, mensajeSanitizado);
-    } catch (error: any) {
-      console.error('[Notify Presupuesto] ❌ Error enviando mensaje:', error);
-      estadoEnvio = 'fallido';
-      errorMensaje = error.message;
-      respuestaBackend = { error: error.message };
+    if (!whatsappResponse.ok) {
+      console.error('[Notify Presupuesto] ❌ Error enviando WhatsApp:', whatsappResult);
+      throw new Error(`Error de WhatsApp: ${whatsappResult.error || 'Desconocido'}`);
     }
 
-    const notificacionData = {
-      company_id: company_id,
-      presupuesto_id: presupuesto_id,
+    await supabase.from('whatsapp_notificaciones').insert({
+      company_id,
+      presupuesto_id,
       tipo_notificacion,
-      telefono_destino: telefonoFormateado,
-      mensaje_enviado: mensajeSanitizado,
-      estado_envio: estadoEnvio,
-      respuesta_backend: respuestaBackend,
-      error_mensaje: errorMensaje,
-    };
+      destinatario: clienteWhatsapp,
+      mensaje: mensajeSanitizado,
+      estado: 'enviado',
+    });
 
-    const { error: insertError } = await supabase
-      .from('whatsapp_notificaciones')
-      .insert(notificacionData);
-
-    if (insertError) {
-      console.error('[Notify Presupuesto] ❌ Error guardando notificación:', insertError);
-    } else {
-      console.log('[Notify Presupuesto] ✅ Notificación registrada en base de datos');
-    }
+    console.log('[Notify Presupuesto] ✅ Notificación enviada exitosamente');
 
     return new Response(
-      JSON.stringify({
-        success: estadoEnvio === 'enviado',
-        message: estadoEnvio === 'enviado'
-          ? 'Notificación enviada exitosamente'
-          : 'Error al enviar notificación',
-        error: errorMensaje
-      }),
+      JSON.stringify({ success: true, message: 'Notificación enviada' }),
       {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
-
   } catch (error: any) {
-    console.error('[Notify Presupuesto] ❌ Error general:', error);
+    console.error('[Notify Presupuesto] ❌ Error:', error);
     return new Response(
-      JSON.stringify({
-        error: error.message || 'Error interno del servidor',
-        success: false
-      }),
+      JSON.stringify({ error: error.message || 'Error interno' }),
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
