@@ -51,17 +51,7 @@ export function FacturaRedirect() {
     try {
       console.log('[FacturaRedirect] Obteniendo factura...', { companyId, token });
 
-      const { data, error } = await supabase.functions.invoke('redirect-factura', {
-        body: null,
-        method: 'GET',
-      }, {
-        // Pasar parámetros en la URL
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      // Construir URL manualmente con parámetros
+      // Construir URL con parámetros
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const url = `${supabaseUrl}/functions/v1/redirect-factura?companyId=${companyId}&token=${token}`;
 
@@ -69,7 +59,7 @@ export function FacturaRedirect() {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         },
       });
 
