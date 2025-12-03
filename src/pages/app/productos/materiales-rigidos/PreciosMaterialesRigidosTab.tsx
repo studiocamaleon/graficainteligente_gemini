@@ -18,7 +18,9 @@ export function PreciosMaterialesRigidosTab() {
   const { showToast } = useToast();
   const [isAumentoModalOpen, setIsAumentoModalOpen] = useState(false);
   const canEditPrecios = useMemo(() => {
-    return !['operador_diseno', 'operador_taller'].includes(profile?.role || '');
+    const result = !['operador_diseno', 'operador_taller'].includes(profile?.role || '');
+    console.log('[Materiales Rígidos] DEBUG - Role:', profile?.role, 'canEditPrecios:', result);
+    return result;
   }, [profile?.role]);
 
   const {
@@ -111,6 +113,7 @@ export function PreciosMaterialesRigidosTab() {
   const materialesIds = Object.keys(productosAgrupados);
 
   if (materialesIds.length === 0) {
+    console.log('[Materiales Rígidos] DEBUG - No hay materiales');
     return (
       <Card>
         <div className="p-12">
@@ -124,21 +127,26 @@ export function PreciosMaterialesRigidosTab() {
     );
   }
 
+  console.log('[Materiales Rígidos] DEBUG - materialesIds.length:', materialesIds.length, 'productosParaAumento.length:', productosParaAumento.length);
+
   const productosModificadosSet = new Set(Object.keys(preciosModificados));
 
   return (
     <>
       <div className="space-y-6 pb-24">
         <div className="flex justify-end gap-3">
-          {canEditPrecios && materialesIds.length > 0 && (
-            <Button
-              variant="secondary"
-              onClick={() => setIsAumentoModalOpen(true)}
-            >
-              <Percent className="w-4 h-4 mr-2" />
-              Aumento Masivo
-            </Button>
-          )}
+          {canEditPrecios && materialesIds.length > 0 && (() => {
+            console.log('[Materiales Rígidos] DEBUG - Mostrando botón Aumento Masivo');
+            return (
+              <Button
+                variant="secondary"
+                onClick={() => setIsAumentoModalOpen(true)}
+              >
+                <Percent className="w-4 h-4 mr-2" />
+                Aumento Masivo
+              </Button>
+            );
+          })()}
           <ExportPDFButtonGroup
             onPrint={handlePrint}
             onDownload={handleDownloadPDF}
