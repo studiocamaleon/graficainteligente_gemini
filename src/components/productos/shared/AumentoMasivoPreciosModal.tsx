@@ -141,6 +141,16 @@ export function AumentoMasivoPreciosModal({
       return;
     }
 
+    // Validar que haya productos con precios configurados
+    const productosConPrecios = aplicarATodos
+      ? productos.filter(p => p.precio > 0)
+      : productos.filter(p => productosSeleccionados.has(p.id) && p.precio > 0);
+
+    if (productosConPrecios.length === 0) {
+      showToast('No hay productos con precios configurados. Configura precios primero antes de aplicar aumentos masivos.', 'error');
+      return;
+    }
+
     setMostrarPreview(true);
   };
 

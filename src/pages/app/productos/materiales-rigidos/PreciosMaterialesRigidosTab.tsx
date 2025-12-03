@@ -130,7 +130,7 @@ export function PreciosMaterialesRigidosTab() {
     <>
       <div className="space-y-6 pb-24">
         <div className="flex justify-end gap-3">
-          {canEditPrecios && productosParaAumento.length > 0 && (
+          {canEditPrecios && materialesIds.length > 0 && (
             <Button
               variant="secondary"
               onClick={() => setIsAumentoModalOpen(true)}
