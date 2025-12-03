@@ -1,24 +1,31 @@
 # Resumen Ejecutivo: Sistema de Facturas
 
+**Sistema**: Gestión completa de facturas para órdenes de trabajo
+**Plan completo**: 7 fases (Base de Datos → Frontend → Integración)
+**Progreso**: ✅ 2/7 Fases completadas (28%)
+
+---
+
 ## 🎯 Objetivo
 Implementar un sistema completo para gestionar facturas de órdenes de trabajo, desde el registro inicial hasta la notificación automática al cliente vía WhatsApp.
 
 ---
 
-## 📋 Problema Actual
+## 📊 Estado Actual
 
-### ✅ Qué existe:
-- Switch "Requiere factura" en frontend (solo visual)
-- Cálculo de IVA (21%) en totales de orden
-- NO se persiste en base de datos
-- NO hay módulo para gestionar facturas
-- NO hay notificaciones automáticas
+### ✅ COMPLETADO (Fase 1 y 2):
+- ✅ **Base de Datos**: Schema completo con 6 campos nuevos
+- ✅ **Tabla `facturas_historial`**: Auditoría completa
+- ✅ **Storage bucket `facturas`**: Privado con RLS
+- ✅ **8 índices optimizados**: Para queries eficientes
+- ✅ **3 funciones BD**: Consultar, registrar, estadísticas
 
-### ❌ Qué falta:
-- Campo `requiere_factura` en BD
-- Módulo "Facturas" en Finanzas
-- Sistema de carga de archivos PDF
-- Notificaciones WhatsApp automáticas
+### ⏳ PENDIENTE (Fase 3-7):
+- ⏳ Persistir en frontend (CreateOrderPage, OrderDetailPage)
+- ⏳ Módulo "Facturas" en Finanzas
+- ⏳ Sistema de carga de archivos PDF
+- ⏳ Notificaciones WhatsApp automáticas
+- ⏳ Testing y documentación
 
 ---
 
@@ -308,6 +315,44 @@ supabase functions new notify-factura-disponible
 
 ---
 
+## 📈 Progreso por Fases
+
+| Fase | Estado | Descripción | Documentación |
+|------|--------|-------------|---------------|
+| **Fase 1** | ✅ Completada | Base de Datos - Schema | `FASE_1_SISTEMA_FACTURAS_COMPLETADA.md` |
+| **Fase 2** | ✅ Completada | Base de Datos - Funciones | `FASE_2_SISTEMA_FACTURAS_COMPLETADA.md` |
+| **Fase 3** | ⏳ Pendiente | Frontend - Persistencia | Types + CreateOrder + OrderDetail |
+| **Fase 4** | ⏳ Pendiente | Frontend - Módulo Facturas | Hook + Página + Componentes |
+| **Fase 5** | ⏳ Pendiente | Upload de PDFs | FileUpload + Storage |
+| **Fase 6** | ⏳ Pendiente | Notificaciones WhatsApp | Trigger + Edge Function |
+| **Fase 7** | ⏳ Pendiente | Testing y Documentación | Tests + Docs + Capacitación |
+
+### ✅ Fase 1: Base de Datos - Schema (COMPLETADA)
+- 6 campos nuevos en `ordenes_trabajo`
+- Tabla `facturas_historial` con auditoría
+- Storage bucket `facturas` (privado)
+- 8 índices optimizados
+- Migración: `add_sistema_facturacion.sql`
+
+### ✅ Fase 2: Base de Datos - Funciones (COMPLETADA)
+- `fn_ordenes_pendientes_facturacion` - Consultar pendientes
+- `fn_registrar_factura` - Registrar con auditoría
+- `fn_estadisticas_facturacion` - KPIs del sistema
+- Migración: `create_facturas_functions.sql`
+
+### ⏳ Siguiente: Fase 3 - Frontend Persistencia
+**Objetivo**: Guardar y mostrar campos de facturación en órdenes
+
+**Tareas**:
+1. Actualizar tipos TypeScript (`src/types/database.ts`)
+2. Modificar `CreateOrderPage.tsx` - Persistir campos
+3. Actualizar `OrderDetailPage.tsx` - Mostrar estado
+
+**Archivos a modificar**: 3
+**Tiempo estimado**: 1-2 horas
+
+---
+
 **Documento de referencia para implementación del Sistema de Facturas**
-Versión: 1.0
+Versión: 2.0 (Actualizado con progreso de Fase 1 y 2)
 Última actualización: 2025-12-03
