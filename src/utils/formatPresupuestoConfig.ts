@@ -1,6 +1,9 @@
 /**
  * Utilidades para formatear configuraciones de productos en presupuestos
  * Convierte objetos de configuración técnica en texto legible para clientes
+ *
+ * IMPORTANTE: Esta lógica debe coincidir EXACTAMENTE con la usada en OrdenItemsTab.tsx
+ * para garantizar consistencia entre órdenes de trabajo y presupuestos.
  */
 
 interface ConfiguracionBase {
@@ -8,58 +11,116 @@ interface ConfiguracionBase {
 }
 
 /**
+ * Formatea el valor de cara impresa
+ */
+function formatCaraImpresa(cara: string): string {
+  if (cara === '1/0') return 'Frente';
+  if (cara === '1/1') return 'Frente y Dorso';
+  if (cara === 'frente_y_dorso') return 'Frente y Dorso';
+  if (cara === 'solo_frente') return 'Frente';
+  return cara;
+}
+
+/**
+ * Formatea espesor o gramaje con su unidad correcta
+ */
+function formatEspesorOGramaje(config: ConfiguracionBase): string | null {
+  // Si tiene espesor, usar la unidad del material
+  if (config.espesor && config.unidad_espesor) {
+    // Para gramajes, agregar espacio antes de la unidad
+    if (config.unidad_espesor === 'gr' || config.unidad_espesor === 'g') {
+      return `${config.espesor} ${config.unidad_espesor}`;
+    }
+    // Para otras unidades (mm, cm, etc), no agregar espacio
+    return `${config.espesor}${config.unidad_espesor}`;
+  }
+  // Fallback: si solo tiene espesor sin unidad
+  if (config.espesor) {
+    return `${config.espesor}mm`;
+  }
+  // Fallback legacy: si tiene gramaje (por compatibilidad con datos antiguos)
+  if (config.gramaje) {
+    return `${config.gramaje} g`;
+  }
+  return null;
+}
+
+/**
+ * Formatea servicios y acabados seleccionados
+ */
+function formatServiciosYAcabados(config: ConfiguracionBase): string[] {
+  const partes: string[] = [];
+
+  // Servicios seleccionados
+  if (config.servicios_seleccionados && Array.isArray(config.servicios_seleccionados)) {
+    config.servicios_seleccionados.forEach((s: any) => {
+      const nombre = s.nivel ? `${s.nombre} (${s.nivel})` : s.nombre;
+      partes.push(`Servicio: ${nombre}`);
+    });
+  }
+
+  // Acabados seleccionados
+  if (config.acabados_seleccionados && Array.isArray(config.acabados_seleccionados)) {
+    config.acabados_seleccionados.forEach((a: any) => {
+      const nombre = a.nivel ? `${a.nombre} (${a.nivel})` : a.nombre;
+      partes.push(`Acabado: ${nombre}`);
+    });
+  }
+
+  return partes;
+}
+
+/**
  * Formatea la configuración de productos de Impresión Láser
+ * Usa los mismos campos que OrdenItemsTab.tsx
  */
 function formatImpresionLaser(config: ConfiguracionBase): string {
   const partes: string[] = [];
 
-  // Dimensiones
-  if (config.medidas) {
-    if (config.medidas.tipo === 'fijas' && config.medidas.ancho && config.medidas.alto) {
-      partes.push(`${config.medidas.ancho} x ${config.medidas.alto} cm`);
-    } else if (config.medidas.tipo === 'personalizadas' && config.medidas.valor) {
-      partes.push(`Medida: ${config.medidas.valor}`);
+  // Dimensiones usando medida_ancho y medida_alto
+  if (config.medida_ancho || config.medida_alto) {
+    if (config.medida_ancho && config.medida_alto) {
+      partes.push(`${config.medida_ancho}x${config.medida_alto} cm`);
+    } else {
+      partes.push(`${config.medida_ancho || config.medida_alto} cm`);
     }
   }
 
-  // Material
-  if (config.material) {
-    partes.push(`Material: ${config.material}`);
-  }
-
-  // Gramaje
-  if (config.gramaje) {
-    partes.push(`${config.gramaje}g`);
-  }
-
-  // Colores/Tintas
-  if (config.tintas) {
-    if (Array.isArray(config.tintas)) {
-      partes.push(`Tintas: ${config.tintas.join(', ')}`);
-    } else if (typeof config.tintas === 'string') {
-      partes.push(`Tintas: ${config.tintas}`);
+  // Material con variante
+  if (config.material_nombre) {
+    let materialTexto = config.material_nombre;
+    if (config.variante_nombre) {
+      materialTexto += ` - ${config.variante_nombre}`;
     }
+    partes.push(materialTexto);
   }
 
-  // Caras impresas
-  if (config.caras_impresas) {
-    const caras = Array.isArray(config.caras_impresas)
-      ? config.caras_impresas.join(', ')
-      : config.caras_impresas;
-    partes.push(`Impresión: ${caras}`);
+  // Espesor/Gramaje con unidad
+  const espesorFormateado = formatEspesorOGramaje(config);
+  if (espesorFormateado) {
+    partes.push(espesorFormateado);
   }
 
-  // Acabados
-  if (config.acabados && Array.isArray(config.acabados) && config.acabados.length > 0) {
-    partes.push(`Acabados: ${config.acabados.join(', ')}`);
+  // Tecnología
+  if (config.tecnologia_nombre) {
+    partes.push(config.tecnologia_nombre);
   }
 
-  // Servicios
-  if (config.servicios && Array.isArray(config.servicios) && config.servicios.length > 0) {
-    partes.push(`Servicios: ${config.servicios.join(', ')}`);
+  // Tinta
+  if (config.tinta_nombre) {
+    partes.push(config.tinta_nombre);
   }
 
-  return partes.length > 0 ? partes.join(' • ') : '';
+  // Cara impresa
+  if (config.cara_impresa) {
+    partes.push(formatCaraImpresa(config.cara_impresa));
+  }
+
+  // Servicios y acabados
+  const serviciosAcabados = formatServiciosYAcabados(config);
+  partes.push(...serviciosAcabados);
+
+  return partes.length > 0 ? partes.join(' | ') : '';
 }
 
 /**
@@ -69,53 +130,54 @@ function formatGranFormato(config: ConfiguracionBase): string {
   const partes: string[] = [];
 
   // Dimensiones
-  if (config.ancho && config.alto) {
-    partes.push(`${config.ancho} x ${config.alto} cm`);
-  } else if (config.medida) {
-    partes.push(`Medida: ${config.medida}`);
-  }
-
-  // Tipo de venta
-  if (config.tipo_venta) {
-    const tipoVentaLabels: Record<string, string> = {
-      'mt2': 'por m²',
-      'unidad': 'por unidad',
-      'mt_lineal': 'por metro lineal'
-    };
-    const label = tipoVentaLabels[config.tipo_venta] || config.tipo_venta;
-    partes.push(`Venta ${label}`);
-  }
-
-  // Material
-  if (config.material) {
-    partes.push(`Material: ${config.material}`);
-  }
-
-  // Tecnología
-  if (config.tecnologia) {
-    partes.push(`Tecnología: ${config.tecnologia}`);
-  }
-
-  // Tintas
-  if (config.tintas) {
-    if (Array.isArray(config.tintas)) {
-      partes.push(`Tintas: ${config.tintas.join(', ')}`);
-    } else if (typeof config.tintas === 'string') {
-      partes.push(`Tintas: ${config.tintas}`);
+  if (config.medida_ancho || config.medida_alto) {
+    if (config.medida_ancho && config.medida_alto) {
+      partes.push(`${config.medida_ancho}x${config.medida_alto} cm`);
+    } else {
+      partes.push(`${config.medida_ancho || config.medida_alto} cm`);
     }
   }
 
-  // Acabados
-  if (config.acabados && Array.isArray(config.acabados) && config.acabados.length > 0) {
-    partes.push(`Acabados: ${config.acabados.join(', ')}`);
+  // Material con variante
+  if (config.material_nombre) {
+    let materialTexto = config.material_nombre;
+    if (config.variante_nombre) {
+      materialTexto += ` - ${config.variante_nombre}`;
+    }
+    partes.push(materialTexto);
   }
 
-  // Servicios
-  if (config.servicios && Array.isArray(config.servicios) && config.servicios.length > 0) {
-    partes.push(`Servicios: ${config.servicios.join(', ')}`);
+  // Espesor/Gramaje
+  const espesorFormateado = formatEspesorOGramaje(config);
+  if (espesorFormateado) {
+    partes.push(espesorFormateado);
   }
 
-  return partes.length > 0 ? partes.join(' • ') : '';
+  // Tecnología
+  if (config.tecnologia_nombre) {
+    partes.push(config.tecnologia_nombre);
+  }
+
+  // Tinta
+  if (config.tinta_nombre) {
+    partes.push(config.tinta_nombre);
+  }
+
+  // Cara impresa
+  if (config.cara_impresa) {
+    partes.push(formatCaraImpresa(config.cara_impresa));
+  }
+
+  // Color (para algunos productos)
+  if (config.color) {
+    partes.push(config.color);
+  }
+
+  // Servicios y acabados
+  const serviciosAcabados = formatServiciosYAcabados(config);
+  partes.push(...serviciosAcabados);
+
+  return partes.length > 0 ? partes.join(' | ') : '';
 }
 
 /**
@@ -125,31 +187,44 @@ function formatMaterialesRigidos(config: ConfiguracionBase): string {
   const partes: string[] = [];
 
   // Dimensiones
-  if (config.ancho && config.alto) {
-    partes.push(`${config.ancho} x ${config.alto} cm`);
+  if (config.medida_ancho || config.medida_alto) {
+    if (config.medida_ancho && config.medida_alto) {
+      partes.push(`${config.medida_ancho}x${config.medida_alto} cm`);
+    } else {
+      partes.push(`${config.medida_ancho || config.medida_alto} cm`);
+    }
   }
 
-  // Material
-  if (config.material) {
-    partes.push(`Material: ${config.material}`);
+  // Material con variante
+  if (config.material_nombre) {
+    let materialTexto = config.material_nombre;
+    if (config.variante_nombre) {
+      materialTexto += ` - ${config.variante_nombre}`;
+    }
+    partes.push(materialTexto);
   }
 
-  // Espesor
-  if (config.espesor) {
-    partes.push(`Espesor: ${config.espesor}mm`);
+  // Espesor con unidad
+  const espesorFormateado = formatEspesorOGramaje(config);
+  if (espesorFormateado) {
+    partes.push(espesorFormateado);
   }
 
-  // Acabados
-  if (config.acabados && Array.isArray(config.acabados) && config.acabados.length > 0) {
-    partes.push(`Acabados: ${config.acabados.join(', ')}`);
+  // Tecnología
+  if (config.tecnologia_nombre) {
+    partes.push(config.tecnologia_nombre);
   }
 
-  // Servicios
-  if (config.servicios && Array.isArray(config.servicios) && config.servicios.length > 0) {
-    partes.push(`Servicios: ${config.servicios.join(', ')}`);
+  // Tinta
+  if (config.tinta_nombre) {
+    partes.push(config.tinta_nombre);
   }
 
-  return partes.length > 0 ? partes.join(' • ') : '';
+  // Servicios y acabados
+  const serviciosAcabados = formatServiciosYAcabados(config);
+  partes.push(...serviciosAcabados);
+
+  return partes.length > 0 ? partes.join(' | ') : '';
 }
 
 /**
@@ -158,37 +233,55 @@ function formatMaterialesRigidos(config: ConfiguracionBase): string {
 function formatTalonarios(config: ConfiguracionBase): string {
   const partes: string[] = [];
 
-  // Páginas
-  if (config.cantidad_paginas) {
-    partes.push(`${config.cantidad_paginas} páginas`);
-  }
-
   // Dimensiones
-  if (config.medida || (config.ancho && config.alto)) {
-    const medida = config.medida || `${config.ancho} x ${config.alto} cm`;
-    partes.push(`Medida: ${medida}`);
+  if (config.medida_ancho || config.medida_alto) {
+    if (config.medida_ancho && config.medida_alto) {
+      partes.push(`${config.medida_ancho}x${config.medida_alto} cm`);
+    } else {
+      partes.push(`${config.medida_ancho || config.medida_alto} cm`);
+    }
   }
 
   // Material
-  if (config.material) {
-    partes.push(`Material: ${config.material}`);
+  if (config.material_nombre) {
+    let materialTexto = config.material_nombre;
+    if (config.variante_nombre) {
+      materialTexto += ` - ${config.variante_nombre}`;
+    }
+    partes.push(materialTexto);
   }
 
-  // Tintas
-  if (config.tintas) {
-    if (Array.isArray(config.tintas)) {
-      partes.push(`Tintas: ${config.tintas.join(', ')}`);
-    } else if (typeof config.tintas === 'string') {
-      partes.push(`Tintas: ${config.tintas}`);
-    }
+  // Espesor/Gramaje
+  const espesorFormateado = formatEspesorOGramaje(config);
+  if (espesorFormateado) {
+    partes.push(espesorFormateado);
+  }
+
+  // Tecnología
+  if (config.tecnologia_nombre) {
+    partes.push(config.tecnologia_nombre);
+  }
+
+  // Tinta
+  if (config.tinta_nombre) {
+    partes.push(config.tinta_nombre);
+  }
+
+  // Páginas
+  if (config.cantidad_paginas) {
+    partes.push(`${config.cantidad_paginas} hojas`);
   }
 
   // Tipo de copia
   if (config.tipo_copia) {
-    partes.push(`Tipo: ${config.tipo_copia}`);
+    partes.push(config.tipo_copia);
   }
 
-  return partes.length > 0 ? partes.join(' • ') : '';
+  // Servicios y acabados
+  const serviciosAcabados = formatServiciosYAcabados(config);
+  partes.push(...serviciosAcabados);
+
+  return partes.length > 0 ? partes.join(' | ') : '';
 }
 
 /**
@@ -197,43 +290,39 @@ function formatTalonarios(config: ConfiguracionBase): string {
 function formatPlotterCorte(config: ConfiguracionBase): string {
   const partes: string[] = [];
 
-  // Tipo de venta
-  if (config.tipo_venta) {
-    const tipoVentaLabels: Record<string, string> = {
-      'mt2': 'por m²',
-      'unidad': 'por unidad',
-      'mt_lineal': 'por metro lineal'
-    };
-    const label = tipoVentaLabels[config.tipo_venta] || config.tipo_venta;
-    partes.push(`Venta ${label}`);
+  // Dimensiones
+  if (config.medida_ancho || config.medida_alto) {
+    if (config.medida_ancho && config.medida_alto) {
+      partes.push(`${config.medida_ancho}x${config.medida_alto} cm`);
+    } else {
+      partes.push(`${config.medida_ancho || config.medida_alto} cm`);
+    }
   }
 
   // Material
-  if (config.material) {
-    partes.push(`Material: ${config.material}`);
+  if (config.material_nombre) {
+    let materialTexto = config.material_nombre;
+    if (config.variante_nombre) {
+      materialTexto += ` - ${config.variante_nombre}`;
+    }
+    partes.push(materialTexto);
   }
 
   // Marca
   if (config.marca) {
-    partes.push(`Marca: ${config.marca}`);
+    partes.push(config.marca);
   }
 
   // Color
   if (config.color) {
-    partes.push(`Color: ${config.color}`);
+    partes.push(config.color);
   }
 
-  // Acabados
-  if (config.acabados && Array.isArray(config.acabados) && config.acabados.length > 0) {
-    partes.push(`Acabados: ${config.acabados.join(', ')}`);
-  }
+  // Servicios y acabados
+  const serviciosAcabados = formatServiciosYAcabados(config);
+  partes.push(...serviciosAcabados);
 
-  // Servicios
-  if (config.servicios && Array.isArray(config.servicios) && config.servicios.length > 0) {
-    partes.push(`Servicios: ${config.servicios.join(', ')}`);
-  }
-
-  return partes.length > 0 ? partes.join(' • ') : '';
+  return partes.length > 0 ? partes.join(' | ') : '';
 }
 
 /**
@@ -243,21 +332,29 @@ function formatPortabanners(config: ConfiguracionBase): string {
   const partes: string[] = [];
 
   // Dimensiones
-  if (config.ancho && config.alto) {
-    partes.push(`${config.ancho} x ${config.alto} cm`);
+  if (config.medida_ancho || config.medida_alto) {
+    if (config.medida_ancho && config.medida_alto) {
+      partes.push(`${config.medida_ancho}x${config.medida_alto} cm`);
+    } else {
+      partes.push(`${config.medida_ancho || config.medida_alto} cm`);
+    }
   }
 
   // Tecnología
-  if (config.tecnologia) {
-    partes.push(`Tecnología: ${config.tecnologia}`);
+  if (config.tecnologia_nombre) {
+    partes.push(config.tecnologia_nombre);
   }
 
   // Material
-  if (config.material) {
-    partes.push(`Material: ${config.material}`);
+  if (config.material_nombre) {
+    let materialTexto = config.material_nombre;
+    if (config.variante_nombre) {
+      materialTexto += ` - ${config.variante_nombre}`;
+    }
+    partes.push(materialTexto);
   }
 
-  return partes.length > 0 ? partes.join(' • ') : '';
+  return partes.length > 0 ? partes.join(' | ') : '';
 }
 
 /**
@@ -268,25 +365,29 @@ function formatSellos(config: ConfiguracionBase): string {
 
   // Tipo de sello
   if (config.tipo_sello) {
-    partes.push(`Tipo: ${config.tipo_sello}`);
+    partes.push(config.tipo_sello);
   }
 
-  // Dimensiones
-  if (config.ancho && config.alto) {
-    partes.push(`${config.ancho} x ${config.alto} mm`);
+  // Dimensiones (en mm para sellos)
+  if (config.medida_ancho || config.medida_alto) {
+    if (config.medida_ancho && config.medida_alto) {
+      partes.push(`${config.medida_ancho}x${config.medida_alto} mm`);
+    } else {
+      partes.push(`${config.medida_ancho || config.medida_alto} mm`);
+    }
   }
 
   // Marca
   if (config.marca) {
-    partes.push(`Marca: ${config.marca}`);
+    partes.push(config.marca);
   }
 
   // Tipo de tinta
   if (config.tipo_tinta) {
-    partes.push(`Tinta: ${config.tipo_tinta}`);
+    partes.push(config.tipo_tinta);
   }
 
-  return partes.length > 0 ? partes.join(' • ') : '';
+  return partes.length > 0 ? partes.join(' | ') : '';
 }
 
 /**
@@ -297,45 +398,63 @@ function formatCentroCopiado(config: ConfiguracionBase): string {
 
   // Tamaño de papel
   if (config.tamanio_papel) {
-    partes.push(`Tamaño: ${config.tamanio_papel}`);
+    partes.push(config.tamanio_papel);
   }
 
   // Tipo de papel
   if (config.tipo_papel) {
-    partes.push(`Papel: ${config.tipo_papel}`);
+    partes.push(config.tipo_papel);
   }
 
   // Gramaje
   if (config.gramaje) {
-    partes.push(`${config.gramaje}g`);
+    partes.push(`${config.gramaje} g`);
   }
 
   // Tinta
   if (config.tinta) {
-    partes.push(`Tinta: ${config.tinta}`);
+    partes.push(config.tinta);
+  } else if (config.tipo_tinta) {
+    partes.push(config.tipo_tinta === 'CMYK' ? 'Color' : 'B/N');
   }
 
   // Caras
   if (config.caras) {
-    partes.push(`Impresión: ${config.caras}`);
+    partes.push(config.caras);
+  } else if (config.cara_impresa) {
+    partes.push(formatCaraImpresa(config.cara_impresa));
   }
 
-  // Cantidad de páginas
+  // Cantidad de páginas/hojas
   if (config.cantidad_paginas) {
     partes.push(`${config.cantidad_paginas} páginas`);
+  } else if (config.cantidad_hojas) {
+    partes.push(`${config.cantidad_hojas} hojas`);
   }
 
   // Anillado
   if (config.anillado) {
-    partes.push(`Anillado: ${config.anillado}`);
+    if (typeof config.anillado === 'object' && config.anillado.tipo) {
+      partes.push(`Anillado: ${config.anillado.tipo}`);
+    } else if (typeof config.anillado === 'string') {
+      partes.push(`Anillado: ${config.anillado}`);
+    }
+  } else if (config.tipo_anillado) {
+    partes.push(`Anillado: ${config.tipo_anillado}`);
   }
 
   // Plastificado
   if (config.plastificado) {
-    partes.push(`Plastificado: ${config.plastificado}`);
+    if (typeof config.plastificado === 'object' && config.plastificado.tipo) {
+      partes.push(`Plastificado: ${config.plastificado.tipo}`);
+    } else if (typeof config.plastificado === 'string') {
+      partes.push(`Plastificado: ${config.plastificado}`);
+    }
+  } else if (config.tipo_plastificado) {
+    partes.push(`Plastificado: ${config.tipo_plastificado}`);
   }
 
-  return partes.length > 0 ? partes.join(' • ') : '';
+  return partes.length > 0 ? partes.join(' | ') : '';
 }
 
 /**
@@ -344,32 +463,55 @@ function formatCentroCopiado(config: ConfiguracionBase): string {
 function formatGenerico(config: ConfiguracionBase): string {
   const partes: string[] = [];
 
-  // Buscar campos comunes
-  const camposComunes = [
-    { key: 'ancho', label: 'Ancho' },
-    { key: 'alto', label: 'Alto' },
-    { key: 'medida', label: 'Medida' },
-    { key: 'material', label: 'Material' },
-    { key: 'color', label: 'Color' },
-    { key: 'tecnologia', label: 'Tecnología' },
-  ];
-
-  camposComunes.forEach(({ key, label }) => {
-    if (config[key]) {
-      partes.push(`${label}: ${config[key]}`);
+  // Dimensiones
+  if (config.medida_ancho || config.medida_alto) {
+    if (config.medida_ancho && config.medida_alto) {
+      partes.push(`${config.medida_ancho}x${config.medida_alto} cm`);
+    } else {
+      partes.push(`${config.medida_ancho || config.medida_alto} cm`);
     }
-  });
-
-  // Acabados y servicios
-  if (config.acabados && Array.isArray(config.acabados) && config.acabados.length > 0) {
-    partes.push(`Acabados: ${config.acabados.join(', ')}`);
   }
 
-  if (config.servicios && Array.isArray(config.servicios) && config.servicios.length > 0) {
-    partes.push(`Servicios: ${config.servicios.join(', ')}`);
+  // Material
+  if (config.material_nombre) {
+    let materialTexto = config.material_nombre;
+    if (config.variante_nombre) {
+      materialTexto += ` - ${config.variante_nombre}`;
+    }
+    partes.push(materialTexto);
   }
 
-  return partes.length > 0 ? partes.join(' • ') : '';
+  // Espesor/Gramaje
+  const espesorFormateado = formatEspesorOGramaje(config);
+  if (espesorFormateado) {
+    partes.push(espesorFormateado);
+  }
+
+  // Tecnología
+  if (config.tecnologia_nombre) {
+    partes.push(config.tecnologia_nombre);
+  }
+
+  // Tinta
+  if (config.tinta_nombre) {
+    partes.push(config.tinta_nombre);
+  }
+
+  // Color
+  if (config.color) {
+    partes.push(config.color);
+  }
+
+  // Marca
+  if (config.marca) {
+    partes.push(config.marca);
+  }
+
+  // Servicios y acabados
+  const serviciosAcabados = formatServiciosYAcabados(config);
+  partes.push(...serviciosAcabados);
+
+  return partes.length > 0 ? partes.join(' | ') : '';
 }
 
 /**
