@@ -219,7 +219,11 @@ export default function DetallePresupuesto() {
 
         <div className="p-6">
           {activeTab === 'items' && (
-            <PresupuestoItemsTab items={presupuesto.items || []} />
+            <PresupuestoItemsTab
+              items={presupuesto.items || []}
+              presupuestoId={presupuesto.id}
+              esEditable={presupuesto.estado === 'borrador'}
+            />
           )}
 
           {activeTab === 'archivos' && (

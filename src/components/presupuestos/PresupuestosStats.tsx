@@ -5,8 +5,10 @@ import {
   TrendingUp,
   DollarSign,
   AlertCircle,
+  Calculator,
 } from 'lucide-react';
 import { Card } from '../ui/Card';
+import { usePresupuestosStats } from '../../hooks/usePresupuestosStats';
 import type { PresupuestoConRelaciones } from '../../types/presupuestos';
 
 interface PresupuestosStatsProps {
@@ -14,6 +16,8 @@ interface PresupuestosStatsProps {
 }
 
 export function PresupuestosStats({ presupuestos }: PresupuestosStatsProps) {
+  const { stats: dbStats } = usePresupuestosStats();
+
   // Calcular estadísticas
   const stats = {
     total: presupuestos.length,
@@ -66,6 +70,14 @@ export function PresupuestosStats({ presupuestos }: PresupuestosStatsProps) {
       bgColor: 'bg-blue-50',
     },
     {
+      title: 'Pendientes de Cotizar',
+      value: dbStats.presupuestos_pendientes_cotizar.toString(),
+      subtitle: 'En borradores',
+      icon: Calculator,
+      color: dbStats.presupuestos_pendientes_cotizar > 0 ? 'text-amber-600' : 'text-gray-400',
+      bgColor: dbStats.presupuestos_pendientes_cotizar > 0 ? 'bg-amber-50' : 'bg-gray-50',
+    },
+    {
       title: 'En Negociación',
       value: stats.enviados.toString(),
       subtitle: formatCurrency(valorEnNegociacion),
@@ -107,7 +119,7 @@ export function PresupuestosStats({ presupuestos }: PresupuestosStatsProps) {
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
       {statCards.map((stat, index) => {
         const Icon = stat.icon;
         return (
