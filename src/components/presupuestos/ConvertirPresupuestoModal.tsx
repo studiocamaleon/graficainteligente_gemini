@@ -179,8 +179,9 @@ export function ConvertirPresupuestoModal({
               <div>
                 <p className="font-semibold text-orange-900">Items Personalizados</p>
                 <p className="text-sm text-orange-700 mt-1">
-                  Este presupuesto tiene {itemsPersonalizados} item(s) personalizado(s) que no
-                  se pueden copiar automáticamente. Deberás agregarlos manualmente a la orden.
+                  Este presupuesto tiene {itemsPersonalizados} item(s) personalizado(s) que serán
+                  copiados a la orden. Deberás configurar las rutas de producción manualmente para
+                  estos items. El sistema te guiará a un modal de configuración antes de completar la conversión.
                 </p>
               </div>
             </div>
