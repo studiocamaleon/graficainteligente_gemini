@@ -36,6 +36,7 @@ interface UseFacturasFilters {
   fecha_hasta?: string;
   cliente_id?: string;
   estado?: string;
+  estado_facturacion?: string;
 }
 
 export function useFacturas(filtros?: UseFacturasFilters) {
@@ -49,7 +50,7 @@ export function useFacturas(filtros?: UseFacturasFilters) {
     if (profile?.company_id) {
       fetchData();
     }
-  }, [profile?.company_id, filtros?.fecha_desde, filtros?.fecha_hasta, filtros?.cliente_id, filtros?.estado]);
+  }, [profile?.company_id, filtros?.fecha_desde, filtros?.fecha_hasta, filtros?.cliente_id, filtros?.estado, filtros?.estado_facturacion]);
 
   const fetchData = async () => {
     await Promise.all([fetchOrdenesPendientes(), fetchEstadisticas()]);
@@ -68,6 +69,7 @@ export function useFacturas(filtros?: UseFacturasFilters) {
           p_fecha_hasta: filtros?.fecha_hasta || null,
           p_cliente_id: filtros?.cliente_id || null,
           p_estado: filtros?.estado || null,
+          p_estado_facturacion: filtros?.estado_facturacion || null,
         }
       );
 

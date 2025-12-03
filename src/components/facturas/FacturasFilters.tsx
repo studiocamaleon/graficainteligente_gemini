@@ -9,10 +9,12 @@ interface FacturasFiltersProps {
   fechaHasta: string;
   clienteId: string;
   estado: string;
+  estadoFacturacion: string;
   onFechaDesdeChange: (value: string) => void;
   onFechaHastaChange: (value: string) => void;
   onClienteChange: (value: string) => void;
   onEstadoChange: (value: string) => void;
+  onEstadoFacturacionChange: (value: string) => void;
   onClear: () => void;
 }
 
@@ -21,10 +23,12 @@ export function FacturasFilters({
   fechaHasta,
   clienteId,
   estado,
+  estadoFacturacion,
   onFechaDesdeChange,
   onFechaHastaChange,
   onClienteChange,
   onEstadoChange,
+  onEstadoFacturacionChange,
   onClear,
 }: FacturasFiltersProps) {
   const { clients } = useClients({ page: 1, itemsPerPage: 1000 });
@@ -36,7 +40,13 @@ export function FacturasFilters({
     { value: 'finalizada', label: 'Finalizada' },
   ];
 
-  const hasActiveFilters = fechaDesde || fechaHasta || clienteId || estado;
+  const estadosFacturacionOptions = [
+    { value: '', label: 'Todas las órdenes' },
+    { value: 'pendiente', label: 'Pendientes de facturar' },
+    { value: 'facturada', label: 'Ya facturadas' },
+  ];
+
+  const hasActiveFilters = fechaDesde || fechaHasta || clienteId || estado || estadoFacturacion;
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-4">
@@ -56,7 +66,7 @@ export function FacturasFilters({
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Fecha Desde
@@ -105,6 +115,18 @@ export function FacturasFilters({
             value={estado}
             onChange={onEstadoChange}
             options={estadosOptions}
+            placeholder="Seleccionar estado"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Estado de Facturación
+          </label>
+          <SearchableSelect
+            value={estadoFacturacion}
+            onChange={onEstadoFacturacionChange}
+            options={estadosFacturacionOptions}
             placeholder="Seleccionar estado"
           />
         </div>

@@ -17,6 +17,7 @@ export function FacturasView() {
   const [fechaHasta, setFechaHasta] = useState('');
   const [clienteId, setClienteId] = useState('');
   const [estado, setEstado] = useState('');
+  const [estadoFacturacion, setEstadoFacturacion] = useState('pendiente');
 
   const [ordenSeleccionada, setOrdenSeleccionada] = useState<OrdenPendienteFacturacion | null>(null);
   const [showModal, setShowModal] = useState(false);
@@ -36,6 +37,7 @@ export function FacturasView() {
     fecha_hasta: fechaHasta || undefined,
     cliente_id: clienteId || undefined,
     estado: estado || undefined,
+    estado_facturacion: estadoFacturacion || undefined,
   });
 
   const handleClearFilters = () => {
@@ -43,6 +45,7 @@ export function FacturasView() {
     setFechaHasta('');
     setClienteId('');
     setEstado('');
+    setEstadoFacturacion('pendiente');
   };
 
   const handleCargarFactura = (orden: OrdenPendienteFacturacion) => {
@@ -100,10 +103,12 @@ export function FacturasView() {
         fechaHasta={fechaHasta}
         clienteId={clienteId}
         estado={estado}
+        estadoFacturacion={estadoFacturacion}
         onFechaDesdeChange={setFechaDesde}
         onFechaHastaChange={setFechaHasta}
         onClienteChange={setClienteId}
         onEstadoChange={setEstado}
+        onEstadoFacturacionChange={setEstadoFacturacion}
         onClear={handleClearFilters}
       />
 
@@ -120,7 +125,11 @@ export function FacturasView() {
       <div>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold text-gray-900">
-            Órdenes Pendientes de Facturación
+            {estadoFacturacion === 'facturada'
+              ? 'Órdenes Facturadas'
+              : estadoFacturacion === 'pendiente'
+              ? 'Órdenes Pendientes de Facturación'
+              : 'Todas las Órdenes'}
             {!loading && ordenesPendientes.length > 0 && (
               <span className="ml-2 text-sm font-normal text-gray-500">
                 ({ordenesPendientes.length})
@@ -150,8 +159,12 @@ export function FacturasView() {
         ) : ordenesPendientes.length === 0 ? (
           <EmptyState
             icon={FileText}
-            title="No hay órdenes pendientes"
-            description="No se encontraron órdenes que requieran facturación con los filtros aplicados"
+            title={estadoFacturacion === 'facturada'
+              ? 'No hay órdenes facturadas'
+              : estadoFacturacion === 'pendiente'
+              ? 'No hay órdenes pendientes'
+              : 'No hay órdenes'}
+            description="No se encontraron órdenes con los filtros aplicados"
           />
         ) : (
           <OrdenesPendientesTable
