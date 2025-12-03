@@ -2,7 +2,7 @@
 
 **Sistema**: Gestión completa de facturas para órdenes de trabajo
 **Plan completo**: 7 fases (Base de Datos → Frontend → Integración)
-**Progreso**: ✅ 2/7 Fases completadas (28%)
+**Progreso**: ✅ 3/7 Fases completadas (43%)
 
 ---
 
@@ -13,16 +13,18 @@ Implementar un sistema completo para gestionar facturas de órdenes de trabajo, 
 
 ## 📊 Estado Actual
 
-### ✅ COMPLETADO (Fase 1 y 2):
+### ✅ COMPLETADO (Fase 1, 2 y 3):
 - ✅ **Base de Datos**: Schema completo con 6 campos nuevos
 - ✅ **Tabla `facturas_historial`**: Auditoría completa
 - ✅ **Storage bucket `facturas`**: Privado con RLS
 - ✅ **8 índices optimizados**: Para queries eficientes
 - ✅ **3 funciones BD**: Consultar, registrar, estadísticas
+- ✅ **Tipos TypeScript**: Interfaz OrdenTrabajo actualizada
+- ✅ **Persistencia frontend**: Crear y ver órdenes con facturación
+- ✅ **Badges visuales**: Estado de facturación visible
 
-### ⏳ PENDIENTE (Fase 3-7):
-- ⏳ Persistir en frontend (CreateOrderPage, OrderDetailPage)
-- ⏳ Módulo "Facturas" en Finanzas
+### ⏳ PENDIENTE (Fase 4-7):
+- ⏳ Módulo "Facturas" en Finanzas (hook + página + componentes)
 - ⏳ Sistema de carga de archivos PDF
 - ⏳ Notificaciones WhatsApp automáticas
 - ⏳ Testing y documentación
@@ -321,7 +323,7 @@ supabase functions new notify-factura-disponible
 |------|--------|-------------|---------------|
 | **Fase 1** | ✅ Completada | Base de Datos - Schema | `FASE_1_SISTEMA_FACTURAS_COMPLETADA.md` |
 | **Fase 2** | ✅ Completada | Base de Datos - Funciones | `FASE_2_SISTEMA_FACTURAS_COMPLETADA.md` |
-| **Fase 3** | ⏳ Pendiente | Frontend - Persistencia | Types + CreateOrder + OrderDetail |
+| **Fase 3** | ✅ Completada | Frontend - Persistencia | `FASE_3_SISTEMA_FACTURAS_COMPLETADA.md` |
 | **Fase 4** | ⏳ Pendiente | Frontend - Módulo Facturas | Hook + Página + Componentes |
 | **Fase 5** | ⏳ Pendiente | Upload de PDFs | FileUpload + Storage |
 | **Fase 6** | ⏳ Pendiente | Notificaciones WhatsApp | Trigger + Edge Function |
@@ -340,19 +342,28 @@ supabase functions new notify-factura-disponible
 - `fn_estadisticas_facturacion` - KPIs del sistema
 - Migración: `create_facturas_functions.sql`
 
-### ⏳ Siguiente: Fase 3 - Frontend Persistencia
-**Objetivo**: Guardar y mostrar campos de facturación en órdenes
+### ✅ Fase 3: Frontend - Persistencia (COMPLETADA)
+- Tipos TypeScript actualizados (6 campos en `OrdenTrabajo`)
+- `useOrdenTrabajo.ts` modificado (persiste totales y facturación)
+- `CreateOrderPage.tsx` guarda `requiere_factura` y `subtotal_iva`
+- `OrderDetailPage.tsx` muestra badges y datos de factura
+- Archivos modificados: 3
+
+### ⏳ Siguiente: Fase 4 - Módulo de Facturas
+**Objetivo**: Crear módulo completo para gestionar facturas en Finanzas
 
 **Tareas**:
-1. Actualizar tipos TypeScript (`src/types/database.ts`)
-2. Modificar `CreateOrderPage.tsx` - Persistir campos
-3. Actualizar `OrderDetailPage.tsx` - Mostrar estado
+1. Hook `useFacturas.ts` - Consumir funciones BD
+2. Página `FacturasView.tsx` - Lista de pendientes
+3. Componentes UI (Cards, KPIs, Filtros)
+4. Modal `RegistrarFacturaModal.tsx`
 
-**Archivos a modificar**: 3
-**Tiempo estimado**: 1-2 horas
+**Archivos a crear**: 5-6
+**Tiempo estimado**: 3-4 horas
 
 ---
 
 **Documento de referencia para implementación del Sistema de Facturas**
-Versión: 2.0 (Actualizado con progreso de Fase 1 y 2)
+Versión: 3.0 (Actualizado con progreso de Fase 1, 2 y 3)
 Última actualización: 2025-12-03
+**Progreso**: 43% completado (3/7 fases)

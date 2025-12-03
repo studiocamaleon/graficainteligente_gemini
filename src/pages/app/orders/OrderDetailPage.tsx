@@ -378,6 +378,11 @@ export function OrderDetailPage() {
                 Orden {orden.numero_orden}
               </h1>
               <OrderStatusBadge estado={orden.estado} size="lg" />
+              {orden.requiere_factura && (
+                <Badge variant={orden.facturada ? 'success' : 'warning'}>
+                  {orden.facturada ? '✓ Facturada' : 'Requiere Factura'}
+                </Badge>
+              )}
             </div>
             <div className="flex items-center gap-6 text-sm text-gray-600">
               <div className="flex items-center gap-2">
@@ -388,6 +393,17 @@ export function OrderDetailPage() {
                 <div className="flex items-center gap-2">
                   <Clock className="w-5 h-5" />
                   <span>Entrega estimada: {new Date(orden.fecha_estimada_entrega).toLocaleDateString()}</span>
+                </div>
+              )}
+              {orden.facturada && orden.numero_factura && (
+                <div className="flex items-center gap-2">
+                  <FileText className="w-5 h-5" />
+                  <span>Factura N° {orden.numero_factura}</span>
+                  {orden.fecha_facturacion && (
+                    <span className="text-gray-500">
+                      ({new Date(orden.fecha_facturacion).toLocaleDateString()})
+                    </span>
+                  )}
                 </div>
               )}
             </div>
@@ -664,9 +680,9 @@ export function OrderDetailPage() {
             <OrdenPagosTab
               totales={{
                 subtotal: Number(orden.subtotal || 0),
-                descuentoAplicado: Number(orden.descuento_aplicado || 0),
-                subtotalConDescuento: Number(orden.subtotal_con_descuento || 0),
-                iva: Number(orden.iva || 0),
+                descuentoAplicado: Number(orden.total_descuentos || 0),
+                subtotalConDescuento: Number(orden.subtotal || 0) - Number(orden.total_descuentos || 0),
+                iva: Number(orden.subtotal_iva || 0),
                 total: Number(orden.total || 0),
               }}
               pagos={orden.pagos || []}

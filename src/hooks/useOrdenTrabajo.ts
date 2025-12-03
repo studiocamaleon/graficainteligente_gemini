@@ -47,6 +47,13 @@ interface CreateOrdenData {
   canal_venta: CanalVenta;
   fecha_estimada_entrega?: string;
   notas_internas?: string;
+  // Campos de totales
+  subtotal?: number;
+  total_descuentos?: number;
+  total?: number;
+  // Campos de facturación
+  requiere_factura?: boolean;
+  subtotal_iva?: number;
 }
 
 interface UpdateOrdenData {
@@ -597,9 +604,13 @@ export function useOrdenTrabajo() {
             fecha_creacion: new Date().toISOString(),
             fecha_estimada_entrega: data.ordenData.fecha_estimada_entrega || null,
             notas_internas: data.ordenData.notas_internas || null,
-            subtotal: 0,
-            total_descuentos: 0,
-            total: 0,
+            subtotal: data.ordenData.subtotal || 0,
+            total_descuentos: data.ordenData.total_descuentos || 0,
+            total: data.ordenData.total || 0,
+            // Campos de facturación
+            requiere_factura: data.ordenData.requiere_factura || false,
+            subtotal_iva: data.ordenData.subtotal_iva || 0,
+            facturada: false,
             created_by: profile.id,
             numero_orden: '',
           },

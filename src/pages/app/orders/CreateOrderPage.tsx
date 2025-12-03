@@ -254,6 +254,13 @@ export function CreateOrderPage() {
       canal_venta: canalVenta,
       fecha_estimada_entrega: fechaEntrega,
       notas_internas: notasInternas || undefined,
+      // Totales calculados
+      subtotal: totales.subtotal,
+      total_descuentos: totales.descuentoAplicado,
+      total: totales.total,
+      // Facturación
+      requiere_factura: requiereFactura,
+      subtotal_iva: totales.iva,
     };
 
     const result = await createOrdenConItems({
