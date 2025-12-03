@@ -295,11 +295,13 @@ export function PreciosGranFormatoTab() {
 
         const p = productosMap.get(producto.id)!;
 
-        // Sumar todos los precios configurados (incluidos los de valor 0)
+        // Sumar SOLO los precios configurados (mayores a 0)
         producto.tintas.forEach((tinta) => {
           tinta.rangos.forEach((rango) => {
-            p.sum += rango.precio;
-            p.count += 1;
+            if (rango.precio > 0) {
+              p.sum += rango.precio;
+              p.count += 1;
+            }
           });
         });
 
@@ -310,12 +312,15 @@ export function PreciosGranFormatoTab() {
       });
     });
 
-    return Array.from(productosMap.values()).map((p) => ({
-      id: p.id,
-      nombre: p.nombre,
-      precio: Math.round(p.precio * 100) / 100,
-      isActive: true,
-    }));
+    // Retornar solo productos con precios configurados (precio > 0)
+    return Array.from(productosMap.values())
+      .filter((p) => p.precio > 0)
+      .map((p) => ({
+        id: p.id,
+        nombre: p.nombre,
+        precio: Math.round(p.precio * 100) / 100,
+        isActive: true,
+      }));
   }, [tecnologiasAgrupadas]);
 
   const handleAumentoSuccess = useCallback(async () => {

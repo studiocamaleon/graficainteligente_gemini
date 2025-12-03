@@ -56,7 +56,7 @@ export function PreciosMaterialesRigidosTab() {
   const productosParaAumento = useMemo(() => {
     const todosLosProductos = Object.values(productosAgrupados).flat();
 
-    // Agrupar por producto único (incluir todos, tengan o no precios)
+    // Agrupar por producto único y calcular precio promedio
     const productosMap = new Map<string, { nombre: string; precioSum: number; count: number }>();
 
     todosLosProductos.forEach(p => {
@@ -65,18 +65,22 @@ export function PreciosMaterialesRigidosTab() {
         productosMap.set(key, { nombre: p.nombre, precioSum: 0, count: 0 });
       }
       const prod = productosMap.get(key)!;
-      if (p.precio_actual) {
-        prod.precioSum += p.precio_actual.precio_placa || 0;
+      // Sumar SOLO precios > 0
+      if (p.precio_actual && p.precio_actual.precio_placa > 0) {
+        prod.precioSum += p.precio_actual.precio_placa;
         prod.count += 1;
       }
     });
 
-    return Array.from(productosMap.entries()).map(([id, data]) => ({
-      id,
-      nombre: data.nombre,
-      precio: data.count > 0 ? Math.round((data.precioSum / data.count) * 100) / 100 : 0,
-      isActive: true,
-    }));
+    // Retornar solo productos con precios configurados (precio > 0)
+    return Array.from(productosMap.entries())
+      .filter(([id, data]) => data.count > 0)
+      .map(([id, data]) => ({
+        id,
+        nombre: data.nombre,
+        precio: Math.round((data.precioSum / data.count) * 100) / 100,
+        isActive: true,
+      }));
   }, [productosAgrupados]);
 
   const handleAumentoSuccess = useCallback(async () => {
