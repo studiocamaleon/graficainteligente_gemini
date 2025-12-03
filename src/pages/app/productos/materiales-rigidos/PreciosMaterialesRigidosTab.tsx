@@ -54,27 +54,27 @@ export function PreciosMaterialesRigidosTab() {
 
   // Preparar datos para el modal de aumento masivo
   const productosParaAumento = useMemo(() => {
-    const productosConPrecios = Object.values(productosAgrupados)
-      .flat()
-      .filter(p => p.precio_actual && p.precio_actual.precio_placa > 0);
+    const todosLosProductos = Object.values(productosAgrupados).flat();
 
-    // Agrupar por producto único
+    // Agrupar por producto único (incluir todos, tengan o no precios)
     const productosMap = new Map<string, { nombre: string; precioSum: number; count: number }>();
 
-    productosConPrecios.forEach(p => {
+    todosLosProductos.forEach(p => {
       const key = p.producto_materiales_rigidos_id;
       if (!productosMap.has(key)) {
         productosMap.set(key, { nombre: p.nombre, precioSum: 0, count: 0 });
       }
       const prod = productosMap.get(key)!;
-      prod.precioSum += p.precio_actual!.precio_placa;
-      prod.count += 1;
+      if (p.precio_actual) {
+        prod.precioSum += p.precio_actual.precio_placa || 0;
+        prod.count += 1;
+      }
     });
 
     return Array.from(productosMap.entries()).map(([id, data]) => ({
       id,
       nombre: data.nombre,
-      precio: Math.round((data.precioSum / data.count) * 100) / 100,
+      precio: data.count > 0 ? Math.round((data.precioSum / data.count) * 100) / 100 : 0,
       isActive: true,
     }));
   }, [productosAgrupados]);

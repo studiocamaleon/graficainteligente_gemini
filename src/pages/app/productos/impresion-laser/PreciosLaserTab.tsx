@@ -52,18 +52,19 @@ export function PreciosLaserTab() {
 
   // Preparar datos para el modal de aumento masivo
   const productosParaAumento = useMemo(() => {
-    return productos
-      .filter(p => p.preciosExistentes && p.preciosExistentes.length > 0)
-      .map(producto => {
-        // Calcular precio promedio de todas las configuraciones
-        const precioPromedio = producto.preciosExistentes.reduce((sum, p) => sum + (p.precio || 0), 0) / producto.preciosExistentes.length;
-        return {
-          id: producto.id,
-          nombre: producto.nombre,
-          precio: Math.round(precioPromedio * 100) / 100,
-          isActive: true,
-        };
-      });
+    return productos.map(producto => {
+      // Calcular precio promedio de todas las configuraciones (incluidos precios en 0)
+      let precioPromedio = 0;
+      if (producto.preciosExistentes && producto.preciosExistentes.length > 0) {
+        precioPromedio = producto.preciosExistentes.reduce((sum, p) => sum + (p.precio || 0), 0) / producto.preciosExistentes.length;
+      }
+      return {
+        id: producto.id,
+        nombre: producto.nombre,
+        precio: Math.round(precioPromedio * 100) / 100,
+        isActive: true,
+      };
+    });
   }, [productos]);
 
   const handleAumentoSuccess = useCallback(async () => {

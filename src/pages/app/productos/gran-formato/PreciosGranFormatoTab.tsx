@@ -282,25 +282,31 @@ export function PreciosGranFormatoTab() {
 
     tecnologiasAgrupadas.forEach((tecnologia) => {
       tecnologia.productos.forEach((producto) => {
+        // Inicializar el producto si no existe
+        if (!productosMap.has(producto.id)) {
+          productosMap.set(producto.id, {
+            id: producto.id,
+            nombre: producto.nombre,
+            precio: 0,
+            count: 0,
+            sum: 0,
+          });
+        }
+
+        const p = productosMap.get(producto.id)!;
+
+        // Sumar todos los precios configurados (incluidos los de valor 0)
         producto.tintas.forEach((tinta) => {
           tinta.rangos.forEach((rango) => {
-            if (rango.precio > 0) {
-              if (!productosMap.has(producto.id)) {
-                productosMap.set(producto.id, {
-                  id: producto.id,
-                  nombre: producto.nombre,
-                  precio: 0,
-                  count: 0,
-                  sum: 0,
-                });
-              }
-              const p = productosMap.get(producto.id)!;
-              p.sum += rango.precio;
-              p.count += 1;
-              p.precio = p.sum / p.count;
-            }
+            p.sum += rango.precio;
+            p.count += 1;
           });
         });
+
+        // Calcular precio promedio
+        if (p.count > 0) {
+          p.precio = p.sum / p.count;
+        }
       });
     });
 
