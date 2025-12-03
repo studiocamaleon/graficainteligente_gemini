@@ -13,7 +13,6 @@ interface ConvertirPresupuestoParams {
   presupuesto_id: string;
   fecha_entrega_estimada?: string;
   notas_adicionales?: string;
-  copiar_archivos?: boolean;
   monto_pago?: number;
   medio_cobro_id?: string;
   referencia_pago?: string;
@@ -52,7 +51,6 @@ export function useConvertirPresupuesto() {
           p_presupuesto_id: params.presupuesto_id,
           p_fecha_entrega_estimada: params.fecha_entrega_estimada || null,
           p_notas_adicionales: params.notas_adicionales || null,
-          p_copiar_archivos: params.copiar_archivos !== false,
           p_monto_pago: params.monto_pago || null,
           p_medio_cobro_id: params.medio_cobro_id || null,
           p_referencia_pago: params.referencia_pago || null,
@@ -134,7 +132,7 @@ export function useConvertirPresupuesto() {
 
       if (itemsPersonalizados.length > 0) {
         warnings.push(
-          `Hay ${itemsPersonalizados.length} items personalizados que no se copiarán automáticamente`
+          `Hay ${itemsPersonalizados.length} items personalizados que requieren configuración de rutas`
         );
       }
 

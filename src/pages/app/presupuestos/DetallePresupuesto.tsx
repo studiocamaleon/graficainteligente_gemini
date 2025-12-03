@@ -128,7 +128,6 @@ export default function DetallePresupuesto() {
   const handleConvertir = async (params: {
     fechaEntrega: string;
     notasAdicionales?: string;
-    copiarArchivos: boolean;
     montoPago?: number;
     medioCobroId?: string;
     referenciaPago?: string;

@@ -22,7 +22,6 @@ interface ConvertirPresupuestoModalProps {
   onConvertir: (params: {
     fechaEntrega: string;
     notasAdicionales?: string;
-    copiarArchivos: boolean;
     montoPago?: number;
     medioCobroId?: string;
     referenciaPago?: string;
@@ -38,7 +37,6 @@ export function ConvertirPresupuestoModal({
 }: ConvertirPresupuestoModalProps) {
   const [fechaEntrega, setFechaEntrega] = useState<string>('');
   const [notasAdicionales, setNotasAdicionales] = useState('');
-  const [copiarArchivos, setCopiarArchivos] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
   // Estados para pago inicial
@@ -83,7 +81,6 @@ export function ConvertirPresupuestoModal({
       await onConvertir({
         fechaEntrega,
         notasAdicionales: notasAdicionales || undefined,
-        copiarArchivos,
         montoPago: registrarPago && montoPago ? parseFloat(montoPago) : undefined,
         medioCobroId: registrarPago && medioCobroId ? medioCobroId : undefined,
         referenciaPago: registrarPago && referenciaPago ? referenciaPago : undefined,
@@ -112,7 +109,6 @@ export function ConvertirPresupuestoModal({
       await onConvertir({
         fechaEntrega,
         notasAdicionales: notasAdicionales || undefined,
-        copiarArchivos,
         montoPago: registrarPago && montoPago ? parseFloat(montoPago) : undefined,
         medioCobroId: registrarPago && medioCobroId ? medioCobroId : undefined,
         referenciaPago: registrarPago && referenciaPago ? referenciaPago : undefined,
@@ -130,7 +126,6 @@ export function ConvertirPresupuestoModal({
     if (!submitting) {
       setFechaEntrega('');
       setNotasAdicionales('');
-      setCopiarArchivos(true);
       setRegistrarPago(false);
       setMontoPago('');
       setMedioCobroId('');
@@ -223,20 +218,6 @@ export function ConvertirPresupuestoModal({
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             placeholder="Agregar notas internas para la orden..."
           />
-        </div>
-
-        {/* Checkbox copiar archivos */}
-        <div className="flex items-start gap-3">
-          <input
-            type="checkbox"
-            id="copiar-archivos"
-            checked={copiarArchivos}
-            onChange={(e) => setCopiarArchivos(e.target.checked)}
-            className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-          />
-          <label htmlFor="copiar-archivos" className="text-sm text-gray-700 cursor-pointer">
-            Copiar archivos adjuntos del presupuesto a la orden
-          </label>
         </div>
 
         {/* Sección de Pago Inicial */}
@@ -333,9 +314,6 @@ export function ConvertirPresupuestoModal({
           <p className="font-semibold text-gray-900">Se creará una orden con:</p>
           <ul className="text-sm text-gray-600 space-y-1">
             <li>• {itemsSistema} item(s) del sistema con rutas de producción</li>
-            {copiarArchivos && (
-              <li>• Archivos adjuntos del presupuesto</li>
-            )}
             <li>• Estado inicial: Pendiente</li>
             <li>• Referencia al presupuesto original</li>
           </ul>

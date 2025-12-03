@@ -313,7 +313,6 @@ export interface ConvertirPresupuestoData {
   presupuesto_id: string;
   fecha_entrega_estimada?: string;
   notas_adicionales?: string;
-  copiar_archivos?: boolean;
 }
 
 export interface ConvertirPresupuestoResult {
