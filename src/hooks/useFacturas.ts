@@ -18,6 +18,7 @@ export interface OrdenPendienteFacturacion {
   subtotal_iva: number;
   total: number;
   dias_pendiente: number;
+  facturada: boolean;
 }
 
 export interface EstadisticasFacturacion {

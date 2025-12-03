@@ -145,14 +145,20 @@ export function OrdenesPendientesTable({
                           <Eye className="w-4 h-4" />
                         </Button>
                       )}
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        onClick={() => onCargarFactura(orden)}
-                      >
-                        <Upload className="w-4 h-4 mr-1" />
-                        Cargar Factura
-                      </Button>
+                      {orden.facturada ? (
+                        <Badge variant="success" size="sm">
+                          Facturada
+                        </Badge>
+                      ) : (
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => onCargarFactura(orden)}
+                        >
+                          <Upload className="w-4 h-4 mr-1" />
+                          Cargar Factura
+                        </Button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -166,11 +172,11 @@ export function OrdenesPendientesTable({
       <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
         <div className="flex items-center justify-between text-sm">
           <div className="text-gray-600">
-            <span className="font-semibold text-gray-900">{ordenes.length}</span> {ordenes.length === 1 ? 'orden pendiente' : 'órdenes pendientes'}
+            <span className="font-semibold text-gray-900">{ordenes.length}</span> {ordenes.length === 1 ? 'orden' : 'órdenes'}
           </div>
           <div className="flex items-center gap-6">
             <div className="text-right">
-              <div className="text-xs text-gray-500 mb-1">Total Pendiente</div>
+              <div className="text-xs text-gray-500 mb-1">Total Acumulado</div>
               <div className="text-base font-bold text-gray-900">
                 {formatCurrency(ordenes.reduce((sum, orden) => sum + orden.total, 0))}
               </div>
