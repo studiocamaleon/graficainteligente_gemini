@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Loader2, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, AlertTriangle, Link as LinkIcon } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
@@ -241,7 +241,6 @@ export function CreateOrderPage() {
     console.log('[CreateOrderPage] Creando orden con datos:', {
       clienteId,
       itemsCount: items.length,
-      ordenTemporalId,
       profileId: profile.id,
       companyId: profile.company_id
     });
@@ -575,11 +574,16 @@ export function CreateOrderPage() {
           </div>
 
           <div className={activeTab === 'adjuntos' ? 'block' : 'hidden'}>
-            <OrdenAdjuntosTab
-              ordenTemporalId={ordenTemporalId}
-              estado="pendiente"
-              modoCreacion={true}
-            />
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
+              <LinkIcon className="w-12 h-12 text-blue-400 mx-auto mb-3" />
+              <h3 className="text-lg font-semibold text-blue-900 mb-2">
+                Links no disponibles en creación
+              </h3>
+              <p className="text-blue-700 text-sm">
+                Los links externos se pueden agregar después de crear la orden.
+                Completa la creación de la orden para poder agregar links.
+              </p>
+            </div>
           </div>
 
           <div className={activeTab === 'historial' ? 'block' : 'hidden'}>

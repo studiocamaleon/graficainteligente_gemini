@@ -6,9 +6,14 @@ Se ha eliminado completamente el sistema de carga de archivos de las órdenes de
 
 ## Cambios Realizados
 
-### 1. Hooks Eliminados
+### 1. Archivos Eliminados
+
+#### Hooks
 - `src/hooks/useOrdenArchivos.ts` - Hook para gestión de archivos de órdenes
 - `src/hooks/useOrdenArchivosProduccion.ts` - Hook para archivos de producción
+
+#### Utilidades
+- `src/utils/cleanupTemporalFiles.ts` - Sistema de limpieza automática de archivos temporales
 
 ### 2. Componentes Modificados
 
@@ -19,9 +24,15 @@ Se ha eliminado completamente el sistema de carga de archivos de las órdenes de
 - Mantenidas las funcionalidades de: agregar, editar, eliminar, copiar y abrir links
 
 #### `src/pages/app/orders/CreateOrderPage.tsx`
-- Eliminadas referencias a `totalAdjuntos`
+- Eliminadas referencias a `totalAdjuntos` y `ordenTemporalId`
 - Removida lógica de conteo de archivos en mensajes de éxito
-- Mantenida la funcionalidad de links directos
+- Tab de adjuntos en modo creación muestra mensaje informativo (links solo disponibles después de crear orden)
+- Eliminado import y uso de sistema de limpieza temporal
+
+#### `src/App.tsx`
+- Eliminado import de `iniciarLimpiezaAutomatica`
+- Removido useEffect que iniciaba la limpieza automática de archivos
+- Simplificado el componente principal
 
 ### 3. Hooks Simplificados
 
