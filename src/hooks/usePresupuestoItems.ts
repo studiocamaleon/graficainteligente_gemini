@@ -6,6 +6,8 @@ import type {
   CreatePresupuestoItemData,
   UpdatePresupuestoItemData,
   CreateItemPersonalizadoData,
+  ItemPendienteCotizacion,
+  TotalesPresupuesto,
 } from '../types/presupuestos';
 
 export function usePresupuestoItems(presupuestoId: string | undefined) {
@@ -84,8 +86,10 @@ export function usePresupuestoItems(presupuestoId: string | undefined) {
         precio_base: 0,
         precio_servicios: 0,
         precio_acabados: 0,
-        precio_unitario_final: data.precio_unitario_final,
-        precio_total: data.cantidad * data.precio_unitario_final,
+        precio_unitario_final: data.precio_unitario_final ?? null,
+        precio_total: data.precio_unitario_final
+          ? data.cantidad * data.precio_unitario_final
+          : null,
         descripcion: data.descripcion,
         tiempo_produccion_dias: data.tiempo_produccion_dias,
       };
@@ -112,8 +116,13 @@ export function usePresupuestoItems(presupuestoId: string | undefined) {
         if (item) {
           const cantidad = data.cantidad ?? item.cantidad;
           const precioUnitario =
-            data.precio_unitario_final ?? item.precio_unitario_final;
-          updateData.precio_total = cantidad * precioUnitario;
+            data.precio_unitario_final !== undefined
+              ? data.precio_unitario_final
+              : item.precio_unitario_final;
+
+          // Calcular precio_total solo si ambos valores existen
+          updateData.precio_total =
+            precioUnitario !== null ? cantidad * precioUnitario : null;
         }
       }
 
@@ -189,16 +198,72 @@ export function usePresupuestoItems(presupuestoId: string | undefined) {
     }
   };
 
-  // Calcular totales
-  const calcularTotales = () => {
-    const subtotal = items.reduce((sum, item) => sum + Number(item.precio_total), 0);
-    const totalItems = items.length;
-    const totalUnidades = items.reduce((sum, item) => sum + Number(item.cantidad), 0);
+  // Verificar si hay items sin precio
+  const tieneItemsSinPrecio = (): boolean => {
+    return items.some(
+      (item) => item.precio_unitario_final === null || item.precio_total === null
+    );
+  };
+
+  // Obtener items pendientes de cotización
+  const getItemsPendientesCotizacion = (): ItemPendienteCotizacion[] => {
+    return items
+      .filter(
+        (item) => item.precio_unitario_final === null || item.precio_total === null
+      )
+      .map((item) => ({
+        id: item.id,
+        producto_nombre: item.producto_nombre,
+        descripcion: item.descripcion,
+        cantidad: item.cantidad,
+        configuracion: item.configuracion,
+      }));
+  };
+
+  // Obtener items completos (con precio)
+  const getItemsCompletos = (): PresupuestoItem[] => {
+    return items.filter(
+      (item) => item.precio_unitario_final !== null && item.precio_total !== null
+    ) as PresupuestoItem[];
+  };
+
+  // Asignar precio a un item pendiente
+  const asignarPrecioItem = async (
+    id: string,
+    precioUnitario: number
+  ): Promise<boolean> => {
+    const item = items.find((i) => i.id === id);
+    if (!item) return false;
+
+    const precioTotal = item.cantidad * precioUnitario;
+
+    return await updateItem(id, {
+      precio_unitario_final: precioUnitario,
+      precio_total: precioTotal,
+    });
+  };
+
+  // Calcular totales con información de items pendientes
+  const calcularTotales = (): TotalesPresupuesto => {
+    const itemsCompletos = items.filter(
+      (item) => item.precio_unitario_final !== null && item.precio_total !== null
+    );
+    const itemsPendientes = items.filter(
+      (item) => item.precio_unitario_final === null || item.precio_total === null
+    );
+
+    const subtotal = itemsCompletos.reduce(
+      (sum, item) => sum + Number(item.precio_total),
+      0
+    );
 
     return {
       subtotal,
-      totalItems,
-      totalUnidades,
+      totalItems: items.length,
+      totalUnidades: items.reduce((sum, item) => sum + Number(item.cantidad), 0),
+      itemsCompletos: itemsCompletos.length,
+      itemsPendientes: itemsPendientes.length,
+      tienePendientes: itemsPendientes.length > 0,
     };
   };
 
@@ -213,5 +278,9 @@ export function usePresupuestoItems(presupuestoId: string | undefined) {
     updateItem,
     deleteItem,
     duplicarItem,
+    tieneItemsSinPrecio,
+    getItemsPendientesCotizacion,
+    getItemsCompletos,
+    asignarPrecioItem,
   };
 }

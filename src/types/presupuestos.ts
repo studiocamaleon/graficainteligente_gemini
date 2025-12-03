@@ -125,8 +125,8 @@ export interface PresupuestoItem {
   precio_base: number;
   precio_servicios: number;
   precio_acabados: number;
-  precio_unitario_final: number;
-  precio_total: number;
+  precio_unitario_final: number | null; // NULL indica pendiente de cotización
+  precio_total: number | null; // NULL indica pendiente de cotización
 
   // Adicionales
   descripcion?: string;
@@ -251,8 +251,8 @@ export interface CreatePresupuestoItemData {
   precio_base: number;
   precio_servicios: number;
   precio_acabados: number;
-  precio_unitario_final: number;
-  precio_total: number;
+  precio_unitario_final: number | null; // Puede ser null para cotización pendiente
+  precio_total: number | null; // Puede ser null para cotización pendiente
   descripcion?: string;
   tiempo_produccion_dias?: number;
 }
@@ -262,8 +262,8 @@ export interface UpdatePresupuestoItemData {
   precio_base?: number;
   precio_servicios?: number;
   precio_acabados?: number;
-  precio_unitario_final?: number;
-  precio_total?: number;
+  precio_unitario_final?: number | null;
+  precio_total?: number | null;
   descripcion?: string;
   tiempo_produccion_dias?: number;
   configuracion?: Record<string, any>;
@@ -274,7 +274,7 @@ export interface CreateItemPersonalizadoData {
   producto_nombre: string;
   descripcion: string;
   cantidad: number;
-  precio_unitario_final: number;
+  precio_unitario_final?: number | null; // Opcional, puede dejarse para cotizar después
   tiempo_produccion_dias?: number;
 }
 
@@ -326,6 +326,34 @@ export interface ConvertirPresupuestoResult {
 }
 
 // ============================================================================
+// COTIZACIONES PENDIENTES
+// ============================================================================
+
+export interface ItemPendienteCotizacion {
+  id: string;
+  producto_nombre: string;
+  descripcion?: string;
+  cantidad: number;
+  configuracion?: Record<string, any>;
+}
+
+export interface TotalesPresupuesto {
+  subtotal: number;
+  totalItems: number;
+  totalUnidades: number;
+  itemsCompletos: number;
+  itemsPendientes: number;
+  tienePendientes: boolean;
+}
+
+export interface PresupuestoValidationState {
+  puedeEnviar: boolean;
+  mensajeValidacion: string | null;
+  porcentajeCompletitud: number;
+  esCompleto: boolean;
+}
+
+// ============================================================================
 // FILTROS Y BÚSQUEDA
 // ============================================================================
 
@@ -371,6 +399,7 @@ export interface PresupuestosStats {
   tasa_conversion: number; // % de aprobados vs enviados
   tiempo_promedio_respuesta_horas: number;
   presupuestos_por_vencer_7_dias: number;
+  presupuestos_pendientes_cotizar: number; // Presupuestos en borrador con items sin precio
 }
 
 // ============================================================================
@@ -399,8 +428,8 @@ export interface PresupuestoTrackingPublico {
     producto_nombre: string;
     producto_categoria?: string;
     cantidad: number;
-    precio_unitario_final: number;
-    precio_total: number;
+    precio_unitario_final: number | null;
+    precio_total: number | null;
     descripcion?: string;
     tiempo_produccion_dias?: number;
   }>;

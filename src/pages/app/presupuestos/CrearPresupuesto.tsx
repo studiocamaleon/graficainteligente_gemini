@@ -11,9 +11,11 @@ import { PageHeader } from '../../../components/ui/PageHeader';
 import { Tabs } from '../../../components/ui/Tabs';
 import { PresupuestoGeneralSection } from '../../../components/presupuestos/PresupuestoGeneralSection';
 import { PresupuestoItemsSection } from '../../../components/presupuestos/PresupuestoItemsSection';
+import { ItemsPendientesCotizacion } from '../../../components/presupuestos/ItemsPendientesCotizacion';
 import { PresupuestoCondicionesSection } from '../../../components/presupuestos/PresupuestoCondicionesSection';
 import { PresupuestoResumenSection } from '../../../components/presupuestos/PresupuestoResumenSection';
-import type { CanalVenta, PresupuestoItem, CreatePresupuestoItemData } from '../../../types/presupuestos';
+import { usePresupuestoValidation } from '../../../hooks/usePresupuestoValidation';
+import type { CanalVenta, PresupuestoItem, CreatePresupuestoItemData, TotalesPresupuesto } from '../../../types/presupuestos';
 import { generarDescripcionCompleta } from '../../../utils/formatPresupuestoConfig';
 
 type TabId = 'general' | 'items' | 'condiciones' | 'resumen';
@@ -111,9 +113,12 @@ export default function CrearPresupuesto() {
     producto_nombre: string;
     descripcion: string;
     cantidad: number;
-    precio_unitario_final: number;
+    precio_unitario_final?: number | null;
     tiempo_produccion_dias?: number;
   }) => {
+    const precioUnitario = item.precio_unitario_final ?? null;
+    const precioTotal = precioUnitario !== null ? item.cantidad * precioUnitario : null;
+
     const nuevoItem: PresupuestoItem = {
       id: `temp-${Date.now()}`,
       presupuesto_id: '',
@@ -124,8 +129,8 @@ export default function CrearPresupuesto() {
       precio_base: 0,
       precio_servicios: 0,
       precio_acabados: 0,
-      precio_unitario_final: item.precio_unitario_final,
-      precio_total: item.cantidad * item.precio_unitario_final,
+      precio_unitario_final: precioUnitario,
+      precio_total: precioTotal,
       descripcion: item.descripcion,
       tiempo_produccion_dias: item.tiempo_produccion_dias,
       created_at: new Date().toISOString(),
@@ -138,10 +143,54 @@ export default function CrearPresupuesto() {
     setItems(items.filter((item) => item.id !== id));
   };
 
-  const calcularTotales = () => {
-    const subtotal = items.reduce((sum, item) => sum + Number(item.precio_total), 0);
-    return { subtotal, descuentos: 0, total: subtotal };
+  const handleAsignarPrecio = async (itemId: string, precioUnitario: number): Promise<boolean> => {
+    try {
+      const itemIndex = items.findIndex(item => item.id === itemId);
+      if (itemIndex === -1) return false;
+
+      const item = items[itemIndex];
+      const precioTotal = item.cantidad * precioUnitario;
+
+      const updatedItems = [...items];
+      updatedItems[itemIndex] = {
+        ...item,
+        precio_unitario_final: precioUnitario,
+        precio_total: precioTotal,
+      };
+
+      setItems(updatedItems);
+      return true;
+    } catch (error) {
+      console.error('Error asignando precio:', error);
+      return false;
+    }
   };
+
+  const calcularTotales = (): TotalesPresupuesto => {
+    const itemsCompletos = items.filter(
+      (item) => item.precio_unitario_final !== null && item.precio_total !== null
+    );
+    const itemsPendientes = items.filter(
+      (item) => item.precio_unitario_final === null || item.precio_total === null
+    );
+
+    const subtotal = itemsCompletos.reduce(
+      (sum, item) => sum + Number(item.precio_total),
+      0
+    );
+
+    return {
+      subtotal,
+      totalItems: items.length,
+      totalUnidades: items.reduce((sum, item) => sum + Number(item.cantidad), 0),
+      itemsCompletos: itemsCompletos.length,
+      itemsPendientes: itemsPendientes.length,
+      tienePendientes: itemsPendientes.length > 0,
+    };
+  };
+
+  const totales = calcularTotales();
+  const validation = usePresupuestoValidation(totales);
 
   const handleGuardar = async (enviar: boolean = false) => {
     setErrorMessage(null);
@@ -284,13 +333,34 @@ export default function CrearPresupuesto() {
           )}
 
           {activeTab === 'items' && (
-            <PresupuestoItemsSection
-              items={items}
-              onAddItemSistema={handleAddItemSistema}
-              onAddItemPersonalizado={handleAddItemPersonalizado}
-              onEditItem={() => {}}
-              onDeleteItem={handleDeleteItem}
-            />
+            <div className="space-y-6">
+              {/* Banner de items pendientes */}
+              {totales.tienePendientes && (
+                <ItemsPendientesCotizacion
+                  items={items.filter(
+                    (item) => item.precio_unitario_final === null || item.precio_total === null
+                  ).map(item => ({
+                    id: item.id,
+                    producto_nombre: item.producto_nombre,
+                    descripcion: item.descripcion,
+                    cantidad: item.cantidad,
+                    configuracion: item.configuracion,
+                  }))}
+                  porcentajeCompletitud={validation.porcentajeCompletitud}
+                  onAsignarPrecio={handleAsignarPrecio}
+                />
+              )}
+
+              {/* Lista de items */}
+              <PresupuestoItemsSection
+                items={items}
+                onAddItemSistema={handleAddItemSistema}
+                onAddItemPersonalizado={handleAddItemPersonalizado}
+                onEditItem={() => {}}
+                onDeleteItem={handleDeleteItem}
+                onAsignarPrecio={handleAsignarPrecio}
+              />
+            </div>
           )}
 
           {activeTab === 'condiciones' && (
@@ -329,14 +399,23 @@ export default function CrearPresupuesto() {
             <Save className="w-4 h-4 mr-2" />
             Guardar Borrador
           </Button>
-          <Button
-            onClick={() => handleGuardar(true)}
-            isLoading={isSubmitting}
-            disabled={isSubmitting}
-          >
-            <Send className="w-4 h-4 mr-2" />
-            Guardar y Enviar
-          </Button>
+          <div className="relative">
+            <Button
+              onClick={() => handleGuardar(true)}
+              isLoading={isSubmitting}
+              disabled={isSubmitting || !validation.puedeEnviar}
+              title={validation.mensajeValidacion || undefined}
+            >
+              <Send className="w-4 h-4 mr-2" />
+              Guardar y Enviar
+            </Button>
+            {validation.mensajeValidacion && !isSubmitting && (
+              <div className="absolute -top-12 right-0 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2 text-sm text-yellow-800 whitespace-nowrap shadow-lg">
+                <AlertCircle className="w-4 h-4 inline mr-1" />
+                {validation.mensajeValidacion}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { X, DollarSign, Package, FileText } from 'lucide-react';
+import { X, DollarSign, Package, FileText, Clock } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
+import { Switch } from '../ui/Switch';
 
 interface AddItemPersonalizadoModalProps {
   isOpen: boolean;
@@ -11,7 +12,7 @@ interface AddItemPersonalizadoModalProps {
     producto_nombre: string;
     descripcion: string;
     cantidad: number;
-    precio_unitario_final: number;
+    precio_unitario_final?: number | null;
     tiempo_produccion_dias?: number;
   }) => void;
 }
@@ -29,6 +30,7 @@ export function AddItemPersonalizadoModal({
     tiempo_produccion_dias: 0,
   });
 
+  const [cotizarDespues, setCotizarDespues] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -41,6 +43,7 @@ export function AddItemPersonalizadoModal({
         precio_unitario_final: 0,
         tiempo_produccion_dias: 0,
       });
+      setCotizarDespues(false);
       setErrors({});
     }
   }, [isOpen]);
@@ -60,7 +63,8 @@ export function AddItemPersonalizadoModal({
       newErrors.cantidad = 'La cantidad debe ser mayor a 0';
     }
 
-    if (formData.precio_unitario_final <= 0) {
+    // Solo validar precio si NO está marcado "Cotizar después"
+    if (!cotizarDespues && formData.precio_unitario_final <= 0) {
       newErrors.precio_unitario_final = 'El precio debe ser mayor a 0';
     }
 
@@ -75,6 +79,7 @@ export function AddItemPersonalizadoModal({
 
     onAdd({
       ...formData,
+      precio_unitario_final: cotizarDespues ? null : formData.precio_unitario_final,
       tiempo_produccion_dias:
         formData.tiempo_produccion_dias > 0
           ? formData.tiempo_produccion_dias
@@ -92,6 +97,7 @@ export function AddItemPersonalizadoModal({
       precio_unitario_final: 0,
       tiempo_produccion_dias: 0,
     });
+    setCotizarDespues(false);
     setErrors({});
     onClose();
   };
@@ -173,31 +179,50 @@ export function AddItemPersonalizadoModal({
           </p>
         </div>
 
-        {/* Cantidad y Precio */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Cantidad */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Cantidad *
-            </label>
-            <Input
-              type="number"
-              value={formData.cantidad}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  cantidad: parseInt(e.target.value) || 0,
-                })
-              }
-              min={1}
-              error={errors.cantidad}
-            />
-            {errors.cantidad && (
-              <p className="mt-1 text-sm text-red-600">{errors.cantidad}</p>
-            )}
-          </div>
+        {/* Cantidad */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Cantidad *
+          </label>
+          <Input
+            type="number"
+            value={formData.cantidad}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                cantidad: parseInt(e.target.value) || 0,
+              })
+            }
+            min={1}
+            error={errors.cantidad}
+          />
+          {errors.cantidad && (
+            <p className="mt-1 text-sm text-red-600">{errors.cantidad}</p>
+          )}
+        </div>
 
-          {/* Precio unitario */}
+        {/* Cotizar después */}
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <Switch
+                  checked={cotizarDespues}
+                  onChange={setCotizarDespues}
+                />
+                <span className="text-sm font-medium text-gray-900">
+                  Cotizar después
+                </span>
+              </label>
+              <p className="text-xs text-gray-600 mt-1">
+                Agrega el item ahora y asigna el precio más tarde
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Precio unitario - Solo visible si NO está marcado "Cotizar después" */}
+        {!cotizarDespues && (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Precio Unitario *
@@ -225,7 +250,7 @@ export function AddItemPersonalizadoModal({
               </p>
             )}
           </div>
-        </div>
+        )}
 
         {/* Tiempo de producción (opcional) */}
         <div>
@@ -249,17 +274,36 @@ export function AddItemPersonalizadoModal({
           </p>
         </div>
 
-        {/* Total */}
-        <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-gray-700">
-              Total del Item:
-            </span>
-            <span className="text-2xl font-bold text-gray-900">
-              {formatCurrency(calcularTotal())}
-            </span>
+        {/* Total - Solo visible si NO está marcado "Cotizar después" */}
+        {!cotizarDespues && (
+          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-700">
+                Total del Item:
+              </span>
+              <span className="text-2xl font-bold text-gray-900">
+                {formatCurrency(calcularTotal())}
+              </span>
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* Mensaje informativo si está marcado "Cotizar después" */}
+        {cotizarDespues && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <Clock className="w-5 h-5 text-blue-700 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-blue-900">
+                  Precio pendiente de cotización
+                </p>
+                <p className="text-xs text-blue-700 mt-1">
+                  Podrás asignar el precio más tarde desde el detalle del presupuesto. El presupuesto permanecerá en estado "borrador" hasta que todos los items tengan precio.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Actions */}
         <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
