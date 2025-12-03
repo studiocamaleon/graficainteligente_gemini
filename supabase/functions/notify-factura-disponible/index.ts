@@ -246,20 +246,31 @@ Deno.serve(async (req: Request) => {
       console.error('[Factura] Error obteniendo empresa:', companyError);
     }
 
-    // Generar URL pública de descarga (signed URL con 30 días de validez)
-    console.log('[Factura] Generando signed URL para:', factura_storage_path);
+    // ====================================================================
+    // NUEVO: Generar token corto y construir URL corta
+    // ====================================================================
+    console.log('[Factura] Generando token corto para URL...');
 
-    const { data: urlData, error: urlError } = await supabase.storage
-      .from('facturas')
-      .createSignedUrl(factura_storage_path, 2592000); // 30 días = 2592000 segundos
+    const { data: tokenCorto, error: tokenError } = await supabase.rpc(
+      'fn_generar_token_factura',
+      {
+        p_company_id: company_id,
+        p_orden_trabajo_id: orden_id,
+        p_factura_storage_path: factura_storage_path,
+        p_numero_factura: numero_factura,
+        p_dias_validez: 30
+      }
+    );
 
-    if (urlError) {
-      console.error('[Factura] Error generando signed URL:', urlError);
-      throw new Error(`Error generando URL de descarga: ${urlError.message}`);
+    if (tokenError) {
+      console.error('[Factura] Error generando token corto:', tokenError);
+      throw new Error(`Error generando token de URL: ${tokenError.message}`);
     }
 
-    const facturaUrl = urlData.signedUrl;
-    console.log('[Factura] ✅ Signed URL generada exitosamente');
+    // Construir URL corta multi-tenant
+    const facturaUrl = `${frontend_origin}/${company_id}/facturas/${tokenCorto}`;
+    console.log('[Factura] ✅ URL corta generada exitosamente:', facturaUrl);
+    // ====================================================================
 
     // Verificar conexión de WhatsApp
     const isConnected = await checkWhatsAppConnection(company_id);
@@ -329,6 +340,7 @@ Deno.serve(async (req: Request) => {
         numero_factura,
         factura_url: facturaUrl,
         factura_storage_path,
+        token_corto: tokenCorto,
       },
     };
 
