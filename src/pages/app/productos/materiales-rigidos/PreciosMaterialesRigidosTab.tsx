@@ -54,7 +54,8 @@ export function PreciosMaterialesRigidosTab() {
 
   // Preparar datos para el modal de aumento masivo
   const productosParaAumento = useMemo(() => {
-    const todosLosProductos = Object.values(productosAgrupados).flat();
+    // Extraer todos los productos de todos los materiales
+    const todosLosProductos = Object.values(productosAgrupados).flatMap(grupo => grupo.productos);
 
     // Agrupar por producto único y calcular precio promedio
     const productosMap = new Map<string, { nombre: string; precioSum: number; count: number }>();

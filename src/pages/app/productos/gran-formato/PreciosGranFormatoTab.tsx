@@ -281,34 +281,38 @@ export function PreciosGranFormatoTab() {
     const productosMap = new Map<string, { id: string; nombre: string; precio: number; count: number; sum: number }>();
 
     tecnologiasAgrupadas.forEach((tecnologia) => {
-      tecnologia.productos.forEach((producto) => {
-        // Inicializar el producto si no existe
-        if (!productosMap.has(producto.id)) {
-          productosMap.set(producto.id, {
-            id: producto.id,
-            nombre: producto.nombre,
-            precio: 0,
-            count: 0,
-            sum: 0,
-          });
-        }
+      tecnologia.tintas.forEach((tintaData) => {
+        tintaData.productosPorRango.forEach((productos) => {
+          productos.forEach((producto) => {
+            // Inicializar el producto si no existe
+            if (!productosMap.has(producto.id)) {
+              productosMap.set(producto.id, {
+                id: producto.id,
+                nombre: producto.nombre,
+                precio: 0,
+                count: 0,
+                sum: 0,
+              });
+            }
 
-        const p = productosMap.get(producto.id)!;
+            const p = productosMap.get(producto.id)!;
 
-        // Sumar SOLO los precios configurados (mayores a 0)
-        producto.tintas.forEach((tinta) => {
-          tinta.rangos.forEach((rango) => {
-            if (rango.precio > 0) {
-              p.sum += rango.precio;
-              p.count += 1;
+            // Sumar SOLO los precios configurados (mayores a 0)
+            if (producto.precios && producto.precios.length > 0) {
+              producto.precios.forEach((precioData) => {
+                if (precioData.precio > 0) {
+                  p.sum += precioData.precio;
+                  p.count += 1;
+                }
+              });
+            }
+
+            // Calcular precio promedio
+            if (p.count > 0) {
+              p.precio = p.sum / p.count;
             }
           });
         });
-
-        // Calcular precio promedio
-        if (p.count > 0) {
-          p.precio = p.sum / p.count;
-        }
       });
     });
 

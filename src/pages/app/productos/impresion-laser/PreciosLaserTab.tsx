@@ -56,8 +56,8 @@ export function PreciosLaserTab() {
       .map(producto => {
         // Calcular precio promedio SOLO de configuraciones con precio > 0
         let precioPromedio = 0;
-        if (producto.preciosExistentes && producto.preciosExistentes.length > 0) {
-          const preciosValidos = producto.preciosExistentes.filter(p => (p.precio || 0) > 0);
+        if (producto.precios_existentes && producto.precios_existentes.length > 0) {
+          const preciosValidos = producto.precios_existentes.filter(p => (p.precio || 0) > 0);
           if (preciosValidos.length > 0) {
             precioPromedio = preciosValidos.reduce((sum, p) => sum + (p.precio || 0), 0) / preciosValidos.length;
           }
