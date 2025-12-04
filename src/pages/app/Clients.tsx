@@ -22,6 +22,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useConfirmDialog } from '../../hooks/useConfirmDialog';
 import { useToast } from '../../contexts/ToastContext';
+import { supabase } from '../../lib/supabase';
 import type { Client } from '../../types/database';
 
 export function Clients() {
@@ -87,6 +88,25 @@ export function Clients() {
     page: currentPage,
     itemsPerPage,
   });
+
+  // Obtener conteo de clientes pendientes (sin filtros)
+  const [pendingCount, setPendingCount] = useState(0);
+
+  useEffect(() => {
+    if (!profile?.company_id) return;
+
+    const fetchPendingCount = async () => {
+      const { count } = await supabase
+        .from('clients')
+        .select('*', { count: 'exact', head: true })
+        .eq('company_id', profile.company_id)
+        .eq('status_aprobacion', 'pending');
+
+      setPendingCount(count || 0);
+    };
+
+    fetchPendingCount();
+  }, [profile?.company_id, clients]); // Refetch cuando cambie clients para mantener actualizado
 
   const { createClient, updateClient, toggleClientStatus, loading: mutationLoading } = useClient();
   const {
@@ -168,8 +188,6 @@ export function Clients() {
     showToast('Operación realizada exitosamente', 'success');
     refetch();
   };
-
-  const pendingCount = clients.filter(c => c.status_aprobacion === 'pending').length;
 
   const columns = [
     {
