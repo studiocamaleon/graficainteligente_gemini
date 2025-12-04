@@ -73,7 +73,7 @@ export function useClients({
     } finally {
       setLoading(false);
     }
-  }, [profile?.company_id, searchTerm, isActive, hasCuentaCorriente, page, itemsPerPage]);
+  }, [profile?.company_id, searchTerm, isActive, hasCuentaCorriente, statusAprobacion, page, itemsPerPage]);
 
   useEffect(() => {
     fetchClients();

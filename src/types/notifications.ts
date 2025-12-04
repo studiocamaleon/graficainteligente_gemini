@@ -12,14 +12,16 @@ export type TipoNotificacion =
   | 'presupuesto_aprobado'
   | 'presupuesto_rechazado'
   | 'presupuesto_por_vencer'
-  | 'presupuesto_vencido';
+  | 'presupuesto_vencido'
+  | 'nuevo_cliente_registro';
 
 export type ReferenciaNotificacion =
   | 'orden_trabajo'
   | 'orden_item'
   | 'ruta_paso'
   | 'pausa'
-  | 'presupuesto';
+  | 'presupuesto'
+  | 'cliente';
 
 export interface NotificacionMetadata {
   orden_id?: string;

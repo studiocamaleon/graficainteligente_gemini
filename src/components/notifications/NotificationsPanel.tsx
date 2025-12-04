@@ -1,4 +1,4 @@
-import { Bell, Check, CheckCheck, Clock, AlertTriangle, Package, X, FileText, XCircle, Calendar } from 'lucide-react';
+import { Bell, Check, CheckCheck, Clock, AlertTriangle, Package, X, FileText, XCircle, Calendar, UserPlus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useNotificaciones } from '../../hooks/useNotificaciones';
 import { Badge } from '../ui/Badge';
@@ -25,6 +25,8 @@ export function NotificationsPanel() {
       navigate(`/app/presupuestos/${notif.metadata.presupuesto_id}`);
     } else if (notif.referencia_tipo === 'orden_trabajo' && notif.metadata?.orden_id) {
       navigate(`/app/orders/${notif.metadata.orden_id}`);
+    } else if (notif.referencia_tipo === 'cliente' || notif.tipo === 'nuevo_cliente_registro') {
+      navigate('/app/clients?filter=pending');
     }
   };
 
@@ -46,6 +48,8 @@ export function NotificationsPanel() {
         return Calendar;
       case 'presupuesto_vencido':
         return Clock;
+      case 'nuevo_cliente_registro':
+        return UserPlus;
       default:
         return Clock;
     }
@@ -69,6 +73,8 @@ export function NotificationsPanel() {
         return 'text-orange-500 bg-orange-50';
       case 'presupuesto_vencido':
         return 'text-gray-500 bg-gray-50';
+      case 'nuevo_cliente_registro':
+        return 'text-purple-500 bg-purple-50';
       default:
         return 'text-gray-500 bg-gray-50';
     }

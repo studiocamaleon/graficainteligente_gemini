@@ -447,6 +447,48 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // Crear notificación interna para el equipo
+    try {
+      // Obtener todos los usuarios admin/super_admin/manager de la empresa
+      const { data: admins, error: adminsError } = await supabaseAdmin
+        .from('profiles')
+        .select('user_id')
+        .eq('company_id', body.company_id)
+        .in('role', ['super_admin', 'admin', 'manager', 'operador_diseno']);
+
+      if (!adminsError && admins && admins.length > 0) {
+        const notificaciones = admins.map(admin => ({
+          company_id: body.company_id,
+          usuario_id: admin.user_id,
+          tipo: 'nuevo_cliente_registro',
+          titulo: 'Nuevo Cliente Pendiente de Aprobación',
+          mensaje: `${body.nombre_fantasia} se ha registrado y está esperando aprobación`,
+          referencia_tipo: 'cliente',
+          referencia_id: nuevoCliente.id,
+          metadata: {
+            cliente_id: nuevoCliente.id,
+            cliente_nombre: body.nombre_fantasia,
+            razon_social: body.razon_social,
+            tipo_documento: body.tipo_documento,
+            numero_documento: documentoLimpio,
+          },
+          leida: false,
+        }));
+
+        const { error: notifError } = await supabaseAdmin
+          .from('notificaciones_internas')
+          .insert(notificaciones);
+
+        if (notifError) {
+          console.error('[Notificación Interna] Error creando:', notifError);
+        } else {
+          console.log('[Notificación Interna] ✅ Creadas exitosamente para', admins.length, 'usuarios');
+        }
+      }
+    } catch (error) {
+      console.error('[Notificación Interna] Excepción:', error);
+    }
+
     // Intentar enviar WhatsApp de confirmación al cliente
     let whatsappEnviado = false;
     let mensajeWhatsApp = '';

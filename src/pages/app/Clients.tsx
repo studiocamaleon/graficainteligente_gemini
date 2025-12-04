@@ -1,4 +1,5 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Users, Plus, Eye, Edit2, Power, Check, X as XIcon, CheckCircle2, XCircle } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -26,11 +27,12 @@ import type { Client } from '../../types/database';
 export function Clients() {
   const { profile } = useAuth();
   const { showToast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
   const canEdit = profile?.role && ['super_admin', 'admin', 'manager', 'operador_diseno'].includes(profile.role);
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [statusAprobacionFilter, setStatusAprobacionFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('active');
+  const [statusAprobacionFilter, setStatusAprobacionFilter] = useState<string>('approved');
   const [cuentaCorrienteFilter, setCuentaCorrienteFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(25);
@@ -59,6 +61,17 @@ export function Clients() {
   );
 
   usePageHeader('Gestiona tus clientes y contactos', headerAction);
+
+  // Manejar parámetros de la URL (ej: /app/clients?filter=pending)
+  useEffect(() => {
+    const filterParam = searchParams.get('filter');
+    if (filterParam === 'pending') {
+      setStatusAprobacionFilter('pending');
+      setStatusFilter('all');
+      // Limpiar el parámetro después de aplicarlo
+      setSearchParams({});
+    }
+  }, [searchParams, setSearchParams]);
 
   const debouncedSearch = useDebounce(searchTerm, 300);
 
@@ -315,7 +328,10 @@ export function Clients() {
 
             <Select
               value={statusFilter}
-              onChange={setStatusFilter}
+              onChange={(value) => {
+                setStatusFilter(value);
+                setCurrentPage(1);
+              }}
               options={[
                 { value: 'all', label: 'Todos los estados' },
                 { value: 'active', label: 'Solo activos' },
@@ -327,7 +343,10 @@ export function Clients() {
           <div className="flex flex-wrap items-center gap-4">
             <Select
               value={statusAprobacionFilter}
-              onChange={setStatusAprobacionFilter}
+              onChange={(value) => {
+                setStatusAprobacionFilter(value);
+                setCurrentPage(1);
+              }}
               options={[
                 { value: 'all', label: 'Todas las aprobaciones' },
                 { value: 'pending', label: 'Pendientes' },
@@ -338,7 +357,10 @@ export function Clients() {
 
             <Select
               value={cuentaCorrienteFilter}
-              onChange={setCuentaCorrienteFilter}
+              onChange={(value) => {
+                setCuentaCorrienteFilter(value);
+                setCurrentPage(1);
+              }}
               options={[
                 { value: 'all', label: 'Todas las cuentas' },
                 { value: 'yes', label: 'Con cuenta corriente' },
