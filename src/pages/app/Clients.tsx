@@ -33,7 +33,7 @@ export function Clients() {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('active');
-  const [statusAprobacionFilter, setStatusAprobacionFilter] = useState<string>('approved');
+  const [statusAprobacionFilter, setStatusAprobacionFilter] = useState<string>('all');
   const [cuentaCorrienteFilter, setCuentaCorrienteFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(25);
