@@ -129,6 +129,7 @@ interface ServicioFormData {
   categorias_ids: string[];
   estacion_id: string;
   disponible_independiente: boolean;
+  alcance: 'por_item' | 'grupo';
   tiene_niveles_precio: boolean;
   tipo_impacto?: TipoImpactoPrecio | null;
   valor_impacto?: number | null;
@@ -162,6 +163,7 @@ export function useServicio() {
         nombre: data.nombre,
         estacion_id: data.estacion_id,
         disponible_independiente: data.disponible_independiente,
+        alcance: data.alcance,
         tiene_niveles_precio: data.tiene_niveles_precio,
         is_active: true,
       };
@@ -241,6 +243,7 @@ export function useServicio() {
         nombre: data.nombre,
         estacion_id: data.estacion_id,
         disponible_independiente: data.disponible_independiente,
+        alcance: data.alcance,
         tiene_niveles_precio: data.tiene_niveles_precio,
         updated_at: new Date().toISOString(),
       };
