@@ -5,12 +5,16 @@ import { Package, Ruler, Layers, Palette, Wrench, Sparkles, DollarSign } from 'l
 import type { ProductConfiguration } from '../../../hooks/wizard/useProductConfiguration';
 import type { SelectedConfiguration } from './ConfigurationStep';
 import type { SelectedService, SelectedFinishing } from './ServicesAndFinishingsStep';
+import type { ServicioGlobalSeleccionado, AcabadoGlobalSeleccionado, PreciosGlobalesLinea } from '../../../types/wizard';
 
 interface UniversalSummaryStepProps {
   config: ProductConfiguration;
   selectedConfig: SelectedConfiguration;
   selectedServicios: SelectedService[];
   selectedAcabados: SelectedFinishing[];
+  selectedServiciosGrupo?: ServicioGlobalSeleccionado[];
+  selectedAcabadosGrupo?: AcabadoGlobalSeleccionado[];
+  preciosGlobalesPorLinea?: PreciosGlobalesLinea[];
   precioBase: number | null;
   precioServicios: number;
   precioAcabados: number;
@@ -23,6 +27,9 @@ export function UniversalSummaryStep({
   selectedConfig,
   selectedServicios,
   selectedAcabados,
+  selectedServiciosGrupo = [],
+  selectedAcabadosGrupo = [],
+  preciosGlobalesPorLinea = [],
   precioBase,
   precioServicios,
   precioAcabados,
@@ -300,6 +307,75 @@ export function UniversalSummaryStep({
             </Card>
           )}
         </>
+      )}
+
+      {/* Servicios y Acabados de Grupo */}
+      {(selectedServiciosGrupo.length > 0 || selectedAcabadosGrupo.length > 0) && (
+        <Card className="p-6 border-2 border-blue-300">
+          <div className="flex items-center gap-2 mb-4">
+            <Sparkles className="w-5 h-5 text-blue-600" />
+            <h3 className="text-lg font-semibold text-gray-900">Servicios y Acabados de Grupo</h3>
+            <Badge variant="info" size="sm">Aplicados a todas las líneas</Badge>
+          </div>
+
+          <div className="space-y-4">
+            {/* Servicios de Grupo */}
+            {selectedServiciosGrupo.length > 0 && (
+              <div>
+                <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                  <Wrench className="w-4 h-4" />
+                  Servicios
+                </h4>
+                <div className="space-y-2">
+                  {selectedServiciosGrupo.map((servicio, index) => {
+                    const precioTotal = preciosGlobalesPorLinea.reduce((sum, p) =>
+                      sum + (p.servicios_detalle.find(s => s.servicio_nombre === servicio.servicio_nombre)?.precio_calculado_total || 0), 0
+                    );
+                    return (
+                      <div key={index} className="flex justify-between items-center bg-blue-50 p-2 rounded">
+                        <div>
+                          <span className="font-medium text-gray-900">{servicio.servicio_nombre}</span>
+                          {servicio.nivel_nombre && (
+                            <span className="text-sm text-gray-600 ml-2">({servicio.nivel_nombre})</span>
+                          )}
+                        </div>
+                        <span className="font-semibold text-blue-600">{formatCurrency(precioTotal)}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Acabados de Grupo */}
+            {selectedAcabadosGrupo.length > 0 && (
+              <div>
+                <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                  <Sparkles className="w-4 h-4" />
+                  Acabados
+                </h4>
+                <div className="space-y-2">
+                  {selectedAcabadosGrupo.map((acabado, index) => {
+                    const precioTotal = preciosGlobalesPorLinea.reduce((sum, p) =>
+                      sum + (p.acabados_detalle.find(a => a.acabado_nombre === acabado.acabado_nombre)?.precio_calculado_total || 0), 0
+                    );
+                    return (
+                      <div key={index} className="flex justify-between items-center bg-purple-50 p-2 rounded">
+                        <div>
+                          <span className="font-medium text-gray-900">{acabado.acabado_nombre}</span>
+                          {acabado.nivel_nombre && (
+                            <span className="text-sm text-gray-600 ml-2">({acabado.nivel_nombre})</span>
+                          )}
+                        </div>
+                        <span className="font-semibold text-purple-600">{formatCurrency(precioTotal)}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        </Card>
       )}
 
       {/* Total General */}

@@ -96,7 +96,33 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
     if (shouldCalculate) {
       recalculatePrice();
     }
-  }, [selectedProduct, config, selectedConfig, selectedServicios, selectedAcabados]);
+  }, [selectedProduct, config, selectedConfig, selectedServicios, selectedAcabados, selectedServiciosGrupo, selectedAcabadosGrupo]);
+
+  // Efecto para actualizar precio_total_linea cuando cambian servicios/acabados de grupo
+  useEffect(() => {
+    if (!config?.permite_multiples_lineas || selectedConfig.lineas_medidas.length === 0) return;
+
+    const lineasActualizadas = selectedConfig.lineas_medidas.map((linea, index) => {
+      const preciosGlobales = preciosGlobalesPorLinea[index];
+      if (!preciosGlobales) return linea;
+
+      const precio_total_con_globales = (linea.precio_base_unitario || 0) * linea.cantidad +
+        (linea.precio_servicios_unitario || 0) * linea.cantidad +
+        (linea.precio_acabados_unitario || 0) * linea.cantidad +
+        preciosGlobales.precio_servicios_globales +
+        preciosGlobales.precio_acabados_globales;
+
+      return {
+        ...linea,
+        precio_total_linea: precio_total_con_globales
+      };
+    });
+
+    setSelectedConfig(prev => ({
+      ...prev,
+      lineas_medidas: lineasActualizadas
+    }));
+  }, [preciosGlobalesPorLinea, config?.permite_multiples_lineas]);
 
   // Inicializar configuración cuando se carga el config
   useEffect(() => {
@@ -707,6 +733,9 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
               selectedConfig={selectedConfig}
               selectedServicios={selectedServicios}
               selectedAcabados={selectedAcabados}
+              selectedServiciosGrupo={selectedServiciosGrupo}
+              selectedAcabadosGrupo={selectedAcabadosGrupo}
+              preciosGlobalesPorLinea={preciosGlobalesPorLinea}
               precioBase={precioBase}
               precioServicios={precioServicios}
               precioAcabados={precioAcabados}

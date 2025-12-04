@@ -31,7 +31,7 @@ export function useGlobalServicesPricing(
           break;
 
         case 'porcentual':
-          precio_total = subtotal_total * ((servicio.valor_monto || 0) / 100);
+          precio_total = subtotal_total * ((servicio.valor_monto_secundario || 0) / 100);
           break;
 
         case 'fijo_porcentual':
@@ -77,7 +77,7 @@ export function useGlobalServicesPricing(
           break;
 
         case 'porcentual':
-          precio_total = subtotal_total * ((acabado.valor_monto || 0) / 100);
+          precio_total = subtotal_total * ((acabado.valor_monto_secundario || 0) / 100);
           break;
 
         case 'fijo_porcentual':

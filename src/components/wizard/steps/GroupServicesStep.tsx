@@ -44,7 +44,7 @@ export function GroupServicesStep({
         nivel_nombre: nivel?.nombre || null,
         tipo_impacto: nivel?.tipo_impacto || 'sin_impacto',
         valor_monto: nivel?.valor_monto || null,
-        valor_monto_secundario: null // Se completará según tipo_impacto si es necesario
+        valor_monto_secundario: nivel?.valor_porcentaje || null
       };
 
       onServiciosChange([...selectedServiciosGrupo, newServicio]);
@@ -72,7 +72,7 @@ export function GroupServicesStep({
         nivel_nombre: nivel?.nombre || null,
         tipo_impacto: nivel?.tipo_impacto || 'sin_impacto',
         valor_monto: nivel?.valor_monto || null,
-        valor_monto_secundario: null // Se completará según tipo_impacto si es necesario
+        valor_monto_secundario: nivel?.valor_porcentaje || null
       };
 
       onAcabadosChange([...selectedAcabadosGrupo, newAcabado]);
@@ -94,7 +94,7 @@ export function GroupServicesStep({
           nivel_nombre: nivel.nombre,
           tipo_impacto: nivel.tipo_impacto,
           valor_monto: nivel.valor_monto,
-          valor_monto_secundario: null
+          valor_monto_secundario: nivel.valor_porcentaje
         };
       }
       return s;
@@ -118,7 +118,7 @@ export function GroupServicesStep({
           nivel_nombre: nivel.nombre,
           tipo_impacto: nivel.tipo_impacto,
           valor_monto: nivel.valor_monto,
-          valor_monto_secundario: null
+          valor_monto_secundario: nivel.valor_porcentaje
         };
       }
       return a;
@@ -127,26 +127,32 @@ export function GroupServicesStep({
     onAcabadosChange(updatedAcabados);
   };
 
-  const getImpactoBadgeText = (nivel: { tipo_impacto: string; valor_monto: number | null }): string => {
-    if (nivel.tipo_impacto === 'sin_impacto' || !nivel.valor_monto) {
+  const getImpactoBadgeText = (nivel: { tipo_impacto: string; valor_monto: number | null; valor_porcentaje: number | null }): string => {
+    if (nivel.tipo_impacto === 'sin_impacto') {
       return 'Sin impacto';
     }
 
     switch (nivel.tipo_impacto) {
       case 'precio_fijo':
-        return `$${nivel.valor_monto.toFixed(2)} fijo`;
+        return nivel.valor_monto ? `$${nivel.valor_monto.toFixed(2)} fijo` : 'Sin precio';
       case 'porcentual':
-        return `${nivel.valor_monto}%`;
+        return nivel.valor_porcentaje ? `${nivel.valor_porcentaje}%` : 'Sin porcentaje';
       case 'fijo_porcentual':
-        return `$${nivel.valor_monto} + %`;
+        return nivel.valor_monto && nivel.valor_porcentaje
+          ? `$${nivel.valor_monto} + ${nivel.valor_porcentaje}%`
+          : 'Precio variable';
       case 'fijo_mt2':
-        return `$${nivel.valor_monto} + $/m²`;
+        return nivel.valor_monto && nivel.valor_porcentaje
+          ? `$${nivel.valor_monto} + $${nivel.valor_porcentaje}/m²`
+          : 'Precio variable';
       case 'fijo_mt_lineal':
-        return `$${nivel.valor_monto} + $/ml`;
+        return nivel.valor_monto && nivel.valor_porcentaje
+          ? `$${nivel.valor_monto} + $${nivel.valor_porcentaje}/ml`
+          : 'Precio variable';
       case 'por_mt2':
-        return `$${nivel.valor_monto}/m²`;
+        return nivel.valor_monto ? `$${nivel.valor_monto}/m²` : 'Sin precio';
       case 'por_mt_lineal':
-        return `$${nivel.valor_monto}/ml`;
+        return nivel.valor_monto ? `$${nivel.valor_monto}/ml` : 'Sin precio';
       default:
         return 'Precio variable';
     }
