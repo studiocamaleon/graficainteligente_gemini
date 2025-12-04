@@ -5,10 +5,12 @@ import { X, ChevronRight, ChevronLeft, Loader } from 'lucide-react';
 import { UniversalProductSearchStep } from './steps/UniversalProductSearchStep';
 import { ConfigurationStep, type SelectedConfiguration } from './steps/ConfigurationStep';
 import { ServicesAndFinishingsStep, type SelectedService, type SelectedFinishing } from './steps/ServicesAndFinishingsStep';
+import { GroupServicesStep } from './steps/GroupServicesStep';
 import { UniversalSummaryStep } from './steps/UniversalSummaryStep';
 import { useProductConfiguration } from '../../hooks/wizard/useProductConfiguration';
 import { useUniversalPricing } from '../../hooks/wizard/useUniversalPricing';
 import type { UniversalProductSearchResult } from '../../hooks/wizard/useUniversalProductSearch';
+import type { ServicioGlobalSeleccionado, AcabadoGlobalSeleccionado } from '../../types/wizard';
 import { generateProductionRoutes } from '../../utils/generateProductionRoutes';
 
 interface UniversalAddItemWizardProps {
@@ -17,11 +19,12 @@ interface UniversalAddItemWizardProps {
   onAgregar: (itemData: any) => Promise<void>;
 }
 
-type WizardStep = 'search' | 'configuration' | 'services' | 'summary';
+type WizardStep = 'search' | 'configuration' | 'group_services' | 'services' | 'summary';
 
 const stepTitles: Record<WizardStep, string> = {
   search: 'Buscar Producto',
   configuration: 'Configuración',
+  group_services: 'Servicios y Acabados de Grupo',
   services: 'Servicios y Acabados',
   summary: 'Resumen'
 };
@@ -56,6 +59,10 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
 
   const [selectedServicios, setSelectedServicios] = useState<SelectedService[]>([]);
   const [selectedAcabados, setSelectedAcabados] = useState<SelectedFinishing[]>([]);
+
+  // Estados para servicios/acabados de grupo
+  const [selectedServiciosGrupo, setSelectedServiciosGrupo] = useState<ServicioGlobalSeleccionado[]>([]);
+  const [selectedAcabadosGrupo, setSelectedAcabadosGrupo] = useState<AcabadoGlobalSeleccionado[]>([]);
 
   // Precio
   const [precioBase, setPrecioBase] = useState<number | null>(null);
@@ -317,6 +324,8 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
     });
     setSelectedServicios([]);
     setSelectedAcabados([]);
+    setSelectedServiciosGrupo([]);
+    setSelectedAcabadosGrupo([]);
     setPrecioBase(null);
     setPrecioServicios(0);
     setPrecioAcabados(0);
@@ -344,6 +353,8 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
         return selectedProduct !== null;
       case 'configuration':
         return isConfigurationComplete();
+      case 'group_services':
+        return true; // Los servicios/acabados de grupo son opcionales
       case 'services':
         return true; // Los servicios son opcionales
       case 'summary':
@@ -363,34 +374,20 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
   const handleNext = () => {
     if (!canProceedToNext()) return;
 
-    const steps: WizardStep[] = ['search', 'configuration', 'services', 'summary'];
+    const steps = getActiveSteps();
     const currentIndex = steps.indexOf(currentStep);
 
     if (currentIndex < steps.length - 1) {
-      let nextStep = steps[currentIndex + 1];
-
-      // Si el siguiente paso es 'services' y el producto permite múltiples líneas, saltarlo
-      if (nextStep === 'services' && config?.permite_multiples_lineas) {
-        nextStep = 'summary';
-      }
-
-      setCurrentStep(nextStep);
+      setCurrentStep(steps[currentIndex + 1]);
     }
   };
 
   const handlePrevious = () => {
-    const steps: WizardStep[] = ['search', 'configuration', 'services', 'summary'];
+    const steps = getActiveSteps();
     const currentIndex = steps.indexOf(currentStep);
 
     if (currentIndex > 0) {
-      let prevStep = steps[currentIndex - 1];
-
-      // Si el paso anterior es 'services' y el producto permite múltiples líneas, saltarlo
-      if (prevStep === 'services' && config?.permite_multiples_lineas) {
-        prevStep = 'configuration';
-      }
-
-      setCurrentStep(prevStep);
+      setCurrentStep(steps[currentIndex - 1]);
     }
   };
 
@@ -538,9 +535,9 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
   if (!isOpen) return null;
 
   const getActiveSteps = (): WizardStep[] => {
-    // Para productos con múltiples líneas, omitir el paso de servicios
+    // Para productos con múltiples líneas, incluir paso de servicios de grupo
     if (config?.permite_multiples_lineas) {
-      return ['search', 'configuration', 'summary'];
+      return ['search', 'configuration', 'group_services', 'summary'];
     }
     return ['search', 'configuration', 'services', 'summary'];
   };
@@ -632,6 +629,17 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
                 onConfigChange={handleConfigChange}
               />
             ) : null
+          )}
+
+          {currentStep === 'group_services' && config && (
+            <GroupServicesStep
+              serviciosGrupo={config.servicios_grupo || []}
+              acabadosGrupo={config.acabados_grupo || []}
+              selectedServiciosGrupo={selectedServiciosGrupo}
+              selectedAcabadosGrupo={selectedAcabadosGrupo}
+              onServiciosChange={setSelectedServiciosGrupo}
+              onAcabadosChange={setSelectedAcabadosGrupo}
+            />
           )}
 
           {currentStep === 'services' && config && (
