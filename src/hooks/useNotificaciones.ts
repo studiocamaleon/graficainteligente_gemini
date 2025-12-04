@@ -114,54 +114,99 @@ export function useNotificaciones() {
 
   // Suscripción realtime
   useEffect(() => {
-    cargarNotificaciones();
+    let userId: string | null = null;
 
-    // Crear canal de realtime
-    const realtimeChannel = supabase
-      .channel('notificaciones-internas')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'notificaciones_internas',
-        },
-        (payload) => {
-          const nuevaNotif = payload.new as Notificacion;
+    const setupRealtimeSubscription = async () => {
+      // Cargar notificaciones iniciales
+      await cargarNotificaciones();
 
-          // Agregar al inicio de la lista
-          setNotificaciones((prev) => [nuevaNotif, ...prev]);
+      // Obtener el usuario actual para filtrado
+      const { data: { user } } = await supabase.auth.getUser();
 
-          // Mostrar notificación del navegador si tiene permiso
-          if ('Notification' in window && Notification.permission === 'granted') {
-            new Notification(nuevaNotif.titulo, {
-              body: nuevaNotif.mensaje,
-              icon: '/logo.png',
-              tag: nuevaNotif.id,
+      if (!user) {
+        console.warn('[Notificaciones] No hay usuario autenticado para suscripción realtime');
+        return null;
+      }
+
+      userId = user.id;
+      console.log('[Notificaciones] Configurando suscripción realtime para usuario:', userId);
+
+      // Crear canal de realtime
+      const realtimeChannel = supabase
+        .channel('notificaciones-internas')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'notificaciones_internas',
+          },
+          (payload) => {
+            const nuevaNotif = payload.new as Notificacion;
+
+            console.log('[Notificaciones] Evento INSERT recibido:', {
+              id: nuevaNotif.id,
+              tipo: nuevaNotif.tipo,
+              usuario_id: nuevaNotif.usuario_id,
+              currentUserId: userId,
             });
+
+            // Verificar que la notificación es para el usuario actual
+            if (nuevaNotif.usuario_id !== userId) {
+              console.log('[Notificaciones] Notificación descartada: no pertenece al usuario actual');
+              return;
+            }
+
+            console.log('[Notificaciones] ✅ Agregando notificación al estado:', nuevaNotif.titulo);
+
+            // Agregar al inicio de la lista
+            setNotificaciones((prev) => [nuevaNotif, ...prev]);
+
+            // Mostrar notificación del navegador si tiene permiso
+            if ('Notification' in window && Notification.permission === 'granted') {
+              new Notification(nuevaNotif.titulo, {
+                body: nuevaNotif.mensaje,
+                icon: '/logo.png',
+                tag: nuevaNotif.id,
+              });
+            }
           }
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'notificaciones_internas',
-        },
-        (payload) => {
-          const notifActualizada = payload.new as Notificacion;
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'notificaciones_internas',
+          },
+          (payload) => {
+            const notifActualizada = payload.new as Notificacion;
 
-          // Actualizar la notificación en el estado
-          setNotificaciones((prev) =>
-            prev.map((n) => (n.id === notifActualizada.id ? notifActualizada : n))
-          );
-          // El contador se recalculará automáticamente por el useEffect
-        }
-      )
-      .subscribe();
+            console.log('[Notificaciones] Evento UPDATE recibido:', {
+              id: notifActualizada.id,
+              leida: notifActualizada.leida,
+            });
 
-    setChannel(realtimeChannel);
+            // Verificar que la notificación es para el usuario actual
+            if (notifActualizada.usuario_id !== userId) {
+              return;
+            }
+
+            // Actualizar la notificación en el estado
+            setNotificaciones((prev) =>
+              prev.map((n) => (n.id === notifActualizada.id ? notifActualizada : n))
+            );
+          }
+        )
+        .subscribe((status) => {
+          console.log('[Notificaciones] Estado de suscripción:', status);
+        });
+
+      return realtimeChannel;
+    };
+
+    // Ejecutar la configuración
+    const channelPromise = setupRealtimeSubscription();
 
     // Solicitar permisos de notificaciones del navegador
     if ('Notification' in window && Notification.permission === 'default') {
@@ -170,7 +215,12 @@ export function useNotificaciones() {
 
     // Cleanup
     return () => {
-      realtimeChannel.unsubscribe();
+      channelPromise.then((channel) => {
+        if (channel) {
+          console.log('[Notificaciones] Desuscribiendo del canal realtime');
+          channel.unsubscribe();
+        }
+      });
     };
   }, [cargarNotificaciones]);
 

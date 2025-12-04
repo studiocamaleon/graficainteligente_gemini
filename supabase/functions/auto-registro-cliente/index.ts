@@ -449,14 +449,24 @@ Deno.serve(async (req: Request) => {
 
     // Crear notificación interna para el equipo
     try {
+      console.log('[Notificación Interna] Buscando usuarios admin para notificar...');
+
       // Obtener todos los usuarios admin/super_admin/manager de la empresa
       const { data: admins, error: adminsError } = await supabaseAdmin
         .from('profiles')
-        .select('user_id')
+        .select('user_id, role')
         .eq('company_id', body.company_id)
         .in('role', ['super_admin', 'admin', 'manager', 'operador_diseno']);
 
-      if (!adminsError && admins && admins.length > 0) {
+      if (adminsError) {
+        console.error('[Notificación Interna] Error consultando admins:', adminsError);
+      } else if (!admins || admins.length === 0) {
+        console.warn('[Notificación Interna] ⚠️ No se encontraron usuarios admin para notificar');
+      } else {
+        console.log('[Notificación Interna] Encontrados', admins.length, 'usuarios admin:',
+          admins.map(a => `${a.user_id.substring(0, 8)}... (${a.role})`).join(', ')
+        );
+
         const notificaciones = admins.map(admin => ({
           company_id: body.company_id,
           usuario_id: admin.user_id,
@@ -475,18 +485,24 @@ Deno.serve(async (req: Request) => {
           leida: false,
         }));
 
-        const { error: notifError } = await supabaseAdmin
+        console.log('[Notificación Interna] Insertando', notificaciones.length, 'notificaciones...');
+
+        const { data: notifData, error: notifError } = await supabaseAdmin
           .from('notificaciones_internas')
-          .insert(notificaciones);
+          .insert(notificaciones)
+          .select('id, usuario_id');
 
         if (notifError) {
-          console.error('[Notificación Interna] Error creando:', notifError);
+          console.error('[Notificación Interna] ❌ Error creando notificaciones:', notifError);
         } else {
-          console.log('[Notificación Interna] ✅ Creadas exitosamente para', admins.length, 'usuarios');
+          console.log('[Notificación Interna] ✅ Creadas exitosamente:', notifData?.length || 0, 'notificaciones');
+          console.log('[Notificación Interna] IDs creados:',
+            notifData?.map(n => n.id.substring(0, 8) + '...').join(', ')
+          );
         }
       }
     } catch (error) {
-      console.error('[Notificación Interna] Excepción:', error);
+      console.error('[Notificación Interna] ❌ Excepción:', error);
     }
 
     // Intentar enviar WhatsApp de confirmación al cliente
