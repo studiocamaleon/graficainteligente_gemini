@@ -109,120 +109,179 @@ export function useNotificaciones() {
   // Recalcular notificaciones no leídas cada vez que cambie el array de notificaciones
   useEffect(() => {
     const contadorNoLeidas = notificaciones.filter((n) => !n.leida).length;
+    console.log('[Notificaciones] 🔢 Recalculando contador:', {
+      total: notificaciones.length,
+      noLeidas: contadorNoLeidas,
+    });
     setNoLeidas(contadorNoLeidas);
   }, [notificaciones]);
 
   // Suscripción realtime
   useEffect(() => {
-    let userId: string | null = null;
+    let isMounted = true;
+    let realtimeChannel: RealtimeChannel | null = null;
+    let currentUserId: string | null = null;
 
     const setupRealtimeSubscription = async () => {
-      // Cargar notificaciones iniciales
-      await cargarNotificaciones();
+      try {
+        // Cargar notificaciones iniciales
+        console.log('[Notificaciones] Cargando notificaciones iniciales...');
 
-      // Obtener el usuario actual para filtrado
-      const { data: { user } } = await supabase.auth.getUser();
+        // Obtener el usuario actual
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
 
-      if (!user) {
-        console.warn('[Notificaciones] No hay usuario autenticado para suscripción realtime');
-        return null;
-      }
+        if (userError) {
+          console.error('[Notificaciones] Error obteniendo usuario:', userError);
+          return;
+        }
 
-      userId = user.id;
-      console.log('[Notificaciones] Configurando suscripción realtime para usuario:', userId);
+        if (!user) {
+          setNotificaciones([]);
+          setNoLeidas(0);
+          setLoading(false);
+          console.warn('[Notificaciones] No hay usuario autenticado');
+          return;
+        }
 
-      // Crear canal de realtime
-      const realtimeChannel = supabase
-        .channel('notificaciones-internas')
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'notificaciones_internas',
-          },
-          (payload) => {
-            const nuevaNotif = payload.new as Notificacion;
+        // Cargar notificaciones del usuario
+        const { data, error } = await supabase
+          .from('notificaciones_internas')
+          .select('*')
+          .eq('usuario_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(50);
 
-            console.log('[Notificaciones] Evento INSERT recibido:', {
-              id: nuevaNotif.id,
-              tipo: nuevaNotif.tipo,
-              usuario_id: nuevaNotif.usuario_id,
-              currentUserId: userId,
-            });
+        if (error) {
+          console.error('[Notificaciones] Error cargando notificaciones:', error);
+          setLoading(false);
+          return;
+        }
 
-            // Verificar que la notificación es para el usuario actual
-            if (nuevaNotif.usuario_id !== userId) {
-              console.log('[Notificaciones] Notificación descartada: no pertenece al usuario actual');
-              return;
-            }
+        if (!isMounted) return;
 
-            console.log('[Notificaciones] ✅ Agregando notificación al estado:', nuevaNotif.titulo);
+        setNotificaciones(data || []);
+        setLoading(false);
+        console.log('[Notificaciones] ✅ Cargadas', data?.length || 0, 'notificaciones');
 
-            // Agregar al inicio de la lista
-            setNotificaciones((prev) => [nuevaNotif, ...prev]);
+        // Usar el usuario ya obtenido para configurar realtime
+        currentUserId = user.id;
+        console.log('[Notificaciones] 🔌 Configurando suscripción realtime para usuario:', currentUserId);
 
-            // Mostrar notificación del navegador si tiene permiso
-            if ('Notification' in window && Notification.permission === 'granted') {
-              new Notification(nuevaNotif.titulo, {
-                body: nuevaNotif.mensaje,
-                icon: '/logo.png',
-                tag: nuevaNotif.id,
+        // Crear canal de realtime con nombre único por usuario para evitar conflictos
+        const channelName = `notificaciones-internas-${currentUserId}`;
+        realtimeChannel = supabase
+          .channel(channelName)
+          .on(
+            'postgres_changes',
+            {
+              event: 'INSERT',
+              schema: 'public',
+              table: 'notificaciones_internas',
+              filter: `usuario_id=eq.${currentUserId}`,
+            },
+            (payload) => {
+              if (!isMounted) return;
+
+              const nuevaNotif = payload.new as Notificacion;
+
+              console.log('[Notificaciones] 📨 Evento INSERT recibido:', {
+                id: nuevaNotif.id,
+                tipo: nuevaNotif.tipo,
+                titulo: nuevaNotif.titulo,
+                usuario_id: nuevaNotif.usuario_id,
               });
+
+              // Agregar al inicio de la lista
+              setNotificaciones((prev) => {
+                // Evitar duplicados
+                if (prev.some(n => n.id === nuevaNotif.id)) {
+                  console.log('[Notificaciones] ⚠️ Notificación duplicada, ignorando');
+                  return prev;
+                }
+                console.log('[Notificaciones] ✅ Agregando notificación al estado:', nuevaNotif.titulo);
+                return [nuevaNotif, ...prev];
+              });
+
+              // Mostrar notificación del navegador si tiene permiso
+              if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification(nuevaNotif.titulo, {
+                  body: nuevaNotif.mensaje,
+                  icon: '/logo.png',
+                  tag: nuevaNotif.id,
+                });
+              }
             }
-          }
-        )
-        .on(
-          'postgres_changes',
-          {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'notificaciones_internas',
-          },
-          (payload) => {
-            const notifActualizada = payload.new as Notificacion;
+          )
+          .on(
+            'postgres_changes',
+            {
+              event: 'UPDATE',
+              schema: 'public',
+              table: 'notificaciones_internas',
+              filter: `usuario_id=eq.${currentUserId}`,
+            },
+            (payload) => {
+              if (!isMounted) return;
 
-            console.log('[Notificaciones] Evento UPDATE recibido:', {
-              id: notifActualizada.id,
-              leida: notifActualizada.leida,
-            });
+              const notifActualizada = payload.new as Notificacion;
 
-            // Verificar que la notificación es para el usuario actual
-            if (notifActualizada.usuario_id !== userId) {
-              return;
+              console.log('[Notificaciones] 🔄 Evento UPDATE recibido:', {
+                id: notifActualizada.id,
+                leida: notifActualizada.leida,
+              });
+
+              // Actualizar la notificación en el estado
+              setNotificaciones((prev) =>
+                prev.map((n) => (n.id === notifActualizada.id ? notifActualizada : n))
+              );
+            }
+          )
+          .subscribe((status, err) => {
+            if (!isMounted) return;
+
+            console.log('[Notificaciones] 📡 Estado de suscripción:', status);
+
+            if (err) {
+              console.error('[Notificaciones] ❌ Error en suscripción:', err);
             }
 
-            // Actualizar la notificación en el estado
-            setNotificaciones((prev) =>
-              prev.map((n) => (n.id === notifActualizada.id ? notifActualizada : n))
-            );
-          }
-        )
-        .subscribe((status) => {
-          console.log('[Notificaciones] Estado de suscripción:', status);
-        });
+            if (status === 'SUBSCRIBED') {
+              console.log('[Notificaciones] ✅ Canal realtime conectado exitosamente');
+              setChannel(realtimeChannel);
+            } else if (status === 'CLOSED') {
+              console.warn('[Notificaciones] ⚠️ Canal realtime cerrado');
+              setChannel(null);
+            } else if (status === 'CHANNEL_ERROR') {
+              console.error('[Notificaciones] ❌ Error en canal realtime');
+              setChannel(null);
+            }
+          });
 
-      return realtimeChannel;
+      } catch (error) {
+        console.error('[Notificaciones] ❌ Error configurando suscripción realtime:', error);
+      }
     };
 
     // Ejecutar la configuración
-    const channelPromise = setupRealtimeSubscription();
+    setupRealtimeSubscription();
 
     // Solicitar permisos de notificaciones del navegador
     if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission();
+      Notification.requestPermission().then((permission) => {
+        console.log('[Notificaciones] Permiso de notificaciones del navegador:', permission);
+      });
     }
 
     // Cleanup
     return () => {
-      channelPromise.then((channel) => {
-        if (channel) {
-          console.log('[Notificaciones] Desuscribiendo del canal realtime');
-          channel.unsubscribe();
-        }
-      });
+      console.log('[Notificaciones] 🔌 Limpiando suscripción realtime...');
+      isMounted = false;
+      if (realtimeChannel) {
+        realtimeChannel.unsubscribe();
+        setChannel(null);
+      }
     };
-  }, [cargarNotificaciones]);
+  }, []); // Sin dependencias para que solo se ejecute una vez
 
   return {
     notificaciones,

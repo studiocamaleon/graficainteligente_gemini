@@ -572,7 +572,14 @@ function MainLayoutContent({ children }: MainLayoutProps) {
                   >
                     <Bell className="w-5 h-5 text-gray-600" />
                     {noLeidas > 0 && (
-                      <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                      <motion.span
+                        key={noLeidas}
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center px-1"
+                      >
+                        {noLeidas > 9 ? '9+' : noLeidas}
+                      </motion.span>
                     )}
                   </button>
 
