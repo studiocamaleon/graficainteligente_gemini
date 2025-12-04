@@ -270,9 +270,9 @@ Deno.serve(async (req: Request) => {
       company_id,
       presupuesto_id,
       tipo_notificacion,
-      destinatario: clienteWhatsapp,
-      mensaje: mensajeSanitizado,
-      estado: 'enviado',
+      telefono_destino: clienteWhatsapp,
+      mensaje_enviado: mensajeSanitizado,
+      estado_envio: 'enviado',
     });
 
     console.log('[Notify Presupuesto] Notificación enviada exitosamente');
