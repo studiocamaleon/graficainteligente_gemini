@@ -135,8 +135,8 @@ export function MeasurementLinesTable({
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Medidas</th>
                   {config.tipo_venta_real === 'mt2' && <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">MT2</th>}
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cantidad</th>
-                  {config.servicios.length > 0 && <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Servicios</th>}
-                  {config.acabados.length > 0 && <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acabados</th>}
+                  {config.servicios && config.servicios.length > 0 && <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Servicios</th>}
+                  {config.acabados && config.acabados.length > 0 && <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acabados</th>}
                   {lines.some(l => l.precio_base_unitario) && <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Base</th>}
                   {lines.some(l => l.precio_servicios_unitario && l.precio_servicios_unitario > 0) && <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">+ Serv.</th>}
                   {lines.some(l => l.precio_acabados_unitario && l.precio_acabados_unitario > 0) && <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">+ Acab.</th>}
@@ -155,7 +155,7 @@ export function MeasurementLinesTable({
                       </td>
                     )}
                     <td className="px-4 py-3 whitespace-nowrap">{line.cantidad}</td>
-                    {config.servicios.length > 0 && (
+                    {config.servicios && config.servicios.length > 0 && (
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-1">
                           {!line.servicios || line.servicios.length === 0 ? (
@@ -171,7 +171,7 @@ export function MeasurementLinesTable({
                         </div>
                       </td>
                     )}
-                    {config.acabados.length > 0 && (
+                    {config.acabados && config.acabados.length > 0 && (
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-1">
                           {!line.acabados || line.acabados.length === 0 ? (
