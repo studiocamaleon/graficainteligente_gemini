@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Plus, Trash2, Package, FileText, Printer, ChevronDown, ChevronUp, Calendar, Edit2 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -10,6 +10,7 @@ import { Card } from '../ui/Card';
 import { UniversalAddItemWizard } from '../wizard/UniversalAddItemWizard';
 import { AsociarOrdenCopiadoModal } from './AsociarOrdenCopiadoModal';
 import { AddItemPersonalizadoOrdenModal } from './AddItemPersonalizadoOrdenModal';
+import { ItemsGrupoCard } from './ItemsGrupoCard';
 
 interface OrdenItem {
   id?: string;
@@ -24,9 +25,12 @@ interface OrdenItem {
   precio_base: number;
   precio_servicios: number;
   precio_acabados: number;
+  precio_servicios_globales?: number;
+  precio_acabados_globales?: number;
   precio_unitario_final: number;
   precio_total: number;
   descuento_individual?: number;
+  item_grupo_id?: string;
 }
 
 interface OrdenItemsTabProps {
@@ -69,9 +73,12 @@ export function OrdenItemsTab({
       precio_base: itemData.precio_base,
       precio_servicios: itemData.precio_servicios,
       precio_acabados: itemData.precio_acabados,
+      precio_servicios_globales: itemData.precio_servicios_globales || 0,
+      precio_acabados_globales: itemData.precio_acabados_globales || 0,
       precio_unitario_final: itemData.precio_unitario_final,
       precio_total: itemData.precio_total,
       descuento_individual: 0,
+      item_grupo_id: itemData.item_grupo_id,
       rutas_generadas: itemData.rutas_generadas || [], // Guardar rutas pregeneradas
     } as any;
 
@@ -251,6 +258,77 @@ export function OrdenItemsTab({
     );
   };
 
+  // Detectar y agrupar items por item_grupo_id
+  const itemsAgrupados = useMemo(() => {
+    const grupos = new Map<string, OrdenItem[]>();
+    const individuales: OrdenItem[] = [];
+
+    items.forEach(item => {
+      if (item.item_grupo_id) {
+        const grupo = grupos.get(item.item_grupo_id) || [];
+        grupo.push(item);
+        grupos.set(item.item_grupo_id, grupo);
+      } else {
+        individuales.push(item);
+      }
+    });
+
+    return {
+      grupos: Array.from(grupos.entries()),
+      individuales
+    };
+  }, [items]);
+
+  // Handler para eliminar un grupo completo
+  const handleEliminarGrupo = (grupoId: string) => {
+    const confirmar = window.confirm('¿Está seguro de eliminar todo el grupo de items relacionados?');
+    if (confirmar) {
+      setItems(items.filter(item => item.item_grupo_id !== grupoId));
+    }
+  };
+
+  // Handler para cambiar cantidad de un item específico dentro de un grupo
+  const handleCantidadChangeById = (itemId: string, nuevaCantidad: number) => {
+    const itemsCopy = [...items];
+    const itemIndex = itemsCopy.findIndex(item => item.id === itemId);
+    if (itemIndex !== -1) {
+      const item = itemsCopy[itemIndex];
+      item.cantidad = nuevaCantidad;
+      // Recalcular precio_total manteniendo los precios globales
+      const precioBase = item.precio_base * nuevaCantidad;
+      const precioServicios = item.precio_servicios * nuevaCantidad;
+      const precioAcabados = item.precio_acabados * nuevaCantidad;
+      const precioGlobales = (item.precio_servicios_globales || 0) + (item.precio_acabados_globales || 0);
+
+      const precioSinDescuento = precioBase + precioServicios + precioAcabados + precioGlobales;
+      const descuentoAplicado = precioSinDescuento * ((item.descuento_individual || 0) / 100);
+      item.precio_total = precioSinDescuento - descuentoAplicado;
+
+      setItems(itemsCopy);
+    }
+  };
+
+  // Handler para cambiar descuento de un item específico dentro de un grupo
+  const handleDescuentoChangeById = (itemId: string, descuento: number) => {
+    const itemsCopy = [...items];
+    const itemIndex = itemsCopy.findIndex(item => item.id === itemId);
+    if (itemIndex !== -1) {
+      const item = itemsCopy[itemIndex];
+      item.descuento_individual = descuento;
+
+      const precioBase = item.precio_base * item.cantidad;
+      const precioServicios = item.precio_servicios * item.cantidad;
+      const precioAcabados = item.precio_acabados * item.cantidad;
+      const precioGlobales = (item.precio_servicios_globales || 0) + (item.precio_acabados_globales || 0);
+
+      const precioSinDescuento = precioBase + precioServicios + precioAcabados + precioGlobales;
+      const descuentoAplicado = precioSinDescuento * (descuento / 100);
+      item.precio_total = precioSinDescuento - descuentoAplicado;
+
+      setItems(itemsCopy);
+    }
+  };
+
   const columns = [
     {
       key: 'cantidad',
@@ -409,11 +487,39 @@ export function OrdenItemsTab({
         />
       ) : (
         <>
-          <Table
-            columns={columns}
-            data={items}
-            keyExtractor={(item) => item.id || `item-${items.indexOf(item)}`}
-          />
+          {/* Renderizar grupos de items */}
+          {itemsAgrupados.grupos.length > 0 && (
+            <div className="space-y-4 mb-6">
+              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                Items Agrupados ({itemsAgrupados.grupos.length} grupo{itemsAgrupados.grupos.length !== 1 ? 's' : ''})
+              </div>
+              {itemsAgrupados.grupos.map(([grupoId, itemsGrupo]) => (
+                <ItemsGrupoCard
+                  key={grupoId}
+                  items={itemsGrupo}
+                  onEliminarGrupo={() => handleEliminarGrupo(grupoId)}
+                  onCantidadChange={handleCantidadChangeById}
+                  onDescuentoChange={handleDescuentoChangeById}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Renderizar items individuales en tabla */}
+          {itemsAgrupados.individuales.length > 0 && (
+            <>
+              {itemsAgrupados.grupos.length > 0 && (
+                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-4">
+                  Items Individuales
+                </div>
+              )}
+              <Table
+                columns={columns}
+                data={itemsAgrupados.individuales}
+                keyExtractor={(item) => item.id || `item-${items.indexOf(item)}`}
+              />
+            </>
+          )}
 
           <div className="flex items-center justify-end space-x-4 pt-4 border-t border-gray-200">
             <label className="text-sm font-medium text-gray-700">

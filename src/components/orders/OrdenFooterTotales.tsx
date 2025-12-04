@@ -10,6 +10,8 @@ interface OrdenFooterTotalesProps {
   mostrarSaldo?: boolean;
   subtotalItems?: number;
   subtotalOrdenesCopiado?: number;
+  totalServiciosGlobales?: number;
+  totalAcabadosGlobales?: number;
 }
 
 export function OrdenFooterTotales({
@@ -22,9 +24,12 @@ export function OrdenFooterTotales({
   mostrarSaldo = false,
   subtotalItems,
   subtotalOrdenesCopiado,
+  totalServiciosGlobales = 0,
+  totalAcabadosGlobales = 0,
 }: OrdenFooterTotalesProps) {
   const saldoPendiente = total - totalPagado;
   const tienePagos = totalPagado > 0;
+  const tieneServiciosGlobales = totalServiciosGlobales > 0 || totalAcabadosGlobales > 0;
 
   return (
     <div className="fixed bottom-0 left-0 lg:left-72 right-0 bg-white border-t border-gray-200 shadow-lg z-40">
@@ -52,6 +57,26 @@ export function OrdenFooterTotales({
                     </div>
                   </div>
                 )}
+                {tieneServiciosGlobales && (
+                  <>
+                    {totalServiciosGlobales > 0 && (
+                      <div className="text-right">
+                        <div className="text-xs text-blue-500">Servicios Globales</div>
+                        <div className="text-sm font-medium text-blue-600">
+                          ${totalServiciosGlobales.toFixed(2)}
+                        </div>
+                      </div>
+                    )}
+                    {totalAcabadosGlobales > 0 && (
+                      <div className="text-right">
+                        <div className="text-xs text-purple-500">Acabados Globales</div>
+                        <div className="text-sm font-medium text-purple-600">
+                          ${totalAcabadosGlobales.toFixed(2)}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
                 <div className="text-right border-l border-gray-200 pl-4">
                   <div className="text-xs text-gray-500">Subtotal</div>
                   <div className="text-sm font-medium text-gray-900">
@@ -60,12 +85,34 @@ export function OrdenFooterTotales({
                 </div>
               </>
             ) : (
-              <div className="text-right">
-                <div className="text-xs text-gray-500">Subtotal</div>
-                <div className="text-sm font-medium text-gray-900">
-                  ${subtotal.toFixed(2)}
+              <>
+                {tieneServiciosGlobales && (
+                  <>
+                    {totalServiciosGlobales > 0 && (
+                      <div className="text-right">
+                        <div className="text-xs text-blue-500">Servicios Globales</div>
+                        <div className="text-sm font-medium text-blue-600">
+                          ${totalServiciosGlobales.toFixed(2)}
+                        </div>
+                      </div>
+                    )}
+                    {totalAcabadosGlobales > 0 && (
+                      <div className="text-right">
+                        <div className="text-xs text-purple-500">Acabados Globales</div>
+                        <div className="text-sm font-medium text-purple-600">
+                          ${totalAcabadosGlobales.toFixed(2)}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+                <div className="text-right">
+                  <div className="text-xs text-gray-500">Subtotal</div>
+                  <div className="text-sm font-medium text-gray-900">
+                    ${subtotal.toFixed(2)}
+                  </div>
                 </div>
-              </div>
+              </>
             )}
 
             {descuentoAplicado > 0 && (

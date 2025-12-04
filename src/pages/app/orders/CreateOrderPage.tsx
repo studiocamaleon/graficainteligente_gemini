@@ -143,12 +143,18 @@ export function CreateOrderPage() {
     const iva = requiereFactura ? subtotalConDescuento * 0.21 : 0;
     const total = subtotalConDescuento + iva;
 
+    // Calcular totales de servicios y acabados globales
+    const totalServiciosGlobales = items.reduce((sum, item) => sum + (item.precio_servicios_globales || 0), 0);
+    const totalAcabadosGlobales = items.reduce((sum, item) => sum + (item.precio_acabados_globales || 0), 0);
+
     return {
       subtotal,
       descuentoAplicado,
       subtotalConDescuento,
       iva,
       total,
+      totalServiciosGlobales,
+      totalAcabadosGlobales,
     };
   };
 
@@ -611,6 +617,8 @@ export function CreateOrderPage() {
           mostrarSaldo={pagos.length > 0}
           subtotalItems={items.reduce((sum, item) => sum + item.precio_total, 0)}
           subtotalOrdenesCopiado={ordenesCopiadoAsociadas.reduce((sum, oc) => sum + oc.total, 0)}
+          totalServiciosGlobales={totales.totalServiciosGlobales}
+          totalAcabadosGlobales={totales.totalAcabadosGlobales}
         />
       </div>
 
