@@ -98,32 +98,6 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
     }
   }, [selectedProduct, config, selectedConfig, selectedServicios, selectedAcabados, selectedServiciosGrupo, selectedAcabadosGrupo]);
 
-  // Efecto para actualizar precio_total_linea cuando cambian servicios/acabados de grupo
-  useEffect(() => {
-    if (!config?.permite_multiples_lineas || selectedConfig.lineas_medidas.length === 0) return;
-
-    const lineasActualizadas = selectedConfig.lineas_medidas.map((linea, index) => {
-      const preciosGlobales = preciosGlobalesPorLinea[index];
-      if (!preciosGlobales) return linea;
-
-      const precio_total_con_globales = (linea.precio_base_unitario || 0) * linea.cantidad +
-        (linea.precio_servicios_unitario || 0) * linea.cantidad +
-        (linea.precio_acabados_unitario || 0) * linea.cantidad +
-        preciosGlobales.precio_servicios_globales +
-        preciosGlobales.precio_acabados_globales;
-
-      return {
-        ...linea,
-        precio_total_linea: precio_total_con_globales
-      };
-    });
-
-    setSelectedConfig(prev => ({
-      ...prev,
-      lineas_medidas: lineasActualizadas
-    }));
-  }, [preciosGlobalesPorLinea, config?.permite_multiples_lineas]);
-
   // Inicializar configuración cuando se carga el config
   useEffect(() => {
     if (!config) return;
@@ -392,10 +366,10 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
       case 'services':
         return true; // Los servicios son opcionales
       case 'summary':
-        // Para productos con múltiples líneas, verificar que todas tengan precio
+        // Para productos con múltiples líneas, verificar que todas tengan precio base
         if (config?.permite_multiples_lineas && selectedConfig.lineas_medidas.length > 0) {
           return selectedConfig.lineas_medidas.every(line =>
-            line.precio_total_linea !== undefined && line.precio_total_linea !== null
+            line.precio_base_unitario !== undefined && line.precio_base_unitario !== null && line.precio_base_unitario > 0
           );
         }
         // Para productos sin múltiples líneas, verificar precioTotal
