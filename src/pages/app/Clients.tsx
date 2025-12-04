@@ -32,7 +32,7 @@ export function Clients() {
   const canEdit = profile?.role && ['super_admin', 'admin', 'manager', 'operador_diseno'].includes(profile.role);
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('active');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [statusAprobacionFilter, setStatusAprobacionFilter] = useState<string>('all');
   const [cuentaCorrienteFilter, setCuentaCorrienteFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
