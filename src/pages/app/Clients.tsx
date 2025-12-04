@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Users, Plus, Eye, Edit2, Power, Check, X as XIcon, CheckCircle2, XCircle, Link as LinkIcon, Copy } from 'lucide-react';
+import { Users, Plus, Eye, Edit2, Power, Check, X as XIcon, CheckCircle2, XCircle, Link as LinkIcon, Copy, QrCode, Download } from 'lucide-react';
+import QRCode from 'qrcode';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { usePageHeader } from '../../hooks/usePageHeader';
@@ -44,6 +45,7 @@ export function Clients() {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [copiedLink, setCopiedLink] = useState(false);
+  const [downloadingQR, setDownloadingQR] = useState(false);
 
   const handleOpenCreateModal = useCallback(() => {
     setSelectedClient(null);
@@ -206,6 +208,51 @@ export function Clients() {
     } catch (error) {
       console.error('Error al copiar el link:', error);
       showToast('Error al copiar el link', 'error');
+    }
+  };
+
+  const handleDownloadQR = async () => {
+    if (!profile?.company_id) {
+      showToast('Error: No se pudo obtener el ID de la empresa', 'error');
+      return;
+    }
+
+    const link = `${window.location.origin}/registro/${profile.company_id}`;
+    setDownloadingQR(true);
+
+    try {
+      // Generar QR en formato SVG
+      const svgString = await QRCode.toString(link, {
+        type: 'svg',
+        width: 500,
+        margin: 2,
+        color: {
+          dark: '#1e293b', // Color oscuro
+          light: '#ffffff', // Color blanco
+        },
+      });
+
+      // Crear un blob con el SVG
+      const blob = new Blob([svgString], { type: 'image/svg+xml' });
+
+      // Crear un link temporal para descargar
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'qr-autoregistro-clientes.svg';
+      document.body.appendChild(a);
+      a.click();
+
+      // Limpiar
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      showToast('Código QR descargado exitosamente', 'success');
+    } catch (error) {
+      console.error('Error al generar el código QR:', error);
+      showToast('Error al generar el código QR', 'error');
+    } finally {
+      setDownloadingQR(false);
     }
   };
 
@@ -410,7 +457,7 @@ export function Clients() {
               Total: <span className="font-semibold">{totalCount}</span> clientes
             </div>
 
-            <div className="ml-auto">
+            <div className="ml-auto flex gap-2">
               <Button
                 variant="outline"
                 size="sm"
@@ -426,6 +473,26 @@ export function Clients() {
                   <>
                     <LinkIcon className="w-4 h-4 mr-2 text-blue-600" />
                     <span className="text-blue-700">Link Autoregistro</span>
+                  </>
+                )}
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDownloadQR}
+                disabled={downloadingQR}
+                className="bg-gradient-to-r from-violet-50 to-purple-50 border-violet-300 hover:border-violet-400"
+              >
+                {downloadingQR ? (
+                  <>
+                    <Download className="w-4 h-4 mr-2 text-violet-600 animate-pulse" />
+                    <span className="text-violet-700">Generando...</span>
+                  </>
+                ) : (
+                  <>
+                    <QrCode className="w-4 h-4 mr-2 text-violet-600" />
+                    <span className="text-violet-700">Descargar QR</span>
                   </>
                 )}
               </Button>
