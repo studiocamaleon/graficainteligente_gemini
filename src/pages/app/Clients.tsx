@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Users, Plus, Eye, Edit2, Power, Check, X as XIcon, CheckCircle2, XCircle } from 'lucide-react';
+import { Users, Plus, Eye, Edit2, Power, Check, X as XIcon, CheckCircle2, XCircle, Link as LinkIcon, Copy } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { usePageHeader } from '../../hooks/usePageHeader';
@@ -43,6 +43,7 @@ export function Clients() {
   const [isRechazarModalOpen, setIsRechazarModalOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
+  const [copiedLink, setCopiedLink] = useState(false);
 
   const handleOpenCreateModal = useCallback(() => {
     setSelectedClient(null);
@@ -187,6 +188,20 @@ export function Clients() {
   const handleAprobacionSuccess = () => {
     showToast('Operación realizada exitosamente', 'success');
     refetch();
+  };
+
+  const handleCopyAutoRegistroLink = async () => {
+    const link = `${window.location.origin}/register-client`;
+
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopiedLink(true);
+      showToast('Link copiado al portapapeles', 'success');
+      setTimeout(() => setCopiedLink(false), 2000);
+    } catch (error) {
+      console.error('Error al copiar el link:', error);
+      showToast('Error al copiar el link', 'error');
+    }
   };
 
   const columns = [
@@ -388,6 +403,27 @@ export function Clients() {
 
             <div className="text-sm text-gray-600">
               Total: <span className="font-semibold">{totalCount}</span> clientes
+            </div>
+
+            <div className="ml-auto">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCopyAutoRegistroLink}
+                className="bg-gradient-to-r from-blue-50 to-cyan-50 border-blue-300 hover:border-blue-400"
+              >
+                {copiedLink ? (
+                  <>
+                    <Check className="w-4 h-4 mr-2 text-green-600" />
+                    <span className="text-green-700">Link copiado</span>
+                  </>
+                ) : (
+                  <>
+                    <LinkIcon className="w-4 h-4 mr-2 text-blue-600" />
+                    <span className="text-blue-700">Link Autoregistro</span>
+                  </>
+                )}
+              </Button>
             </div>
           </div>
         </div>
