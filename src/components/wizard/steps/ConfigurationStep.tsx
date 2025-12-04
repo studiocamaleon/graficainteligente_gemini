@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card } from '../../ui/Card';
 import { Input } from '../../ui/Input';
 import { Button } from '../../ui/Button';
@@ -140,6 +140,9 @@ export function ConfigurationStep({
 }: ConfigurationStepProps) {
   const [localConfig, setLocalConfig] = useState(selectedConfig);
 
+  // Ref para evitar loops de sincronización
+  const isUpdatingFromParent = useRef(false);
+
   // Estado específico para Materiales Rígidos (selección progresiva)
   const [variantesDisponibles, setVariantesDisponibles] = useState<string[]>([]);
   const [espesoresDisponibles, setEspesoresDisponibles] = useState<number[]>([]);
@@ -157,10 +160,20 @@ export function ConfigurationStep({
   };
 
   // Sincronizar localConfig cuando selectedConfig cambia desde el padre
+  // Solo actualizar si hay diferencias para evitar loops
   useEffect(() => {
-    console.log('[ConfigurationStep] Sincronizando selectedConfig desde padre:', selectedConfig);
-    setLocalConfig(selectedConfig);
-  }, [selectedConfig]);
+    // Evitar loop: no sincronizar si el cambio viene de este componente
+    if (isUpdatingFromParent.current) {
+      isUpdatingFromParent.current = false;
+      return;
+    }
+
+    const hasChanges = JSON.stringify(localConfig) !== JSON.stringify(selectedConfig);
+    if (hasChanges) {
+      console.log('[ConfigurationStep] Sincronizando selectedConfig desde padre:', selectedConfig);
+      setLocalConfig(selectedConfig);
+    }
+  }, [selectedConfig, localConfig]);
 
   // Auto-seleccionar opciones únicas al cargar
   useEffect(() => {
@@ -242,6 +255,10 @@ export function ConfigurationStep({
     const newConfig = { ...localConfig, ...changes };
     console.log('[ConfigurationStep] handleChange - changes:', changes);
     console.log('[ConfigurationStep] handleChange - newConfig completo:', newConfig);
+
+    // Marcar que la actualización viene de este componente
+    isUpdatingFromParent.current = true;
+
     setLocalConfig(newConfig);
     onConfigChange(newConfig);
   };
