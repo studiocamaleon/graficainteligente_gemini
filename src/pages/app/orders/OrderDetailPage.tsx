@@ -19,7 +19,8 @@ import {
   Settings,
   Share2,
   Copy,
-  Check
+  Check,
+  Download
 } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
@@ -42,6 +43,7 @@ import { useToast } from '../../../contexts/ToastContext';
 import { calcularTotalesConsolidados } from '../../../utils/ordenesConsolidadas';
 import type { EstadoOrdenTrabajo } from '../../../types/database';
 import { enviarNotificacion } from '../../../lib/whatsappNotifications';
+import { descargarFactura } from '../../../utils/facturaHelpers';
 
 type TabKey = 'items' | 'ruta' | 'adjuntos' | 'pagos' | 'historial';
 
@@ -66,6 +68,7 @@ export function OrderDetailPage() {
   const [copiedTracking, setCopiedTracking] = useState(false);
   const [showPagoModal, setShowPagoModal] = useState(false);
   const [editingPago, setEditingPago] = useState<any>(null);
+  const [downloadingFactura, setDownloadingFactura] = useState(false);
 
   const isAdmin = profile?.role === 'super_admin' || profile?.role === 'admin';
   const canViewPrices = profile?.role !== 'operador_taller';
@@ -120,6 +123,32 @@ export function OrderDetailPage() {
       setTimeout(() => setCopiedTracking(false), 2000);
     } catch (error) {
       console.error('Error al copiar el enlace:', error);
+    }
+  };
+
+  const handleDescargarFactura = async () => {
+    if (!orden?.facturaStoragePath || !orden?.numero_factura) {
+      showError('No hay factura disponible para descargar');
+      return;
+    }
+
+    setDownloadingFactura(true);
+    try {
+      const resultado = await descargarFactura(
+        orden.facturaStoragePath,
+        orden.numero_factura
+      );
+
+      if (resultado.success) {
+        showSuccess('Factura descargada correctamente');
+      } else {
+        showError(resultado.error || 'Error al descargar la factura');
+      }
+    } catch (error) {
+      console.error('Error descargando factura:', error);
+      showError('Error inesperado al descargar la factura');
+    } finally {
+      setDownloadingFactura(false);
     }
   };
 
@@ -403,6 +432,16 @@ export function OrderDetailPage() {
                     <span className="text-gray-500">
                       ({new Date(orden.fecha_facturacion).toLocaleDateString()})
                     </span>
+                  )}
+                  {orden.facturaStoragePath && (
+                    <button
+                      onClick={handleDescargarFactura}
+                      disabled={downloadingFactura}
+                      className="ml-2 p-1.5 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Descargar factura"
+                    >
+                      <Download className={`w-4 h-4 text-blue-600 ${downloadingFactura ? 'animate-bounce' : ''}`} />
+                    </button>
                   )}
                 </div>
               )}

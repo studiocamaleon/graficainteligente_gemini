@@ -20,6 +20,7 @@ export interface OrdenTrabajoFull extends OrdenTrabajo {
   pagos?: OrdenTrabajoPago[];
   historial?: OrdenTrabajoHistorial[];
   ordenCopiado?: CentroCopiadoOrdenResumida | null;
+  facturaStoragePath?: string | null;
   cliente?: {
     id: string;
     nombre_fantasia: string;
@@ -152,7 +153,7 @@ export function useOrdenTrabajo() {
 
       if (ordenError) throw ordenError;
 
-      const [itemsRes, pagosRes, historialRes, ordenCopiadoRes] = await Promise.all([
+      const [itemsRes, pagosRes, historialRes, ordenCopiadoRes, facturaRes] = await Promise.all([
         supabase
           .from('ordenes_trabajo_items')
           .select('*')
@@ -173,12 +174,22 @@ export function useOrdenTrabajo() {
           .select('id, numero_orden, estado, total')
           .eq('orden_trabajo_id', id)
           .maybeSingle(),
+        // Obtener la factura activa (última creación o reemplazo)
+        supabase
+          .from('facturas_historial')
+          .select('factura_storage_path, numero_factura, monto_total, created_at')
+          .eq('orden_id', id)
+          .in('tipo_operacion', ['creacion', 'reemplazo'])
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
       ]);
 
       if (itemsRes.error) throw itemsRes.error;
       if (pagosRes.error) throw pagosRes.error;
       if (historialRes.error) throw historialRes.error;
       if (ordenCopiadoRes.error) throw ordenCopiadoRes.error;
+      if (facturaRes.error) throw facturaRes.error;
 
       // Si hay orden de copiado, cargar sus items con sus relaciones
       let ordenCopiadoCompleta: CentroCopiadoOrdenResumida | null = null;
@@ -210,6 +221,7 @@ export function useOrdenTrabajo() {
         pagos: pagosRes.data,
         historial: historialRes.data,
         ordenCopiado: ordenCopiadoCompleta,
+        facturaStoragePath: facturaRes.data?.factura_storage_path || null,
       } as OrdenTrabajoFull;
     } catch (err) {
       console.error('Error fetching orden:', err);
