@@ -9,6 +9,7 @@ import { GroupServicesStep } from './steps/GroupServicesStep';
 import { UniversalSummaryStep } from './steps/UniversalSummaryStep';
 import { useProductConfiguration } from '../../hooks/wizard/useProductConfiguration';
 import { useUniversalPricing } from '../../hooks/wizard/useUniversalPricing';
+import { useGlobalServicesPricing } from '../../hooks/wizard/useGlobalServicesPricing';
 import type { UniversalProductSearchResult } from '../../hooks/wizard/useUniversalProductSearch';
 import type { ServicioGlobalSeleccionado, AcabadoGlobalSeleccionado } from '../../types/wizard';
 import { generateProductionRoutes } from '../../utils/generateProductionRoutes';
@@ -78,6 +79,13 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
 
   // Hook de pricing
   const { calculatePrice, isCalculating } = useUniversalPricing();
+
+  // Hook de precios globales (para productos con múltiples líneas)
+  const preciosGlobalesPorLinea = useGlobalServicesPricing(
+    selectedConfig.lineas_medidas,
+    selectedServiciosGrupo,
+    selectedAcabadosGrupo
+  );
 
   // Efecto para calcular precio cuando cambia la configuración
   useEffect(() => {
@@ -398,15 +406,30 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
     try {
       // Si el producto permite m\u00faltiples l\u00edneas, crear un item por cada l\u00ednea
       if (config.permite_multiples_lineas && selectedConfig.lineas_medidas.length > 0) {
-        for (const linea of selectedConfig.lineas_medidas) {
-          // Usar servicios directamente de la línea
+        // 1. Generar un único item_grupo_id para todos los items del grupo
+        const itemGrupoId = crypto.randomUUID();
+
+        // 2. Usar los precios globales ya calculados por el hook
+        // preciosGlobalesPorLinea ya contiene un elemento por cada línea con los precios distribuidos
+
+        // 3. Crear items con precios globales
+        for (let i = 0; i < selectedConfig.lineas_medidas.length; i++) {
+          const linea = selectedConfig.lineas_medidas[i];
+          const preciosGlobalesLinea = preciosGlobalesPorLinea[i] || {
+            precio_servicios_globales: 0,
+            precio_acabados_globales: 0,
+            servicios_detalle: [],
+            acabados_detalle: []
+          };
+
+          // Usar servicios directamente de la línea (servicios por item)
           const serviciosLinea = (linea.servicios || []).map(s => ({
             servicio_id: s.servicio_id,
             nombre: s.servicio_nombre,
             nivel: s.nivel_nombre,
           }));
 
-          // Usar acabados directamente de la línea
+          // Usar acabados directamente de la línea (acabados por item)
           const acabadosLinea = (linea.acabados || []).map(a => ({
             acabado_id: a.acabado_id,
             nombre: a.acabado_nombre,
@@ -435,7 +458,18 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
             color: selectedConfig.color,
             marca: selectedConfig.marca,
             servicios_seleccionados: serviciosLinea,
-            acabados_seleccionados: acabadosLinea
+            acabados_seleccionados: acabadosLinea,
+            // Solo en el primer item: guardar info completa de servicios/acabados globales
+            servicios_globales_grupo: i === 0 ? selectedServiciosGrupo.map(s => ({
+              servicio_id: s.servicio_id,
+              nombre: s.servicio_nombre,
+              nivel: s.nivel_nombre,
+            })) : undefined,
+            acabados_globales_grupo: i === 0 ? selectedAcabadosGrupo.map(a => ({
+              acabado_id: a.acabado_id,
+              nombre: a.acabado_nombre,
+              nivel: a.nivel_nombre,
+            })) : undefined
           };
 
           // Generar rutas de producci\u00f3n para esta l\u00ednea
@@ -444,6 +478,18 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
             categoria: selectedProduct.categoria,
             configuracion: configuracionLinea,
           });
+
+          // Calcular precio_unitario_final incluyendo precios globales
+          // precio_unitario_final = precio_base + precio_servicios + precio_acabados + (precio_globales / cantidad)
+          const precioGlobalesUnitario = (preciosGlobalesLinea.precio_servicios_globales + preciosGlobalesLinea.precio_acabados_globales) / linea.cantidad;
+          const precioUnitarioFinal = (linea.precio_base_unitario || 0) + (linea.precio_servicios_unitario || 0) + (linea.precio_acabados_unitario || 0) + precioGlobalesUnitario;
+
+          // Calcular precio_total incluyendo precios globales
+          const precioTotal = (linea.precio_base_unitario || 0) * linea.cantidad +
+                             (linea.precio_servicios_unitario || 0) * linea.cantidad +
+                             (linea.precio_acabados_unitario || 0) * linea.cantidad +
+                             preciosGlobalesLinea.precio_servicios_globales +
+                             preciosGlobalesLinea.precio_acabados_globales;
 
           const itemData = {
             producto_id: selectedProduct.id,
@@ -455,8 +501,11 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
             precio_base: linea.precio_base_unitario || 0,
             precio_servicios: linea.precio_servicios_unitario || 0,
             precio_acabados: linea.precio_acabados_unitario || 0,
-            precio_unitario_final: linea.precio_unitario_final || 0,
-            precio_total: linea.precio_total_linea || 0,
+            precio_servicios_globales: preciosGlobalesLinea.precio_servicios_globales,
+            precio_acabados_globales: preciosGlobalesLinea.precio_acabados_globales,
+            precio_unitario_final: precioUnitarioFinal,
+            precio_total: precioTotal,
+            item_grupo_id: itemGrupoId,
             impuesto_iva: config.impuesto_iva,
             rutas_generadas: rutasGeneradas
           };
