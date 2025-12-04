@@ -191,7 +191,12 @@ export function Clients() {
   };
 
   const handleCopyAutoRegistroLink = async () => {
-    const link = `${window.location.origin}/register-client`;
+    if (!profile?.company_id) {
+      showToast('Error: No se pudo obtener el ID de la empresa', 'error');
+      return;
+    }
+
+    const link = `${window.location.origin}/registro/${profile.company_id}`;
 
     try {
       await navigator.clipboard.writeText(link);
