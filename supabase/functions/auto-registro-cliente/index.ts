@@ -383,15 +383,27 @@ Deno.serve(async (req: Request) => {
     // Obtener datos de la empresa
     const { data: company, error: companyError } = await supabaseAdmin
       .from('companies')
-      .select('name, whatsapp_configured')
+      .select('name, whatsapp_notifications_enabled')
       .eq('id', body.company_id)
       .single();
 
-    if (companyError || !company) {
+    if (companyError) {
+      console.error('[Company] Error consultando empresa:', companyError);
       return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'Empresa no encontrada' 
+        JSON.stringify({
+          success: false,
+          error: 'Error al verificar la empresa. Por favor intente nuevamente.'
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!company) {
+      console.error('[Company] Empresa no encontrada:', body.company_id);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Empresa no encontrada'
         }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -437,15 +449,15 @@ Deno.serve(async (req: Request) => {
 
     // Intentar enviar WhatsApp de confirmación al cliente
     let whatsappEnviado = false;
-    if (company.whatsapp_configured) {
+    if (company.whatsapp_notifications_enabled) {
       const whatsappDisponible = await verificarWhatsAppDisponible(body.company_id);
-      
+
       if (whatsappDisponible) {
         const mensaje = generarMensajeConfirmacion(
           body.nombre_fantasia,
           company.name
         );
-        
+
         whatsappEnviado = await enviarMensajeWhatsApp(
           body.company_id,
           whatsappFormateado,
@@ -463,8 +475,7 @@ Deno.serve(async (req: Request) => {
       }),
       { 
         status: 201, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
