@@ -449,11 +449,13 @@ Deno.serve(async (req: Request) => {
 
     // Intentar enviar WhatsApp de confirmación al cliente
     let whatsappEnviado = false;
+    let mensajeWhatsApp = '';
+
     if (company.whatsapp_notifications_enabled) {
       const whatsappDisponible = await verificarWhatsAppDisponible(body.company_id);
 
       if (whatsappDisponible) {
-        const mensaje = generarMensajeConfirmacion(
+        mensajeWhatsApp = generarMensajeConfirmacion(
           body.nombre_fantasia,
           company.name
         );
@@ -461,8 +463,50 @@ Deno.serve(async (req: Request) => {
         whatsappEnviado = await enviarMensajeWhatsApp(
           body.company_id,
           whatsappFormateado,
-          mensaje
+          mensajeWhatsApp
         );
+
+        // Registrar la notificación en la base de datos
+        try {
+          await supabaseAdmin
+            .from('whatsapp_notificaciones')
+            .insert({
+              company_id: body.company_id,
+              cliente_id: nuevoCliente.id,
+              tipo_notificacion: 'auto_registro_cliente',
+              telefono_destino: whatsappFormateado,
+              mensaje_enviado: mensajeWhatsApp,
+              estado_envio: whatsappEnviado ? 'enviado' : 'fallido',
+              error_mensaje: whatsappEnviado ? null : 'No se pudo enviar el mensaje',
+            });
+        } catch (notifError) {
+          console.error('[Notificación] Error registrando:', notifError);
+          // No fallar la operación completa si falla el registro de la notificación
+        }
+      } else {
+        console.log('[WhatsApp] Backend no disponible para company:', body.company_id);
+
+        // Registrar intento fallido
+        try {
+          mensajeWhatsApp = generarMensajeConfirmacion(
+            body.nombre_fantasia,
+            company.name
+          );
+
+          await supabaseAdmin
+            .from('whatsapp_notificaciones')
+            .insert({
+              company_id: body.company_id,
+              cliente_id: nuevoCliente.id,
+              tipo_notificacion: 'auto_registro_cliente',
+              telefono_destino: whatsappFormateado,
+              mensaje_enviado: mensajeWhatsApp,
+              estado_envio: 'fallido',
+              error_mensaje: 'Backend de WhatsApp no disponible',
+            });
+        } catch (notifError) {
+          console.error('[Notificación] Error registrando fallido:', notifError);
+        }
       }
     }
 
@@ -473,8 +517,8 @@ Deno.serve(async (req: Request) => {
         cliente_id: nuevoCliente.id,
         whatsapp_enviado: whatsappEnviado,
       }),
-      { 
-        status: 201, 
+      {
+        status: 201,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 

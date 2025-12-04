@@ -71,6 +71,9 @@ Lamentamos informarte que tu solicitud de registro en ${company.name} no ha sido
 
     const backendUrl = whatsapp_backend_url || Deno.env.get('WHATSAPP_BACKEND_URL') || 'https://whatsapp-backend-w6ot.onrender.com';
 
+    let whatsappEnviado = false;
+    let errorMensaje: string | null = null;
+
     if (backendUrl) {
       try {
         const whatsappResponse = await fetch(`${backendUrl}/send`, {
@@ -84,13 +87,21 @@ Lamentamos informarte que tu solicitud de registro en ${company.name} no ha sido
         });
 
         if (!whatsappResponse.ok) {
-          console.error('Error al enviar WhatsApp:', await whatsappResponse.text());
+          const errorText = await whatsappResponse.text();
+          console.error('Error al enviar WhatsApp:', errorText);
+          errorMensaje = `Error HTTP ${whatsappResponse.status}: ${errorText}`;
+        } else {
+          whatsappEnviado = true;
         }
       } catch (error) {
         console.error('Error conectando con backend WhatsApp:', error);
+        errorMensaje = `Error de conexión: ${error.message}`;
       }
+    } else {
+      errorMensaje = 'URL del backend no configurada';
     }
 
+    // Registrar notificación con nombres de columnas correctos
     const insertResponse = await fetch(`${supabaseUrl}/rest/v1/whatsapp_notificaciones`, {
       method: 'POST',
       headers: {
@@ -101,10 +112,12 @@ Lamentamos informarte que tu solicitud de registro en ${company.name} no ha sido
       },
       body: JSON.stringify({
         company_id: cliente.company_id,
-        tipo: 'cliente_rechazado',
-        destinatario: whatsappPhone,
-        mensaje: mensaje,
-        estado: 'enviado',
+        cliente_id: cliente_id,
+        tipo_notificacion: 'cliente_rechazado',
+        telefono_destino: whatsappPhone,
+        mensaje_enviado: mensaje,
+        estado_envio: whatsappEnviado ? 'enviado' : 'fallido',
+        error_mensaje: errorMensaje,
       }),
     });
 
@@ -115,8 +128,8 @@ Lamentamos informarte que tu solicitud de registro en ${company.name} no ha sido
     return new Response(
       JSON.stringify({
         success: true,
-        whatsapp_enviado: true,
-        message: 'Cliente notificado exitosamente',
+        whatsapp_enviado: whatsappEnviado,
+        message: whatsappEnviado ? 'Cliente notificado exitosamente' : 'No se pudo enviar WhatsApp',
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
