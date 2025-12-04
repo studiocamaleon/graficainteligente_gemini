@@ -109,10 +109,31 @@ export function ClienteRegistro() {
     return !error;
   };
 
+  const formatWhatsApp = (value: string): string => {
+    const cleaned = value.replace(/\D/g, '');
+    if (cleaned.startsWith('549')) {
+      return cleaned;
+    }
+    if (cleaned.startsWith('54')) {
+      return '549' + cleaned.substring(2);
+    }
+    if (cleaned.startsWith('15')) {
+      return '549' + cleaned.substring(2);
+    }
+    if (cleaned.startsWith('0')) {
+      return '549' + cleaned.substring(1);
+    }
+    if (cleaned.length > 0) {
+      return '549' + cleaned;
+    }
+    return cleaned;
+  };
+
   const handleChange = (name: string, value: string) => {
-    setFormData(prev => ({ ...prev, [name]: value }));
+    const finalValue = name === 'whatsapp' ? formatWhatsApp(value) : value;
+    setFormData(prev => ({ ...prev, [name]: finalValue }));
     if (touched[name]) {
-      validateField(name, value);
+      validateField(name, finalValue);
     }
   };
 
@@ -404,6 +425,7 @@ export function ClienteRegistro() {
             error={touched.whatsapp ? errors.whatsapp : undefined}
             icon={Phone}
             placeholder="11 1234-5678"
+            helperText="Se guardará en formato internacional: 549XXXXXXXXX"
             required
           />
           <FormField
@@ -606,6 +628,7 @@ interface FormFieldProps {
   placeholder?: string;
   type?: string;
   required?: boolean;
+  helperText?: string;
 }
 
 function FormField({
@@ -619,6 +642,7 @@ function FormField({
   placeholder,
   type = 'text',
   required = false,
+  helperText,
 }: FormFieldProps) {
   return (
     <div className="space-y-2">
@@ -655,6 +679,9 @@ function FormField({
             </motion.p>
           )}
         </AnimatePresence>
+        {!error && helperText && (
+          <p className="mt-1 text-xs text-gray-500">{helperText}</p>
+        )}
       </div>
     </div>
   );
