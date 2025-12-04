@@ -29,7 +29,7 @@ Deno.serve(async (req: Request) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-    const clienteResponse = await fetch(`${supabaseUrl}/rest/v1/clients?id=eq.${cliente_id}&select=nombre_fantasia,whatsapp,company_id,companies(name,whatsapp_configured)`, {
+    const clienteResponse = await fetch(`${supabaseUrl}/rest/v1/clients?id=eq.${cliente_id}&select=nombre_fantasia,whatsapp,company_id,companies(name,whatsapp_notifications_enabled)`, {
       headers: {
         'apikey': supabaseKey,
         'Authorization': `Bearer ${supabaseKey}`,
@@ -48,10 +48,10 @@ Deno.serve(async (req: Request) => {
     const cliente = clientes[0];
     const company = cliente.companies;
 
-    if (!company?.whatsapp_configured) {
-      console.log('WhatsApp no configurado para esta empresa');
+    if (!company?.whatsapp_notifications_enabled) {
+      console.log('WhatsApp no habilitado para esta empresa');
       return new Response(
-        JSON.stringify({ success: true, whatsapp_enviado: false, message: 'WhatsApp no configurado' }),
+        JSON.stringify({ success: true, whatsapp_enviado: false, message: 'WhatsApp no habilitado' }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -67,15 +67,16 @@ Cualquier consulta, estamos a tu disposición.
 
 ¡Bienvenido a ${company.name}!`;
 
-    const backendUrl = whatsapp_backend_url || Deno.env.get('WHATSAPP_BACKEND_URL');
+    const backendUrl = whatsapp_backend_url || Deno.env.get('WHATSAPP_BACKEND_URL') || 'https://whatsapp-backend-w6ot.onrender.com';
 
     if (backendUrl) {
       try {
-        const whatsappResponse = await fetch(`${backendUrl}/api/send-message`, {
+        const whatsappResponse = await fetch(`${backendUrl}/send`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            phone: whatsappPhone,
+            companyId: cliente.company_id,
+            to: whatsappPhone,
             message: mensaje,
           }),
         });
