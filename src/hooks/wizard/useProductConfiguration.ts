@@ -55,11 +55,12 @@ export interface ProductConfiguration {
   color?: string;
   marca?: string;
 
-  // Servicios disponibles
-  servicios: Array<{
+  // Servicios disponibles separados por alcance
+  servicios_por_item: Array<{
     id: string;
     servicio_id: string;
     servicio_nombre: string;
+    alcance: 'por_item' | 'grupo';
     tiene_niveles: boolean;
     niveles?: Array<{
       id: string;
@@ -70,11 +71,42 @@ export interface ProductConfiguration {
     }>;
   }>;
 
-  // Acabados disponibles
-  acabados: Array<{
+  servicios_grupo: Array<{
+    id: string;
+    servicio_id: string;
+    servicio_nombre: string;
+    alcance: 'por_item' | 'grupo';
+    tiene_niveles: boolean;
+    niveles?: Array<{
+      id: string;
+      nombre: string;
+      tipo_impacto: string;
+      valor_porcentaje: number | null;
+      valor_monto: number | null;
+    }>;
+  }>;
+
+  // Acabados disponibles separados por alcance
+  acabados_por_item: Array<{
     id: string;
     acabado_id: string;
     acabado_nombre: string;
+    alcance: 'por_item' | 'grupo';
+    tiene_niveles: boolean;
+    niveles?: Array<{
+      id: string;
+      nombre: string;
+      tipo_impacto: string;
+      valor_porcentaje: number | null;
+      valor_monto: number | null;
+    }>;
+  }>;
+
+  acabados_grupo: Array<{
+    id: string;
+    acabado_id: string;
+    acabado_nombre: string;
+    alcance: 'por_item' | 'grupo';
     tiene_niveles: boolean;
     niveles?: Array<{
       id: string;

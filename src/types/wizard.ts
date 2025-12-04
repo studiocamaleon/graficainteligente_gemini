@@ -73,6 +73,83 @@ export interface AcabadoSeleccionado {
   impacto_calculado: number;
 }
 
+// =====================================================
+// SERVICIOS Y ACABADOS CON ALCANCE
+// =====================================================
+
+export interface ServicioConAlcance {
+  id: string;
+  servicio_id: string;
+  servicio_nombre: string;
+  alcance: 'por_item' | 'grupo';
+  tiene_niveles: boolean;
+  niveles?: Array<{
+    id: string;
+    nombre: string;
+    tipo_impacto: string;
+    valor_porcentaje: number | null;
+    valor_monto: number | null;
+  }>;
+}
+
+export interface AcabadoConAlcance {
+  id: string;
+  acabado_id: string;
+  acabado_nombre: string;
+  alcance: 'por_item' | 'grupo';
+  tiene_niveles: boolean;
+  niveles?: Array<{
+    id: string;
+    nombre: string;
+    tipo_impacto: string;
+    valor_porcentaje: number | null;
+    valor_monto: number | null;
+  }>;
+}
+
+// =====================================================
+// SERVICIOS Y ACABADOS GLOBALES SELECCIONADOS
+// =====================================================
+
+export interface ServicioGlobalSeleccionado {
+  servicio_id: string;
+  servicio_nombre: string;
+  nivel_id: string | null;
+  nivel_nombre: string | null;
+  tipo_impacto: string;
+  valor_monto: number | null;
+  valor_monto_secundario: number | null;
+}
+
+export interface AcabadoGlobalSeleccionado {
+  acabado_id: string;
+  acabado_nombre: string;
+  nivel_id: string | null;
+  nivel_nombre: string | null;
+  tipo_impacto: string;
+  valor_monto: number | null;
+  valor_monto_secundario: number | null;
+}
+
+// =====================================================
+// PRECIOS GLOBALES CALCULADOS
+// =====================================================
+
+export interface PreciosGlobalesLinea {
+  precio_servicios_globales: number;
+  precio_acabados_globales: number;
+  servicios_detalle: Array<{
+    servicio_nombre: string;
+    precio_calculado_total: number;
+    precio_asignado_linea: number;
+  }>;
+  acabados_detalle: Array<{
+    acabado_nombre: string;
+    precio_calculado_total: number;
+    precio_asignado_linea: number;
+  }>;
+}
+
 export interface WizardState {
   currentStep: number;
   steps: WizardStep[];
