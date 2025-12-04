@@ -454,7 +454,7 @@ Deno.serve(async (req: Request) => {
       // Obtener todos los usuarios admin/super_admin/manager de la empresa
       const { data: admins, error: adminsError } = await supabaseAdmin
         .from('profiles')
-        .select('user_id, role')
+        .select('id, role')
         .eq('company_id', body.company_id)
         .in('role', ['super_admin', 'admin', 'manager', 'operador_diseno']);
 
@@ -464,12 +464,12 @@ Deno.serve(async (req: Request) => {
         console.warn('[Notificación Interna] ⚠️ No se encontraron usuarios admin para notificar');
       } else {
         console.log('[Notificación Interna] Encontrados', admins.length, 'usuarios admin:',
-          admins.map(a => `${a.user_id.substring(0, 8)}... (${a.role})`).join(', ')
+          admins.map(a => `${a.id.substring(0, 8)}... (${a.role})`).join(', ')
         );
 
         const notificaciones = admins.map(admin => ({
           company_id: body.company_id,
-          usuario_id: admin.user_id,
+          usuario_id: admin.id,
           tipo: 'nuevo_cliente_registro',
           titulo: 'Nuevo Cliente Pendiente de Aprobación',
           mensaje: `${body.nombre_fantasia} se ha registrado y está esperando aprobación`,
