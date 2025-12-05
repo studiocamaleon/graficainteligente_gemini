@@ -17,7 +17,8 @@ interface AddAcabadoCompartidoModalProps {
   id: string;
   items: ItemForProration[];
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (data: any) => void;
+  modoCreacion?: boolean;
 }
 
 export function AddAcabadoCompartidoModal({
@@ -25,11 +26,12 @@ export function AddAcabadoCompartidoModal({
   id,
   items,
   onClose,
-  onSuccess
+  onSuccess,
+  modoCreacion = false
 }: AddAcabadoCompartidoModalProps) {
   const { acabados, fetchAcabados } = useAcabados();
   const { niveles, fetchNivelesByAcabado } = useAcabadoNiveles();
-  const { addAcabadoCompartido } = useServiciosAcabadosCompartidos({ tipo, id });
+  const { addAcabadoCompartido } = useServiciosAcabadosCompartidos({ tipo, id: id || 'temp' });
 
   const [acabadoId, setAcabadoId] = useState('');
   const [nivelId, setNivelId] = useState('');
@@ -49,6 +51,9 @@ export function AddAcabadoCompartidoModal({
       setNivelId('');
     }
   }, [acabadoId, fetchNivelesByAcabado]);
+
+  const acabadoSeleccionado = acabados.find(a => a.id === acabadoId);
+  const acabadosDisponibles = acabados.filter(a => a.alcance === 'grupo');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,16 +84,30 @@ export function AddAcabadoCompartidoModal({
         configuracion.nivel_id = nivelId;
       }
 
-      await addAcabadoCompartido({
-        acabado_id: acabadoId,
-        configuracion,
-        metodo_prorrateo: metodoProrrateo,
-        prorrateos,
-        precio_total: precio,
-        notas: notas.trim() || undefined
-      });
-
-      onSuccess();
+      if (modoCreacion) {
+        // Modo creación: devolver datos al componente padre
+        onSuccess({
+          acabado_id: acabadoId,
+          acabado_nombre: acabadoSeleccionado?.nombre || 'Acabado',
+          configuracion,
+          metodo_prorrateo: metodoProrrateo,
+          precio_total: precio,
+          notas: notas.trim() || undefined
+        });
+        onClose();
+      } else {
+        // Modo edición: guardar en BD
+        await addAcabadoCompartido({
+          acabado_id: acabadoId,
+          configuracion,
+          metodo_prorrateo: metodoProrrateo,
+          prorrateos,
+          precio_total: precio,
+          notas: notas.trim() || undefined
+        });
+        onSuccess({});
+        onClose();
+      }
     } catch (err) {
       console.error('Error adding acabado compartido:', err);
       setError(err instanceof Error ? err.message : 'Error al agregar acabado');

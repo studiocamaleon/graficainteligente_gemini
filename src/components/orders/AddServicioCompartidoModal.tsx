@@ -84,16 +84,30 @@ export function AddServicioCompartidoModal({
         configuracion.nivel_id = nivelId;
       }
 
-      await addServicioCompartido({
-        servicio_id: servicioId,
-        configuracion,
-        metodo_prorrateo: metodoProrrateo,
-        prorrateos,
-        precio_total: precio,
-        notas: notas.trim() || undefined
-      });
-
-      onSuccess();
+      if (modoCreacion) {
+        // Modo creación: devolver datos al componente padre
+        onSuccess({
+          servicio_id: servicioId,
+          servicio_nombre: servicioSeleccionado?.nombre || 'Servicio',
+          configuracion,
+          metodo_prorrateo: metodoProrrateo,
+          precio_total: precio,
+          notas: notas.trim() || undefined
+        });
+        onClose();
+      } else {
+        // Modo edición: guardar en BD
+        await addServicioCompartido({
+          servicio_id: servicioId,
+          configuracion,
+          metodo_prorrateo: metodoProrrateo,
+          prorrateos,
+          precio_total: precio,
+          notas: notas.trim() || undefined
+        });
+        onSuccess({});
+        onClose();
+      }
     } catch (err) {
       console.error('Error adding servicio compartido:', err);
       setError(err instanceof Error ? err.message : 'Error al agregar servicio');
