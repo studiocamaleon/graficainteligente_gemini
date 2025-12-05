@@ -15,10 +15,41 @@ interface NivelPrecio {
   } | null;
 }
 
-export function useServicioNiveles(servicioId: string | null) {
+export function useServicioNiveles(servicioId?: string | null) {
   const [niveles, setNiveles] = useState<NivelPrecio[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const fetchNivelesByServicio = async (id: string) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('servicios_niveles_precio')
+        .select(`
+          id,
+          nombre,
+          tipo_impacto,
+          valor_impacto,
+          valor_impacto_secundario,
+          paso_id,
+          paso:pasos(id, nombre, etapa)
+        `)
+        .eq('servicio_id', id)
+        .order('orden', { ascending: true });
+
+      if (fetchError) throw fetchError;
+
+      setNiveles(data || []);
+    } catch (err) {
+      console.error('Error fetching servicio niveles:', err);
+      setError('Error al cargar los niveles del servicio');
+      setNiveles([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!servicioId) {
@@ -26,38 +57,7 @@ export function useServicioNiveles(servicioId: string | null) {
       return;
     }
 
-    const fetchNiveles = async () => {
-      setLoading(true);
-      setError(null);
-
-      try {
-        const { data, error: fetchError } = await supabase
-          .from('servicios_niveles_precio')
-          .select(`
-            id,
-            nombre,
-            tipo_impacto,
-            valor_impacto,
-            valor_impacto_secundario,
-            paso_id,
-            paso:pasos(id, nombre, etapa)
-          `)
-          .eq('servicio_id', servicioId)
-          .order('orden', { ascending: true });
-
-        if (fetchError) throw fetchError;
-
-        setNiveles(data || []);
-      } catch (err) {
-        console.error('Error fetching servicio niveles:', err);
-        setError('Error al cargar los niveles del servicio');
-        setNiveles([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchNiveles();
+    fetchNivelesByServicio(servicioId);
   }, [servicioId]);
 
   const hasAllPasosAssigned = niveles.length > 0 && niveles.every((n) => n.paso_id !== null);
@@ -67,5 +67,6 @@ export function useServicioNiveles(servicioId: string | null) {
     loading,
     error,
     hasAllPasosAssigned,
+    fetchNivelesByServicio,
   };
 }

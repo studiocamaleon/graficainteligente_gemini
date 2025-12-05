@@ -29,7 +29,7 @@ export function AddServicioCompartidoModal({
   onSuccess,
   modoCreacion = false
 }: AddServicioCompartidoModalProps) {
-  const { servicios, fetchServicios } = useServicios();
+  const { servicios, refetch: refetchServicios } = useServicios();
   const { niveles, fetchNivelesByServicio } = useServicioNiveles();
 
   // Solo usar el hook de compartidos si NO estamos en modo creación
@@ -47,8 +47,8 @@ export function AddServicioCompartidoModal({
   const [error, setError] = useState('');
 
   useEffect(() => {
-    fetchServicios();
-  }, [fetchServicios]);
+    refetchServicios();
+  }, [refetchServicios]);
 
   useEffect(() => {
     if (servicioId) {

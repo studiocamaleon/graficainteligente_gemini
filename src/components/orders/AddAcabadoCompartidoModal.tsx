@@ -29,7 +29,7 @@ export function AddAcabadoCompartidoModal({
   onSuccess,
   modoCreacion = false
 }: AddAcabadoCompartidoModalProps) {
-  const { acabados, fetchAcabados } = useAcabados();
+  const { acabados, refetch: refetchAcabados } = useAcabados();
   const { niveles, fetchNivelesByAcabado } = useAcabadoNiveles();
 
   // Solo usar el hook de compartidos si NO estamos en modo creación
@@ -47,8 +47,8 @@ export function AddAcabadoCompartidoModal({
   const [error, setError] = useState('');
 
   useEffect(() => {
-    fetchAcabados();
-  }, [fetchAcabados]);
+    refetchAcabados();
+  }, [refetchAcabados]);
 
   useEffect(() => {
     if (acabadoId) {

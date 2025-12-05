@@ -15,10 +15,41 @@ interface NivelPrecio {
   } | null;
 }
 
-export function useAcabadoNiveles(acabadoId: string | null) {
+export function useAcabadoNiveles(acabadoId?: string | null) {
   const [niveles, setNiveles] = useState<NivelPrecio[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const fetchNivelesByAcabado = async (id: string) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('acabados_niveles_precio')
+        .select(`
+          id,
+          nombre,
+          tipo_impacto,
+          valor_impacto,
+          valor_impacto_secundario,
+          paso_id,
+          paso:pasos(id, nombre, etapa)
+        `)
+        .eq('acabado_id', id)
+        .order('orden', { ascending: true });
+
+      if (fetchError) throw fetchError;
+
+      setNiveles(data || []);
+    } catch (err) {
+      console.error('Error fetching acabado niveles:', err);
+      setError('Error al cargar los niveles del acabado');
+      setNiveles([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!acabadoId) {
@@ -26,38 +57,7 @@ export function useAcabadoNiveles(acabadoId: string | null) {
       return;
     }
 
-    const fetchNiveles = async () => {
-      setLoading(true);
-      setError(null);
-
-      try {
-        const { data, error: fetchError } = await supabase
-          .from('acabados_niveles_precio')
-          .select(`
-            id,
-            nombre,
-            tipo_impacto,
-            valor_impacto,
-            valor_impacto_secundario,
-            paso_id,
-            paso:pasos(id, nombre, etapa)
-          `)
-          .eq('acabado_id', acabadoId)
-          .order('orden', { ascending: true });
-
-        if (fetchError) throw fetchError;
-
-        setNiveles(data || []);
-      } catch (err) {
-        console.error('Error fetching acabado niveles:', err);
-        setError('Error al cargar los niveles del acabado');
-        setNiveles([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchNiveles();
+    fetchNivelesByAcabado(acabadoId);
   }, [acabadoId]);
 
   const hasAllPasosAssigned = niveles.length > 0 && niveles.every((n) => n.paso_id !== null);
@@ -67,5 +67,6 @@ export function useAcabadoNiveles(acabadoId: string | null) {
     loading,
     error,
     hasAllPasosAssigned,
+    fetchNivelesByAcabado,
   };
 }
