@@ -21,9 +21,6 @@ import { OrdenHistorialTab } from '../../../components/orders/OrdenHistorialTab'
 import { OrdenAdjuntosTab } from '../../../components/orders/OrdenAdjuntosTab';
 import { OrdenFooterTotales } from '../../../components/orders/OrdenFooterTotales';
 import { PagoFormModal } from '../../../components/orders/PagoFormModal';
-import { ServiciosCompartidosCreacionSection } from '../../../components/orders/ServiciosCompartidosCreacionSection';
-import type { ServicioCompartidoTemp, AcabadoCompartidoTemp } from '../../../components/orders/ServiciosCompartidosCreacionSection';
-import { calculateSharedServiceProration, mapOrderItemsToProrationItems } from '../../../utils/sharedServiceProration';
 import { useOrdenLinks } from '../../../hooks/useOrdenLinks';
 import { useCentroCopiadoOrdenes } from '../../../hooks/useCentroCopiadoOrdenes';
 import type { CanalVenta } from '../../../types/database';
@@ -66,10 +63,6 @@ export function CreateOrderPage() {
 
   // Estado para órdenes de copiado asociadas
   const [ordenesCopiadoAsociadas, setOrdenesCopiadoAsociadas] = useState<any[]>([]);
-
-  // Estado para servicios y acabados compartidos (antes de crear la orden)
-  const [serviciosCompartidos, setServiciosCompartidos] = useState<any[]>([]);
-  const [acabadosCompartidos, setAcabadosCompartidos] = useState<any[]>([]);
 
   const { updateStepComment, countAllComments } = useItemRoutesComments({
     items,
@@ -144,12 +137,7 @@ export function CreateOrderPage() {
   const calcularTotales = () => {
     const subtotalItems = items.reduce((sum, item) => sum + item.precio_total, 0);
     const subtotalOrdenesCopiad = ordenesCopiadoAsociadas.reduce((sum, oc) => sum + oc.total, 0);
-
-    // Calcular totales de servicios y acabados compartidos
-    const totalServiciosCompartidos = serviciosCompartidos.reduce((sum, s) => sum + s.precio_total, 0);
-    const totalAcabadosCompartidos = acabadosCompartidos.reduce((sum, a) => sum + a.precio_total, 0);
-
-    const subtotal = subtotalItems + subtotalOrdenesCopiad + totalServiciosCompartidos + totalAcabadosCompartidos;
+    const subtotal = subtotalItems + subtotalOrdenesCopiad;
     const descuentoAplicado = subtotal * (descuentoTotal / 100);
     const subtotalConDescuento = subtotal - descuentoAplicado;
     const iva = requiereFactura ? subtotalConDescuento * 0.21 : 0;
@@ -161,8 +149,6 @@ export function CreateOrderPage() {
       subtotalConDescuento,
       iva,
       total,
-      totalServiciosGlobales: totalServiciosCompartidos,
-      totalAcabadosGlobales: totalAcabadosCompartidos,
     };
   };
 
@@ -330,76 +316,6 @@ export function CreateOrderPage() {
           }
         }
 
-        // Insertar servicios compartidos si existen
-        if (serviciosCompartidos.length > 0) {
-          console.log('[CreateOrderPage] Insertando servicios compartidos:', serviciosCompartidos.length);
-
-          const serviciosInserts = serviciosCompartidos.map(servicio => {
-            const prorrateos = calculateSharedServiceProration({
-              items,
-              costoTotal: servicio.precio_total,
-              metodo: servicio.metodo_prorrateo
-            });
-
-            return {
-              orden_id: result.id,
-              servicio_id: servicio.servicio_id,
-              configuracion: servicio.configuracion,
-              metodo_prorrateo: servicio.metodo_prorrateo,
-              prorrateos,
-              precio_total: servicio.precio_total,
-              notas: servicio.notas || null,
-              created_by: profile.id,
-            };
-          });
-
-          const { error: serviciosError } = await supabase
-            .from('ordenes_servicios_compartidos')
-            .insert(serviciosInserts);
-
-          if (serviciosError) {
-            console.error('[CreateOrderPage] Error insertando servicios compartidos:', serviciosError);
-            showError('Orden creada pero hubo un error al registrar los servicios compartidos');
-          } else {
-            console.log('[CreateOrderPage] Servicios compartidos insertados exitosamente');
-          }
-        }
-
-        // Insertar acabados compartidos si existen
-        if (acabadosCompartidos.length > 0) {
-          console.log('[CreateOrderPage] Insertando acabados compartidos:', acabadosCompartidos.length);
-
-          const acabadosInserts = acabadosCompartidos.map(acabado => {
-            const prorrateos = calculateSharedServiceProration({
-              items,
-              costoTotal: acabado.precio_total,
-              metodo: acabado.metodo_prorrateo
-            });
-
-            return {
-              orden_id: result.id,
-              acabado_id: acabado.acabado_id,
-              configuracion: acabado.configuracion,
-              metodo_prorrateo: acabado.metodo_prorrateo,
-              prorrateos,
-              precio_total: acabado.precio_total,
-              notas: acabado.notas || null,
-              created_by: profile.id,
-            };
-          });
-
-          const { error: acabadosError } = await supabase
-            .from('ordenes_acabados_compartidos')
-            .insert(acabadosInserts);
-
-          if (acabadosError) {
-            console.error('[CreateOrderPage] Error insertando acabados compartidos:', acabadosError);
-            showError('Orden creada pero hubo un error al registrar los acabados compartidos');
-          } else {
-            console.log('[CreateOrderPage] Acabados compartidos insertados exitosamente');
-          }
-        }
-
         // Crear órdenes de copiado asociadas
         if (ordenesCopiadoAsociadas.length > 0) {
           console.log('[CreateOrderPage] Creando órdenes de copiado asociadas:', ordenesCopiadoAsociadas.length);
@@ -557,12 +473,6 @@ export function CreateOrderPage() {
       count: items.length,
     },
     {
-      id: 'servicios-compartidos',
-      label: 'Servicios Compartidos',
-      count: serviciosCompartidos.length + acabadosCompartidos.length,
-      disabled: items.length === 0,
-    },
-    {
       id: 'rutas',
       label: 'Rutas de Producción',
       count: totalRutas,
@@ -652,16 +562,6 @@ export function CreateOrderPage() {
             />
           </div>
 
-          <div className={activeTab === 'servicios-compartidos' ? 'block' : 'hidden'}>
-            <ServiciosCompartidosCreacionSection
-              items={mapOrderItemsToProrationItems(items)}
-              serviciosCompartidos={serviciosCompartidos}
-              acabadosCompartidos={acabadosCompartidos}
-              onServiciosChange={setServiciosCompartidos}
-              onAcabadosChange={setAcabadosCompartidos}
-            />
-          </div>
-
           <div className={activeTab === 'pagos' ? 'block' : 'hidden'}>
             <OrdenPagosTab
               totales={totales}
@@ -711,8 +611,6 @@ export function CreateOrderPage() {
           mostrarSaldo={pagos.length > 0}
           subtotalItems={items.reduce((sum, item) => sum + item.precio_total, 0)}
           subtotalOrdenesCopiado={ordenesCopiadoAsociadas.reduce((sum, oc) => sum + oc.total, 0)}
-          totalServiciosGlobales={totales.totalServiciosGlobales}
-          totalAcabadosGlobales={totales.totalAcabadosGlobales}
         />
       </div>
 

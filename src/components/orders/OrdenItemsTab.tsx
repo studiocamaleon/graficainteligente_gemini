@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { Plus, Trash2, Package, FileText, Printer, ChevronDown, ChevronUp, Calendar, Edit2 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -250,7 +250,6 @@ export function OrdenItemsTab({
       </div>
     );
   };
-
 
   const columns = [
     {

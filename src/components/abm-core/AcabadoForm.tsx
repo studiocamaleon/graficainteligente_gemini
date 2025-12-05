@@ -22,7 +22,6 @@ export interface AcabadoFormData {
   categorias_ids: string[];
   estacion_id: string;
   disponible_independiente: boolean;
-  alcance: 'por_item' | 'grupo';
   tiene_niveles_precio: boolean;
   tipo_impacto?: TipoImpactoPrecio | null;
   valor_impacto?: number | null;
@@ -90,7 +89,6 @@ export function AcabadoForm({ acabado, onSubmit, onCancel }: AcabadoFormProps) {
     categorias_ids: initialCategorias,
     estacion_id: acabado?.estacion_id || '',
     disponible_independiente: acabado?.disponible_independiente || false,
-    alcance: (acabado as any)?.alcance || 'por_item',
     tiene_niveles_precio: acabado?.tiene_niveles_precio || false,
     tipo_impacto: acabado?.tipo_impacto || null,
     valor_impacto: acabado?.valor_impacto || null,
@@ -248,26 +246,6 @@ export function AcabadoForm({ acabado, onSubmit, onCancel }: AcabadoFormProps) {
                 setFormData((prev) => ({ ...prev, disponible_independiente: checked }))
               }
             />
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Alcance del Acabado
-              </label>
-              <select
-                value={formData.alcance}
-                onChange={(e) => setFormData({ ...formData, alcance: e.target.value as 'por_item' | 'grupo' })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="por_item">Por Item (individual)</option>
-                <option value="grupo">Grupo de Items</option>
-              </select>
-              <p className="mt-1 text-xs text-gray-500">
-                {formData.alcance === 'grupo'
-                  ? 'Este acabado se cobrará UNA SOLA VEZ para todos los items del grupo'
-                  : 'Este acabado se cobrará por cada item individual'
-                }
-              </p>
-            </div>
 
             <Switch
               label="Tiene niveles de precio"

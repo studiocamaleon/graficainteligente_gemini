@@ -5,16 +5,12 @@ import { Package, Ruler, Layers, Palette, Wrench, Sparkles, DollarSign } from 'l
 import type { ProductConfiguration } from '../../../hooks/wizard/useProductConfiguration';
 import type { SelectedConfiguration } from './ConfigurationStep';
 import type { SelectedService, SelectedFinishing } from './ServicesAndFinishingsStep';
-import type { ServicioGlobalSeleccionado, AcabadoGlobalSeleccionado, PreciosGlobalesLinea } from '../../../types/wizard';
 
 interface UniversalSummaryStepProps {
   config: ProductConfiguration;
   selectedConfig: SelectedConfiguration;
   selectedServicios: SelectedService[];
   selectedAcabados: SelectedFinishing[];
-  selectedServiciosGrupo?: ServicioGlobalSeleccionado[];
-  selectedAcabadosGrupo?: AcabadoGlobalSeleccionado[];
-  preciosGlobalesPorLinea?: PreciosGlobalesLinea[];
   precioBase: number | null;
   precioServicios: number;
   precioAcabados: number;
@@ -27,9 +23,6 @@ export function UniversalSummaryStep({
   selectedConfig,
   selectedServicios,
   selectedAcabados,
-  selectedServiciosGrupo = [],
-  selectedAcabadosGrupo = [],
-  preciosGlobalesPorLinea = [],
   precioBase,
   precioServicios,
   precioAcabados,
@@ -61,15 +54,7 @@ export function UniversalSummaryStep({
     : 0;
 
   const totalPrecioGeneral = hasMultipleLines
-    ? selectedConfig.lineas_medidas.reduce((sum, line, index) => {
-        const preciosGlobales = preciosGlobalesPorLinea[index];
-        const precio_total_linea = (line.precio_base_unitario || 0) * line.cantidad +
-          (line.precio_servicios_unitario || 0) * line.cantidad +
-          (line.precio_acabados_unitario || 0) * line.cantidad +
-          (preciosGlobales?.precio_servicios_globales || 0) +
-          (preciosGlobales?.precio_acabados_globales || 0);
-        return sum + precio_total_linea;
-      }, 0)
+    ? selectedConfig.lineas_medidas.reduce((sum, line) => sum + (line.precio_total_linea || 0), 0)
     : precioTotal !== null ? precioTotal * selectedConfig.cantidad : 0;
 
   return (
@@ -171,90 +156,80 @@ export function UniversalSummaryStep({
           </div>
 
           <div className="space-y-4">
-            {selectedConfig.lineas_medidas.map((linea, index) => {
-              // Calcular precio total dinámicamente incluyendo precios globales
-              const preciosGlobales = preciosGlobalesPorLinea[index];
-              const precio_total_linea = (linea.precio_base_unitario || 0) * linea.cantidad +
-                (linea.precio_servicios_unitario || 0) * linea.cantidad +
-                (linea.precio_acabados_unitario || 0) * linea.cantidad +
-                (preciosGlobales?.precio_servicios_globales || 0) +
-                (preciosGlobales?.precio_acabados_globales || 0);
-
-              return (
-                <div key={linea.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                  <div className="font-semibold text-gray-900 mb-3">
-                    Línea {index + 1}
-                  </div>
-
-                  <div className="space-y-2 text-sm">
-                    {/* Medidas */}
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Medidas:</span>
-                      <span className="font-medium">
-                        {config.tipo_venta_real === 'mt2' ? (
-                          <>
-                            {linea.ancho}x{linea.alto} cm
-                            <Badge variant="info" size="sm" className="ml-2">
-                              {linea.mt2_calculado?.toFixed(2)} MT2
-                            </Badge>
-                          </>
-                        ) : (
-                          <>
-                            {linea.metros_lineales} mts × {linea.ancho_seleccionado} cm
-                          </>
-                        )}
-                      </span>
-                    </div>
-
-                    {/* Cantidad */}
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Cantidad:</span>
-                      <span className="font-medium">{linea.cantidad} unidades</span>
-                    </div>
-
-                    {/* Servicios */}
-                    {linea.servicios && linea.servicios.length > 0 && (
-                      <div className="flex justify-between items-start">
-                        <span className="text-gray-600">Servicios:</span>
-                        <div className="flex flex-wrap gap-1 justify-end max-w-xs">
-                          {linea.servicios.map((servicio) => (
-                            <Badge key={servicio.servicio_id} variant="warning" size="sm">
-                              {servicio.servicio_nombre}
-                              {servicio.nivel_nombre && ` (${servicio.nivel_nombre})`}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Acabados */}
-                    {linea.acabados && linea.acabados.length > 0 && (
-                      <div className="flex justify-between items-start">
-                        <span className="text-gray-600">Acabados:</span>
-                        <div className="flex flex-wrap gap-1 justify-end max-w-xs">
-                          {linea.acabados.map((acabado) => (
-                            <Badge key={acabado.acabado_id} variant="success" size="sm">
-                              {acabado.acabado_nombre}
-                              {acabado.nivel_nombre && ` (${acabado.nivel_nombre})`}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Precios */}
-                    {linea.precio_base_unitario && (
-                      <div className="pt-2 border-t border-gray-300 mt-2">
-                        <div className="flex justify-between font-semibold text-blue-600">
-                          <span>Subtotal Línea:</span>
-                          <span>{formatCurrency(precio_total_linea)}</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
+            {selectedConfig.lineas_medidas.map((linea, index) => (
+              <div key={linea.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                <div className="font-semibold text-gray-900 mb-3">
+                  Línea {index + 1}
                 </div>
-              );
-            })}
+
+                <div className="space-y-2 text-sm">
+                  {/* Medidas */}
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Medidas:</span>
+                    <span className="font-medium">
+                      {config.tipo_venta_real === 'mt2' ? (
+                        <>
+                          {linea.ancho}x{linea.alto} cm
+                          <Badge variant="info" size="sm" className="ml-2">
+                            {linea.mt2_calculado?.toFixed(2)} MT2
+                          </Badge>
+                        </>
+                      ) : (
+                        <>
+                          {linea.metros_lineales} mts × {linea.ancho_seleccionado} cm
+                        </>
+                      )}
+                    </span>
+                  </div>
+
+                  {/* Cantidad */}
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Cantidad:</span>
+                    <span className="font-medium">{linea.cantidad} unidades</span>
+                  </div>
+
+                  {/* Servicios */}
+                  {linea.servicios && linea.servicios.length > 0 && (
+                    <div className="flex justify-between items-start">
+                      <span className="text-gray-600">Servicios:</span>
+                      <div className="flex flex-wrap gap-1 justify-end max-w-xs">
+                        {linea.servicios.map((servicio) => (
+                          <Badge key={servicio.servicio_id} variant="warning" size="sm">
+                            {servicio.servicio_nombre}
+                            {servicio.nivel_nombre && ` (${servicio.nivel_nombre})`}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Acabados */}
+                  {linea.acabados && linea.acabados.length > 0 && (
+                    <div className="flex justify-between items-start">
+                      <span className="text-gray-600">Acabados:</span>
+                      <div className="flex flex-wrap gap-1 justify-end max-w-xs">
+                        {linea.acabados.map((acabado) => (
+                          <Badge key={acabado.acabado_id} variant="success" size="sm">
+                            {acabado.acabado_nombre}
+                            {acabado.nivel_nombre && ` (${acabado.nivel_nombre})`}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Precios */}
+                  {linea.precio_total_linea && (
+                    <div className="pt-2 border-t border-gray-300 mt-2">
+                      <div className="flex justify-between font-semibold text-blue-600">
+                        <span>Subtotal Línea:</span>
+                        <span>{formatCurrency(linea.precio_total_linea)}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         </Card>
       ) : (
@@ -325,75 +300,6 @@ export function UniversalSummaryStep({
             </Card>
           )}
         </>
-      )}
-
-      {/* Servicios y Acabados de Grupo */}
-      {(selectedServiciosGrupo.length > 0 || selectedAcabadosGrupo.length > 0) && (
-        <Card className="p-6 border-2 border-blue-300">
-          <div className="flex items-center gap-2 mb-4">
-            <Sparkles className="w-5 h-5 text-blue-600" />
-            <h3 className="text-lg font-semibold text-gray-900">Servicios y Acabados de Grupo</h3>
-            <Badge variant="info" size="sm">Aplicados a todas las líneas</Badge>
-          </div>
-
-          <div className="space-y-4">
-            {/* Servicios de Grupo */}
-            {selectedServiciosGrupo.length > 0 && (
-              <div>
-                <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                  <Wrench className="w-4 h-4" />
-                  Servicios
-                </h4>
-                <div className="space-y-2">
-                  {selectedServiciosGrupo.map((servicio, index) => {
-                    const precioTotal = preciosGlobalesPorLinea.reduce((sum, p) =>
-                      sum + (p.servicios_detalle.find(s => s.servicio_nombre === servicio.servicio_nombre)?.precio_calculado_total || 0), 0
-                    );
-                    return (
-                      <div key={index} className="flex justify-between items-center bg-blue-50 p-2 rounded">
-                        <div>
-                          <span className="font-medium text-gray-900">{servicio.servicio_nombre}</span>
-                          {servicio.nivel_nombre && (
-                            <span className="text-sm text-gray-600 ml-2">({servicio.nivel_nombre})</span>
-                          )}
-                        </div>
-                        <span className="font-semibold text-blue-600">{formatCurrency(precioTotal)}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Acabados de Grupo */}
-            {selectedAcabadosGrupo.length > 0 && (
-              <div>
-                <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                  <Sparkles className="w-4 h-4" />
-                  Acabados
-                </h4>
-                <div className="space-y-2">
-                  {selectedAcabadosGrupo.map((acabado, index) => {
-                    const precioTotal = preciosGlobalesPorLinea.reduce((sum, p) =>
-                      sum + (p.acabados_detalle.find(a => a.acabado_nombre === acabado.acabado_nombre)?.precio_calculado_total || 0), 0
-                    );
-                    return (
-                      <div key={index} className="flex justify-between items-center bg-purple-50 p-2 rounded">
-                        <div>
-                          <span className="font-medium text-gray-900">{acabado.acabado_nombre}</span>
-                          {acabado.nivel_nombre && (
-                            <span className="text-sm text-gray-600 ml-2">({acabado.nivel_nombre})</span>
-                          )}
-                        </div>
-                        <span className="font-semibold text-purple-600">{formatCurrency(precioTotal)}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-        </Card>
       )}
 
       {/* Total General */}

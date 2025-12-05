@@ -55,43 +55,11 @@ export interface ProductConfiguration {
   color?: string;
   marca?: string;
 
-  // Servicios disponibles separados por alcance
-  servicios_por_item: Array<{
-    id: string;
-    servicio_id: string;
-    servicio_nombre: string;
-    alcance: 'por_item' | 'grupo';
-    tiene_niveles: boolean;
-    niveles?: Array<{
-      id: string;
-      nombre: string;
-      tipo_impacto: string;
-      valor_porcentaje: number | null;
-      valor_monto: number | null;
-    }>;
-  }>;
-
-  servicios_grupo: Array<{
-    id: string;
-    servicio_id: string;
-    servicio_nombre: string;
-    alcance: 'por_item' | 'grupo';
-    tiene_niveles: boolean;
-    niveles?: Array<{
-      id: string;
-      nombre: string;
-      tipo_impacto: string;
-      valor_porcentaje: number | null;
-      valor_monto: number | null;
-    }>;
-  }>;
-
-  // Servicios combinados (para uso en líneas individuales)
+  // Servicios disponibles
   servicios: Array<{
     id: string;
     servicio_id: string;
     servicio_nombre: string;
-    alcance: 'por_item' | 'grupo';
     tiene_niveles: boolean;
     niveles?: Array<{
       id: string;
@@ -102,43 +70,11 @@ export interface ProductConfiguration {
     }>;
   }>;
 
-  // Acabados disponibles separados por alcance
-  acabados_por_item: Array<{
-    id: string;
-    acabado_id: string;
-    acabado_nombre: string;
-    alcance: 'por_item' | 'grupo';
-    tiene_niveles: boolean;
-    niveles?: Array<{
-      id: string;
-      nombre: string;
-      tipo_impacto: string;
-      valor_porcentaje: number | null;
-      valor_monto: number | null;
-    }>;
-  }>;
-
-  acabados_grupo: Array<{
-    id: string;
-    acabado_id: string;
-    acabado_nombre: string;
-    alcance: 'por_item' | 'grupo';
-    tiene_niveles: boolean;
-    niveles?: Array<{
-      id: string;
-      nombre: string;
-      tipo_impacto: string;
-      valor_porcentaje: number | null;
-      valor_monto: number | null;
-    }>;
-  }>;
-
-  // Acabados combinados (para uso en líneas individuales)
+  // Acabados disponibles
   acabados: Array<{
     id: string;
     acabado_id: string;
     acabado_nombre: string;
-    alcance: 'por_item' | 'grupo';
     tiene_niveles: boolean;
     niveles?: Array<{
       id: string;
@@ -248,28 +184,19 @@ async function loadImpresionLaserConfig(productId: string): Promise<ProductConfi
     `)
     .eq('producto_laser_id', productId);
 
-  // Cargar servicios y acabados
-  const serviciosCargados = await loadServiciosForProduct(
+  // Cargar servicios
+  const servicios = await loadServiciosForProduct(
     'productos_impresion_laser_servicios',
     'producto_laser_id',
     productId
   );
 
-  const acabadosCargados = await loadAcabadosForProduct(
+  // Cargar acabados
+  const acabados = await loadAcabadosForProduct(
     'productos_impresion_laser_acabados',
     'producto_laser_id',
     productId
   );
-
-  // Separar servicios y acabados por alcance
-  const servicios_por_item = serviciosCargados.filter(s => s.alcance === 'por_item');
-  const servicios_grupo = serviciosCargados.filter(s => s.alcance === 'grupo');
-  const acabados_por_item = acabadosCargados.filter(a => a.alcance === 'por_item');
-  const acabados_grupo = acabadosCargados.filter(a => a.alcance === 'grupo');
-
-  // Combinar servicios y acabados (solo por_item para uso en líneas individuales)
-  const servicios = servicios_por_item;
-  const acabados = acabados_por_item;
 
   // Procesar medidas
   const medidasArray = producto.medidas_disponibles as any[];
@@ -311,11 +238,7 @@ async function loadImpresionLaserConfig(productId: string): Promise<ProductConfi
       tecnologia_nombre: (t.tecnologias as any).nombre,
       tintas: t.tintas || []
     })) || [],
-    servicios_por_item,
-    servicios_grupo,
     servicios,
-    acabados_por_item,
-    acabados_grupo,
     acabados,
     impuesto_iva: producto.impuesto_iva || 0
   };
@@ -352,27 +275,17 @@ async function loadGranFormatoConfig(productId: string): Promise<ProductConfigur
     `)
     .eq('producto_gran_formato_id', productId);
 
-  const serviciosCargados = await loadServiciosForProduct(
+  const servicios = await loadServiciosForProduct(
     'productos_gran_formato_servicios',
     'producto_gran_formato_id',
     productId
   );
 
-  const acabadosCargados = await loadAcabadosForProduct(
+  const acabados = await loadAcabadosForProduct(
     'productos_gran_formato_acabados',
     'producto_gran_formato_id',
     productId
   );
-
-  // Separar por alcance
-  const servicios_por_item = serviciosCargados.filter(s => s.alcance === 'por_item');
-  const servicios_grupo = serviciosCargados.filter(s => s.alcance === 'grupo');
-  const acabados_por_item = acabadosCargados.filter(a => a.alcance === 'por_item');
-  const acabados_grupo = acabadosCargados.filter(a => a.alcance === 'grupo');
-
-  // Combinar servicios y acabados (solo por_item para uso en líneas individuales)
-  const servicios = servicios_por_item;
-  const acabados = acabados_por_item;
 
   return {
     id: producto.id,
@@ -396,11 +309,7 @@ async function loadGranFormatoConfig(productId: string): Promise<ProductConfigur
       tecnologia_nombre: (t.tecnologias as any).nombre,
       tintas: t.tintas || []
     })) || [],
-    servicios_por_item,
-    servicios_grupo,
     servicios,
-    acabados_por_item,
-    acabados_grupo,
     acabados,
     impuesto_iva: producto.impuesto_iva || 0
   };
@@ -427,27 +336,17 @@ async function loadMaterialesRigidosConfig(productId: string): Promise<ProductCo
     `)
     .eq('producto_materiales_rigidos_id', productId);
 
-  const serviciosCargados = await loadServiciosForProduct(
+  const servicios = await loadServiciosForProduct(
     'productos_materiales_rigidos_servicios',
     'producto_materiales_rigidos_id',
     productId
   );
 
-  const acabadosCargados = await loadAcabadosForProduct(
+  const acabados = await loadAcabadosForProduct(
     'productos_materiales_rigidos_acabados',
     'producto_materiales_rigidos_id',
     productId
   );
-
-  // Separar por alcance
-  const servicios_por_item = serviciosCargados.filter(s => s.alcance === 'por_item');
-  const servicios_grupo = serviciosCargados.filter(s => s.alcance === 'grupo');
-  const acabados_por_item = acabadosCargados.filter(a => a.alcance === 'por_item');
-  const acabados_grupo = acabadosCargados.filter(a => a.alcance === 'grupo');
-
-  // Combinar servicios y acabados (solo por_item para uso en líneas individuales)
-  const servicios = servicios_por_item;
-  const acabados = acabados_por_item;
 
   // Extraer espesores únicos
   const espesores = [...new Set(materiales?.map(m => m.espesor).filter(e => e != null) as number[])]
@@ -472,11 +371,7 @@ async function loadMaterialesRigidosConfig(productId: string): Promise<ProductCo
       espesor: m.espesor,
       unidad_espesor: (m.materiales as any).unidad_espesor
     })) || [],
-    servicios_por_item,
-    servicios_grupo,
     servicios,
-    acabados_por_item,
-    acabados_grupo,
     acabados,
     impuesto_iva: producto.impuesto_iva || 0
   };
@@ -491,27 +386,17 @@ async function loadPlotterCorteConfig(productId: string): Promise<ProductConfigu
 
   if (prodError) throw prodError;
 
-  const serviciosCargados = await loadServiciosForProduct(
+  const servicios = await loadServiciosForProduct(
     'productos_plotter_corte_servicios',
     'producto_id',
     productId
   );
 
-  const acabadosCargados = await loadAcabadosForProduct(
+  const acabados = await loadAcabadosForProduct(
     'productos_plotter_corte_acabados',
     'producto_id',
     productId
   );
-
-  // Separar por alcance
-  const servicios_por_item = serviciosCargados.filter(s => s.alcance === 'por_item');
-  const servicios_grupo = serviciosCargados.filter(s => s.alcance === 'grupo');
-  const acabados_por_item = acabadosCargados.filter(a => a.alcance === 'por_item');
-  const acabados_grupo = acabadosCargados.filter(a => a.alcance === 'grupo');
-
-  // Combinar servicios y acabados (solo por_item para uso en líneas individuales)
-  const servicios = servicios_por_item;
-  const acabados = acabados_por_item;
 
   // Cargar material del producto (Plotter tiene material único asignado)
   let materialData = null;
@@ -542,11 +427,7 @@ async function loadPlotterCorteConfig(productId: string): Promise<ProductConfigu
       variante_nombre: producto.variante_nombre || '',
       espesor: producto.espesor
     }] : [],
-    servicios_por_item,
-    servicios_grupo,
     servicios,
-    acabados_por_item,
-    acabados_grupo,
     acabados,
     impuesto_iva: producto.impuesto_iva || 0
   };
@@ -571,27 +452,17 @@ async function loadPortabannersConfig(productId: string): Promise<ProductConfigu
     `)
     .eq('producto_id', productId);
 
-  const serviciosCargados = await loadServiciosForProduct(
+  const servicios = await loadServiciosForProduct(
     'productos_portabanners_servicios',
     'producto_id',
     productId
   );
 
-  const acabadosCargados = await loadAcabadosForProduct(
+  const acabados = await loadAcabadosForProduct(
     'productos_portabanners_acabados',
     'producto_id',
     productId
   );
-
-  // Separar por alcance
-  const servicios_por_item = serviciosCargados.filter(s => s.alcance === 'por_item');
-  const servicios_grupo = serviciosCargados.filter(s => s.alcance === 'grupo');
-  const acabados_por_item = acabadosCargados.filter(a => a.alcance === 'por_item');
-  const acabados_grupo = acabadosCargados.filter(a => a.alcance === 'grupo');
-
-  // Combinar servicios y acabados (solo por_item para uso en líneas individuales)
-  const servicios = servicios_por_item;
-  const acabados = acabados_por_item;
 
   return {
     id: producto.id,
@@ -607,11 +478,7 @@ async function loadPortabannersConfig(productId: string): Promise<ProductConfigu
       tecnologia_nombre: (t.tecnologias as any).nombre,
       tintas: producto.tintas || []
     })) || [],
-    servicios_por_item,
-    servicios_grupo,
     servicios,
-    acabados_por_item,
-    acabados_grupo,
     acabados,
     impuesto_iva: producto.impuesto_iva || 0
   };
@@ -632,11 +499,7 @@ async function loadSellosConfig(productId: string): Promise<ProductConfiguration
     categoria: 'Sellos',
     medidas: [{ ancho: producto.medida_ancho, alto: producto.medida_alto }],
     marca: producto.marca,
-    servicios_por_item: [],
-    servicios_grupo: [],
     servicios: [],
-    acabados_por_item: [],
-    acabados_grupo: [],
     acabados: [],
     impuesto_iva: producto.impuesto_iva || 0
   };
@@ -672,27 +535,17 @@ async function loadTalonariosConfig(productId: string): Promise<ProductConfigura
     `)
     .eq('producto_talonario_id', productId);
 
-  const serviciosCargados = await loadServiciosForProduct(
+  const servicios = await loadServiciosForProduct(
     'productos_talonarios_servicios',
     'producto_talonario_id',
     productId
   );
 
-  const acabadosCargados = await loadAcabadosForProduct(
+  const acabados = await loadAcabadosForProduct(
     'productos_talonarios_acabados',
     'producto_talonario_id',
     productId
   );
-
-  // Separar por alcance
-  const servicios_por_item = serviciosCargados.filter(s => s.alcance === 'por_item');
-  const servicios_grupo = serviciosCargados.filter(s => s.alcance === 'grupo');
-  const acabados_por_item = acabadosCargados.filter(a => a.alcance === 'por_item');
-  const acabados_grupo = acabadosCargados.filter(a => a.alcance === 'grupo');
-
-  // Combinar servicios y acabados (solo por_item para uso en líneas individuales)
-  const servicios = servicios_por_item;
-  const acabados = acabados_por_item;
 
   const medidasArray = producto.medidas_disponibles as any[];
   const medidas = medidasArray?.map((m: any) => ({
@@ -727,11 +580,7 @@ async function loadTalonariosConfig(productId: string): Promise<ProductConfigura
       tecnologia_nombre: (t.tecnologias as any).nombre,
       tintas: t.tintas || []
     })) || [],
-    servicios_por_item,
-    servicios_grupo,
     servicios,
-    acabados_por_item,
-    acabados_grupo,
     acabados,
     impuesto_iva: producto.impuesto_iva || 0
   };
@@ -751,7 +600,7 @@ async function loadServiciosForProduct(
     .select(`
       id,
       servicio_id,
-      servicios!inner(id, nombre, tiene_niveles_precio, alcance)
+      servicios!inner(id, nombre, tiene_niveles_precio)
     `)
     .eq(foreignKey, productId);
 
@@ -817,7 +666,6 @@ async function loadServiciosForProduct(
         id: rel.id,
         servicio_id: rel.servicio_id,
         servicio_nombre: servicio.nombre,
-        alcance: servicio.alcance || 'por_item', // Default para retrocompatibilidad
         tiene_niveles: servicio.tiene_niveles_precio,
         niveles
       };
@@ -837,7 +685,7 @@ async function loadAcabadosForProduct(
     .select(`
       id,
       acabado_id,
-      acabados!inner(id, nombre, tiene_niveles_precio, alcance)
+      acabados!inner(id, nombre, tiene_niveles_precio)
     `)
     .eq(foreignKey, productId);
 
@@ -903,7 +751,6 @@ async function loadAcabadosForProduct(
         id: rel.id,
         acabado_id: rel.acabado_id,
         acabado_nombre: acabado.nombre,
-        alcance: acabado.alcance || 'por_item', // Default para retrocompatibilidad
         tiene_niveles: acabado.tiene_niveles_precio,
         niveles
       };

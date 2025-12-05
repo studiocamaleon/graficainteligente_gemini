@@ -5,13 +5,10 @@ import { X, ChevronRight, ChevronLeft, Loader } from 'lucide-react';
 import { UniversalProductSearchStep } from './steps/UniversalProductSearchStep';
 import { ConfigurationStep, type SelectedConfiguration } from './steps/ConfigurationStep';
 import { ServicesAndFinishingsStep, type SelectedService, type SelectedFinishing } from './steps/ServicesAndFinishingsStep';
-import { GroupServicesStep } from './steps/GroupServicesStep';
 import { UniversalSummaryStep } from './steps/UniversalSummaryStep';
 import { useProductConfiguration } from '../../hooks/wizard/useProductConfiguration';
 import { useUniversalPricing } from '../../hooks/wizard/useUniversalPricing';
-import { useGlobalServicesPricing } from '../../hooks/wizard/useGlobalServicesPricing';
 import type { UniversalProductSearchResult } from '../../hooks/wizard/useUniversalProductSearch';
-import type { ServicioGlobalSeleccionado, AcabadoGlobalSeleccionado } from '../../types/wizard';
 import { generateProductionRoutes } from '../../utils/generateProductionRoutes';
 
 interface UniversalAddItemWizardProps {
@@ -20,12 +17,11 @@ interface UniversalAddItemWizardProps {
   onAgregar: (itemData: any) => Promise<void>;
 }
 
-type WizardStep = 'search' | 'configuration' | 'group_services' | 'services' | 'summary';
+type WizardStep = 'search' | 'configuration' | 'services' | 'summary';
 
 const stepTitles: Record<WizardStep, string> = {
   search: 'Buscar Producto',
   configuration: 'Configuración',
-  group_services: 'Servicios y Acabados de Grupo',
   services: 'Servicios y Acabados',
   summary: 'Resumen'
 };
@@ -61,10 +57,6 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
   const [selectedServicios, setSelectedServicios] = useState<SelectedService[]>([]);
   const [selectedAcabados, setSelectedAcabados] = useState<SelectedFinishing[]>([]);
 
-  // Estados para servicios/acabados de grupo
-  const [selectedServiciosGrupo, setSelectedServiciosGrupo] = useState<ServicioGlobalSeleccionado[]>([]);
-  const [selectedAcabadosGrupo, setSelectedAcabadosGrupo] = useState<AcabadoGlobalSeleccionado[]>([]);
-
   // Precio
   const [precioBase, setPrecioBase] = useState<number | null>(null);
   const [precioServicios, setPrecioServicios] = useState(0);
@@ -80,13 +72,6 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
   // Hook de pricing
   const { calculatePrice, isCalculating } = useUniversalPricing();
 
-  // Hook de precios globales (para productos con múltiples líneas)
-  const preciosGlobalesPorLinea = useGlobalServicesPricing(
-    selectedConfig.lineas_medidas,
-    selectedServiciosGrupo,
-    selectedAcabadosGrupo
-  );
-
   // Efecto para calcular precio cuando cambia la configuración
   useEffect(() => {
     if (!selectedProduct || !config) return;
@@ -96,7 +81,7 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
     if (shouldCalculate) {
       recalculatePrice();
     }
-  }, [selectedProduct, config, selectedConfig, selectedServicios, selectedAcabados, selectedServiciosGrupo, selectedAcabadosGrupo]);
+  }, [selectedProduct, config, selectedConfig, selectedServicios, selectedAcabados]);
 
   // Inicializar configuración cuando se carga el config
   useEffect(() => {
@@ -332,8 +317,6 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
     });
     setSelectedServicios([]);
     setSelectedAcabados([]);
-    setSelectedServiciosGrupo([]);
-    setSelectedAcabadosGrupo([]);
     setPrecioBase(null);
     setPrecioServicios(0);
     setPrecioAcabados(0);
@@ -361,15 +344,13 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
         return selectedProduct !== null;
       case 'configuration':
         return isConfigurationComplete();
-      case 'group_services':
-        return true; // Los servicios/acabados de grupo son opcionales
       case 'services':
         return true; // Los servicios son opcionales
       case 'summary':
-        // Para productos con múltiples líneas, verificar que todas tengan precio base
+        // Para productos con múltiples líneas, verificar que todas tengan precio
         if (config?.permite_multiples_lineas && selectedConfig.lineas_medidas.length > 0) {
           return selectedConfig.lineas_medidas.every(line =>
-            line.precio_base_unitario !== undefined && line.precio_base_unitario !== null && line.precio_base_unitario > 0
+            line.precio_total_linea !== undefined && line.precio_total_linea !== null
           );
         }
         // Para productos sin múltiples líneas, verificar precioTotal
@@ -382,20 +363,34 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
   const handleNext = () => {
     if (!canProceedToNext()) return;
 
-    const steps = getActiveSteps();
+    const steps: WizardStep[] = ['search', 'configuration', 'services', 'summary'];
     const currentIndex = steps.indexOf(currentStep);
 
     if (currentIndex < steps.length - 1) {
-      setCurrentStep(steps[currentIndex + 1]);
+      let nextStep = steps[currentIndex + 1];
+
+      // Si el siguiente paso es 'services' y el producto permite múltiples líneas, saltarlo
+      if (nextStep === 'services' && config?.permite_multiples_lineas) {
+        nextStep = 'summary';
+      }
+
+      setCurrentStep(nextStep);
     }
   };
 
   const handlePrevious = () => {
-    const steps = getActiveSteps();
+    const steps: WizardStep[] = ['search', 'configuration', 'services', 'summary'];
     const currentIndex = steps.indexOf(currentStep);
 
     if (currentIndex > 0) {
-      setCurrentStep(steps[currentIndex - 1]);
+      let prevStep = steps[currentIndex - 1];
+
+      // Si el paso anterior es 'services' y el producto permite múltiples líneas, saltarlo
+      if (prevStep === 'services' && config?.permite_multiples_lineas) {
+        prevStep = 'configuration';
+      }
+
+      setCurrentStep(prevStep);
     }
   };
 
@@ -406,30 +401,15 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
     try {
       // Si el producto permite m\u00faltiples l\u00edneas, crear un item por cada l\u00ednea
       if (config.permite_multiples_lineas && selectedConfig.lineas_medidas.length > 0) {
-        // 1. Generar un único item_grupo_id para todos los items del grupo
-        const itemGrupoId = crypto.randomUUID();
-
-        // 2. Usar los precios globales ya calculados por el hook
-        // preciosGlobalesPorLinea ya contiene un elemento por cada línea con los precios distribuidos
-
-        // 3. Crear items con precios globales
-        for (let i = 0; i < selectedConfig.lineas_medidas.length; i++) {
-          const linea = selectedConfig.lineas_medidas[i];
-          const preciosGlobalesLinea = preciosGlobalesPorLinea[i] || {
-            precio_servicios_globales: 0,
-            precio_acabados_globales: 0,
-            servicios_detalle: [],
-            acabados_detalle: []
-          };
-
-          // Usar servicios directamente de la línea (servicios por item)
+        for (const linea of selectedConfig.lineas_medidas) {
+          // Usar servicios directamente de la línea
           const serviciosLinea = (linea.servicios || []).map(s => ({
             servicio_id: s.servicio_id,
             nombre: s.servicio_nombre,
             nivel: s.nivel_nombre,
           }));
 
-          // Usar acabados directamente de la línea (acabados por item)
+          // Usar acabados directamente de la línea
           const acabadosLinea = (linea.acabados || []).map(a => ({
             acabado_id: a.acabado_id,
             nombre: a.acabado_nombre,
@@ -458,18 +438,7 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
             color: selectedConfig.color,
             marca: selectedConfig.marca,
             servicios_seleccionados: serviciosLinea,
-            acabados_seleccionados: acabadosLinea,
-            // Solo en el primer item: guardar info completa de servicios/acabados globales
-            servicios_globales_grupo: i === 0 ? selectedServiciosGrupo.map(s => ({
-              servicio_id: s.servicio_id,
-              nombre: s.servicio_nombre,
-              nivel: s.nivel_nombre,
-            })) : undefined,
-            acabados_globales_grupo: i === 0 ? selectedAcabadosGrupo.map(a => ({
-              acabado_id: a.acabado_id,
-              nombre: a.acabado_nombre,
-              nivel: a.nivel_nombre,
-            })) : undefined
+            acabados_seleccionados: acabadosLinea
           };
 
           // Generar rutas de producci\u00f3n para esta l\u00ednea
@@ -478,18 +447,6 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
             categoria: selectedProduct.categoria,
             configuracion: configuracionLinea,
           });
-
-          // Calcular precio_unitario_final incluyendo precios globales
-          // precio_unitario_final = precio_base + precio_servicios + precio_acabados + (precio_globales / cantidad)
-          const precioGlobalesUnitario = (preciosGlobalesLinea.precio_servicios_globales + preciosGlobalesLinea.precio_acabados_globales) / linea.cantidad;
-          const precioUnitarioFinal = (linea.precio_base_unitario || 0) + (linea.precio_servicios_unitario || 0) + (linea.precio_acabados_unitario || 0) + precioGlobalesUnitario;
-
-          // Calcular precio_total incluyendo precios globales
-          const precioTotal = (linea.precio_base_unitario || 0) * linea.cantidad +
-                             (linea.precio_servicios_unitario || 0) * linea.cantidad +
-                             (linea.precio_acabados_unitario || 0) * linea.cantidad +
-                             preciosGlobalesLinea.precio_servicios_globales +
-                             preciosGlobalesLinea.precio_acabados_globales;
 
           const itemData = {
             producto_id: selectedProduct.id,
@@ -501,11 +458,8 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
             precio_base: linea.precio_base_unitario || 0,
             precio_servicios: linea.precio_servicios_unitario || 0,
             precio_acabados: linea.precio_acabados_unitario || 0,
-            precio_servicios_globales: preciosGlobalesLinea.precio_servicios_globales,
-            precio_acabados_globales: preciosGlobalesLinea.precio_acabados_globales,
-            precio_unitario_final: precioUnitarioFinal,
-            precio_total: precioTotal,
-            item_grupo_id: itemGrupoId,
+            precio_unitario_final: linea.precio_unitario_final || 0,
+            precio_total: linea.precio_total_linea || 0,
             impuesto_iva: config.impuesto_iva,
             rutas_generadas: rutasGeneradas
           };
@@ -584,9 +538,9 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
   if (!isOpen) return null;
 
   const getActiveSteps = (): WizardStep[] => {
-    // Para productos con múltiples líneas, incluir paso de servicios de grupo
+    // Para productos con múltiples líneas, omitir el paso de servicios
     if (config?.permite_multiples_lineas) {
-      return ['search', 'configuration', 'group_services', 'summary'];
+      return ['search', 'configuration', 'summary'];
     }
     return ['search', 'configuration', 'services', 'summary'];
   };
@@ -680,17 +634,6 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
             ) : null
           )}
 
-          {currentStep === 'group_services' && config && (
-            <GroupServicesStep
-              serviciosGrupo={config.servicios_grupo || []}
-              acabadosGrupo={config.acabados_grupo || []}
-              selectedServiciosGrupo={selectedServiciosGrupo}
-              selectedAcabadosGrupo={selectedAcabadosGrupo}
-              onServiciosChange={setSelectedServiciosGrupo}
-              onAcabadosChange={setSelectedAcabadosGrupo}
-            />
-          )}
-
           {currentStep === 'services' && config && (
             <ServicesAndFinishingsStep
               config={config}
@@ -707,9 +650,6 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
               selectedConfig={selectedConfig}
               selectedServicios={selectedServicios}
               selectedAcabados={selectedAcabados}
-              selectedServiciosGrupo={selectedServiciosGrupo}
-              selectedAcabadosGrupo={selectedAcabadosGrupo}
-              preciosGlobalesPorLinea={preciosGlobalesPorLinea}
               precioBase={precioBase}
               precioServicios={precioServicios}
               precioAcabados={precioAcabados}

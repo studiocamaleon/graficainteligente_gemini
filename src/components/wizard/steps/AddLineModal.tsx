@@ -420,7 +420,7 @@ export function AddLineModal({
         </Card>
 
         {/* Sección 3: Servicios */}
-        {config.servicios && config.servicios.length > 0 && (
+        {config.servicios.length > 0 && (
           <Card className="p-6">
             <div className="flex items-center gap-2 mb-4">
               <Wrench className="w-5 h-5 text-blue-600" />
@@ -490,7 +490,7 @@ export function AddLineModal({
         )}
 
         {/* Sección 4: Acabados */}
-        {config.acabados && config.acabados.length > 0 && (
+        {config.acabados.length > 0 && (
           <Card className="p-6">
             <div className="flex items-center gap-2 mb-4">
               <Sparkles className="w-5 h-5 text-blue-600" />

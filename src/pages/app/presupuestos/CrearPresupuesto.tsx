@@ -14,14 +14,11 @@ import { PresupuestoItemsSection } from '../../../components/presupuestos/Presup
 import { ItemsPendientesCotizacion } from '../../../components/presupuestos/ItemsPendientesCotizacion';
 import { PresupuestoCondicionesSection } from '../../../components/presupuestos/PresupuestoCondicionesSection';
 import { PresupuestoResumenSection } from '../../../components/presupuestos/PresupuestoResumenSection';
-import { ServiciosCompartidosCreacionSection } from '../../../components/orders/ServiciosCompartidosCreacionSection';
-import type { ServicioCompartidoTemp, AcabadoCompartidoTemp } from '../../../components/orders/ServiciosCompartidosCreacionSection';
-import { calculateSharedServiceProration, mapOrderItemsToProrationItems } from '../../../utils/sharedServiceProration';
 import { usePresupuestoValidation } from '../../../hooks/usePresupuestoValidation';
 import type { CanalVenta, PresupuestoItem, CreatePresupuestoItemData, TotalesPresupuesto } from '../../../types/presupuestos';
 import { generarDescripcionCompleta } from '../../../utils/formatPresupuestoConfig';
 
-type TabId = 'general' | 'items' | 'servicios-compartidos' | 'condiciones' | 'resumen';
+type TabId = 'general' | 'items' | 'condiciones' | 'resumen';
 
 export default function CrearPresupuesto() {
   const navigate = useNavigate();
@@ -48,16 +45,11 @@ export default function CrearPresupuesto() {
   const [items, setItems] = useState<PresupuestoItem[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Estado para servicios y acabados compartidos
-  const [serviciosCompartidos, setServiciosCompartidos] = useState<ServicioCompartidoTemp[]>([]);
-  const [acabadosCompartidos, setAcabadosCompartidos] = useState<AcabadoCompartidoTemp[]>([]);
-
   const tabs = [
     { id: 'general' as TabId, label: '1. General', icon: null },
     { id: 'items' as TabId, label: '2. Items', icon: null },
-    { id: 'servicios-compartidos' as TabId, label: '3. Servicios Compartidos', icon: null },
-    { id: 'condiciones' as TabId, label: '4. Condiciones', icon: null },
-    { id: 'resumen' as TabId, label: '5. Resumen', icon: null },
+    { id: 'condiciones' as TabId, label: '3. Condiciones', icon: null },
+    { id: 'resumen' as TabId, label: '4. Resumen', icon: null },
   ];
 
   const validateGeneral = (): boolean => {
@@ -182,22 +174,10 @@ export default function CrearPresupuesto() {
       (item) => item.precio_unitario_final === null || item.precio_total === null
     );
 
-    const subtotalItems = itemsCompletos.reduce(
+    const subtotal = itemsCompletos.reduce(
       (sum, item) => sum + Number(item.precio_total),
       0
     );
-
-    // Calcular totales de servicios y acabados compartidos
-    const totalServiciosCompartidos = serviciosCompartidos.reduce(
-      (sum, s) => sum + s.precio_total,
-      0
-    );
-    const totalAcabadosCompartidos = acabadosCompartidos.reduce(
-      (sum, a) => sum + a.precio_total,
-      0
-    );
-
-    const subtotal = subtotalItems + totalServiciosCompartidos + totalAcabadosCompartidos;
 
     return {
       subtotal,
@@ -270,78 +250,6 @@ export default function CrearPresupuesto() {
         if (itemError) {
           console.error('Error al agregar item:', itemError);
           throw new Error(`Error al agregar item: ${itemError.message}`);
-        }
-      }
-
-      // Insertar servicios compartidos si existen
-      if (serviciosCompartidos.length > 0) {
-        const serviciosInserts = serviciosCompartidos.map(servicio => {
-          const prorrateos = calculateSharedServiceProration({
-            items: items.map(item => ({
-              id: item.id || '',
-              producto_nombre: item.producto_nombre,
-              cantidad: item.cantidad,
-              precio_total: item.precio_total || 0
-            })),
-            costoTotal: servicio.precio_total,
-            metodo: servicio.metodo_prorrateo
-          });
-
-          return {
-            presupuesto_id: presupuesto.id,
-            servicio_id: servicio.servicio_id,
-            configuracion: servicio.configuracion,
-            metodo_prorrateo: servicio.metodo_prorrateo,
-            prorrateos,
-            precio_total: servicio.precio_total,
-            notas: servicio.notas || null,
-            created_by: profile?.id,
-          };
-        });
-
-        const { error: serviciosError } = await supabase
-          .from('presupuestos_servicios_compartidos')
-          .insert(serviciosInserts);
-
-        if (serviciosError) {
-          console.error('Error insertando servicios compartidos:', serviciosError);
-          throw new Error('Error al agregar servicios compartidos');
-        }
-      }
-
-      // Insertar acabados compartidos si existen
-      if (acabadosCompartidos.length > 0) {
-        const acabadosInserts = acabadosCompartidos.map(acabado => {
-          const prorrateos = calculateSharedServiceProration({
-            items: items.map(item => ({
-              id: item.id || '',
-              producto_nombre: item.producto_nombre,
-              cantidad: item.cantidad,
-              precio_total: item.precio_total || 0
-            })),
-            costoTotal: acabado.precio_total,
-            metodo: acabado.metodo_prorrateo
-          });
-
-          return {
-            presupuesto_id: presupuesto.id,
-            acabado_id: acabado.acabado_id,
-            configuracion: acabado.configuracion,
-            metodo_prorrateo: acabado.metodo_prorrateo,
-            prorrateos,
-            precio_total: acabado.precio_total,
-            notas: acabado.notas || null,
-            created_by: profile?.id,
-          };
-        });
-
-        const { error: acabadosError } = await supabase
-          .from('presupuestos_acabados_compartidos')
-          .insert(acabadosInserts);
-
-        if (acabadosError) {
-          console.error('Error insertando acabados compartidos:', acabadosError);
-          throw new Error('Error al agregar acabados compartidos');
         }
       }
 
@@ -453,16 +361,6 @@ export default function CrearPresupuesto() {
                 onAsignarPrecio={handleAsignarPrecio}
               />
             </div>
-          )}
-
-          {activeTab === 'servicios-compartidos' && (
-            <ServiciosCompartidosCreacionSection
-              items={mapOrderItemsToProrationItems(items)}
-              serviciosCompartidos={serviciosCompartidos}
-              acabadosCompartidos={acabadosCompartidos}
-              onServiciosChange={setServiciosCompartidos}
-              onAcabadosChange={setAcabadosCompartidos}
-            />
           )}
 
           {activeTab === 'condiciones' && (
