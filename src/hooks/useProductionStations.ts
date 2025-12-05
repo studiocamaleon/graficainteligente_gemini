@@ -9,10 +9,13 @@ export interface StationStep {
   paso_id: string | null;
   paso_nombre: string;
   estado_paso: EstadoPaso;
+  global_task_id?: string | null;
   orden_item_id: string;
   numero_orden: string;
   cliente_nombre: string;
   producto_nombre: string;
+  medida_ancho?: number | null;
+  medida_alto?: number | null;
   cantidad: number;
   fecha_inicio: string | null;
   fecha_creacion_orden: string;
@@ -29,6 +32,7 @@ interface RutaConOrden {
   paso_id: string | null;
   paso_nombre: string;
   estado_paso: EstadoPaso;
+  global_task_id?: string | null;
   orden: number;
   tipo_etapa: TipoEtapaRuta;
   orden_item_id: string;
@@ -81,9 +85,11 @@ export function useProductionStations(params: UseProductionStationsParams = {}) 
           tipo_etapa,
           orden_item_id,
           fecha_inicio,
+          global_task_id,
           orden_item:ordenes_trabajo_items!inner(
             id,
             producto_nombre,
+            configuracion,
             cantidad,
             orden:ordenes_trabajo!inner(
               id,
@@ -223,11 +229,14 @@ export function useProductionStations(params: UseProductionStationsParams = {}) 
             numero_orden: ruta.orden_item.orden.numero_orden,
             cliente_nombre: ruta.orden_item.orden.cliente.nombre_fantasia,
             producto_nombre: ruta.orden_item.producto_nombre,
+            medida_ancho: ruta.orden_item.configuracion?.medida_ancho,
+            medida_alto: ruta.orden_item.configuracion?.medida_alto,
             cantidad: ruta.orden_item.cantidad,
             fecha_inicio: ruta.fecha_inicio,
             fecha_creacion_orden: ruta.orden_item.orden.fecha_creacion,
             orden_id: ruta.orden_item.orden.id,
             pausa_activa: ruta.pausa_activa || null,
+            global_task_id: ruta.global_task_id,
           };
 
           if (!stepsMap.has(estacionId)) {

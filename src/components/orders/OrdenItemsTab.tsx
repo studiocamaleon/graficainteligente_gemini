@@ -10,6 +10,8 @@ import { Card } from '../ui/Card';
 import { UniversalAddItemWizard } from '../wizard/UniversalAddItemWizard';
 import { AsociarOrdenCopiadoModal } from './AsociarOrdenCopiadoModal';
 import { AddItemPersonalizadoOrdenModal } from './AddItemPersonalizadoOrdenModal';
+import { AplicarServicioMasivoModal, type ServicioSeleccionado } from './AplicarServicioMasivoModal';
+import { CheckSquare, Square, Wand2 } from 'lucide-react';
 
 interface OrdenItem {
   id?: string;
@@ -27,6 +29,7 @@ interface OrdenItem {
   precio_unitario_final: number;
   precio_total: number;
   descuento_individual?: number;
+  rutas_generadas?: any[];
 }
 
 interface OrdenItemsTabProps {
@@ -57,6 +60,130 @@ export function OrdenItemsTab({
   const [showAsociarOCModal, setShowAsociarOCModal] = useState(false);
   const [ordenCopiadoEditando, setOrdenCopiadoEditando] = useState<any>(undefined);
   const [ordenesExpanded, setOrdenesExpanded] = useState<Record<string, boolean>>({});
+
+  // Selección Múltiple
+  const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
+  const [showMasivoModal, setShowMasivoModal] = useState(false);
+
+  const toggleSelectItem = (id: string) => {
+    const newSelected = new Set(selectedItemIds);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedItemIds(newSelected);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedItemIds.size === items.length) {
+      setSelectedItemIds(new Set());
+    } else {
+      setSelectedItemIds(new Set(items.map(item => item.id || '')));
+    }
+  };
+
+  const isAllSelected = items.length > 0 && selectedItemIds.size === items.length;
+
+  const handleAplicarServicioMasivo = async (data: any) => {
+    // Extraer datos del objeto recibido (interfaz ServicioSeleccionado)
+    const { servicio, nivel, precioTotalCalculado } = data;
+
+    // Generar ID Global para agrupar visualmente en producción
+    const globalTaskId = globalThis.crypto ? globalThis.crypto.randomUUID() : `task-${Date.now()}`;
+
+    // Paso 1: Obtener datos del paso a inyectar
+    const pasoVinculado = nivel?.paso || servicio.pasos?.[0]?.paso;
+    const pasoId = pasoVinculado?.id || (servicio.tiene_niveles_precio ? null : servicio.pasos?.[0]?.paso_id);
+
+    // Mapper de etapas para visualización correcta en timeline
+    const mapEtapaToTipo = (etapaDb: string = '') => {
+      const map: Record<string, string> = {
+        'Pre-prensa': 'pre_prensa',
+        'Produccion': 'produccion',
+        'Terminacion': 'post_prensa',
+        'Instalacion': 'instalacion',
+        'Entrega': 'entrega'
+      };
+      return map[etapaDb] || 'pre_prensa'; // Default a pre_prensa si no machea o es nulo
+    };
+
+    // Paso 2: Identificar items afectados para descripción del item de cobro
+    const itemsAfectados = items.filter(i => selectedItemIds.has(i?.id || ''));
+    if (itemsAfectados.length === 0) return;
+
+    // Paso 3: Modificar los items FÍSICOS (Inyectar Rutas de Producción)
+    const newItems = items.map(item => {
+      if (!selectedItemIds.has(item?.id || '')) return item;
+
+      // Inyectar la ruta del servicio en el item físico
+      let nuevasRutas = [...(item.rutas_generadas || [])];
+
+      if (pasoId) {
+        // Construir objeto ruta completo
+        const nuevaRuta = {
+          company_id: '',
+          orden_item_id: '',
+          tipo_etapa: mapEtapaToTipo(pasoVinculado?.etapa),
+          etapa: pasoVinculado?.etapa || pasoVinculado?.estacion?.nombre || 'Servicios',
+          id: `temp-step-${Math.random()}`,
+          paso_id: pasoId,
+          paso_nombre: pasoVinculado?.nombre || `[Servicio] ${servicio.nombre}`,
+          orden: 0, // Prioridad 0 para que aparezca al inicio
+          es_modificado: false,
+          source_service_id: servicio.id,
+          global_task_id: globalTaskId
+        };
+
+        // Insertamos al INICIO
+        nuevasRutas.unshift(nuevaRuta);
+      }
+
+      return {
+        ...item,
+        // Importante: No tocamos el precio del item físico, se mantiene limpio.
+        rutas_generadas: nuevasRutas,
+        configuracion: {
+          ...item.configuracion,
+          tiene_servicios_externos: true
+        }
+      };
+    });
+
+    // Paso 4: Crear el Item de COBRO (Servicio) con descripción detallada
+    // Generar descripción
+    const itemsList = itemsAfectados.slice(0, 5).map(i => {
+      const medidas = i.configuracion?.medida_ancho ? `(${i.configuracion.medida_ancho}x${i.configuracion.medida_alto})` : '';
+      return `- ${i.cantidad}x ${i.producto_nombre} ${medidas}`;
+    });
+    if (itemsAfectados.length > 5) itemsList.push(`... y ${itemsAfectados.length - 5} items más.`);
+
+    const descripcionDetallada = `Aplicado a ${selectedItemIds.size} items:\n${itemsList.join('\n')}`;
+    const nuevoPrecioTotal = precioTotalCalculado || 0;
+
+    const servicioItem: OrdenItem = {
+      id: `service-${Date.now()}-${Math.random()}`,
+      tipo_item: 'personalizado',
+      producto_nombre: `[Servicio] ${servicio.nombre}${nivel ? ` - ${nivel.nombre}` : ''}`,
+      producto_id: null,
+      cantidad: 1,
+      precio_base: nuevoPrecioTotal,
+      precio_servicios: 0,
+      precio_acabados: 0,
+      precio_unitario_final: nuevoPrecioTotal,
+      precio_total: nuevoPrecioTotal,
+      descuento_individual: 0,
+      descripcion: descripcionDetallada,
+      configuracion: {},
+      rutas_generadas: [], // IMPORTANTE: Este item NO genera ruta propia, solo cobra. La ruta está en los items físicos.
+      es_servicio_cobro: true, // Flag para ocultarlo en vistas de producción
+      created_at: new Date().toISOString()
+    } as any;
+
+    setItems([...newItems, servicioItem]);
+    setSelectedItemIds(new Set()); // Limpiar selección
+    setShowMasivoModal(false);
+  };
 
   const handleAgregarItem = async (itemData: any) => {
     const nuevoItem: OrdenItem = {
@@ -234,24 +361,52 @@ export function OrdenItemsTab({
         {/* Línea 2: Servicios y Acabados con badges */}
         {((config.servicios_seleccionados && config.servicios_seleccionados.length > 0) ||
           (config.acabados_seleccionados && config.acabados_seleccionados.length > 0)) && (
-          <div className="flex flex-wrap gap-1.5">
-            {config.servicios_seleccionados?.map((s: any, idx: number) => (
-              <Badge key={`servicio-${idx}`} variant="blue" size="sm">
-                {s.nivel ? `${s.nombre} (${s.nivel})` : s.nombre}
-              </Badge>
-            ))}
-            {config.acabados_seleccionados?.map((a: any, idx: number) => (
-              <Badge key={`acabado-${idx}`} variant="purple" size="sm">
-                {a.nivel ? `${a.nombre} (${a.nivel})` : a.nombre}
-              </Badge>
-            ))}
-          </div>
-        )}
+            <div className="flex flex-wrap gap-1.5">
+              {config.servicios_seleccionados?.map((s: any, idx: number) => (
+                <Badge key={`servicio-${idx}`} variant="blue" size="sm">
+                  {s.nivel ? `${s.nombre} (${s.nivel})` : s.nombre}
+                </Badge>
+              ))}
+              {config.acabados_seleccionados?.map((a: any, idx: number) => (
+                <Badge key={`acabado-${idx}`} variant="purple" size="sm">
+                  {a.nivel ? `${a.nombre} (${a.nivel})` : a.nombre}
+                </Badge>
+              ))}
+            </div>
+          )}
       </div>
     );
   };
 
   const columns = [
+    {
+      key: 'select',
+      header: (
+        <div className="flex items-center justify-center">
+          <button
+            onClick={toggleSelectAll}
+            className="text-gray-500 hover:text-blue-600 focus:outline-none"
+          >
+            {isAllSelected ? <CheckSquare className="w-5 h-5 text-blue-600" /> : <Square className="w-5 h-5" />}
+          </button>
+        </div>
+      ),
+      render: (item: OrdenItem) => (
+        <div className="flex items-center justify-center">
+          <button
+            onClick={() => item.id && toggleSelectItem(item.id)}
+            className="text-gray-400 hover:text-blue-600 focus:outline-none"
+          >
+            {item.id && selectedItemIds.has(item.id) ? (
+              <CheckSquare className="w-5 h-5 text-blue-600" />
+            ) : (
+              <Square className="w-5 h-5" />
+            )}
+          </button>
+        </div>
+      ),
+      width: '50px'
+    },
     {
       key: 'cantidad',
       header: 'Cantidad',
@@ -467,7 +622,7 @@ export function OrdenItemsTab({
                               key={item.id}
                               className="text-sm text-gray-700 flex items-center gap-2"
                             >
-                              <Badge variant="secondary" size="sm">
+                              <Badge variant="default" size="sm">
                                 {idx + 1}
                               </Badge>
                               <span>
@@ -582,6 +737,40 @@ export function OrdenItemsTab({
           ordenEditando={ordenCopiadoEditando}
         />
       )}
+
+      {/* Toolbar de Acciones Masivas */}
+      {selectedItemIds.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-white border border-blue-200 shadow-xl rounded-full px-6 py-3 flex items-center gap-4 z-50 animate-in fade-in slide-in-from-bottom-4">
+          <div className="text-sm font-medium text-gray-700 border-r pr-4 mr-2">
+            {selectedItemIds.size} items seleccionados
+          </div>
+
+          <Button
+            onClick={() => setShowMasivoModal(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-6"
+            size="sm"
+          >
+            <Wand2 className="w-4 h-4 mr-2" />
+            Aplicar Servicio
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setSelectedItemIds(new Set())}
+            className="text-gray-500 hover:text-gray-700"
+          >
+            Cancelar
+          </Button>
+        </div>
+      )}
+
+      <AplicarServicioMasivoModal
+        isOpen={showMasivoModal}
+        onClose={() => setShowMasivoModal(false)}
+        selectedItemsCount={selectedItemIds.size}
+        onConfirm={handleAplicarServicioMasivo}
+      />
     </div>
   );
 }

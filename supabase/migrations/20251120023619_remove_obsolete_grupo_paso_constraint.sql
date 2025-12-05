@@ -18,5 +18,14 @@ ALTER TABLE ordenes_trabajo_items_rutas
 DROP CONSTRAINT IF EXISTS check_paso_o_grupo;
 
 -- Comentario sobre la tabla
-COMMENT ON COLUMN ordenes_trabajo_items_rutas.grupo_paso_id IS 
-'Campo obsoleto mantenido por compatibilidad. Ya no se usa en el sistema actual.';
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'ordenes_trabajo_items_rutas' 
+    AND column_name = 'grupo_paso_id'
+  ) THEN
+    COMMENT ON COLUMN ordenes_trabajo_items_rutas.grupo_paso_id IS 
+    'Campo obsoleto mantenido por compatibilidad. Ya no se usa en el sistema actual.';
+  END IF;
+END $$;

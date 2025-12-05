@@ -399,6 +399,24 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
 
     setIsSubmitting(true);
     try {
+      // 1. Identificar servicios globales (tipo_impacto = 'precio_fijo')
+      const globalTaskMap = new Map<string, string>(); // serviceId -> uuid
+
+      if (config.permite_multiples_lineas && selectedConfig.lineas_medidas.length > 0) {
+        // Pre-escanear para generar IDs de tareas globales
+        for (const linea of selectedConfig.lineas_medidas) {
+          if (linea.servicios) {
+            for (const s of linea.servicios) {
+              if (s.tipo_impacto === 'precio_fijo') {
+                if (!globalTaskMap.has(s.servicio_id)) {
+                  globalTaskMap.set(s.servicio_id, self.crypto.randomUUID());
+                }
+              }
+            }
+          }
+        }
+      }
+
       // Si el producto permite m\u00faltiples l\u00edneas, crear un item por cada l\u00ednea
       if (config.permite_multiples_lineas && selectedConfig.lineas_medidas.length > 0) {
         for (const linea of selectedConfig.lineas_medidas) {
@@ -448,6 +466,15 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
             configuracion: configuracionLinea,
           });
 
+          // Inyectar global_task_id si corresponde
+          const rutasProcesadas = rutasGeneradas.map(r => {
+            // Si el paso proviene de un servicio que marcamos como global
+            if (r.source_service_id && globalTaskMap.has(r.source_service_id)) {
+              return { ...r, global_task_id: globalTaskMap.get(r.source_service_id) };
+            }
+            return r;
+          });
+
           const itemData = {
             producto_id: selectedProduct.id,
             producto_nombre: selectedProduct.nombre,
@@ -461,7 +488,7 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
             precio_unitario_final: linea.precio_unitario_final || 0,
             precio_total: linea.precio_total_linea || 0,
             impuesto_iva: config.impuesto_iva,
-            rutas_generadas: rutasGeneradas
+            rutas_generadas: rutasProcesadas
           };
 
           await onAgregar(itemData);
@@ -556,21 +583,19 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
           {steps.map((step, index) => (
             <div key={step} className="flex items-center">
               <div
-                className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium transition-colors ${
-                  index === currentIndex
+                className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium transition-colors ${index === currentIndex
                     ? 'bg-blue-600 text-white'
                     : index < currentIndex
-                    ? 'bg-green-500 text-white'
-                    : 'bg-gray-200 text-gray-600'
-                }`}
+                      ? 'bg-green-500 text-white'
+                      : 'bg-gray-200 text-gray-600'
+                  }`}
               >
                 {index + 1}
               </div>
               {index < steps.length - 1 && (
                 <div
-                  className={`w-12 h-0.5 mx-1 ${
-                    index < currentIndex ? 'bg-green-500' : 'bg-gray-200'
-                  }`}
+                  className={`w-12 h-0.5 mx-1 ${index < currentIndex ? 'bg-green-500' : 'bg-gray-200'
+                    }`}
                 />
               )}
             </div>

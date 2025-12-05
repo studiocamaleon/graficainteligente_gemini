@@ -48,17 +48,20 @@
 -- INSERTAR CATEGORÍA SELLOS
 -- =====================================================
 
-INSERT INTO categorias (id, company_id, nombre, descripcion, color, is_system_category, is_active)
-VALUES (
-  '00000000-0000-0000-0000-000000000005',
-  NULL,
-  'Sellos',
-  'Productos de sellos y accesorios',
-  '#8B5CF6',
-  true,
-  true
-)
-ON CONFLICT (id) DO NOTHING;
+DO $$
+BEGIN
+    INSERT INTO categorias (id, company_id, nombre, descripcion, color, is_system_category, is_active)
+    VALUES (
+      '00000000-0000-0000-0000-000000000005',
+      NULL,
+      'Sellos',
+      'Productos de sellos y accesorios',
+      '#8B5CF6',
+      true,
+      true
+    )
+    ON CONFLICT (id) DO NOTHING;
+END $$;
 
 -- =====================================================
 -- TABLA PRINCIPAL: productos_sellos
@@ -158,36 +161,64 @@ CREATE INDEX IF NOT EXISTS idx_sellos_precios_producto_id
 
 ALTER TABLE productos_sellos ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Users can view own company sellos products"
-  ON productos_sellos FOR SELECT
-  TO authenticated
-  USING (
-    company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid())
-  );
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE policyname = 'Users can view own company sellos products' AND tablename = 'productos_sellos'
+  ) THEN
+    CREATE POLICY "Users can view own company sellos products"
+      ON productos_sellos FOR SELECT
+      TO authenticated
+      USING (
+        company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid())
+      );
+  END IF;
+END $$;
 
-CREATE POLICY "Users can insert own company sellos products"
-  ON productos_sellos FOR INSERT
-  TO authenticated
-  WITH CHECK (
-    company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid())
-  );
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE policyname = 'Users can insert own company sellos products' AND tablename = 'productos_sellos'
+  ) THEN
+    CREATE POLICY "Users can insert own company sellos products"
+      ON productos_sellos FOR INSERT
+      TO authenticated
+      WITH CHECK (
+        company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid())
+      );
+  END IF;
+END $$;
 
-CREATE POLICY "Users can update own company sellos products"
-  ON productos_sellos FOR UPDATE
-  TO authenticated
-  USING (
-    company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid())
-  )
-  WITH CHECK (
-    company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid())
-  );
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE policyname = 'Users can update own company sellos products' AND tablename = 'productos_sellos'
+  ) THEN
+    CREATE POLICY "Users can update own company sellos products"
+      ON productos_sellos FOR UPDATE
+      TO authenticated
+      USING (
+        company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid())
+      )
+      WITH CHECK (
+        company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid())
+      );
+  END IF;
+END $$;
 
-CREATE POLICY "Users can delete own company sellos products"
-  ON productos_sellos FOR DELETE
-  TO authenticated
-  USING (
-    company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid())
-  );
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE policyname = 'Users can delete own company sellos products' AND tablename = 'productos_sellos'
+  ) THEN
+    CREATE POLICY "Users can delete own company sellos products"
+      ON productos_sellos FOR DELETE
+      TO authenticated
+      USING (
+        company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid())
+      );
+  END IF;
+END $$;
 
 -- =====================================================
 -- ROW LEVEL SECURITY - productos_sellos_precios
@@ -195,51 +226,79 @@ CREATE POLICY "Users can delete own company sellos products"
 
 ALTER TABLE productos_sellos_precios ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Users can view own company sellos precios"
-  ON productos_sellos_precios FOR SELECT
-  TO authenticated
-  USING (
-    producto_id IN (
-      SELECT id FROM productos_sellos
-      WHERE company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid())
-    )
-  );
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE policyname = 'Users can view own company sellos precios' AND tablename = 'productos_sellos_precios'
+  ) THEN
+    CREATE POLICY "Users can view own company sellos precios"
+      ON productos_sellos_precios FOR SELECT
+      TO authenticated
+      USING (
+        producto_id IN (
+          SELECT id FROM productos_sellos
+          WHERE company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid())
+        )
+      );
+  END IF;
+END $$;
 
-CREATE POLICY "Users can insert own company sellos precios"
-  ON productos_sellos_precios FOR INSERT
-  TO authenticated
-  WITH CHECK (
-    producto_id IN (
-      SELECT id FROM productos_sellos
-      WHERE company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid())
-    )
-  );
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE policyname = 'Users can insert own company sellos precios' AND tablename = 'productos_sellos_precios'
+  ) THEN
+    CREATE POLICY "Users can insert own company sellos precios"
+      ON productos_sellos_precios FOR INSERT
+      TO authenticated
+      WITH CHECK (
+        producto_id IN (
+          SELECT id FROM productos_sellos
+          WHERE company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid())
+        )
+      );
+  END IF;
+END $$;
 
-CREATE POLICY "Users can update own company sellos precios"
-  ON productos_sellos_precios FOR UPDATE
-  TO authenticated
-  USING (
-    producto_id IN (
-      SELECT id FROM productos_sellos
-      WHERE company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid())
-    )
-  )
-  WITH CHECK (
-    producto_id IN (
-      SELECT id FROM productos_sellos
-      WHERE company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid())
-    )
-  );
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE policyname = 'Users can update own company sellos precios' AND tablename = 'productos_sellos_precios'
+  ) THEN
+    CREATE POLICY "Users can update own company sellos precios"
+      ON productos_sellos_precios FOR UPDATE
+      TO authenticated
+      USING (
+        producto_id IN (
+          SELECT id FROM productos_sellos
+          WHERE company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid())
+        )
+      )
+      WITH CHECK (
+        producto_id IN (
+          SELECT id FROM productos_sellos
+          WHERE company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid())
+        )
+      );
+  END IF;
+END $$;
 
-CREATE POLICY "Users can delete own company sellos precios"
-  ON productos_sellos_precios FOR DELETE
-  TO authenticated
-  USING (
-    producto_id IN (
-      SELECT id FROM productos_sellos
-      WHERE company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid())
-    )
-  );
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE policyname = 'Users can delete own company sellos precios' AND tablename = 'productos_sellos_precios'
+  ) THEN
+    CREATE POLICY "Users can delete own company sellos precios"
+      ON productos_sellos_precios FOR DELETE
+      TO authenticated
+      USING (
+        producto_id IN (
+          SELECT id FROM productos_sellos
+          WHERE company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid())
+        )
+      );
+  END IF;
+END $$;
 
 -- =====================================================
 -- TRIGGERS PARA ACTUALIZAR updated_at
@@ -253,6 +312,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trigger_update_productos_sellos_updated_at ON productos_sellos;
 CREATE TRIGGER trigger_update_productos_sellos_updated_at
   BEFORE UPDATE ON productos_sellos
   FOR EACH ROW
@@ -266,6 +326,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trigger_update_productos_sellos_precios_updated_at ON productos_sellos_precios;
 CREATE TRIGGER trigger_update_productos_sellos_precios_updated_at
   BEFORE UPDATE ON productos_sellos_precios
   FOR EACH ROW

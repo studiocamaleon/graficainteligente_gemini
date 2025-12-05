@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useProductionStations, type StationStep } from '../../../hooks/useProductionStations';
 import { StationCard } from '../../../components/production/StationCard';
 import { StationStepCard } from '../../../components/production/StationStepCard';
+import { StationStepGroup } from '../../../components/production/StationStepGroup';
 import { StationSelector } from '../../../components/production/StationSelector';
 import { JobExecutionModal } from '../../../components/production/JobExecutionModal';
 import { EmptyState } from '../../../components/ui/EmptyState';
@@ -37,6 +38,40 @@ export function StationsView() {
   const handleCloseModal = () => {
     setShowExecutionModal(false);
     setSelectedStep(null);
+  };
+
+  const renderGroupedSteps = (steps: StationStep[]) => {
+    const groups = new Map<string, StationStep[]>();
+
+    steps.forEach((step) => {
+      // Agrupar por Global ID si existe, sino por Orden + Paso
+      // Esto agrupa visualmente items idénticos de la misma orden
+      const key = step.global_task_id || `${step.orden_id}-${step.paso_id}`;
+      if (!groups.has(key)) {
+        groups.set(key, []);
+      }
+      groups.get(key)!.push(step);
+    });
+
+    return Array.from(groups.entries()).map(([key, groupSteps]) => {
+      if (groupSteps.length > 1) {
+        return (
+          <StationStepGroup
+            key={`group-${key}`}
+            steps={groupSteps}
+            onViewDetails={handleViewStepDetails}
+          />
+        );
+      } else {
+        return (
+          <StationStepCard
+            key={groupSteps[0].ruta_id}
+            {...groupSteps[0]}
+            onViewDetails={() => handleViewStepDetails(groupSteps[0])}
+          />
+        );
+      }
+    });
   };
 
   if (loading) {
@@ -186,15 +221,7 @@ export function StationsView() {
                       </span>
                     </div>
                     <div className="space-y-3">
-                      {selectedStation.pasos
-                        .filter((paso) => paso.estado_paso === 'pausado')
-                        .map((paso) => (
-                          <StationStepCard
-                            key={paso.ruta_id}
-                            {...paso}
-                            onViewDetails={() => handleViewStepDetails(paso)}
-                          />
-                        ))}
+                      {renderGroupedSteps(selectedStation.pasos.filter((paso) => paso.estado_paso === 'pausado'))}
                       {selectedStation.pasos_pausados === 0 && (
                         <div className="text-center py-8 text-gray-500">
                           No hay pasos pausados
@@ -215,15 +242,7 @@ export function StationsView() {
                       </span>
                     </div>
                     <div className="space-y-3">
-                      {selectedStation.pasos
-                        .filter((paso) => paso.estado_paso === 'en_proceso')
-                        .map((paso) => (
-                          <StationStepCard
-                            key={paso.ruta_id}
-                            {...paso}
-                            onViewDetails={() => handleViewStepDetails(paso)}
-                          />
-                        ))}
+                      {renderGroupedSteps(selectedStation.pasos.filter((paso) => paso.estado_paso === 'en_proceso'))}
                       {selectedStation.pasos_en_proceso === 0 && (
                         <div className="text-center py-8 text-gray-500">
                           No hay pasos en proceso
@@ -244,15 +263,7 @@ export function StationsView() {
                       </span>
                     </div>
                     <div className="space-y-3">
-                      {selectedStation.pasos
-                        .filter((paso) => paso.estado_paso === 'pendiente')
-                        .map((paso) => (
-                          <StationStepCard
-                            key={paso.ruta_id}
-                            {...paso}
-                            onViewDetails={() => handleViewStepDetails(paso)}
-                          />
-                        ))}
+                      {renderGroupedSteps(selectedStation.pasos.filter((paso) => paso.estado_paso === 'pendiente'))}
                       {selectedStation.pasos_pendientes === 0 && (
                         <div className="text-center py-8 text-gray-500">
                           No hay pasos pendientes

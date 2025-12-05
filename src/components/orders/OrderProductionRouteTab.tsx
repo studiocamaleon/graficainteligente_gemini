@@ -10,6 +10,7 @@ interface OrdenItem {
   producto_id: string;
   producto_nombre: string;
   cantidad: number;
+  es_servicio_cobro?: boolean;
 }
 
 interface OrderProductionRouteTabProps {
@@ -18,6 +19,9 @@ interface OrderProductionRouteTabProps {
 }
 
 export function OrderProductionRouteTab({ items, readonly = false }: OrderProductionRouteTabProps) {
+  // Filtrar items de cobro (servicios globales) que no tienen ruta propia
+  const productionItems = items.filter(i => !i.es_servicio_cobro);
+
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [itemsWithRoutes, setItemsWithRoutes] = useState<Map<string, number>>(new Map());
 
@@ -40,20 +44,20 @@ export function OrderProductionRouteTab({ items, readonly = false }: OrderProduc
   }, []);
 
   useEffect(() => {
-    if (items.length === 1) {
-      setExpandedItems(new Set([items[0].id]));
-    } else if (items.length > 0 && expandedItems.size === 0) {
-      setExpandedItems(new Set([items[0].id]));
+    if (productionItems.length === 1) {
+      setExpandedItems(new Set([productionItems[0].id]));
+    } else if (productionItems.length > 0 && expandedItems.size === 0) {
+      setExpandedItems(new Set([productionItems[0].id]));
     }
-  }, [items.length]);
+  }, [productionItems.length]); // Evitar warning de exhaustividad si usamos productionItems, aunque items.length cambiaba, productionItems también cambiará
 
-  if (items.length === 0) {
+  if (productionItems.length === 0) {
     return (
       <div className="p-6">
         <EmptyState
           icon={Route}
-          title="No hay items en la orden"
-          description="Agrega productos a esta orden para configurar sus rutas de producción"
+          title="No hay items de producción"
+          description="Agrega productos físicos a esta orden para configurar sus rutas."
         />
       </div>
     );
@@ -70,8 +74,8 @@ export function OrderProductionRouteTab({ items, readonly = false }: OrderProduc
             </p>
           </div>
           <div className="flex items-center gap-2 text-sm text-gray-600">
-            <span className="font-medium">{items.length}</span>
-            <span>{items.length === 1 ? 'producto' : 'productos'}</span>
+            <span className="font-medium">{productionItems.length}</span>
+            <span>{productionItems.length === 1 ? 'producto' : 'productos'}</span>
           </div>
         </div>
 
@@ -92,7 +96,7 @@ export function OrderProductionRouteTab({ items, readonly = false }: OrderProduc
       </div>
 
       <div className="space-y-4">
-        {items.map((item, index) => (
+        {productionItems.map((item, index) => (
           <ItemRouteCard
             key={item.id}
             item={item}

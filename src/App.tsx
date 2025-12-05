@@ -309,6 +309,14 @@ function AppRoutes() {
                   }
                 />
                 <Route
+                  path="orders/editar-ot/:id"
+                  element={
+                    <ProtectedModuleRoute moduleId="orders-crear">
+                      <CreateOrderPage />
+                    </ProtectedModuleRoute>
+                  }
+                />
+                <Route
                   path="orders/:id"
                   element={
                     <ProtectedModuleRoute moduleId="orders-lista">

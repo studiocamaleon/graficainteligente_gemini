@@ -81,6 +81,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS update_pmr_precios_timestamp ON productos_materiales_rigidos_precios;
 CREATE TRIGGER update_pmr_precios_timestamp
   BEFORE UPDATE ON productos_materiales_rigidos_precios
   FOR EACH ROW
@@ -100,6 +101,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS calcular_precio_mt2_before_insert_update ON productos_materiales_rigidos_precios;
 CREATE TRIGGER calcular_precio_mt2_before_insert_update
   BEFORE INSERT OR UPDATE ON productos_materiales_rigidos_precios
   FOR EACH ROW
@@ -112,46 +114,75 @@ CREATE TRIGGER calcular_precio_mt2_before_insert_update
 ALTER TABLE productos_materiales_rigidos_precios ENABLE ROW LEVEL SECURITY;
 
 -- Política SELECT: usuarios pueden ver precios de su empresa
-CREATE POLICY "Users can view prices from their company"
-  ON productos_materiales_rigidos_precios FOR SELECT
-  TO authenticated
-  USING (
-    company_id IN (
-      SELECT company_id FROM profiles WHERE id = auth.uid()
-    )
-  );
+-- Política SELECT
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE policyname = 'Users can view prices from their company' AND tablename = 'productos_materiales_rigidos_precios'
+  ) THEN
+    CREATE POLICY "Users can view prices from their company"
+      ON productos_materiales_rigidos_precios FOR SELECT
+      TO authenticated
+      USING (
+        company_id IN (
+          SELECT company_id FROM profiles WHERE id = auth.uid()
+        )
+      );
+  END IF;
+END $$;
 
--- Política INSERT: usuarios pueden insertar precios a su empresa
-CREATE POLICY "Users can insert prices to their company"
-  ON productos_materiales_rigidos_precios FOR INSERT
-  TO authenticated
-  WITH CHECK (
-    company_id IN (
-      SELECT company_id FROM profiles WHERE id = auth.uid()
-    )
-  );
+-- Política INSERT
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE policyname = 'Users can insert prices to their company' AND tablename = 'productos_materiales_rigidos_precios'
+  ) THEN
+    CREATE POLICY "Users can insert prices to their company"
+      ON productos_materiales_rigidos_precios FOR INSERT
+      TO authenticated
+      WITH CHECK (
+        company_id IN (
+          SELECT company_id FROM profiles WHERE id = auth.uid()
+        )
+      );
+  END IF;
+END $$;
 
--- Política UPDATE: usuarios pueden actualizar precios de su empresa
-CREATE POLICY "Users can update prices from their company"
-  ON productos_materiales_rigidos_precios FOR UPDATE
-  TO authenticated
-  USING (
-    company_id IN (
-      SELECT company_id FROM profiles WHERE id = auth.uid()
-    )
-  )
-  WITH CHECK (
-    company_id IN (
-      SELECT company_id FROM profiles WHERE id = auth.uid()
-    )
-  );
+-- Política UPDATE
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE policyname = 'Users can update prices from their company' AND tablename = 'productos_materiales_rigidos_precios'
+  ) THEN
+    CREATE POLICY "Users can update prices from their company"
+      ON productos_materiales_rigidos_precios FOR UPDATE
+      TO authenticated
+      USING (
+        company_id IN (
+          SELECT company_id FROM profiles WHERE id = auth.uid()
+        )
+      )
+      WITH CHECK (
+        company_id IN (
+          SELECT company_id FROM profiles WHERE id = auth.uid()
+        )
+      );
+  END IF;
+END $$;
 
--- Política DELETE: usuarios pueden eliminar precios de su empresa
-CREATE POLICY "Users can delete prices from their company"
-  ON productos_materiales_rigidos_precios FOR DELETE
-  TO authenticated
-  USING (
-    company_id IN (
-      SELECT company_id FROM profiles WHERE id = auth.uid()
-    )
-  );
+-- Política DELETE
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE policyname = 'Users can delete prices from their company' AND tablename = 'productos_materiales_rigidos_precios'
+  ) THEN
+    CREATE POLICY "Users can delete prices from their company"
+      ON productos_materiales_rigidos_precios FOR DELETE
+      TO authenticated
+      USING (
+        company_id IN (
+          SELECT company_id FROM profiles WHERE id = auth.uid()
+        )
+      );
+  END IF;
+END $$;

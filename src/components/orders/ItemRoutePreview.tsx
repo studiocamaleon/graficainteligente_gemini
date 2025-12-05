@@ -18,6 +18,7 @@ interface ItemRoutePreviewProps {
 }
 
 function normalizeEtapa(etapa: string): string {
+  if (!etapa) return 'Pre-prensa';
   const etapaLower = etapa.toLowerCase().replace(/[-\s]/g, '_');
 
   if (etapaLower === 'pre_prensa') return 'Pre-prensa';
@@ -30,8 +31,8 @@ function normalizeEtapa(etapa: string): string {
   }
 
   if (etapaLower.includes('post') ||
-      etapaLower.includes('terminacion') ||
-      etapaLower.includes('acabado')) {
+    etapaLower.includes('terminacion') ||
+    etapaLower.includes('acabado')) {
     return 'Terminacion';
   }
 
@@ -116,7 +117,8 @@ export function ItemRoutePreview({
   const commentCount = stepsWithComments.filter((s: any) => s.comentario_vendedor && s.comentario_vendedor.trim().length > 0).length;
 
   const pasosPorEtapa = stepsWithComments.reduce((acc: Record<string, any[]>, paso: any) => {
-    const etapaNormalizada = normalizeEtapa(paso.etapa);
+    const rawEtapa = paso.etapa || paso.tipo_etapa;
+    const etapaNormalizada = normalizeEtapa(rawEtapa);
     if (!acc[etapaNormalizada]) {
       acc[etapaNormalizada] = [];
     }
@@ -262,11 +264,10 @@ export function ItemRoutePreview({
                       return (
                         <div key={paso.id} className="space-y-2">
                           <div
-                            className={`flex items-start gap-3 p-3 rounded-lg border ${
-                              tieneComentario
-                                ? 'bg-blue-50 border-blue-200'
-                                : 'bg-gray-50 border-gray-200'
-                            }`}
+                            className={`flex items-start gap-3 p-3 rounded-lg border ${tieneComentario
+                              ? 'bg-blue-50 border-blue-200'
+                              : 'bg-gray-50 border-gray-200'
+                              }`}
                           >
                             <div className="flex items-center justify-center w-6 h-6 rounded-full bg-white border-2 border-gray-300 text-gray-600 text-xs font-medium flex-shrink-0 mt-0.5">
                               {pasoIndex + 1}
@@ -282,7 +283,7 @@ export function ItemRoutePreview({
                                   </Badge>
                                 )}
                                 {isManualStep && (
-                                  <Badge variant="secondary" className="text-xs">
+                                  <Badge variant="default" className="text-xs">
                                     Manual
                                   </Badge>
                                 )}

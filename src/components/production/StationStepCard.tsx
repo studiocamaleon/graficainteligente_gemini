@@ -12,6 +12,8 @@ interface StationStepCardProps {
   numero_orden: string;
   cliente_nombre: string;
   producto_nombre: string;
+  medida_ancho?: number | null;
+  medida_alto?: number | null;
   cantidad: number;
   fecha_inicio: string | null;
   fecha_creacion_orden: string;
@@ -30,6 +32,8 @@ export function StationStepCard({
   numero_orden,
   cliente_nombre,
   producto_nombre,
+  medida_ancho,
+  medida_alto,
   cantidad,
   fecha_inicio,
   fecha_creacion_orden,
@@ -83,11 +87,18 @@ export function StationStepCard({
                 <User className="w-4 h-4 text-gray-400" />
                 <span>{cliente_nombre}</span>
               </div>
-              <div className="flex items-center gap-2">
-                <Package className="w-4 h-4 text-gray-400" />
-                <span>
-                  {producto_nombre} - {cantidad} {cantidad === 1 ? 'unidad' : 'unidades'}
-                </span>
+              <div className="flex items-start gap-2">
+                <Package className="w-4 h-4 text-gray-400 mt-0.5" />
+                <div className="flex flex-col">
+                  <span className="leading-tight">
+                    {producto_nombre} - {cantidad} {cantidad === 1 ? 'unidad' : 'unidades'}
+                  </span>
+                  {medida_ancho && medida_alto && (
+                    <span className="text-xs font-semibold text-blue-600 mt-1">
+                      Medidas: {medida_ancho}cm x {medida_alto}cm
+                    </span>
+                  )}
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <FileText className="w-4 h-4 text-gray-400" />

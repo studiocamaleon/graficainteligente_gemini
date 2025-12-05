@@ -115,7 +115,8 @@ export function useProductionJobs() {
               id,
               nombre_fantasia
             )
-          )
+          ),
+          configuracion
         `)
         .eq('orden.company_id', profile.company_id)
         .neq('orden.estado', 'cancelada')
@@ -130,7 +131,12 @@ export function useProductionJobs() {
         return;
       }
 
-      const sortedItemsData = itemsData.sort((a: any, b: any) => {
+      // Filtrar items de cobro que no requieren producción
+      const productionItems = itemsData.filter((item: any) =>
+        !item.configuracion?.es_servicio_cobro
+      );
+
+      const sortedItemsData = productionItems.sort((a: any, b: any) => {
         const fechaA = new Date(a.orden.fecha_creacion).getTime();
         const fechaB = new Date(b.orden.fecha_creacion).getTime();
         return fechaA - fechaB;

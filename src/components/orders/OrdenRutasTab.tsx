@@ -10,12 +10,15 @@ interface OrdenRutasTabProps {
 }
 
 export function OrdenRutasTab({ items, setItems, onUpdateStepComment, readOnly = false }: OrdenRutasTabProps) {
-  if (items.length === 0) {
+  // Contar items reales de producción (excluir servicios de cobro)
+  const productionItemsCount = items.filter(i => !i.es_servicio_cobro).length;
+
+  if (productionItemsCount === 0) {
     return (
       <EmptyState
         icon={Route}
-        title="No hay items en la orden"
-        description="Las rutas de producción se generarán automáticamente al agregar items"
+        title="No hay items de producción"
+        description="Agrega productos físicos a esta orden para configurar sus rutas. Los servicios de cobro no generan rutas propias."
       />
     );
   }
@@ -35,18 +38,23 @@ export function OrdenRutasTab({ items, setItems, onUpdateStepComment, readOnly =
       </div>
 
       <div className="space-y-4">
-        {items.map((item, index) => (
-          <ItemRoutePreview
-            key={item.id || index}
-            item={item}
-            index={index}
-            items={items}
-            setItems={setItems}
-            onUpdateStepComment={onUpdateStepComment}
-            readOnly={readOnly}
-            allowManualSteps={true}
-          />
-        ))}
+        {items.map((item, index) => {
+          // Si es un servicio de cobro, no lo mostramos en la lista de rutas
+          if (item.es_servicio_cobro) return null;
+
+          return (
+            <ItemRoutePreview
+              key={item.id || index}
+              item={item}
+              index={index} // Importante: Mantener el índice original del array para actualizaciones correctas
+              items={items}
+              setItems={setItems}
+              onUpdateStepComment={onUpdateStepComment}
+              readOnly={readOnly}
+              allowManualSteps={true}
+            />
+          );
+        })}
       </div>
     </div>
   );

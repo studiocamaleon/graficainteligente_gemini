@@ -1437,6 +1437,7 @@ export interface OrdenItemRuta {
   notas: string | null;
   created_at: string;
   updated_at: string;
+  global_task_id?: string | null;
 }
 
 // ============================================================================
@@ -1841,6 +1842,16 @@ export interface Database {
         Row: RutaProduccionPaso;
         Insert: Omit<RutaProduccionPaso, 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Omit<RutaProduccionPaso, 'id' | 'created_at' | 'ruta_id'>>;
+      };
+      ordenes_trabajo_items_rutas: {
+        Row: OrdenItemRuta;
+        Insert: Omit<OrdenItemRuta, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<OrdenItemRuta, 'id' | 'created_at' | 'updated_at'>>;
+      };
+      ordenes_trabajo_items: {
+        Row: any;
+        Insert: any;
+        Update: any;
       };
       centro_copiado_tamanios_papel: {
         Row: CentroCopiadoTamanioPapel;

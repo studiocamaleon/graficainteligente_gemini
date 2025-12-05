@@ -1,5 +1,5 @@
 export const FEATURES = {
-  REGISTRATIONS_ENABLED: false,
+  REGISTRATIONS_ENABLED: true,
 } as const;
 
 export const COMING_SOON_MESSAGE = {

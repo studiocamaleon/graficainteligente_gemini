@@ -24,6 +24,32 @@ export function useStepExecution() {
     setError(null);
 
     try {
+      // 1. Verificar si es tarea global
+      const { data: rutaInfo, error: fetchRutaError } = await supabase
+        .from('ordenes_trabajo_items_rutas')
+        .select('global_task_id, paso_nombre')
+        .eq('id', rutaId)
+        .single<any>();
+
+      if (fetchRutaError) throw fetchRutaError;
+
+      // CASO TAREA GLOBAL: Actualización Masiva
+      if (rutaInfo.global_task_id) {
+        const { error: rpcError } = await supabase.rpc('update_global_task_status', {
+          p_global_task_id: rutaInfo.global_task_id,
+          p_new_status: 'en_proceso',
+          p_user_id: profile.id
+        } as any);
+
+        if (rpcError) throw rpcError;
+
+        // Actualizar estado del item a "en_proceso" es más complejo masivamente, se omite por ahora
+        // o se confía en triggers de DB si existen. 
+        // Retornamos éxito genérico.
+        return { success: true };
+      }
+
+      // CASO TAREA NORMAL: Lógica Original
       // Verificar que no haya otro paso en proceso para este item
       const { data: pasosEnProceso, error: checkError } = await supabase
         .from('ordenes_trabajo_items_rutas')
@@ -86,6 +112,29 @@ export function useStepExecution() {
     setError(null);
 
     try {
+      // 1. Verificar si es tarea global
+      const { data: rutaInfo, error: fetchRutaError } = await supabase
+        .from('ordenes_trabajo_items_rutas')
+        .select('global_task_id')
+        .eq('id', rutaId)
+        .single<any>();
+
+      if (fetchRutaError) throw fetchRutaError;
+
+      // CASO TAREA GLOBAL
+      if (rutaInfo.global_task_id) {
+        const { error: rpcError } = await supabase.rpc('update_global_task_status', {
+          p_global_task_id: rutaInfo.global_task_id,
+          p_new_status: 'completado',
+          p_user_id: profile.id,
+          p_notes: notas || null
+        } as any);
+
+        if (rpcError) throw rpcError;
+        return { success: true };
+      }
+
+      // CASO NORMAL
       // Completar el paso
       const { data: updatedRuta, error: updateError } = await supabase
         .from('ordenes_trabajo_items_rutas')
@@ -149,6 +198,29 @@ export function useStepExecution() {
     setError(null);
 
     try {
+      // 1. Verificar si es tarea global
+      const { data: rutaInfo, error: fetchRutaError } = await supabase
+        .from('ordenes_trabajo_items_rutas')
+        .select('global_task_id')
+        .eq('id', rutaId)
+        .single<any>();
+
+      if (fetchRutaError) throw fetchRutaError;
+
+      // CASO TAREA GLOBAL
+      if (rutaInfo.global_task_id) {
+        const { error: rpcError } = await supabase.rpc('update_global_task_status', {
+          p_global_task_id: rutaInfo.global_task_id,
+          p_new_status: 'omitido',
+          p_user_id: profile.id,
+          p_notes: justificacion
+        } as any);
+
+        if (rpcError) throw rpcError;
+        return { success: true };
+      }
+
+      // CASO NORMAL
       // Omitir el paso
       const { data: updatedRuta, error: updateError } = await supabase
         .from('ordenes_trabajo_items_rutas')

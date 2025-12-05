@@ -10,6 +10,8 @@ export interface GeneratedRouteStep {
   es_obligatorio: boolean;
   origen_plantilla_id: string;
   comentario_vendedor?: string | null;
+  source_service_id?: string;
+  source_acabado_id?: string;
 }
 
 interface GenerateRoutesParams {
@@ -50,8 +52,8 @@ function normalizarEtapa(etapa: string): TipoEtapaRuta {
 
   // 3. Post-prensa (verificar ANTES que pre para evitar que "post_prensa" sea capturado por "pre")
   if (etapaLower.includes('post') ||
-      etapaLower.includes('terminacion') ||
-      etapaLower.includes('acabado')) {
+    etapaLower.includes('terminacion') ||
+    etapaLower.includes('acabado')) {
     return 'post_prensa';
   }
 
@@ -334,12 +336,24 @@ export async function generateProductionRoutes({
 
       // Solo incluir si cumple condiciones
       if (incluir) {
+        let sourceServiceId: string | undefined;
+        let sourceAcabadoId: string | undefined;
+
+        // Determinar ID del origen
+        if (paso.tipo_condicion === 'servicio_sin_nivel' || paso.tipo_condicion === 'servicio_con_nivel') {
+          sourceServiceId = paso.configuracion_condicion?.servicio_id;
+        } else if (paso.tipo_condicion === 'acabado_sin_nivel' || paso.tipo_condicion === 'acabado_con_nivel') {
+          sourceAcabadoId = paso.configuracion_condicion?.acabado_id;
+        }
+
         generatedSteps.push({
           etapa: paso.etapa,
           paso_id_especifico: pasoIdEspecifico,
           orden: paso.orden,
           es_obligatorio: paso.es_obligatorio,
           origen_plantilla_id: paso.id,
+          source_service_id: sourceServiceId,
+          source_acabado_id: sourceAcabadoId,
         });
       }
     }
@@ -386,6 +400,8 @@ export async function generateProductionRoutes({
         es_obligatorio: step.es_obligatorio,
         origen_plantilla_id: step.origen_plantilla_id,
         comentario_vendedor: null,
+        source_service_id: step.source_service_id,
+        source_acabado_id: step.source_acabado_id,
       };
     });
 

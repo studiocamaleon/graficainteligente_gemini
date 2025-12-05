@@ -26,8 +26,26 @@ DROP TABLE IF EXISTS evolution_integrations CASCADE;
 -- 2. COMENTARIO FINAL
 -- =====================================================
 
-COMMENT ON COLUMN companies.whatsapp_instance_id IS
-'ID de la instancia de WhatsApp en el backend propio (Render.com). NO usa Evolution API.';
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'companies' 
+    AND column_name = 'whatsapp_instance_id'
+  ) THEN
+    COMMENT ON COLUMN companies.whatsapp_instance_id IS
+    'ID de la instancia de WhatsApp en el backend propio (Render.com). NO usa Evolution API.';
+  END IF;
+END $$;
 
-COMMENT ON COLUMN companies.whatsapp_notifications_enabled IS
-'Habilita/deshabilita notificaciones automáticas de WhatsApp usando backend propio en Render.com';
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'companies' 
+    AND column_name = 'whatsapp_notifications_enabled'
+  ) THEN
+    COMMENT ON COLUMN companies.whatsapp_notifications_enabled IS
+    'Habilita/deshabilita notificaciones automáticas de WhatsApp usando backend propio en Render.com';
+  END IF;
+END $$;

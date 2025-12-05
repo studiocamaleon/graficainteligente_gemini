@@ -96,18 +96,26 @@ BEGIN
 END $$;
 
 -- Crear nuevo constraint único que incluye todos los campos relevantes
-ALTER TABLE productos_precios
-  ADD CONSTRAINT unique_precio_combinacion_completa UNIQUE NULLS NOT DISTINCT (
-    producto_id,
-    tecnologia_id,
-    tipo_tinta,
-    cara_impresion,
-    material_id,
-    variante_nombre,
-    cantidad,
-    rango_min,
-    rango_max
-  );
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'unique_precio_combinacion_completa'
+  ) THEN
+    ALTER TABLE productos_precios
+      ADD CONSTRAINT unique_precio_combinacion_completa UNIQUE NULLS NOT DISTINCT (
+        producto_id,
+        tecnologia_id,
+        tipo_tinta,
+        cara_impresion,
+        material_id,
+        variante_nombre,
+        cantidad,
+        rango_min,
+        rango_max
+      );
+  END IF;
+END $$;
 
 -- =====================================================
 -- NUEVOS ÍNDICES

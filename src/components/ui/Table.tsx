@@ -3,7 +3,7 @@ import { ChevronRight, ChevronDown } from 'lucide-react';
 
 interface Column<T> {
   key: string;
-  header: string;
+  header: ReactNode;
   render: (item: T, index: number) => ReactNode;
   width?: string;
 }
@@ -122,9 +122,8 @@ export function Table<T>({
                 return (
                   <Fragment key={itemKey}>
                     <tr
-                      className={`transition-colors duration-150 ${
-                        canExpand || onRowClick ? 'cursor-pointer hover:bg-gray-50' : 'hover:bg-gray-50'
-                      }`}
+                      className={`transition-colors duration-150 ${canExpand || onRowClick ? 'cursor-pointer hover:bg-gray-50' : 'hover:bg-gray-50'
+                        }`}
                       onClick={() => handleRowClick(item)}
                     >
                       {expandable && (
@@ -193,9 +192,8 @@ export function Table<T>({
             return (
               <Fragment key={itemKey}>
                 <tr
-                  className={`transition-colors duration-150 ${
-                    canExpand || onRowClick ? 'cursor-pointer hover:bg-gray-50' : 'hover:bg-gray-50'
-                  }`}
+                  className={`transition-colors duration-150 ${canExpand || onRowClick ? 'cursor-pointer hover:bg-gray-50' : 'hover:bg-gray-50'
+                    }`}
                   onClick={() => handleRowClick(item)}
                 >
                   {expandable && (

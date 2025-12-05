@@ -119,8 +119,13 @@ END $$;
 -- COMENTARIOS ACTUALIZADOS
 -- =====================================================
 
-COMMENT ON TABLE productos_rutas_plantillas IS
-  'Plantillas de rutas de producción para productos. Define el flujo de pasos de producción que se aplicará a los pedidos de cada producto.';
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'productos_rutas_plantillas') THEN
+    COMMENT ON TABLE productos_rutas_plantillas IS
+      'Plantillas de rutas de producción para productos. Define el flujo de pasos de producción que se aplicará a los pedidos de cada producto.';
+  END IF;
+END $$;
 
 COMMENT ON TABLE pedidos_rutas_resueltas IS
   'Rutas de producción resueltas para cada pedido. Almacena la secuencia de pasos específica que se ejecutará para producir cada pedido.';

@@ -58,8 +58,23 @@ export function useServicios({
             categoria:categorias(id, nombre, color)
           ),
           estacion:estaciones_trabajo(id, nombre),
-          niveles_precio:servicios_niveles_precio(*),
-          pasos:servicios_pasos(*)
+          niveles_precio:servicios_niveles_precio(
+            *,
+            paso:pasos(
+              id,
+              nombre,
+              etapa,
+              estacion:estaciones_trabajo(id, nombre)
+            )
+          ),
+          pasos:servicios_pasos(
+            *,
+            paso:pasos(
+              id,
+              nombre,
+              estacion:estaciones_trabajo(id, nombre)
+            )
+          )
         `,
           { count: 'exact' }
         )

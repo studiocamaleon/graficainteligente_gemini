@@ -19,12 +19,13 @@
 */
 
 -- Insertar categoría de Portabanners si no existe
-INSERT INTO categorias (id, nombre, descripcion, color, is_active, created_at, updated_at)
+INSERT INTO categorias (id, nombre, descripcion, color, is_active, is_system_category, created_at, updated_at)
 VALUES (
   '00000000-0000-0000-0000-000000000006',
   'Portabanners',
   'Productos de portabanners y expositores',
   '#06B6D4',
+  true,
   true,
   now(),
   now()

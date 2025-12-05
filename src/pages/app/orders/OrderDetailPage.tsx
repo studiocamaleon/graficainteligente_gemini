@@ -354,6 +354,15 @@ export function OrderDetailPage() {
             </Button>
 
             <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate(`/app/orders/editar-ot/${id}`)}
+                className="bg-white border-blue-200 hover:bg-blue-50 text-blue-700"
+              >
+                <Edit2 className="w-4 h-4 mr-2" />
+                Editar Orden
+              </Button>
               {orden.tracking_token && (
                 <Button
                   variant="outline"
@@ -508,11 +517,10 @@ export function OrderDetailPage() {
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors flex items-center gap-2 ${
-                  activeTab === tab.key
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
+                className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors flex items-center gap-2 ${activeTab === tab.key
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
               >
                 <Icon className="w-4 h-4" />
                 {tab.label}
@@ -561,21 +569,21 @@ export function OrderDetailPage() {
                     // Extraer servicios seleccionados (con nivel si existe)
                     const servicios = config.servicios_seleccionados && Array.isArray(config.servicios_seleccionados)
                       ? config.servicios_seleccionados.map((s: any) => {
-                          if (s.nivel) {
-                            return `${s.nombre} (${s.nivel})`;
-                          }
-                          return s.nombre;
-                        }).join(', ')
+                        if (s.nivel) {
+                          return `${s.nombre} (${s.nivel})`;
+                        }
+                        return s.nombre;
+                      }).join(', ')
                       : null;
 
                     // Extraer acabados seleccionados (con nivel si existe)
                     const acabados = config.acabados_seleccionados && Array.isArray(config.acabados_seleccionados)
                       ? config.acabados_seleccionados.map((a: any) => {
-                          if (a.nivel) {
-                            return `${a.nombre} (${a.nivel})`;
-                          }
-                          return a.nombre;
-                        }).join(', ')
+                        if (a.nivel) {
+                          return `${a.nombre} (${a.nivel})`;
+                        }
+                        return a.nombre;
+                      }).join(', ')
                       : null;
 
                     return (
@@ -614,29 +622,99 @@ export function OrderDetailPage() {
                           </div>
                         )}
 
-                        {/* Para items del catálogo: mostrar material */}
-                        {item.tipo_item !== 'personalizado' && materialStr && (
-                          <p className="text-sm text-gray-600 mb-1">
-                            <span className="font-medium">Material:</span> {materialStr}
-                          </p>
-                        )}
+                        {/* Detalles de Configuración del Producto - Diseño Mejorado */}
+                        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm bg-gray-50 p-4 rounded-lg border border-gray-100">
 
-                        {/* Para items del catálogo: mostrar servicios y acabados */}
-                        {item.tipo_item !== 'personalizado' && (servicios || acabados) && (
-                          <p className="text-sm text-gray-600 mb-2">
-                            {servicios && (
-                              <>
-                                <span className="font-medium">Servicios:</span> {servicios}
-                              </>
-                            )}
-                            {servicios && acabados && <span className="mx-2">•</span>}
-                            {acabados && (
-                              <>
-                                <span className="font-medium">Acabados:</span> {acabados}
-                              </>
-                            )}
-                          </p>
-                        )}
+                          {/* Medidas (Destacado) - Soporte para múltiples estructuras */}
+                          {(config.medida_seleccionada || config.medida_ancho || config.medida_alto) && (
+                            <div className="flex flex-col">
+                              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Medidas</span>
+                              <div className="font-medium text-gray-900 bg-white border border-gray-200 rounded px-2 py-1 inline-flex items-center gap-2 w-fit">
+                                <span>
+                                  {config.medida_seleccionada
+                                    ? `${config.medida_seleccionada.ancho} x ${config.medida_seleccionada.alto}`
+                                    : `${config.medida_ancho || '?'} x ${config.medida_alto || '?'}`
+                                  } cm
+                                </span>
+                                {(config.mt2_total || config.mt_lineal_total) && (
+                                  <Badge variant="secondary" className="text-[10px] h-5">
+                                    {config.mt2_total ? `${config.mt2_total} m²` : `${config.mt_lineal_total} ml`}
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Material */}
+                          {materialStr && (
+                            <div className="flex flex-col sm:col-span-2 lg:col-span-1">
+                              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Material</span>
+                              <span className="font-medium text-gray-900">{materialStr}</span>
+                            </div>
+                          )}
+
+                          {/* Tecnología de Impresión */}
+                          {(config.tecnologia_nombre || config.tecnologia) && (
+                            <div className="flex flex-col">
+                              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Tecnología</span>
+                              <span className="font-medium text-gray-900">{config.tecnologia_nombre || config.tecnologia}</span>
+                            </div>
+                          )}
+
+                          {/* Tipo de Tinta */}
+                          {(config.tipo_tinta || config.tinta_nombre) && (
+                            <div className="flex flex-col">
+                              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Tinta</span>
+                              <Badge variant="purple" className="w-fit">{config.tipo_tinta || config.tinta_nombre}</Badge>
+                            </div>
+                          )}
+
+                          {/* Cara Impresión */}
+                          {config.cara_impresion && (
+                            <div className="flex flex-col">
+                              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Lados</span>
+                              <span className="text-gray-700 capitalize">{config.cara_impresion.replace(/_/g, ' ')}</span>
+                            </div>
+                          )}
+
+                          {/* Servicios Seleccionados */}
+                          {servicios && (
+                            <div className="flex flex-col sm:col-span-2 lg:col-span-3">
+                              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Servicios</span>
+                              <div className="flex flex-wrap gap-2">
+                                {config.servicios_seleccionados?.map((s: any, idx: number) => (
+                                  <Badge key={idx} variant="blue" className="font-normal">
+                                    {s.nombre} {s.nivel ? `(${s.nivel})` : ''}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Acabados Seleccionados */}
+                          {acabados && (
+                            <div className="flex flex-col sm:col-span-2 lg:col-span-3">
+                              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Acabados</span>
+                              <div className="flex flex-wrap gap-2">
+                                {config.acabados_seleccionados?.map((a: any, idx: number) => (
+                                  <Badge key={idx} variant="orange" className="font-normal">
+                                    {a.nombre} {a.nivel ? `(${a.nivel})` : ''}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Observaciones del cliente */}
+                          {config.observaciones_cliente && (
+                            <div className="flex flex-col sm:col-span-2 lg:col-span-3 mt-2 pt-2 border-t border-gray-200">
+                              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Nota del Cliente</span>
+                              <p className="text-sm italic text-gray-600 bg-white p-2 rounded border border-gray-200">
+                                "{config.observaciones_cliente}"
+                              </p>
+                            </div>
+                          )}
+                        </div>
 
                         {/* Línea 4: Cantidad y Total */}
                         <div className="flex items-center justify-between pt-2 border-t border-gray-200">
@@ -653,6 +731,44 @@ export function OrderDetailPage() {
                     );
                   })}
                 </div>
+
+                {/* Servicios Adicionales */}
+                {orden.servicios && orden.servicios.length > 0 && (
+                  <div className="mt-8 space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      Servicios Adicionales ({orden.servicios.length})
+                    </h3>
+                    <div className="space-y-3">
+                      {orden.servicios.map((servicio: any, index: number) => (
+                        <div
+                          key={servicio.id || index}
+                          className="p-4 bg-indigo-50 rounded-lg border border-indigo-100 flex justify-between items-center"
+                        >
+                          <div>
+                            <h4 className="font-semibold text-indigo-900">
+                              {servicio.descripcion || 'Servicio sin descripción'}
+                            </h4>
+                            <p className="text-sm text-indigo-700 mt-1">
+                              Cantidad: {servicio.cantidad}
+                            </p>
+                          </div>
+                          {canViewPrices && (
+                            <div className="text-right">
+                              <span className="block text-lg font-bold text-indigo-700">
+                                ${Number(servicio.subtotal).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                              </span>
+                              {Number(servicio.cantidad) > 1 && (
+                                <span className="text-xs text-indigo-600">
+                                  (${Number(servicio.precio_unitario).toLocaleString('es-AR', { minimumFractionDigits: 2 })} c/u)
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Orden de Copiado Asociada */}
                 {orden.ordenCopiado && (

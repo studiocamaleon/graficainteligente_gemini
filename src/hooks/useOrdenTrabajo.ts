@@ -15,8 +15,20 @@ import type {
   EstadoOrdenCopiado,
 } from '../types/database';
 
+export interface OrdenTrabajoServicio {
+  id: string;
+  orden_id: string;
+  servicio_id: string | null;
+  descripcion: string;
+  cantidad: number;
+  precio_unitario: number;
+  subtotal: number;
+  created_at: string;
+}
+
 export interface OrdenTrabajoFull extends OrdenTrabajo {
   items?: OrdenTrabajoItemFull[];
+  servicios?: OrdenTrabajoServicio[];
   pagos?: OrdenTrabajoPago[];
   historial?: OrdenTrabajoHistorial[];
   ordenCopiado?: CentroCopiadoOrdenResumida | null;
@@ -82,9 +94,18 @@ interface AddItemData {
   rutas_generadas?: any[];
 }
 
+interface AddServicioData {
+  descripcion: string;
+  cantidad: number;
+  precio_unitario: number;
+  subtotal: number;
+  servicio_id?: string | null;
+}
+
 interface CreateOrdenConItemsData {
   ordenData: CreateOrdenData;
   items: AddItemData[];
+  servicios?: AddServicioData[];
   estadoInicial?: EstadoOrdenTrabajo;
 }
 
@@ -153,9 +174,14 @@ export function useOrdenTrabajo() {
 
       if (ordenError) throw ordenError;
 
-      const [itemsRes, pagosRes, historialRes, ordenCopiadoRes, facturaRes] = await Promise.all([
+      const [itemsRes, serviciosRes, pagosRes, historialRes, ordenCopiadoRes, facturaRes] = await Promise.all([
         supabase
           .from('ordenes_trabajo_items')
+          .select('*')
+          .eq('orden_id', id)
+          .order('created_at', { ascending: true }),
+        supabase
+          .from('ordenes_trabajo_servicios' as any)
           .select('*')
           .eq('orden_id', id)
           .order('created_at', { ascending: true }),
@@ -186,6 +212,7 @@ export function useOrdenTrabajo() {
       ]);
 
       if (itemsRes.error) throw itemsRes.error;
+      if (serviciosRes.error) throw serviciosRes.error;
       if (pagosRes.error) throw pagosRes.error;
       if (historialRes.error) throw historialRes.error;
       if (ordenCopiadoRes.error) throw ordenCopiadoRes.error;
@@ -215,9 +242,25 @@ export function useOrdenTrabajo() {
         };
       }
 
+      // Obtener rutas de produccion de los items
+      const { data: rutasRes, error: rutasError } = await supabase
+        .from('ordenes_trabajo_items_rutas')
+        .select('*')
+        .in('orden_item_id', itemsRes.data?.map(i => i.id) || [])
+        .order('orden', { ascending: true });
+
+      if (rutasError) throw rutasError;
+
+      // Mapear items con sus rutas
+      const itemsConRutas = itemsRes.data?.map(item => ({
+        ...item,
+        rutas: rutasRes?.filter(r => r.orden_item_id === item.id) || []
+      })) || [];
+
       return {
         ...orden,
-        items: itemsRes.data as OrdenTrabajoItemFull[],
+        items: itemsConRutas as OrdenTrabajoItemFull[],
+        servicios: serviciosRes.data,
         pagos: pagosRes.data,
         historial: historialRes.data,
         ordenCopiado: ordenCopiadoCompleta,
@@ -585,6 +628,239 @@ export function useOrdenTrabajo() {
     }
   };
 
+  // Nueva función para actualizar orden completa (header + items + servicios)
+  const updateOrdenCompleta = async (id: string, data: CreateOrdenConItemsData): Promise<OrdenTrabajoFull | null> => {
+    if (!profile?.company_id || !profile?.id) {
+      setError('No hay empresa o usuario asociado');
+      return null;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      // 1. Actualizar Header de la Orden
+      const { error: ordenError } = await supabase
+        .from('ordenes_trabajo')
+        .update({
+          cliente_id: data.ordenData.cliente_id,
+          canal_venta: data.ordenData.canal_venta,
+          fecha_estimada_entrega: data.ordenData.fecha_estimada_entrega || null,
+          notas_internas: data.ordenData.notas_internas || null,
+          subtotal: data.ordenData.subtotal || 0,
+          total_descuentos: data.ordenData.total_descuentos || 0,
+          total: data.ordenData.total || 0,
+          requiere_factura: data.ordenData.requiere_factura || false,
+          subtotal_iva: data.ordenData.subtotal_iva || 0,
+          updated_at: new Date().toISOString(),
+          updated_by: profile.id
+        })
+        .eq('id', id)
+        .eq('company_id', profile.company_id);
+
+      if (ordenError) throw ordenError;
+
+      // 2. Gestionar Servicios Adicionales (Estrategia: Borrar y Recrear)
+      // Primero borramos todos los servicios existentes
+      const { error: deleteServicesError } = await supabase
+        .from('ordenes_trabajo_servicios' as any)
+        .delete()
+        .eq('orden_id', id);
+
+      if (deleteServicesError) throw deleteServicesError;
+
+      // Luego insertamos los nuevos si existen
+      if (data.servicios && data.servicios.length > 0) {
+        const serviciosToInsert = data.servicios.map(s => ({
+          orden_id: id,
+          descripcion: s.descripcion,
+          cantidad: s.cantidad,
+          precio_unitario: s.precio_unitario,
+          subtotal: s.subtotal,
+          servicio_id: s.servicio_id || null,
+          created_by: profile.id
+        }));
+
+        const { error: insertServError } = await supabase
+          .from('ordenes_trabajo_servicios' as any)
+          .insert(serviciosToInsert);
+
+        if (insertServError) throw insertServError;
+      }
+
+      // 3. Gestionar Items (Estrategia: Diffing Inteligente)
+      // Primero obtenemos los items actuales para comparar
+      const { data: currentItems, error: fetchItemsError } = await supabase
+        .from('ordenes_trabajo_items')
+        .select('id')
+        .eq('orden_id', id);
+
+      if (fetchItemsError) throw fetchItemsError;
+
+      const currentItemIds = new Set(currentItems?.map(i => i.id) || []);
+      const incomingItemsWithId = data.items.filter((i: any) => i.id && !i.id.startsWith('temp-'));
+      const incomingItemIds = new Set(incomingItemsWithId.map((i: any) => i.id));
+
+      // 3.1 Identificar items a borrar (están en DB pero no en payload)
+      const itemsToDelete = Array.from(currentItemIds).filter(id => !incomingItemIds.has(id));
+
+      if (itemsToDelete.length > 0) {
+        const { error: deleteError } = await supabase
+          .from('ordenes_trabajo_items')
+          .delete()
+          .in('id', itemsToDelete);
+
+        if (deleteError) throw deleteError;
+      }
+
+      // 3.2 Identificar items a actualizar (tienen ID y están en el payload)
+      for (const item of incomingItemsWithId) {
+        const { error: updateItemError } = await supabase
+          .from('ordenes_trabajo_items')
+          .update({
+            tipo_item: item.tipo_item || 'catalogo',
+            producto_nombre: item.producto_nombre,
+            producto_categoria: item.producto_categoria || null,
+            descripcion: item.descripcion || null,
+            tiempo_produccion_dias: item.tiempo_produccion_dias || null,
+            cantidad: item.cantidad,
+            configuracion: item.configuracion || null,
+            precio_base: item.precio_base,
+            precio_servicios: item.precio_servicios,
+            precio_acabados: item.precio_acabados,
+            precio_unitario_final: item.precio_unitario_final,
+            precio_total: item.precio_total,
+          })
+          .eq('id', item.id); // Este es un ID real de DB
+
+        if (updateItemError) throw updateItemError;
+
+        // NOTA: No actualizamos rutas de producción en items existentes por seguridad.
+        // Si el usuario quisiera reiniciar la producción, debería borrar e insertar de nuevo.
+
+        // MEJORA: Si el item NO tiene pasos iniciados, permitimos regenerar la ruta
+        // Esto permite corregir errores de configuración antes de que inicie la producción
+        if (item.rutas_generadas && item.rutas_generadas.length > 0) {
+          // Verificar si hay pasos iniciados
+          const { count: pasosIniciados } = await supabase
+            .from('ordenes_trabajo_items_rutas')
+            .select('*', { count: 'exact', head: true })
+            .eq('orden_item_id', item.id)
+            .neq('estado', 'pendiente');
+
+          // Si no hay pasos iniciados (todo está pendiente), regeneramos la ruta
+          if (pasosIniciados === 0) {
+            // Borrar rutas anteriores
+            await supabase
+              .from('ordenes_trabajo_items_rutas')
+              .delete()
+              .eq('orden_item_id', item.id);
+
+            // Insertar nuevas rutas
+            const rutasToInsert = item.rutas_generadas.map((ruta: any) => ({
+              company_id: profile.company_id,
+              orden_item_id: item.id,
+              tipo_etapa: ruta.tipo_etapa || 'principal',
+              paso_id: ruta.paso_id,
+              paso_nombre: ruta.paso_nombre,
+              orden: ruta.orden,
+              es_modificado: false,
+              origen_plantilla_id: ruta.origen_plantilla_id || null,
+              comentario_vendedor: ruta.comentario_vendedor || null,
+              global_task_id: ruta.global_task_id || null,
+              estado: 'pendiente' // Asegurar estado inicial
+            }));
+
+            const { error: insertRutasError } = await supabase
+              .from('ordenes_trabajo_items_rutas')
+              .insert(rutasToInsert);
+
+            if (insertRutasError) throw insertRutasError;
+          }
+        }
+      }
+
+      // 3.3 Insertar items NUEVOS (no tienen ID o tienen 'temp-')
+      const newItems = data.items.filter((i: any) => !i.id || i.id.startsWith('temp-'));
+      const itemsToInsert = newItems.map(item => {
+        let finalProductId = item.producto_id;
+        if (typeof finalProductId === 'string' && finalProductId.trim() === '') {
+          finalProductId = null;
+        }
+
+        return {
+          orden_id: id,
+          tipo_item: item.tipo_item || 'catalogo',
+          producto_id: finalProductId,
+          producto_nombre: item.producto_nombre,
+          producto_categoria: item.producto_categoria || null,
+          descripcion: item.descripcion || null,
+          tiempo_produccion_dias: item.tiempo_produccion_dias || null,
+          cantidad: item.cantidad,
+          configuracion: item.configuracion || null,
+          precio_base: item.precio_base,
+          precio_servicios: item.precio_servicios,
+          precio_acabados: item.precio_acabados,
+          precio_unitario_final: item.precio_unitario_final,
+          precio_total: item.precio_total,
+        };
+      });
+
+      if (itemsToInsert.length > 0) {
+        const { data: insertedItems, error: insertItemsError } = await supabase
+          .from('ordenes_trabajo_items')
+          .insert(itemsToInsert)
+          .select();
+
+        if (insertItemsError) throw insertItemsError;
+
+        // Insertar rutas para los NUEVOS items
+        for (let i = 0; i < insertedItems.length; i++) {
+          const itemDb = insertedItems[i];
+          const itemOriginal = newItems[i]; // Coinciden en índice
+
+          if (itemOriginal.rutas_generadas && itemOriginal.rutas_generadas.length > 0) {
+            const rutasToInsert = itemOriginal.rutas_generadas.map((ruta: any) => ({
+              company_id: profile.company_id,
+              orden_item_id: itemDb.id,
+              tipo_etapa: ruta.tipo_etapa || 'principal',
+              paso_id: ruta.paso_id,
+              paso_nombre: ruta.paso_nombre,
+              orden: ruta.orden,
+              es_modificado: false,
+              origen_plantilla_id: ruta.origen_plantilla_id || null,
+              comentario_vendedor: ruta.comentario_vendedor || null,
+              global_task_id: ruta.global_task_id || null,
+            }));
+
+            await supabase
+              .from('ordenes_trabajo_items_rutas')
+              .insert(rutasToInsert);
+          }
+        }
+      }
+
+      // 4. Recalcular totales consolidado
+      await supabase.rpc('fn_recalcular_total_orden_trabajo', { p_orden_trabajo_id: id });
+
+      // 5. Historial
+      await addHistorialEvent(
+        id,
+        'modificacion',
+        `Orden actualizada por ${profile.full_name}`
+      );
+
+      return await getOrdenById(id);
+
+    } catch (err) {
+      console.error('Error updating full orden:', err);
+      setError(err instanceof Error ? err.message : 'Error al actualizar orden completa');
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const changeEstado = async (
     id: string,
     nuevoEstado: EstadoOrdenTrabajo
@@ -629,28 +905,34 @@ export function useOrdenTrabajo() {
         ])
         .select()
         .single();
-
       if (ordenError) throw ordenError;
 
       // 2. Insertar items
       if (data.items.length > 0) {
-        const itemsToInsert = data.items.map(item => ({
-          orden_id: newOrden.id,
-          tipo_item: item.tipo_item || 'catalogo',
-          producto_id: item.producto_id || null,
-          producto_nombre: item.producto_nombre,
-          producto_categoria: item.producto_categoria || null,
-          descripcion: item.descripcion || null,
-          tiempo_produccion_dias: item.tiempo_produccion_dias || null,
-          cantidad: item.cantidad,
-          configuracion: item.configuracion || null,
-          precio_base: item.precio_base,
-          precio_servicios: item.precio_servicios,
-          precio_acabados: item.precio_acabados,
-          precio_unitario_final: item.precio_unitario_final,
-          precio_total: item.precio_total,
-          // Excluir rutas_generadas - se insertan por separado en ordenes_trabajo_items_rutas
-        }));
+        const itemsToInsert = data.items.map(item => {
+          // Limpieza básica: strings vacías a null
+          let finalProductId = item.producto_id;
+          if (typeof finalProductId === 'string' && finalProductId.trim() === '') {
+            finalProductId = null;
+          }
+
+          return {
+            orden_id: newOrden.id,
+            tipo_item: item.tipo_item || 'catalogo',
+            producto_id: finalProductId,
+            producto_nombre: item.producto_nombre,
+            producto_categoria: item.producto_categoria || null,
+            descripcion: item.descripcion || null,
+            tiempo_produccion_dias: item.tiempo_produccion_dias || null,
+            cantidad: item.cantidad,
+            configuracion: item.configuracion || null,
+            precio_base: item.precio_base,
+            precio_servicios: item.precio_servicios,
+            precio_acabados: item.precio_acabados,
+            precio_unitario_final: item.precio_unitario_final,
+            precio_total: item.precio_total,
+          };
+        });
 
         const { data: insertedItems, error: itemsError } = await supabase
           .from('ordenes_trabajo_items')
@@ -677,13 +959,14 @@ export function useOrdenTrabajo() {
                 return {
                   company_id: profile.company_id,
                   orden_item_id: item.id,
-                  tipo_etapa: ruta.etapa,
+                  tipo_etapa: ruta.tipo_etapa || 'principal', // Corregido: Usar el valor técnico, no el display
                   paso_id: ruta.paso_id,
                   paso_nombre: ruta.paso_nombre,
                   orden: ruta.orden,
                   es_modificado: false,
                   origen_plantilla_id: ruta.origen_plantilla_id || null,
                   comentario_vendedor: ruta.comentario_vendedor || null,
+                  global_task_id: ruta.global_task_id || null,
                 };
               });
 
@@ -722,23 +1005,57 @@ export function useOrdenTrabajo() {
           }
         }
 
-        // 4. Actualizar totales recalculando desde items pero manteniendo descuentos e IVA
-        const subtotal = data.items.reduce((sum, item) => sum + item.precio_total, 0);
+        // 3.5. Insertar servicios adicionales (si existen)
+        let totalServicios = 0;
+        if (data.servicios && data.servicios.length > 0) {
+          const serviciosToInsert = data.servicios.map(s => ({
+            orden_id: newOrden.id,
+            descripcion: s.descripcion,
+            cantidad: s.cantidad,
+            precio_unitario: s.precio_unitario,
+            subtotal: s.subtotal,
+            servicio_id: s.servicio_id || null,
+            created_by: profile.id
+          }));
+
+          const { error: servError } = await supabase
+            .from('ordenes_trabajo_servicios' as any)
+            .insert(serviciosToInsert);
+
+          if (servError) {
+            console.error('Error insertando servicios:', servError);
+            throw servError;
+          }
+
+          totalServicios = data.servicios.reduce((sum, s) => sum + s.subtotal, 0);
+        }
+
+        // 4. Actualizar totales recalculando items + servicios
+        // Nota: Asumimos que 'subtotal' en DB es solo de items físicos, y 'total' es la suma final
+        const subtotalItems = data.items.reduce((sum, item) => sum + item.precio_total, 0);
+        const subtotalFinal = subtotalItems; // Mantenemos subtotal como solo items físicos para consistencia con fn SQL
+
         const totalDescuentos = newOrden.total_descuentos || 0;
         const subtotalIva = newOrden.subtotal_iva || 0;
-        const total = subtotal - totalDescuentos + subtotalIva;
+
+        // Total = Items + Servicios - Descuentos + IVA
+        const total = subtotalItems + totalServicios - totalDescuentos + subtotalIva;
 
         await supabase
           .from('ordenes_trabajo')
-          .update({ subtotal, total })
+          .update({ subtotal: subtotalFinal, total })
           .eq('id', newOrden.id);
       }
 
       // 5. Agregar evento al historial
+      const itemsCount = data.items.length;
+      const serviciosCount = data.servicios?.length || 0;
+      const descEvento = `Orden de trabajo creada por ${profile.full_name} con ${itemsCount} items${serviciosCount > 0 ? ` y ${serviciosCount} servicios` : ''}`;
+
       await addHistorialEvent(
         newOrden.id,
         'creacion',
-        `Orden de trabajo creada por ${profile.full_name} con ${data.items.length} items`
+        descEvento
       );
 
       // 6. Retornar orden completa
@@ -804,5 +1121,6 @@ export function useOrdenTrabajo() {
     deletePago,
     changeEstado,
     desvincularOrdenCopiado,
+    updateOrdenCompleta,
   };
 }
