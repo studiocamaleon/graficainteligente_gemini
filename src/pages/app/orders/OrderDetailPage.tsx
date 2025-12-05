@@ -39,13 +39,14 @@ import { OrdenAdjuntosTab } from '../../../components/orders/OrdenAdjuntosTab';
 import { OrdenPagosTab } from '../../../components/orders/OrdenPagosTab';
 import { PagoFormModal } from '../../../components/orders/PagoFormModal';
 import { OrdenCopiadoAsociadaCard } from '../../../components/orders/OrdenCopiadoAsociadaCard';
+import { ServiciosAcabadosCompartidosSection } from '../../../components/orders/ServiciosAcabadosCompartidosSection';
 import { useToast } from '../../../contexts/ToastContext';
 import { calcularTotalesConsolidados } from '../../../utils/ordenesConsolidadas';
 import type { EstadoOrdenTrabajo } from '../../../types/database';
 import { enviarNotificacion } from '../../../lib/whatsappNotifications';
 import { descargarFactura } from '../../../utils/facturaHelpers';
 
-type TabKey = 'items' | 'ruta' | 'adjuntos' | 'pagos' | 'historial';
+type TabKey = 'items' | 'ruta' | 'adjuntos' | 'pagos' | 'compartidos' | 'historial';
 
 export function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -501,6 +502,7 @@ export function OrderDetailPage() {
             { key: 'ruta' as const, label: 'Ruta de Producción', icon: Route },
             { key: 'adjuntos' as const, label: 'Adjuntos', icon: FileText },
             ...(canViewPrices ? [{ key: 'pagos' as const, label: 'Pagos', icon: CreditCard, count: orden.pagos?.length || 0 }] : []),
+            { key: 'compartidos' as const, label: 'Servicios Compartidos', icon: Settings },
             { key: 'historial' as const, label: 'Historial', icon: History },
           ].map((tab) => {
             const Icon = tab.icon;
@@ -759,6 +761,22 @@ export function OrderDetailPage() {
               onEditarPago={handleEditarPago}
               onEliminarPago={handleEliminarPago}
               ordenCopiado={orden.ordenCopiado}
+            />
+          </div>
+        )}
+
+        {activeTab === 'compartidos' && orden && (
+          <div className="p-6">
+            <ServiciosAcabadosCompartidosSection
+              tipo="orden"
+              id={orden.id}
+              items={(orden.items || []).map((item: any) => ({
+                id: item.id,
+                precio_unitario: Number(item.precio_unitario_final || 0),
+                cantidad: Number(item.cantidad || 1),
+                precio_total: Number(item.precio_total || 0)
+              }))}
+              onTotalsChange={loadOrden}
             />
           </div>
         )}

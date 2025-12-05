@@ -15,8 +15,9 @@ import { PresupuestoItemsTab } from '../../../components/presupuestos/Presupuest
 import { PresupuestoArchivosTab } from '../../../components/presupuestos/PresupuestoArchivosTab';
 import { PresupuestoHistorialTab } from '../../../components/presupuestos/PresupuestoHistorialTab';
 import { ConvertirPresupuestoModal } from '../../../components/presupuestos/ConvertirPresupuestoModal';
+import { ServiciosAcabadosCompartidosSection } from '../../../components/orders/ServiciosAcabadosCompartidosSection';
 
-type TabId = 'items' | 'archivos' | 'historial';
+type TabId = 'items' | 'archivos' | 'compartidos' | 'historial';
 
 export default function DetallePresupuesto() {
   const { id } = useParams<{ id: string }>();
@@ -37,6 +38,7 @@ export default function DetallePresupuesto() {
   const tabs = [
     { id: 'items' as TabId, label: 'Items', icon: null },
     { id: 'archivos' as TabId, label: 'Archivos', icon: null },
+    { id: 'compartidos' as TabId, label: 'Servicios Compartidos', icon: null },
     { id: 'historial' as TabId, label: 'Historial', icon: null },
   ];
 
@@ -228,6 +230,23 @@ export default function DetallePresupuesto() {
 
           {activeTab === 'archivos' && (
             <PresupuestoArchivosTab presupuestoId={presupuesto.id} />
+          )}
+
+          {activeTab === 'compartidos' && (
+            <ServiciosAcabadosCompartidosSection
+              tipo="presupuesto"
+              id={presupuesto.id}
+              items={(presupuesto.items || []).map((item: any) => ({
+                id: item.id,
+                precio_unitario: Number(item.precio_unitario_final || 0),
+                cantidad: Number(item.cantidad || 1),
+                precio_total: Number(item.precio_total || 0)
+              }))}
+              onTotalsChange={() => {
+                // Recargar presupuesto cuando cambien los totales
+                window.location.reload();
+              }}
+            />
           )}
 
           {activeTab === 'historial' && (
