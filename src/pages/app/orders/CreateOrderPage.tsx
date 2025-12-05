@@ -23,7 +23,7 @@ import { OrdenFooterTotales } from '../../../components/orders/OrdenFooterTotale
 import { PagoFormModal } from '../../../components/orders/PagoFormModal';
 import { ServiciosCompartidosCreacionSection } from '../../../components/orders/ServiciosCompartidosCreacionSection';
 import type { ServicioCompartidoTemp, AcabadoCompartidoTemp } from '../../../components/orders/ServiciosCompartidosCreacionSection';
-import { calculateSharedServiceProration } from '../../../utils/sharedServiceProration';
+import { calculateSharedServiceProration, mapOrderItemsToProrationItems } from '../../../utils/sharedServiceProration';
 import { useOrdenLinks } from '../../../hooks/useOrdenLinks';
 import { useCentroCopiadoOrdenes } from '../../../hooks/useCentroCopiadoOrdenes';
 import type { CanalVenta } from '../../../types/database';
@@ -654,7 +654,7 @@ export function CreateOrderPage() {
 
           <div className={activeTab === 'servicios-compartidos' ? 'block' : 'hidden'}>
             <ServiciosCompartidosCreacionSection
-              items={items}
+              items={mapOrderItemsToProrationItems(items)}
               serviciosCompartidos={serviciosCompartidos}
               acabadosCompartidos={acabadosCompartidos}
               onServiciosChange={setServiciosCompartidos}

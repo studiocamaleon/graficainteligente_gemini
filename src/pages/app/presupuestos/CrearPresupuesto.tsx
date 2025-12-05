@@ -16,7 +16,7 @@ import { PresupuestoCondicionesSection } from '../../../components/presupuestos/
 import { PresupuestoResumenSection } from '../../../components/presupuestos/PresupuestoResumenSection';
 import { ServiciosCompartidosCreacionSection } from '../../../components/orders/ServiciosCompartidosCreacionSection';
 import type { ServicioCompartidoTemp, AcabadoCompartidoTemp } from '../../../components/orders/ServiciosCompartidosCreacionSection';
-import { calculateSharedServiceProration } from '../../../utils/sharedServiceProration';
+import { calculateSharedServiceProration, mapOrderItemsToProrationItems } from '../../../utils/sharedServiceProration';
 import { usePresupuestoValidation } from '../../../hooks/usePresupuestoValidation';
 import type { CanalVenta, PresupuestoItem, CreatePresupuestoItemData, TotalesPresupuesto } from '../../../types/presupuestos';
 import { generarDescripcionCompleta } from '../../../utils/formatPresupuestoConfig';
@@ -457,12 +457,7 @@ export default function CrearPresupuesto() {
 
           {activeTab === 'servicios-compartidos' && (
             <ServiciosCompartidosCreacionSection
-              items={items.map(item => ({
-                id: item.id || '',
-                producto_nombre: item.producto_nombre,
-                cantidad: item.cantidad,
-                precio_total: item.precio_total || 0
-              }))}
+              items={mapOrderItemsToProrationItems(items)}
               serviciosCompartidos={serviciosCompartidos}
               acabadosCompartidos={acabadosCompartidos}
               onServiciosChange={setServiciosCompartidos}

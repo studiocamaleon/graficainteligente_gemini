@@ -196,3 +196,24 @@ export function formatProrationForDisplay(
 ): string {
   return `$${monto.toFixed(2)} (${porcentaje.toFixed(1)}%)`;
 }
+
+/**
+ * Convierte items de orden a items para prorrateo
+ * Maneja el mapeo de precio_unitario_final a precio_unitario
+ * y asegura que todos los items tengan un id único
+ */
+export function mapOrderItemsToProrationItems(items: any[]): ItemForProration[] {
+  return items.map((item, index) => {
+    const id = item.id || `temp-item-${index}`;
+    const precioUnitario = item.precio_unitario_final ?? item.precio_unitario ?? 0;
+    const cantidad = item.cantidad ?? 1;
+    const precioTotal = item.precio_total ?? (precioUnitario * cantidad);
+
+    return {
+      id,
+      precio_unitario: precioUnitario,
+      cantidad,
+      precio_total: precioTotal
+    };
+  });
+}

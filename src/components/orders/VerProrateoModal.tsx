@@ -85,6 +85,10 @@ export function VerProrateoModal({
               const item = itemsMap.get(detail.itemId);
               if (!item) return null;
 
+              const precioTotal = item.precio_total ?? 0;
+              const cantidad = item.cantidad ?? 0;
+              const precioUnitario = item.precio_unitario ?? 0;
+
               return (
                 <div
                   key={detail.itemId}
@@ -98,10 +102,10 @@ export function VerProrateoModal({
                         </span>
                       </div>
                       <p className="text-sm text-gray-600 mt-1">
-                        Precio del item: ${item.precio_total.toFixed(2)}
+                        Precio del item: ${precioTotal.toFixed(2)}
                       </p>
                       <p className="text-xs text-gray-500">
-                        Cantidad: {item.cantidad} × ${item.precio_unitario.toFixed(2)}
+                        Cantidad: {cantidad} × ${precioUnitario.toFixed(2)}
                       </p>
                     </div>
                     <div className="text-right">
