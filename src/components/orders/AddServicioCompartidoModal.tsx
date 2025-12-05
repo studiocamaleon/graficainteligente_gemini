@@ -31,7 +31,12 @@ export function AddServicioCompartidoModal({
 }: AddServicioCompartidoModalProps) {
   const { servicios, fetchServicios } = useServicios();
   const { niveles, fetchNivelesByServicio } = useServicioNiveles();
-  const { addServicioCompartido } = useServiciosAcabadosCompartidos({ tipo, id: id || 'temp' });
+
+  // Solo usar el hook de compartidos si NO estamos en modo creación
+  const compartidosHook = modoCreacion
+    ? { addServicioCompartido: async () => {} }
+    : useServiciosAcabadosCompartidos({ tipo, id });
+  const { addServicioCompartido } = compartidosHook;
 
   const [servicioId, setServicioId] = useState('');
   const [nivelId, setNivelId] = useState('');

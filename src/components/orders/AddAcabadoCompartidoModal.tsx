@@ -31,7 +31,12 @@ export function AddAcabadoCompartidoModal({
 }: AddAcabadoCompartidoModalProps) {
   const { acabados, fetchAcabados } = useAcabados();
   const { niveles, fetchNivelesByAcabado } = useAcabadoNiveles();
-  const { addAcabadoCompartido } = useServiciosAcabadosCompartidos({ tipo, id: id || 'temp' });
+
+  // Solo usar el hook de compartidos si NO estamos en modo creación
+  const compartidosHook = modoCreacion
+    ? { addAcabadoCompartido: async () => {} }
+    : useServiciosAcabadosCompartidos({ tipo, id });
+  const { addAcabadoCompartido } = compartidosHook;
 
   const [acabadoId, setAcabadoId] = useState('');
   const [nivelId, setNivelId] = useState('');
