@@ -17,7 +17,8 @@ interface AddServicioCompartidoModalProps {
   id: string;
   items: ItemForProration[];
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (data: any) => void;
+  modoCreacion?: boolean;
 }
 
 export function AddServicioCompartidoModal({
@@ -25,11 +26,12 @@ export function AddServicioCompartidoModal({
   id,
   items,
   onClose,
-  onSuccess
+  onSuccess,
+  modoCreacion = false
 }: AddServicioCompartidoModalProps) {
   const { servicios, fetchServicios } = useServicios();
   const { niveles, fetchNivelesByServicio } = useServicioNiveles();
-  const { addServicioCompartido } = useServiciosAcabadosCompartidos({ tipo, id });
+  const { addServicioCompartido } = useServiciosAcabadosCompartidos({ tipo, id: id || 'temp' });
 
   const [servicioId, setServicioId] = useState('');
   const [nivelId, setNivelId] = useState('');

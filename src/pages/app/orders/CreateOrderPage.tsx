@@ -64,6 +64,10 @@ export function CreateOrderPage() {
   // Estado para órdenes de copiado asociadas
   const [ordenesCopiadoAsociadas, setOrdenesCopiadoAsociadas] = useState<any[]>([]);
 
+  // Estado para servicios y acabados compartidos (antes de crear la orden)
+  const [serviciosCompartidos, setServiciosCompartidos] = useState<any[]>([]);
+  const [acabadosCompartidos, setAcabadosCompartidos] = useState<any[]>([]);
+
   const { updateStepComment, countAllComments } = useItemRoutesComments({
     items,
     setItems,
@@ -477,6 +481,12 @@ export function CreateOrderPage() {
       id: 'items',
       label: 'Items',
       count: items.length,
+    },
+    {
+      id: 'servicios-compartidos',
+      label: 'Servicios Compartidos',
+      count: serviciosCompartidos.length + acabadosCompartidos.length,
+      disabled: items.length === 0,
     },
     {
       id: 'rutas',
