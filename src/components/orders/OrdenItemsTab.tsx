@@ -11,7 +11,7 @@ import { UniversalAddItemWizard } from '../wizard/UniversalAddItemWizard';
 import { AsociarOrdenCopiadoModal } from './AsociarOrdenCopiadoModal';
 import { AddItemPersonalizadoOrdenModal } from './AddItemPersonalizadoOrdenModal';
 import { AplicarServicioMasivoModal, type ServicioSeleccionado } from './AplicarServicioMasivoModal';
-import { CheckSquare, Square, Wand2 } from 'lucide-react';
+import { CheckSquare, Square, Wand2, Wrench } from 'lucide-react';
 
 interface OrdenItem {
   id?: string;
@@ -202,7 +202,7 @@ export function OrdenItemsTab({
       rutas_generadas: itemData.rutas_generadas || [], // Guardar rutas pregeneradas
     } as any;
 
-    setItems(prevItems => [...prevItems, nuevoItem]);
+    setItems([...items, nuevoItem]);
     setShowAddModal(false);
   };
 
@@ -235,7 +235,7 @@ export function OrdenItemsTab({
       },
     };
 
-    setItems(prevItems => [...prevItems, nuevoItem]);
+    setItems([...items, nuevoItem]);
     setShowAddPersonalizadoModal(false);
   };
 
@@ -266,7 +266,7 @@ export function OrdenItemsTab({
     setItems(itemsCopy);
   };
 
-  const renderConfiguracion = (config: any) => {
+  const renderConfiguracion = (config: any, rutasGeneradas?: any[]) => {
     if (!config) return null;
 
     const formatCaraImpresa = (cara: string) => {
@@ -297,10 +297,39 @@ export function OrdenItemsTab({
       return null;
     };
 
+    const getLinkedServices = (rutas: any[]) => {
+      if (!rutas || rutas.length === 0) return [];
+
+      const linkedServices = new Set<string>();
+
+      rutas.forEach(ruta => {
+        if (ruta.source_service_id && ruta.paso_nombre) {
+          // Extract cleaner name if it follows the pattern "[Servicio] Name"
+          const cleanName = ruta.paso_nombre.replace('[Servicio] ', '');
+          linkedServices.add(cleanName);
+        }
+      });
+
+      return Array.from(linkedServices);
+    };
+
+    const linkedServices = getLinkedServices(rutasGeneradas || []);
     const espesorFormateado = formatEspesorOGramaje();
 
     return (
       <div className="space-y-2">
+        {/* Línea 0: Badges de Servicios Vinculados (Externos) */}
+        {linkedServices.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-1.5">
+            {linkedServices.map((serviceName, idx) => (
+              <Badge key={`linked-${idx}`} variant="info" size="sm" className="border-cyan-400 bg-cyan-50 text-cyan-700">
+                <Wrench className="w-3 h-3 mr-1 inline-block" />
+                {serviceName}
+              </Badge>
+            ))}
+          </div>
+        )}
+
         {/* Línea 1: Info básica */}
         <div className="flex flex-wrap gap-1.5 text-sm text-gray-600">
           {(config.medida_ancho || config.medida_alto) && (
@@ -436,7 +465,7 @@ export function OrdenItemsTab({
               {item.descripcion}
             </div>
           ) : (
-            renderConfiguracion(item.configuracion)
+            renderConfiguracion(item.configuracion, item.rutas_generadas)
           )}
         </div>
       ),

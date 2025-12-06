@@ -411,6 +411,11 @@ export function DetalleOrdenCopiado() {
                               {item.tipo_tinta === 'CMYK' ? 'Color' : 'B/N'} -{' '}
                               {item.cara_impresa === 'frente' ? 'Frente' : 'Frente y Dorso'}
                             </div>
+                            {item.descripcion && (
+                              <div className="mt-1 text-xs text-gray-500 italic border-t border-gray-100 pt-1">
+                                Note: {item.descripcion}
+                              </div>
+                            )}
                           </div>
                         );
                       }

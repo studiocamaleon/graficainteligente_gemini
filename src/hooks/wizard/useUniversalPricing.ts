@@ -100,7 +100,8 @@ export function useUniversalPricing() {
           precioBaseTotal,
           mt2,
           metrosLineales,
-          config.cantidad
+          config.cantidad,
+          servicio.cantidad // Cantidad específica del servicio (ej. minutos)
         );
 
         console.log('💰 Impacto total calculado:', impacto, '| Unitario:', impacto / config.cantidad);
@@ -117,7 +118,8 @@ export function useUniversalPricing() {
           precioBaseTotal,
           mt2,
           metrosLineales,
-          config.cantidad
+          config.cantidad,
+          acabado.cantidad // Cantidad específica del acabado
         );
         precioAcabadosTotal += impacto;
       }
@@ -446,7 +448,8 @@ function calcularImpacto(
   precioBaseTotal: number,
   mt2: number,
   metrosLineales: number,
-  cantidad: number
+  cantidad: number, // Cantidad global del producto
+  cantidadServicio: number = 1 // Cantidad específica del servicio (ej. minutos, u otras unidades)
 ): number {
   switch (tipoImpacto) {
     case 'precio_fijo':
@@ -488,10 +491,17 @@ function calcularImpacto(
       return fijoMl + porMl;
 
     case 'por_minuto':
+      // Precio por minuto * minutos (Costo TOTAL por la línea, no por unidad)
+      // NO se multiplica por cantidad global porque es un servicio de tiempo único
+      return valorMonto ? valorMonto * cantidadServicio : 0;
+
+    case 'fijo_minuto':
     case 'fijo_por_minuto':
-      // Por ahora retornamos 0, se implementará más adelante
-      console.warn(`Tipo de impacto "${tipoImpacto}" no implementado aún`);
-      return 0;
+      // (Precio Fijo + (Precio Minuto * minutos)) (Costo TOTAL por la línea)
+      // Asumimos: valorMonto = Fijo, valorPorcentaje = Precio Minuto
+      const fijoMin = valorMonto || 0;
+      const varMin = valorPorcentaje ? valorPorcentaje * cantidadServicio : 0;
+      return fijoMin + varMin;
 
     case 'sin_impacto':
     default:
@@ -725,7 +735,8 @@ export async function calculateLinePrice(
         precioBaseTotal,
         mt2,
         metrosLineales,
-        line.cantidad
+        line.cantidad,
+        servicio.cantidad // Cantidad específica del servicio (ej. minutos)
       );
       precioServiciosTotal += impacto;
     }
@@ -740,7 +751,8 @@ export async function calculateLinePrice(
         precioBaseTotal,
         mt2,
         metrosLineales,
-        line.cantidad
+        line.cantidad,
+        acabado.cantidad // Cantidad específica del acabado
       );
       precioAcabadosTotal += impacto;
     }

@@ -101,7 +101,7 @@ export function useCentroCopiadoOrdenes(params: UseCentroCopiadoOrdenesParams = 
       const from = (page - 1) * itemsPerPage;
       const to = from + itemsPerPage - 1;
 
-      query = query.order('fecha_solicitud', { ascending: false }).range(from, to);
+      query = query.order('fecha_solicitud', { ascending: true }).range(from, to);
 
       const { data, error: fetchError, count } = await query;
 

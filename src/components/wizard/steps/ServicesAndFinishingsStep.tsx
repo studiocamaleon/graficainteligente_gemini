@@ -1,6 +1,8 @@
 import { motion } from 'framer-motion';
 import { Card } from '../../ui/Card';
+
 import { Select } from '../../ui/Select';
+import { Input } from '../../ui/Input';
 import { Badge } from '../../ui/Badge';
 import { Wrench, Sparkles, Check } from 'lucide-react';
 import type { ProductConfiguration } from '../../../hooks/wizard/useProductConfiguration';
@@ -21,6 +23,7 @@ export interface SelectedService {
   tipo_impacto: string;
   valor_porcentaje: number | null;
   valor_monto: number | null;
+  cantidad?: number;
 }
 
 export interface SelectedFinishing {
@@ -31,6 +34,7 @@ export interface SelectedFinishing {
   tipo_impacto: string;
   valor_porcentaje: number | null;
   valor_monto: number | null;
+  cantidad?: number;
 }
 
 export function ServicesAndFinishingsStep({
@@ -145,6 +149,12 @@ export function ServicesAndFinishingsStep({
     onAcabadosChange(updatedAcabados);
   };
 
+  const handleChangeCantidadServicio = (servicioId: string, cantidad: number) => {
+    onServiciosChange(selectedServicios.map(s =>
+      s.servicio_id === servicioId ? { ...s, cantidad } : s
+    ));
+  };
+
   const getImpactoBadgeText = (nivel: { tipo_impacto: string; valor_porcentaje: number | null; valor_monto: number | null }): string => {
     if (nivel.tipo_impacto === 'sin_impacto' || (!nivel.valor_porcentaje && !nivel.valor_monto)) {
       return 'Sin impacto';
@@ -166,23 +176,26 @@ export function ServicesAndFinishingsStep({
       case 'por_metro_lineal':
         return nivel.valor_monto ? `$${nivel.valor_monto.toFixed(2)}/ml` : 'Sin impacto';
 
-      case 'fijo_porcentual':
-        const parts1 = [];
-        if (nivel.valor_monto) parts1.push(`$${nivel.valor_monto.toFixed(2)}`);
-        if (nivel.valor_porcentaje) parts1.push(`+${nivel.valor_porcentaje}%`);
-        return parts1.length > 0 ? parts1.join(' + ') : 'Sin impacto';
+      case 'fijo_porcentual': {
+        const parts = [];
+        if (nivel.valor_monto) parts.push(`$${nivel.valor_monto.toFixed(2)}`);
+        if (nivel.valor_porcentaje) parts.push(`+${nivel.valor_porcentaje}%`);
+        return parts.length > 0 ? parts.join(' + ') : 'Sin impacto';
+      }
 
-      case 'fijo_metro_cuadrado':
-        const parts2 = [];
-        if (nivel.valor_monto) parts2.push(`$${nivel.valor_monto.toFixed(2)}`);
-        if (nivel.valor_porcentaje) parts2.push(`$${nivel.valor_porcentaje.toFixed(2)}/m²`);
-        return parts2.length > 0 ? parts2.join(' + ') : 'Sin impacto';
+      case 'fijo_metro_cuadrado': {
+        const parts = [];
+        if (nivel.valor_monto) parts.push(`$${nivel.valor_monto.toFixed(2)}`);
+        if (nivel.valor_porcentaje) parts.push(`$${nivel.valor_porcentaje.toFixed(2)}/m²`);
+        return parts.length > 0 ? parts.join(' + ') : 'Sin impacto';
+      }
 
-      case 'fijo_metro_lineal':
-        const parts3 = [];
-        if (nivel.valor_monto) parts3.push(`$${nivel.valor_monto.toFixed(2)}`);
-        if (nivel.valor_porcentaje) parts3.push(`$${nivel.valor_porcentaje.toFixed(2)}/ml`);
-        return parts3.length > 0 ? parts3.join(' + ') : 'Sin impacto';
+      case 'fijo_metro_lineal': {
+        const parts = [];
+        if (nivel.valor_monto) parts.push(`$${nivel.valor_monto.toFixed(2)}`);
+        if (nivel.valor_porcentaje) parts.push(`$${nivel.valor_porcentaje.toFixed(2)}/ml`);
+        return parts.length > 0 ? parts.join(' + ') : 'Sin impacto';
+      }
 
       case 'por_minuto':
       case 'fijo_por_minuto':
@@ -216,11 +229,10 @@ export function ServicesAndFinishingsStep({
                   transition={{ duration: 0.2 }}
                 >
                   <Card
-                    className={`p-4 cursor-pointer transition-all ${
-                      isSelected
-                        ? 'border-2 border-blue-500 bg-blue-50'
-                        : 'border border-gray-200 hover:border-blue-300 hover:shadow-md'
-                    }`}
+                    className={`p-4 cursor-pointer transition-all ${isSelected
+                      ? 'border-2 border-blue-500 bg-blue-50'
+                      : 'border border-gray-200 hover:border-blue-300 hover:shadow-md'
+                      }`}
                     onClick={() => handleToggleServicio(servicio)}
                   >
                     <div className="flex items-start justify-between mb-2">
@@ -292,11 +304,10 @@ export function ServicesAndFinishingsStep({
                   transition={{ duration: 0.2 }}
                 >
                   <Card
-                    className={`p-4 cursor-pointer transition-all ${
-                      isSelected
-                        ? 'border-2 border-purple-500 bg-purple-50'
-                        : 'border border-gray-200 hover:border-purple-300 hover:shadow-md'
-                    }`}
+                    className={`p-4 cursor-pointer transition-all ${isSelected
+                      ? 'border-2 border-purple-500 bg-purple-50'
+                      : 'border border-gray-200 hover:border-purple-300 hover:shadow-md'
+                      }`}
                     onClick={() => handleToggleAcabado(acabado)}
                   >
                     <div className="flex items-start justify-between mb-2">

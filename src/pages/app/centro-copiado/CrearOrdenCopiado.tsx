@@ -1,9 +1,8 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Plus, ArrowLeft, Save, ChevronDown, ChevronUp, MessageSquare, Globe, Store, Smartphone } from 'lucide-react';
+import { Plus, ArrowLeft, ChevronDown, ChevronUp, MessageSquare, Globe, Store, Smartphone } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
-import { Input } from '../../../components/ui/Input';
 import { SearchableSelect } from '../../../components/ui/SearchableSelect';
 import { DatePicker } from '../../../components/ui/DatePicker';
 import { Tabs } from '../../../components/ui/Tabs';
@@ -12,7 +11,7 @@ import { CentroCopiadoItemForm, ItemCopiadoConfig } from '../../../components/ce
 import { CentroCopiadoResumenOrden } from '../../../components/centro-copiado/CentroCopiadoResumenOrden';
 import { CentroCopiadoArchivosSection } from '../../../components/centro-copiado/CentroCopiadoArchivosSection';
 import { OrdenPagosTab } from '../../../components/orders/OrdenPagosTab';
-import { PagoFormModal } from '../../../components/orders/PagoFormModal';
+import { PagoFormModal, PagoFormData } from '../../../components/orders/PagoFormModal';
 import { usePageHeader } from '../../../hooks/usePageHeader';
 import { useClients } from '../../../hooks/useClients';
 import { useCentroCopiadoOrdenes } from '../../../hooks/useCentroCopiadoOrdenes';
@@ -87,15 +86,31 @@ export function CrearOrdenCopiado() {
     { value: 'App Mobile', label: 'App Mobile', icon: Smartphone },
   ];
 
+  const [addedItemId, setAddedItemId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (addedItemId) {
+      setTimeout(() => {
+        const element = document.getElementById(`item-${addedItemId}`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          setAddedItemId(null);
+        }
+      }, 100);
+    }
+  }, [items, addedItemId]);
+
   const handleArchivoGenerado = useCallback((archivoId: string, nombreArchivo: string) => {
     // Colapsar todos los items existentes
     setItems((prev) =>
       prev.map(item => ({ ...item, isCollapsed: true }))
     );
 
+    const newItemId = `item-${Date.now()}-${Math.random()}`;
+
     // Crear nuevo item en blanco para que el usuario configure manualmente
     const nuevoItem: ItemWithId = {
-      id: `item-${Date.now()}-${Math.random()}`,
+      id: newItemId,
       config: {
         cantidad_copias: 1,
       },
@@ -104,6 +119,7 @@ export function CrearOrdenCopiado() {
       nombreArchivo,
     };
     setItems((prev) => [...prev, nuevoItem]);
+    setAddedItemId(newItemId);
   }, []);
 
   const agregarItem = useCallback(() => {
@@ -111,14 +127,17 @@ export function CrearOrdenCopiado() {
       prev.map(item => ({ ...item, isCollapsed: true }))
     );
 
+    const newItemId = `item-${Date.now()}-${Math.random()}`;
+
     const nuevoItem: ItemWithId = {
-      id: `item-${Date.now()}-${Math.random()}`,
+      id: newItemId,
       config: {
         cantidad_copias: 1,
       },
       isCollapsed: false,
     };
     setItems((prev) => [...prev, nuevoItem]);
+    setAddedItemId(newItemId);
   }, []);
 
   useEffect(() => {
@@ -503,10 +522,9 @@ export function CrearOrdenCopiado() {
                               onClick={() => setOrigen(canal.value)}
                               className={`
                                 flex items-center justify-center p-4 rounded-lg border-2 transition-all
-                                ${
-                                  isSelected
-                                    ? 'border-blue-500 bg-blue-50 text-blue-700'
-                                    : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                                ${isSelected
+                                  ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                  : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
                                 }
                               `}
                             >
@@ -572,21 +590,22 @@ export function CrearOrdenCopiado() {
 
             <div className="space-y-3">
               {items.map((item, index) => (
-                <CentroCopiadoItemForm
-                  key={item.id}
-                  itemNumber={index + 1}
-                  nombreArchivo={item.nombreArchivo}
-                  descripcion={item.descripcion}
-                  onDescripcionChange={(desc) => {
-                    setItems(prev => prev.map(i => i.id === item.id ? { ...i, descripcion: desc } : i));
-                  }}
-                  value={item.config}
-                  onChange={(config) => actualizarItem(item.id, config)}
-                  onRemove={() => eliminarItem(item.id)}
-                  onPriceCalculated={priceCalculatedCallbacks[item.id]}
-                  isCollapsed={item.isCollapsed}
-                  onToggleCollapse={() => toggleItemCollapse(item.id)}
-                />
+                <div key={item.id} id={`item-${item.id}`}>
+                  <CentroCopiadoItemForm
+                    itemNumber={index + 1}
+                    nombreArchivo={item.nombreArchivo}
+                    descripcion={item.descripcion}
+                    onDescripcionChange={(desc) => {
+                      setItems(prev => prev.map(i => i.id === item.id ? { ...i, descripcion: desc } : i));
+                    }}
+                    value={item.config}
+                    onChange={(config) => actualizarItem(item.id, config)}
+                    onRemove={() => eliminarItem(item.id)}
+                    onPriceCalculated={priceCalculatedCallbacks[item.id]}
+                    isCollapsed={item.isCollapsed}
+                    onToggleCollapse={() => toggleItemCollapse(item.id)}
+                  />
+                </div>
               ))}
             </div>
           </div>
@@ -596,7 +615,7 @@ export function CrearOrdenCopiado() {
               totales={totales}
               pagos={pagos}
               onAgregarPago={handleAgregarPago}
-              onEditarPago={handleEditarPago}
+              onEditarPago={(pago) => handleEditarPago(pago as PagoTemporal)}
               onEliminarPago={handleEliminarPago}
               readOnly={false}
             />
@@ -624,7 +643,7 @@ export function CrearOrdenCopiado() {
         }}
         onSubmit={handleGuardarPago}
         saldoPendiente={totales.saldoPendiente}
-        pago={editingPago}
+        pago={editingPago as unknown as (PagoFormData & { id: string; }) | undefined}
       />
 
       <InfoDialog

@@ -2,7 +2,7 @@ import { ButtonHTMLAttributes, forwardRef } from 'react';
 import { motion, HTMLMotionProps } from 'framer-motion';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'success' | 'warning';
   size?: 'sm' | 'md' | 'lg';
   isLoading?: boolean;
 }
@@ -13,6 +13,8 @@ const variantStyles = {
   outline: 'border-2 border-gray-300 text-gray-700 hover:border-gray-400 hover:bg-gray-50',
   ghost: 'text-gray-700 hover:bg-gray-100',
   danger: 'bg-red-600 text-white hover:bg-red-700 shadow-lg shadow-red-500/30',
+  success: 'bg-gradient-to-r from-emerald-500 to-green-600 text-white hover:from-emerald-600 hover:to-green-700 shadow-lg shadow-green-500/30',
+  warning: 'bg-gradient-to-r from-amber-500 to-orange-600 text-white hover:from-amber-600 hover:to-orange-700 shadow-lg shadow-amber-500/30',
 };
 
 const sizeStyles = {

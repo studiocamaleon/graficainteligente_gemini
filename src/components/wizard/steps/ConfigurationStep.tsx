@@ -40,6 +40,7 @@ export interface MeasurementLine {
     tipo_impacto: string;
     valor_porcentaje: number | null;
     valor_monto: number | null;
+    cantidad?: number;
   }>;
 
   // Acabados aplicables a esta línea
@@ -51,6 +52,7 @@ export interface MeasurementLine {
     tipo_impacto: string;
     valor_porcentaje: number | null;
     valor_monto: number | null;
+    cantidad?: number;
   }>;
 
   // Precios calculados para esta línea
@@ -368,11 +370,10 @@ export function ConfigurationStep({
                   return (
                     <Card
                       key={`${medida.ancho}x${medida.alto}`}
-                      className={`p-4 cursor-pointer transition-all ${
-                        isSelected
+                      className={`p-4 cursor-pointer transition-all ${isSelected
                           ? 'ring-2 ring-blue-600 bg-blue-50 border-blue-600'
                           : 'hover:border-blue-300 hover:shadow-md'
-                      }`}
+                        }`}
                       onClick={() => handleChange({ medida_ancho: medida.ancho, medida_alto: medida.alto })}
                     >
                       <div className="flex items-center justify-between">
@@ -407,11 +408,10 @@ export function ConfigurationStep({
             </label>
             <div className="grid grid-cols-2 gap-4">
               <Card
-                className={`p-4 cursor-pointer transition-all ${
-                  localConfig.usa_material_catalogo === true
+                className={`p-4 cursor-pointer transition-all ${localConfig.usa_material_catalogo === true
                     ? 'ring-2 ring-blue-600 bg-blue-50 border-blue-600'
                     : 'hover:border-blue-300 hover:shadow-md'
-                }`}
+                  }`}
                 onClick={() => handleChange({
                   usa_material_catalogo: true,
                   material_id: null,
@@ -430,11 +430,10 @@ export function ConfigurationStep({
               </Card>
 
               <Card
-                className={`p-4 cursor-pointer transition-all ${
-                  localConfig.usa_material_catalogo === false
+                className={`p-4 cursor-pointer transition-all ${localConfig.usa_material_catalogo === false
                     ? 'ring-2 ring-blue-600 bg-blue-50 border-blue-600'
                     : 'hover:border-blue-300 hover:shadow-md'
-                }`}
+                  }`}
                 onClick={() => handleChange({
                   usa_material_catalogo: false,
                   material_id: null,
@@ -535,11 +534,10 @@ export function ConfigurationStep({
                   return (
                     <Card
                       key={variante}
-                      className={`p-4 cursor-pointer transition-all ${
-                        isSelected
+                      className={`p-4 cursor-pointer transition-all ${isSelected
                           ? 'ring-2 ring-blue-600 bg-blue-50 border-blue-600'
                           : 'hover:border-blue-300 hover:shadow-md'
-                      }`}
+                        }`}
                       onClick={() => handleVarianteSelection(variante)}
                     >
                       <div className="flex items-center justify-between">
@@ -575,11 +573,10 @@ export function ConfigurationStep({
                     return (
                       <Card
                         key={espesor}
-                        className={`p-4 cursor-pointer transition-all ${
-                          isSelected
+                        className={`p-4 cursor-pointer transition-all ${isSelected
                             ? 'ring-2 ring-blue-600 bg-blue-50 border-blue-600'
                             : 'hover:border-blue-300 hover:shadow-md'
-                        }`}
+                          }`}
                         onClick={() => handleEspesorSelection(espesor)}
                       >
                         <div className="flex flex-col items-center justify-center">
@@ -644,11 +641,10 @@ export function ConfigurationStep({
                 return (
                   <Card
                     key={material.id}
-                    className={`p-4 cursor-pointer transition-all ${
-                      isSelected
+                    className={`p-4 cursor-pointer transition-all ${isSelected
                         ? 'ring-2 ring-blue-600 bg-blue-50 border-blue-600'
                         : 'hover:border-blue-300 hover:shadow-md'
-                    }`}
+                      }`}
                     onClick={() => {
                       handleChange({
                         material_id: material.material_id,
@@ -707,11 +703,10 @@ export function ConfigurationStep({
                 return (
                   <Card
                     key={material.id}
-                    className={`p-4 cursor-pointer transition-all ${
-                      isSelected
+                    className={`p-4 cursor-pointer transition-all ${isSelected
                         ? 'ring-2 ring-blue-600 bg-blue-50 border-blue-600'
                         : 'hover:border-blue-300 hover:shadow-md'
-                    }`}
+                      }`}
                     onClick={() => {
                       handleChange({
                         material_id: material.material_id,
@@ -767,11 +762,10 @@ export function ConfigurationStep({
                     return (
                       <Card
                         key={tec.tecnologia_id}
-                        className={`p-4 cursor-pointer transition-all ${
-                          isSelected
+                        className={`p-4 cursor-pointer transition-all ${isSelected
                             ? 'ring-2 ring-blue-600 bg-blue-50 border-blue-600'
                             : 'hover:border-blue-300 hover:shadow-md'
-                        }`}
+                          }`}
                         onClick={() => {
                           handleChange({
                             tecnologia_id: tec.tecnologia_id,
@@ -820,11 +814,10 @@ export function ConfigurationStep({
                       return (
                         <Card
                           key={tinta}
-                          className={`p-4 cursor-pointer transition-all ${
-                            isSelected
+                          className={`p-4 cursor-pointer transition-all ${isSelected
                               ? 'ring-2 ring-blue-600 bg-blue-50 border-blue-600'
                               : 'hover:border-blue-300 hover:shadow-md'
-                          }`}
+                            }`}
                           onClick={() => {
                             handleChange({
                               tinta: tinta,
@@ -854,31 +847,31 @@ export function ConfigurationStep({
 
       {/* Material auto-seleccionado (solo info) - Para productos con múltiples líneas y 1 solo material */}
       {config.permite_multiples_lineas &&
-       localConfig.material_nombre &&
-       config.materiales &&
-       config.materiales.length === 1 && (
-        <Card className="p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Layers className="w-5 h-5 text-blue-600" />
-            <h3 className="text-lg font-semibold text-gray-900">Material</h3>
-          </div>
+        localConfig.material_nombre &&
+        config.materiales &&
+        config.materiales.length === 1 && (
+          <Card className="p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Layers className="w-5 h-5 text-blue-600" />
+              <h3 className="text-lg font-semibold text-gray-900">Material</h3>
+            </div>
 
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <p className="text-sm text-gray-700">
-              <span className="font-semibold">{localConfig.material_nombre}</span>
-              {localConfig.variante_nombre && ` - ${localConfig.variante_nombre}`}
-              {localConfig.espesor && localConfig.unidad_espesor && (
-                <span className="text-gray-600 ml-2">
-                  ({localConfig.espesor}{localConfig.unidad_espesor})
-                </span>
-              )}
-            </p>
-            <p className="text-xs text-gray-500 mt-1">
-              Material asignado a este producto
-            </p>
-          </div>
-        </Card>
-      )}
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <p className="text-sm text-gray-700">
+                <span className="font-semibold">{localConfig.material_nombre}</span>
+                {localConfig.variante_nombre && ` - ${localConfig.variante_nombre}`}
+                {localConfig.espesor && localConfig.unidad_espesor && (
+                  <span className="text-gray-600 ml-2">
+                    ({localConfig.espesor}{localConfig.unidad_espesor})
+                  </span>
+                )}
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                Material asignado a este producto
+              </p>
+            </div>
+          </Card>
+        )}
 
       {/* M\u00faltiples l\u00edneas de medidas (para Gran Formato, Materiales R\u00edgidos y Plotter) */}
       {config.permite_multiples_lineas && (
@@ -922,11 +915,10 @@ export function ConfigurationStep({
           <div className="grid grid-cols-2 gap-4">
             {config.caras_impresas.includes('solo_frente') && (
               <Card
-                className={`p-4 cursor-pointer transition-all ${
-                  localConfig.cara_impresa === 'solo_frente'
+                className={`p-4 cursor-pointer transition-all ${localConfig.cara_impresa === 'solo_frente'
                     ? 'ring-2 ring-blue-600 bg-blue-50 border-blue-600'
                     : 'hover:border-blue-300 hover:shadow-md'
-                }`}
+                  }`}
                 onClick={() => handleChange({ cara_impresa: 'solo_frente' })}
               >
                 <div className="flex items-center justify-between">
@@ -943,11 +935,10 @@ export function ConfigurationStep({
 
             {config.caras_impresas.includes('frente_y_dorso') && (
               <Card
-                className={`p-4 cursor-pointer transition-all ${
-                  localConfig.cara_impresa === 'frente_y_dorso'
+                className={`p-4 cursor-pointer transition-all ${localConfig.cara_impresa === 'frente_y_dorso'
                     ? 'ring-2 ring-blue-600 bg-blue-50 border-blue-600'
                     : 'hover:border-blue-300 hover:shadow-md'
-                }`}
+                  }`}
                 onClick={() => handleChange({ cara_impresa: 'frente_y_dorso' })}
               >
                 <div className="flex items-center justify-between">
@@ -976,11 +967,10 @@ export function ConfigurationStep({
           <div className="grid grid-cols-3 gap-4">
             {config.tipo_copia.includes('duplicado') && (
               <Card
-                className={`p-4 cursor-pointer transition-all ${
-                  localConfig.tipo_copia === 'duplicado'
+                className={`p-4 cursor-pointer transition-all ${localConfig.tipo_copia === 'duplicado'
                     ? 'border-2 border-blue-600 bg-blue-50'
                     : 'border border-gray-200 hover:border-blue-300'
-                }`}
+                  }`}
                 onClick={() => handleChange({ tipo_copia: 'duplicado' })}
               >
                 <div className="text-center">
@@ -995,11 +985,10 @@ export function ConfigurationStep({
 
             {config.tipo_copia.includes('triplicado') && (
               <Card
-                className={`p-4 cursor-pointer transition-all ${
-                  localConfig.tipo_copia === 'triplicado'
+                className={`p-4 cursor-pointer transition-all ${localConfig.tipo_copia === 'triplicado'
                     ? 'border-2 border-blue-600 bg-blue-50'
                     : 'border border-gray-200 hover:border-blue-300'
-                }`}
+                  }`}
                 onClick={() => handleChange({ tipo_copia: 'triplicado' })}
               >
                 <div className="text-center">
@@ -1014,11 +1003,10 @@ export function ConfigurationStep({
 
             {config.tipo_copia.includes('cuadruplicado') && (
               <Card
-                className={`p-4 cursor-pointer transition-all ${
-                  localConfig.tipo_copia === 'cuadruplicado'
+                className={`p-4 cursor-pointer transition-all ${localConfig.tipo_copia === 'cuadruplicado'
                     ? 'border-2 border-blue-600 bg-blue-50'
                     : 'border border-gray-200 hover:border-blue-300'
-                }`}
+                  }`}
                 onClick={() => handleChange({ tipo_copia: 'cuadruplicado' })}
               >
                 <div className="text-center">

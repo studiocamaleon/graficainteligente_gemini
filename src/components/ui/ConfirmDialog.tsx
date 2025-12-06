@@ -1,10 +1,10 @@
 import { ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertTriangle, Info, Trash2, Power, X } from 'lucide-react';
+import { AlertTriangle, Info, Trash2, CheckCircle } from 'lucide-react';
 import { Button } from './Button';
 
-export type ConfirmDialogVariant = 'danger' | 'warning' | 'info';
+export type ConfirmDialogVariant = 'danger' | 'warning' | 'info' | 'success';
 
 interface ConfirmDialogProps {
   isOpen: boolean;
@@ -37,6 +37,12 @@ const variantStyles = {
     iconColor: 'text-blue-600',
     buttonVariant: 'primary' as const,
     defaultIcon: <Info className="w-6 h-6" />,
+  },
+  success: {
+    iconBg: 'bg-green-100',
+    iconColor: 'text-green-600',
+    buttonVariant: 'success' as const,
+    defaultIcon: <CheckCircle className="w-6 h-6" />,
   },
 };
 

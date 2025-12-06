@@ -297,6 +297,7 @@ export function MeasurementLinesTable({
         isOpen={isModalOpen}
         onClose={closeModal}
         config={config}
+        baseConfig={baseConfig}
         selectedServicios={selectedServicios}
         selectedAcabados={selectedAcabados}
         existingLine={editingLine}

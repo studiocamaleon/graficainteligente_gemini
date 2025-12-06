@@ -20,7 +20,8 @@ import {
   Share2,
   Copy,
   Check,
-  Download
+  Download,
+  Wrench
 } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
@@ -407,6 +408,25 @@ export function OrderDetailPage() {
                   Eliminar
                 </Button>
               )}
+              {/* Botón Entregar Orden (Solo si está Finalizada) */}
+              {orden.estado === 'finalizada' && (
+                <Button
+                  variant="success" // O 'primary' si prefieres azul, pero verde indica completitud
+                  size="sm"
+                  onClick={() => {
+                    confirmAction({
+                      title: 'Marcar como Entregada',
+                      message: '¿Confirmas que la orden ha sido entregada al cliente? Esta acción moverá la orden a la columna "Entregada".',
+                      confirmText: 'Marcar Entregada',
+                      variant: 'success', // Coincide con el estilo del botón
+                      onConfirm: () => handleChangeEstado('entregada')
+                    });
+                  }}
+                >
+                  <Check className="w-4 h-4 mr-2" />
+                  Entregar Orden
+                </Button>
+              )}
             </div>
           </div>
 
@@ -586,6 +606,20 @@ export function OrderDetailPage() {
                       }).join(', ')
                       : null;
 
+                    // Helper para servicios vinculados (externos)
+                    const getLinkedServices = (rutas: any[]) => {
+                      if (!rutas || rutas.length === 0) return [];
+                      const linked = new Set<string>();
+                      rutas.forEach(ruta => {
+                        if (ruta.source_service_id && ruta.paso_nombre) {
+                          const cleanName = ruta.paso_nombre.replace('[Servicio] ', '');
+                          linked.add(cleanName);
+                        }
+                      });
+                      return Array.from(linked);
+                    };
+                    const linkedServices = getLinkedServices(item.rutas_generadas || []);
+
                     return (
                       <motion.div
                         key={item.id}
@@ -600,6 +634,17 @@ export function OrderDetailPage() {
                           <h4 className="font-semibold text-gray-900">
                             {item.producto_nombre || 'Producto'}
                           </h4>
+                          {/* Badges de Servicios Vinculados (Display Compacto junto al título o abajo) */}
+                          {linkedServices.length > 0 && (
+                            <div className="flex gap-1">
+                              {linkedServices.map((serviceName, idx) => (
+                                <Badge key={`linked-${idx}`} variant="info" size="sm" className="border-cyan-400 bg-cyan-50 text-cyan-700 text-xs">
+                                  <Wrench className="w-3 h-3 mr-1 inline-block" />
+                                  {serviceName}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
                           {item.producto_categoria && (
                             <Badge variant="secondary" className="text-xs">
                               {item.producto_categoria}
@@ -785,49 +830,58 @@ export function OrderDetailPage() {
                 {canViewPrices && (
                   <div className="border-t border-gray-200 pt-4 mt-6">
                     <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-                      {/* Subtotal */}
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-600">Subtotal</span>
-                        <span className="text-sm font-medium text-gray-900">
-                          ${Number(orden.subtotal).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                        </span>
-                      </div>
-
-                      {/* Descuentos (si hay) */}
-                      {Number(orden.total_descuentos || 0) > 0 && (
+                      {/* Lógica de Totales según Factura */}
+                      {!orden.requiere_factura ? (
+                        /* Caso SIN Factura: Solo mostrar Total Final (ocultar subtotal interno incorrecto) */
+                        <div className="flex justify-between items-center pt-3 border-gray-300">
+                          <span className="text-base font-semibold text-gray-900">Total</span>
+                          <span className="text-2xl font-bold text-blue-600">
+                            ${Number(orden.total).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                      ) : (
+                        /* Caso CON Factura: Mostrar todo el desglose */
                         <>
+                          {/* Subtotal */}
                           <div className="flex justify-between items-center">
-                            <span className="text-sm text-gray-600">Descuento</span>
-                            <span className="text-sm font-medium text-red-600">
-                              -${Number(orden.total_descuentos).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                            <span className="text-sm text-gray-600">Subtotal</span>
+                            <span className="text-sm font-medium text-gray-900">
+                              ${Number(orden.subtotal).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                             </span>
                           </div>
+
+                          {/* Descuentos (si hay) */}
+                          {Number(orden.total_descuentos || 0) > 0 && (
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-gray-600">Descuento</span>
+                              <span className="text-sm font-medium text-red-600">
+                                -${Number(orden.total_descuentos).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                              </span>
+                            </div>
+                          )}
+
                           <div className="flex justify-between items-center pt-1 border-t border-gray-200">
                             <span className="text-sm text-gray-600">Base Imponible</span>
                             <span className="text-sm font-medium text-gray-900">
                               ${(Number(orden.subtotal) - Number(orden.total_descuentos)).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                             </span>
                           </div>
+
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-gray-600">IVA 21%</span>
+                            <span className="text-sm font-medium text-blue-600">
+                              +${Number(orden.subtotal_iva || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                            </span>
+                          </div>
+
+                          <div className="flex justify-between items-center pt-3 border-t-2 border-gray-300">
+                            <span className="text-base font-semibold text-gray-900">Total</span>
+                            <span className="text-2xl font-bold text-blue-600">
+                              ${Number(orden.total).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                            </span>
+                          </div>
                         </>
                       )}
-
-                      {/* IVA (si requiere factura) */}
-                      {orden.requiere_factura && (
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm text-gray-600">IVA 21%</span>
-                          <span className="text-sm font-medium text-blue-600">
-                            +${Number(orden.subtotal_iva || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                          </span>
-                        </div>
-                      )}
-
-                      {/* Total (destacado) */}
-                      <div className="flex justify-between items-center pt-3 border-t-2 border-gray-300">
-                        <span className="text-base font-semibold text-gray-900">Total</span>
-                        <span className="text-2xl font-bold text-blue-600">
-                          ${Number(orden.total).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                        </span>
-                      </div>
                     </div>
                   </div>
                 )}

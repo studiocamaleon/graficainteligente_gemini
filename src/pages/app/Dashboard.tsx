@@ -1,4 +1,5 @@
-import { Package, Clock, TrendingUp, AlertCircle, RefreshCw } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Package, Clock, TrendingUp, AlertCircle, RefreshCw, Truck } from 'lucide-react';
 import { usePageHeader } from '../../hooks/usePageHeader';
 import { useDashboardData } from '../../hooks/useDashboardData';
 import { DashboardStatCard } from '../../components/dashboard/DashboardStatCard';
@@ -8,6 +9,7 @@ import { ActividadRecienteList } from '../../components/dashboard/ActividadRecie
 import { Button } from '../../components/ui/Button';
 
 export function Dashboard() {
+  const navigate = useNavigate();
   usePageHeader('Centro de Control');
   const { loading, stats, tasaCumplimiento, proximasEntregas, actividadReciente, refresh } = useDashboardData();
 
@@ -40,15 +42,25 @@ export function Dashboard() {
             })}
           </p>
         </div>
-        <Button
-          onClick={refresh}
-          variant="outline"
-          size="sm"
-          disabled={loading}
-        >
-          <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          Actualizar
-        </Button>
+        <div className="flex gap-3">
+          <Button
+            onClick={() => navigate('/app/pending-deliveries')}
+            variant="success"
+            size="sm"
+          >
+            <Truck className="w-4 h-4 mr-2" />
+            Gestionar Entregas
+          </Button>
+          <Button
+            onClick={refresh}
+            variant="outline"
+            size="sm"
+            disabled={loading}
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Actualizar
+          </Button>
+        </div>
       </div>
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">

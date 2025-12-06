@@ -56,6 +56,7 @@ import { JobsMonitor } from './pages/public/JobsMonitor';
 import PresupuestoTracking from './pages/public/PresupuestoTracking';
 import { FacturaRedirect } from './pages/public/FacturaRedirect';
 import { ClienteRegistro } from './pages/public/ClienteRegistro';
+import { PendingDeliveriesPage } from './pages/app/delivery/PendingDeliveriesPage';
 
 function AppRoutes() {
   const { user, loading, isAuthenticating } = useAuth();
@@ -288,6 +289,14 @@ function AppRoutes() {
                   element={
                     <ProtectedModuleRoute moduleId="centro-copiado-ordenes">
                       <DetalleOrdenCopiado />
+                    </ProtectedModuleRoute>
+                  }
+                />
+                <Route
+                  path="pending-deliveries"
+                  element={
+                    <ProtectedModuleRoute moduleId="orders-lista">
+                      <PendingDeliveriesPage />
                     </ProtectedModuleRoute>
                   }
                 />

@@ -645,6 +645,7 @@ async function loadServiciosForProduct(
             case 'fijo_metro_cuadrado':
             case 'fijo_metro_lineal':
             case 'fijo_por_minuto':
+            case 'fijo_minuto':
               valor_monto = n.valor_impacto;
               valor_porcentaje = n.valor_impacto_secundario;
               break;

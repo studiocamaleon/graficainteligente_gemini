@@ -424,8 +424,10 @@ export function usePriceCalculator() {
           return valorImpacto;
 
         case 'por_minuto':
+          return valorImpacto * cantidad;
+
         case 'fijo_minuto':
-          return valorImpacto;
+          return valorImpacto + (valorImpactoSecundario || 0) * cantidad;
 
         default:
           return 0;

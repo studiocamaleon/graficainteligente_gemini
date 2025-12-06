@@ -2,16 +2,21 @@ import { useState, useEffect } from 'react';
 import { Modal } from '../../ui/Modal';
 import { Button } from '../../ui/Button';
 import { Input } from '../../ui/Input';
+import { Select } from '../../ui/Select';
 import { Badge } from '../../ui/Badge';
-import { Ruler, Package, Wrench, Sparkles, AlertCircle, Maximize2 } from 'lucide-react';
+
+import { Ruler, Package, Wrench, Sparkles, AlertCircle, Maximize2, Loader2, DollarSign } from 'lucide-react';
 import type { ProductConfiguration } from '../../../hooks/wizard/useProductConfiguration';
-import type { MeasurementLine } from './ConfigurationStep';
+import type { MeasurementLine, SelectedConfiguration } from './ConfigurationStep';
 import type { SelectedService, SelectedFinishing } from './ServicesAndFinishingsStep';
+import { useUniversalPricing } from '../../../hooks/wizard/useUniversalPricing';
 
 interface AddLineModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onClose: () => void;
   config: ProductConfiguration;
+  baseConfig: Omit<SelectedConfiguration, 'lineas_medidas'>;
   selectedServicios: SelectedService[];
   selectedAcabados: SelectedFinishing[];
   existingLine?: MeasurementLine;
@@ -22,6 +27,7 @@ export function AddLineModal({
   isOpen,
   onClose,
   config,
+  baseConfig,
   selectedServicios,
   selectedAcabados,
   existingLine,
@@ -42,6 +48,7 @@ export function AddLineModal({
     tipo_impacto: string;
     valor_porcentaje: number | null;
     valor_monto: number | null;
+    cantidad?: number;
   }>>([]);
   const [acabadosSeleccionados, setAcabadosSeleccionados] = useState<Array<{
     acabado_id: string;
@@ -51,6 +58,7 @@ export function AddLineModal({
     tipo_impacto: string;
     valor_porcentaje: number | null;
     valor_monto: number | null;
+    cantidad?: number;
   }>>([]);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -84,6 +92,78 @@ export function AddLineModal({
   }, [isOpen]);
 
   const mt2Calculado = ancho && alto ? (ancho * alto) / 10000 : 0;
+  const mt2Total = mt2Calculado * cantidad;
+
+  // Real-time Pricing Logic
+  const { calculatePrice, isCalculating } = useUniversalPricing();
+  const [precioCalculado, setPrecioCalculado] = useState<{
+    precio_base: number;
+    precio_servicios: number;
+    precio_acabados: number;
+    precio_total: number;
+  } | null>(null);
+
+  useEffect(() => {
+    const calcularPrecioEnVivo = async () => {
+      // Solo calcular si tenemos los datos mínimos requeridos
+      const datosCompletos = config.tipo_venta_real === 'mt2'
+        ? (ancho > 0 && alto > 0)
+        : (config.tipo_venta_real === 'mt_lineal' ? (anchoSeleccionado && metrosLineales > 0) : true);
+
+      if (!datosCompletos || cantidad <= 0) {
+        setPrecioCalculado(null);
+        return;
+      }
+
+      // Constuir configuración temporal para el cálculo
+      const tempConfig: SelectedConfiguration = {
+        ...baseConfig,
+        lineas_medidas: [], // No se usa para el cálculo unitario
+        cantidad: cantidad,
+        medida_ancho: config.tipo_venta_real === 'mt2' ? ancho : (anchoSeleccionado || 0),
+        medida_alto: config.tipo_venta_real === 'mt2' ? alto : (metrosLineales * 100), // Convert m to cm for height logic if needed? Assuming height is used for linear meters logic in backend differently or same? 
+        // Wait, for mt_lineal: ancho is width, height is length? Or vice versa?
+        // In ConfigurationStep logic: 
+        // case 'Impresion Gran Formato': precioBase = await getPrecioGranFormato(productId, config);
+        // getPrecioGranFormato uses: (config.medida_ancho / 100) * (config.medida_alto / 100) for M2.
+        // If type is 'mt_lineal', one dimension is fixed. 
+        // Let's assume standard passing:
+        // For mt2: measure_width = ancho, measure_height = alto.
+        // For mt_lineal: measure_width = ancho_seleccionado, measure_height = metrosLineales * 100 (converting m to cm).
+      };
+
+      // Ajuste específico para metros lineales si es necesario que la altura sea en cm
+      if (config.tipo_venta_real === 'mt_lineal') {
+        tempConfig.medida_alto = metrosLineales * 100;
+      }
+
+      const result = await calculatePrice(
+        config.id,
+        config.categoria as any,
+        tempConfig,
+        serviciosSeleccionados,
+        acabadosSeleccionados
+      );
+
+      if (result.tiene_precio) {
+        setPrecioCalculado({
+          precio_base: (result.precio_base || 0) * cantidad,
+          precio_servicios: result.precio_servicios * cantidad,
+          precio_acabados: result.precio_acabados * cantidad,
+          precio_total: (result.precio_total || 0) * cantidad
+        });
+      } else {
+        setPrecioCalculado(null);
+      }
+    };
+
+    const timer = setTimeout(() => {
+      calcularPrecioEnVivo();
+    }, 500); // Debounce
+
+    return () => clearTimeout(timer);
+  }, [ancho, alto, anchoSeleccionado, metrosLineales, cantidad, serviciosSeleccionados, acabadosSeleccionados, baseConfig, config]);
+
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -137,7 +217,8 @@ export function AddLineModal({
         nivel_nombre: servicioConfig.tiene_niveles ? nivel.nombre : null,
         tipo_impacto: nivel.tipo_impacto,
         valor_porcentaje: nivel.valor_porcentaje,
-        valor_monto: nivel.valor_monto
+        valor_monto: nivel.valor_monto,
+        cantidad: 1
       }]);
     }
   };
@@ -154,7 +235,8 @@ export function AddLineModal({
           nivel_nombre: nivel.nombre,
           tipo_impacto: nivel.tipo_impacto,
           valor_porcentaje: nivel.valor_porcentaje,
-          valor_monto: nivel.valor_monto
+          valor_monto: nivel.valor_monto,
+          cantidad: s.cantidad || 1
         };
       }
       return s;
@@ -199,12 +281,35 @@ export function AddLineModal({
     }));
   };
 
+  const handleChangeCantidadServicio = (servicioId: string, nuevaCantidad: number) => {
+    setServiciosSeleccionados(prev => prev.map(s => {
+      if (s.servicio_id === servicioId) {
+        return { ...s, cantidad: nuevaCantidad };
+      }
+      return s;
+    }));
+  };
+
   const formatImpacto = (item: { tipo_impacto: string; valor_monto: number | null; valor_porcentaje: number | null }) => {
+    if (!item.tipo_impacto || item.tipo_impacto === 'sin_impacto') return '';
+
+    if (item.tipo_impacto === 'fijo_minuto' || item.tipo_impacto === 'fijo_por_minuto') {
+      const parts = [];
+      if (item.valor_monto) parts.push(`$${item.valor_monto.toFixed(2)}`);
+      if (item.valor_porcentaje) parts.push(`$${item.valor_porcentaje.toFixed(2)}/min`);
+      return parts.length > 0 ? parts.join(' + ') : '';
+    }
+
+    if (item.tipo_impacto === 'por_minuto' || item.tipo_impacto.includes('minuto')) {
+      return item.valor_monto ? `+$${item.valor_monto.toFixed(2)} /min` : '';
+    }
+
     if (item.tipo_impacto === 'precio_fijo' && item.valor_monto) return `+$${item.valor_monto.toFixed(2)}`;
     if (item.tipo_impacto === 'por_unidad' && item.valor_monto) return `+$${item.valor_monto.toFixed(2)} /u`;
     if (item.tipo_impacto === 'porcentual' && item.valor_porcentaje) return `+${item.valor_porcentaje}%`;
     if (item.tipo_impacto === 'por_mt2' && item.valor_monto) return `+$${item.valor_monto.toFixed(2)} /m²`;
     if (item.tipo_impacto === 'por_metro_lineal' && item.valor_monto) return `+$${item.valor_monto.toFixed(2)} /ml`;
+
     return '';
   };
 
@@ -222,7 +327,7 @@ export function AddLineModal({
           <div className="grid grid-cols-12 gap-4 items-start">
 
             {/* Medidas (8 cols) */}
-            <div className={`col-span-${config.tipo_venta_real === 'mt2' ? '8' : '8'} grid grid-cols-2 gap-3`}>
+            <div className="col-span-8 grid grid-cols-2 gap-3">
               {config.tipo_venta_real === 'mt2' ? (
                 <>
                   <div className="space-y-1">
@@ -307,8 +412,13 @@ export function AddLineModal({
               <div className="flex items-center gap-2">
                 <span className="text-gray-500 font-medium">Cálculo:</span>
                 <Badge variant="default" className="bg-gray-200 text-gray-800 hover:bg-gray-300 border-0">
-                  {mt2Calculado.toFixed(2)} m²
+                  {mt2Calculado.toFixed(2)} m² / u
                 </Badge>
+                {cantidad > 1 && (
+                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                    Total: {mt2Total.toFixed(2)} m²
+                  </Badge>
+                )}
               </div>
 
               {config.cantidad_minima && mt2Calculado < config.cantidad_minima && (
@@ -359,23 +469,35 @@ export function AddLineModal({
                               {servicio.servicio_nombre}
                             </div>
 
-                            {/* Niveles Selector Compacto */}
+                            {/* Niveles Selector (Dropdown) */}
                             {servicio.tiene_niveles && servicio.niveles && servicio.niveles.length > 1 && isSelected && (
-                              <div className="mt-2 space-y-1">
-                                {servicio.niveles.map(nivel => (
-                                  <label key={nivel.id} className="flex items-center gap-2 cursor-pointer group">
-                                    <input
-                                      type="radio"
-                                      name={`srv-${servicio.servicio_id}`}
-                                      checked={selectedData?.nivel_id === nivel.id}
-                                      onChange={() => handleChangeNivelServicio(servicio, nivel.id)}
-                                      className="text-blue-600 w-3 h-3 border-gray-300 focus:ring-1 focus:ring-blue-500"
-                                    />
-                                    <span className="text-xs text-gray-600 group-hover:text-gray-900">
-                                      {nivel.nombre} <span className="text-gray-400">({formatImpacto(nivel)})</span>
-                                    </span>
-                                  </label>
-                                ))}
+                              <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+                                <Select
+                                  value={selectedData?.nivel_id || ''}
+                                  onChange={(value) => handleChangeNivelServicio(servicio, value)}
+                                  placeholder="Seleccionar nivel..."
+                                  className="w-full text-sm"
+                                >
+                                  {servicio.niveles.map(nivel => (
+                                    <option key={nivel.id} value={nivel.id}>
+                                      {nivel.nombre} ({formatImpacto(nivel)})
+                                    </option>
+                                  ))}
+                                </Select>
+                              </div>
+                            )}
+                            {/* Minute Input for Time-Based Services */}
+                            {isSelected && (selectedData?.tipo_impacto === 'por_minuto' || selectedData?.tipo_impacto?.includes('minuto')) && (
+                              <div className="mt-2 pt-2 border-t border-gray-100">
+                                <Input
+                                  label="Minutos"
+                                  type="number"
+                                  min="1"
+                                  value={selectedData.cantidad || 1}
+                                  onClick={(e) => e.stopPropagation()}
+                                  onChange={(e) => handleChangeCantidadServicio(servicio.servicio_id, parseInt(e.target.value) || 1)}
+                                  className="text-sm h-8"
+                                />
                               </div>
                             )}
                           </div>
@@ -448,6 +570,43 @@ export function AddLineModal({
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* PRICE SUMMARY FOOTER */}
+        {precioCalculado && (
+          <div className="mt-4 bg-gray-900 rounded-xl p-4 text-white shadow-lg">
+            <div className="flex items-center justify-between mb-3 text-xs text-gray-400 border-b border-gray-700 pb-2">
+              <span>Desglose de Costos</span>
+              {isCalculating && <Loader2 className="w-3 h-3 animate-spin" />}
+            </div>
+
+            <div className="grid grid-cols-2 gap-y-1 text-sm mb-3">
+              <div className="text-gray-400">Precio Base:</div>
+              <div className="text-right font-medium">${precioCalculado.precio_base.toFixed(2)}</div>
+
+              {precioCalculado.precio_servicios > 0 && (
+                <>
+                  <div className="text-gray-400">Servicios:</div>
+                  <div className="text-right font-medium text-blue-300">+${precioCalculado.precio_servicios.toFixed(2)}</div>
+                </>
+              )}
+
+              {precioCalculado.precio_acabados > 0 && (
+                <>
+                  <div className="text-gray-400">Acabados:</div>
+                  <div className="text-right font-medium text-purple-300">+${precioCalculado.precio_acabados.toFixed(2)}</div>
+                </>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between pt-2 border-t border-gray-700">
+              <div className="text-sm font-semibold text-gray-300">Total Estimado</div>
+              <div className="text-xl font-bold text-white flex items-center">
+                <DollarSign className="w-5 h-5 mr-0.5 text-green-400" />
+                {precioCalculado.precio_total.toFixed(2)}
+              </div>
+            </div>
           </div>
         )}
 

@@ -6,7 +6,7 @@ import { useMediosCobro } from '../../hooks/useMediosCobro';
 import { MedioCobroSelector } from '../medios-cobro/MedioCobroSelector';
 import { getArgentinaDateString, isDateInFuture } from '../../utils/dates';
 
-interface PagoFormData {
+export interface PagoFormData {
   fecha_pago: string;
   monto: number;
   medio_cobro_id: string;
@@ -261,18 +261,15 @@ export function PagoFormModal({
               </div>
 
               {/* Saldo Restante */}
-              <div className={`border rounded-lg p-3 ${
-                saldoRestante > 0 ? 'bg-amber-50 border-amber-200' : 'bg-green-50 border-green-200'
-              }`}>
+              <div className={`border rounded-lg p-3 ${saldoRestante > 0 ? 'bg-amber-50 border-amber-200' : 'bg-green-50 border-green-200'
+                }`}>
                 <div className="flex items-center justify-between">
-                  <span className={`text-sm font-medium ${
-                    saldoRestante > 0 ? 'text-amber-700' : 'text-green-700'
-                  }`}>
+                  <span className={`text-sm font-medium ${saldoRestante > 0 ? 'text-amber-700' : 'text-green-700'
+                    }`}>
                     Saldo Restante después de este pago
                   </span>
-                  <span className={`text-2xl font-bold ${
-                    saldoRestante > 0 ? 'text-amber-900' : 'text-green-900'
-                  }`}>
+                  <span className={`text-2xl font-bold ${saldoRestante > 0 ? 'text-amber-900' : 'text-green-900'
+                    }`}>
                     ${saldoRestante.toFixed(2)}
                   </span>
                 </div>

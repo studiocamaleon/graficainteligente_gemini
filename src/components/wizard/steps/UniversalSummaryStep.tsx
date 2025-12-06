@@ -147,6 +147,50 @@ export function UniversalSummaryStep({
         </div>
       </Card>
 
+      {/* Servicios Globales */}
+      {selectedServicios.length > 0 && (
+        <Card className="p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Wrench className="w-5 h-5 text-blue-600" />
+            <h3 className="text-lg font-semibold text-gray-900">Servicios Globales</h3>
+          </div>
+
+          <div className="space-y-2">
+            {selectedServicios.map((servicio, index) => (
+              <div key={index} className="flex justify-between">
+                <span className="text-gray-600">
+                  {servicio.servicio_nombre}
+                  {servicio.nivel_nombre && ` (${servicio.nivel_nombre})`}
+                </span>
+                <Badge variant="warning">{servicio.servicio_nombre}</Badge>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* Acabados Globales */}
+      {selectedAcabados.length > 0 && (
+        <Card className="p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Sparkles className="w-5 h-5 text-blue-600" />
+            <h3 className="text-lg font-semibold text-gray-900">Acabados Globales</h3>
+          </div>
+
+          <div className="space-y-2">
+            {selectedAcabados.map((acabado, index) => (
+              <div key={index} className="flex justify-between">
+                <span className="text-gray-600">
+                  {acabado.acabado_nombre}
+                  {acabado.nivel_nombre && ` (${acabado.nivel_nombre})`}
+                </span>
+                <Badge variant="success">{acabado.acabado_nombre}</Badge>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
       {/* Líneas de Producción (para múltiples líneas) */}
       {hasMultipleLines ? (
         <Card className="p-6">
@@ -256,49 +300,7 @@ export function UniversalSummaryStep({
             )}
           </Card>
 
-          {/* Servicios */}
-          {selectedServicios.length > 0 && (
-            <Card className="p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <Wrench className="w-5 h-5 text-blue-600" />
-                <h3 className="text-lg font-semibold text-gray-900">Servicios</h3>
-              </div>
 
-              <div className="space-y-2">
-                {selectedServicios.map((servicio, index) => (
-                  <div key={index} className="flex justify-between">
-                    <span className="text-gray-600">
-                      {servicio.servicio_nombre}
-                      {servicio.nivel_nombre && ` (${servicio.nivel_nombre})`}
-                    </span>
-                    <Badge variant="warning">{servicio.servicio_nombre}</Badge>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          )}
-
-          {/* Acabados */}
-          {selectedAcabados.length > 0 && (
-            <Card className="p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <Sparkles className="w-5 h-5 text-blue-600" />
-                <h3 className="text-lg font-semibold text-gray-900">Acabados</h3>
-              </div>
-
-              <div className="space-y-2">
-                {selectedAcabados.map((acabado, index) => (
-                  <div key={index} className="flex justify-between">
-                    <span className="text-gray-600">
-                      {acabado.acabado_nombre}
-                      {acabado.nivel_nombre && ` (${acabado.nivel_nombre})`}
-                    </span>
-                    <Badge variant="success">{acabado.acabado_nombre}</Badge>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          )}
         </>
       )}
 
