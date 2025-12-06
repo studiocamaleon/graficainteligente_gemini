@@ -8,12 +8,13 @@ ALTER TABLE ordenes_trabajo_items ALTER COLUMN producto_id DROP NOT NULL;
 ALTER TABLE ordenes_trabajo_items DROP CONSTRAINT IF EXISTS ordenes_trabajo_items_producto_id_fkey;
 ALTER TABLE ordenes_trabajo_items DROP CONSTRAINT IF EXISTS fk_ordenes_trabajo_items_producto;
 
--- 3. Recrear la FK de forma permisiva (solo valida si el valor NO es NULL)
-ALTER TABLE ordenes_trabajo_items
-ADD CONSTRAINT ordenes_trabajo_items_producto_id_fkey
-FOREIGN KEY (producto_id)
-REFERENCES productos(id)
-ON DELETE SET NULL;
+-- 3. (OMITIDO) No recreamos FK a tabla 'productos' por arquitectura distribuida
+-- La integridad referencial se asume implícita o manejada por lógica de negocio
+-- ALTER TABLE ordenes_trabajo_items
+-- ADD CONSTRAINT ordenes_trabajo_items_producto_id_fkey
+-- FOREIGN KEY (producto_id)
+-- REFERENCES productos(id)
+-- ON DELETE SET NULL;
 
 -- 4. Reafirmar constraints lógicos (CHECKs)
 ALTER TABLE ordenes_trabajo_items DROP CONSTRAINT IF EXISTS check_tipo_item_valido;
