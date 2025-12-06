@@ -67,6 +67,8 @@ interface CreateOrdenData {
   // Campos de facturación
   requiere_factura?: boolean;
   subtotal_iva?: number;
+  // Campos de envío
+  requiere_despacho?: boolean;
 }
 
 interface UpdateOrdenData {
@@ -75,6 +77,8 @@ interface UpdateOrdenData {
   estado?: EstadoOrdenTrabajo;
   fecha_estimada_entrega?: string | null;
   notas_internas?: string | null;
+  requiere_factura?: boolean;
+  requiere_despacho?: boolean;
 }
 
 interface AddItemData {
@@ -640,21 +644,28 @@ export function useOrdenTrabajo() {
       setError(null);
 
       // 1. Actualizar Header de la Orden
+      const updateData: any = {
+        cliente_id: data.ordenData.cliente_id,
+        canal_venta: data.ordenData.canal_venta,
+        fecha_estimada_entrega: data.ordenData.fecha_estimada_entrega || null,
+        notas_internas: data.ordenData.notas_internas || null,
+        subtotal: data.ordenData.subtotal || 0,
+        total_descuentos: data.ordenData.total_descuentos || 0,
+        total: data.ordenData.total || 0,
+        requiere_factura: data.ordenData.requiere_factura || false,
+        subtotal_iva: data.ordenData.subtotal_iva || 0,
+        requiere_despacho: data.ordenData.requiere_despacho || false, // Nuevo campo
+        direccion_despacho: data.ordenData.direccion_despacho || null, // Nuevo campo
+        comuna_despacho: data.ordenData.comuna_despacho || null, // Nuevo campo
+        region_despacho: data.ordenData.region_despacho || null, // Nuevo campo
+        costo_despacho: data.ordenData.costo_despacho || 0, // Nuevo campo
+        updated_at: new Date().toISOString(),
+        updated_by: profile.id
+      };
+
       const { error: ordenError } = await supabase
         .from('ordenes_trabajo')
-        .update({
-          cliente_id: data.ordenData.cliente_id,
-          canal_venta: data.ordenData.canal_venta,
-          fecha_estimada_entrega: data.ordenData.fecha_estimada_entrega || null,
-          notas_internas: data.ordenData.notas_internas || null,
-          subtotal: data.ordenData.subtotal || 0,
-          total_descuentos: data.ordenData.total_descuentos || 0,
-          total: data.ordenData.total || 0,
-          requiere_factura: data.ordenData.requiere_factura || false,
-          subtotal_iva: data.ordenData.subtotal_iva || 0,
-          updated_at: new Date().toISOString(),
-          updated_by: profile.id
-        })
+        .update(updateData)
         .eq('id', id)
         .eq('company_id', profile.company_id);
 
@@ -886,21 +897,24 @@ export function useOrdenTrabajo() {
           {
             company_id: profile.company_id,
             cliente_id: data.ordenData.cliente_id,
-            vendedor_id: profile.id, // Por ahora es igual a created_by, reservado para futura funcionalidad
+            vendedor_id: profile.id, // Por ahora el vendedor es quien crea
             canal_venta: data.ordenData.canal_venta,
-            estado: estadoFinal,
+            estado: 'pendiente',
             fecha_creacion: new Date().toISOString(),
             fecha_estimada_entrega: data.ordenData.fecha_estimada_entrega || null,
             notas_internas: data.ordenData.notas_internas || null,
             subtotal: data.ordenData.subtotal || 0,
             total_descuentos: data.ordenData.total_descuentos || 0,
             total: data.ordenData.total || 0,
-            // Campos de facturación
             requiere_factura: data.ordenData.requiere_factura || false,
             subtotal_iva: data.ordenData.subtotal_iva || 0,
             facturada: false,
             created_by: profile.id,
             numero_orden: '',
+            requiere_despacho: data.ordenData.requiere_despacho || false,
+            estado_envio: 'pendiente',
+            updated_at: new Date().toISOString(),
+            updated_by: profile.id,
           },
         ])
         .select()

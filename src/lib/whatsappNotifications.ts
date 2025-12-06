@@ -6,7 +6,7 @@ export interface WhatsAppNotificacion {
   company_id: string;
   orden_trabajo_id?: string;
   orden_copiado_id?: string;
-  tipo_notificacion: 'nueva_orden_trabajo' | 'nueva_orden_copiado' | 'orden_finalizada';
+  tipo_notificacion: 'nueva_orden_trabajo' | 'nueva_orden_copiado' | 'orden_finalizada' | 'orden_despachada';
   telefono_destino: string;
   mensaje_enviado: string;
   estado_envio: 'enviado' | 'fallido';
@@ -19,7 +19,7 @@ export interface EnviarNotificacionParams {
   companyId: string;
   clienteId: string;
   ordenId: string;
-  tipo: 'nueva_orden_trabajo' | 'nueva_orden_copiado' | 'orden_finalizada';
+  tipo: 'nueva_orden_trabajo' | 'nueva_orden_copiado' | 'orden_finalizada' | 'orden_despachada';
   ordenTipo: 'trabajo' | 'copiado';
 }
 
@@ -73,6 +73,44 @@ export function formatPhoneNumber(phone: string): string {
 export function buildTrackingUrl(trackingToken: string): string {
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
   return `${origin}/track/${trackingToken}`;
+}
+
+export function generateOrdenDespachadaMessage(
+  orden: any,
+  cliente: any,
+  company: any
+): string {
+  const nombreCliente = cliente.nombre_fantasia || cliente.razon_social;
+  const fechaDespacho = orden.fecha_despacho
+    ? new Date(orden.fecha_despacho).toLocaleDateString('es-AR')
+    : new Date().toLocaleDateString('es-AR');
+
+  let mensaje = `Hola ${nombreCliente}!\n\n`;
+  mensaje += `🚚 Tu orden *${orden.numero_orden}* ha sido despachada!\n\n`;
+
+  if (orden.transporte) {
+    mensaje += `🚛 *Transporte:* ${orden.transporte}\n`;
+  }
+
+  if (orden.numero_guia) {
+    mensaje += `📄 *Guía / Seguimiento:* ${orden.numero_guia}\n`;
+  }
+
+  mensaje += `📅 *Fecha de despacho:* ${fechaDespacho}\n\n`;
+
+  // Removed Production Tracking URL as requested
+
+  if (company.google_review_url) {
+    mensaje += `⭐ *Nos ayudarías mucho dejando tu opinión:*\n`;
+    mensaje += `${company.google_review_url}\n\n`;
+  }
+
+  mensaje += `Por favor, cuando recibas tu pedido confirmanos que todo llego bien, gracias por elegirnos!\n\n`;
+
+  mensaje += `📍 *${company.name || 'Nuestra empresa'}*\n`;
+  mensaje += `_Tecnología desarrollada por CamaleonStudio_`;
+
+  return mensaje;
 }
 
 export function generateNuevaOrdenTrabajoMessage(
@@ -199,7 +237,7 @@ export function generateNuevaOrdenTrabajoMessage(
   return mensaje;
 }
 
-function formatItemCopiadoParaNuevaOrden(item: any, index: number): string {
+export function formatItemCopiadoParaNuevaOrden(item: any, index: number): string {
   const cantidad = item.cantidad_unidades || 0;
   const precio = parseFloat(item.precio_unitario || 0).toFixed(2);
   const subtotal = parseFloat(item.subtotal || 0).toFixed(2);
@@ -277,10 +315,10 @@ export function generateNuevaOrdenCopiadoMessage(
 
   const fechaEntrega = orden.fecha_entrega_estimada
     ? new Date(orden.fecha_entrega_estimada).toLocaleDateString('es-AR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-      })
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    })
     : 'A confirmar';
 
   let mensaje = `Hola ${nombreCliente}!\n\n`;
@@ -468,24 +506,7 @@ export async function enviarNotificacion(
       orden.pagos_totales = pagosTotal;
 
       if (tipo === 'nueva_orden_trabajo') {
-        // DEBUG: Log del valor original de ordenesCopiado
-        console.log('🔍 DEBUG ordenesCopiado raw:', JSON.stringify(ordenData.ordenesCopiado, null, 2));
-        console.log('🔍 DEBUG ordenesCopiado type:', typeof ordenData.ordenesCopiado);
-        console.log('🔍 DEBUG ordenesCopiado isArray:', Array.isArray(ordenData.ordenesCopiado));
-
-        // Normalizar ordenesCopiado a array (puede venir como objeto o array desde Supabase)
-        let ordenesCopiado = ordenData.ordenesCopiado || [];
-
-        // Si viene como objeto único (relación 1:1), convertir a array
-        if (!Array.isArray(ordenesCopiado)) {
-          console.log('⚠️ ordenesCopiado NO es array, convirtiendo...');
-          ordenesCopiado = ordenesCopiado ? [ordenesCopiado] : [];
-        }
-
-        console.log('✅ ordenesCopiado normalizado:', JSON.stringify(ordenesCopiado, null, 2));
-        console.log('✅ ordenesCopiado.length:', ordenesCopiado.length);
-
-        // Si hay órdenes de copiado, cargar nombres de archivos
+        const ordenesCopiado = ordenData.ordenesCopiado ? (Array.isArray(ordenData.ordenesCopiado) ? ordenData.ordenesCopiado : [ordenData.ordenesCopiado]) : [];
         if (ordenesCopiado.length > 0) {
           for (const oc of ordenesCopiado) {
             const { data: archivos } = await supabase
@@ -508,11 +529,12 @@ export async function enviarNotificacion(
             });
           }
         }
-
         mensaje = generateNuevaOrdenTrabajoMessage(orden, cliente, items, company, ordenesCopiado);
       } else if (tipo === 'orden_finalizada') {
         const saldoPendiente = parseFloat(orden.total || 0) - pagosTotal;
         mensaje = generateOrdenFinalizadaMessage(orden, cliente, company, saldoPendiente);
+      } else if (tipo === 'orden_despachada') {
+        mensaje = generateOrdenDespachadaMessage(orden, cliente, company);
       }
     } else {
       const { data: ordenData, error: ordenError } = await supabase

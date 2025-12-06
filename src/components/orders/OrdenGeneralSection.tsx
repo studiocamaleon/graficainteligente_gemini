@@ -1,4 +1,4 @@
-import { MessageSquare, Globe, Store, User, Smartphone } from 'lucide-react';
+import { MessageSquare, Globe, Store, User, Smartphone, Truck } from 'lucide-react';
 import { SearchableSelect } from '../ui/SearchableSelect';
 import { DatePicker } from '../ui/DatePicker';
 import { Tooltip } from '../ui/Tooltip';
@@ -12,6 +12,8 @@ interface OrdenGeneralSectionProps {
   setCanalVenta: (canal: CanalVenta) => void;
   fechaEntrega: string;
   setFechaEntrega: (fecha: string) => void;
+  requiereDespacho?: boolean;
+  setRequiereDespacho?: (requiere: boolean) => void;
   notasInternas: string;
   setNotasInternas: (notas: string) => void;
   requiereFactura: boolean;
@@ -27,6 +29,8 @@ export function OrdenGeneralSection({
   setCanalVenta,
   fechaEntrega,
   setFechaEntrega,
+  requiereDespacho = false,
+  setRequiereDespacho,
   notasInternas,
   setNotasInternas,
   requiereFactura,
@@ -86,10 +90,9 @@ export function OrdenGeneralSection({
                     onClick={() => setCanalVenta(canal.value)}
                     className={`
                       flex items-center justify-center p-4 rounded-lg border-2 transition-all
-                      ${
-                        isSelected
-                          ? 'border-blue-500 bg-blue-50 text-blue-700'
-                          : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                      ${isSelected
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
                       }
                     `}
                   >
@@ -120,6 +123,68 @@ export function OrdenGeneralSection({
           placeholder="Seleccionar fecha de entrega"
           required
         />
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Tipo de Entrega
+          </label>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setRequiereDespacho && setRequiereDespacho(false)}
+              className={`
+                flex-1 flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-all gap-2
+                ${!requiereDespacho
+                  ? 'border-blue-500 bg-blue-50 text-blue-700'
+                  : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                }
+              `}
+            >
+              <Store className="w-5 h-5" />
+              <span className="text-sm font-medium">Retiro en Local</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setRequiereDespacho && setRequiereDespacho(true)}
+              className={`
+                flex-1 flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-all gap-2
+                ${requiereDespacho
+                  ? 'border-blue-500 bg-blue-50 text-blue-700'
+                  : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                }
+              `}
+            >
+              <Truck className="w-5 h-5" />
+              <span className="text-sm font-medium">Envío a Domicilio</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Información de Facturación
+          </label>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setRequiereFactura(!requiereFactura)}
+              className={`
+                flex items-center justify-center px-4 py-2 rounded-lg border-2 transition-all gap-2 w-full
+                ${requiereFactura
+                  ? 'border-blue-500 bg-blue-50 text-blue-700'
+                  : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                }
+              `}
+            >
+              <div className={`w-5 h-5 rounded border flex items-center justify-center ${requiereFactura ? 'border-blue-500 bg-blue-500 text-white' : 'border-gray-400'}`}>
+                {requiereFactura && <span className="text-xs">✓</span>}
+              </div>
+              <span className="text-sm font-medium">Requiere Factura</span>
+            </button>
+          </div>
+        </div>
       </div>
 
       <div>

@@ -53,6 +53,7 @@ export function CreateOrderPage() {
   const [fechaEntrega, setFechaEntrega] = useState('');
   const [notasInternas, setNotasInternas] = useState('');
   const [requiereFactura, setRequiereFactura] = useState(false);
+  const [requiereDespacho, setRequiereDespacho] = useState(false);
 
   const [items, setItems] = useState<any[]>([]);
   const [descuentoTotal, setDescuentoTotal] = useState(0);
@@ -87,6 +88,7 @@ export function CreateOrderPage() {
     setFechaEntrega('');
     setNotasInternas('');
     setRequiereFactura(false);
+    setRequiereDespacho(false);
     setItems([]);
     setDescuentoTotal(0);
     setFormErrors({});
@@ -121,6 +123,7 @@ export function CreateOrderPage() {
       setFechaEntrega(orden.fecha_estimada_entrega ? orden.fecha_estimada_entrega.split('T')[0] : '');
       setNotasInternas(orden.notas_internas || '');
       setRequiereFactura(orden.requiere_factura || false);
+      setRequiereDespacho(orden.requiere_despacho || false);
 
       // Calcular descuento % basado en total y descuentos $
       const totalSinDescuento = (orden.subtotal || 0); // Aproximación básica
@@ -338,6 +341,7 @@ export function CreateOrderPage() {
       // Facturación
       requiere_factura: requiereFactura,
       subtotal_iva: totales.iva,
+      requiere_despacho: requiereDespacho,
     };
 
     // Separar items físicos de servicios adicionales
@@ -604,6 +608,8 @@ export function CreateOrderPage() {
             setCanalVenta={setCanalVenta}
             fechaEntrega={fechaEntrega}
             setFechaEntrega={setFechaEntrega}
+            requiereDespacho={requiereDespacho}
+            setRequiereDespacho={setRequiereDespacho}
             notasInternas={notasInternas}
             setNotasInternas={setNotasInternas}
             requiereFactura={requiereFactura}

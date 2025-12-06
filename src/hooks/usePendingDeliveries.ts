@@ -7,6 +7,7 @@ export interface PendingDelivery {
     id: string;
     numero_orden: string;
     cliente: {
+        id: string; // Added id
         nombre_fantasia: string;
         numero_documento: string;
     } | null;
@@ -17,6 +18,7 @@ export interface PendingDelivery {
     estado: string;
     total_pagado: number;
     saldo_pendiente: number;
+    requiere_despacho?: boolean;
 }
 
 export function usePendingDeliveries() {
@@ -42,7 +44,8 @@ export function usePendingDeliveries() {
           fecha_estimada_entrega,
           total,
           estado,
-          cliente:clients(nombre_fantasia, numero_documento),
+          requiere_despacho,
+          cliente:clients(id, nombre_fantasia, numero_documento),
           pagos:ordenes_trabajo_pagos(monto)
         `)
                 .eq('company_id', profile.company_id)
@@ -60,7 +63,7 @@ export function usePendingDeliveries() {
           fecha_entrega_estimada,
           total,
           estado,
-          cliente:clients(nombre_fantasia, numero_documento),
+          cliente:clients(id, nombre_fantasia, numero_documento),
           pagos:centro_copiado_ordenes_pagos(monto)
         `)
                 .eq('company_id', profile.company_id)
@@ -84,7 +87,8 @@ export function usePendingDeliveries() {
                     total: o.total,
                     estado: o.estado,
                     total_pagado: totalPagado,
-                    saldo_pendiente: o.total - totalPagado
+                    saldo_pendiente: o.total - totalPagado,
+                    requiere_despacho: o.requiere_despacho
                 };
             });
 
@@ -118,20 +122,36 @@ export function usePendingDeliveries() {
         }
     }, [profile?.company_id]);
 
-    const deliverOrder = async (id: string, type: 'orden_trabajo' | 'centro_copiado') => {
+    const deliverOrder = async (
+        id: string,
+        type: 'orden_trabajo' | 'centro_copiado',
+        shippingData?: {
+            fecha_despacho: string;
+            transporte: string;
+            numero_guia: string;
+        }
+    ) => {
         try {
             const table = type === 'orden_trabajo' ? 'ordenes_trabajo' : 'centro_copiado_ordenes';
-            const updates = {
+            let updates: any = {
                 estado: 'entregada',
                 fecha_entrega_real: new Date().toISOString()
             };
+
+            if (shippingData && type === 'orden_trabajo') {
+                updates = {
+                    ...updates,
+                    ...shippingData,
+                    estado_envio: 'enviado'
+                };
+            }
 
             const { error: updateError } = await supabase
                 .from(table)
                 .update(updates)
                 .eq('id', id);
 
-            if (updateError) throw updateError;
+            if (updateError) throw updateError; // Fixed typo in thought if present, this is correct.
 
             // Optimistic update
             setDeliveries(prev => prev.filter(d => d.id !== id));

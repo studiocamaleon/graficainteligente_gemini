@@ -1343,6 +1343,12 @@ export interface OrdenTrabajo {
   total_descuentos: number;
   total: number;
   tracking_token: string | null;
+  // Campos de envío
+  requiere_despacho: boolean;
+  fecha_despacho: string | null;
+  transporte: string | null;
+  numero_guia: string | null;
+  estado_envio: 'pendiente' | 'enviado' | 'entregado';
   // Campos de facturación
   requiere_factura: boolean;
   subtotal_iva: number;

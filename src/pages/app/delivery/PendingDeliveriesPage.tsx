@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Package, Check, ArrowLeft, Clock, DollarSign } from 'lucide-react';
+import { Search, Package, Check, ArrowLeft, Clock, DollarSign, Truck } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { PagoFormModal } from '../../../components/orders/PagoFormModal';
 import { Card } from '../../../components/ui/Card';
@@ -12,15 +12,20 @@ import { useConfirmDialog } from '../../../hooks/useConfirmDialog';
 import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
 import { useInfoDialog } from '../../../hooks/useInfoDialog';
 import { InfoDialog } from '../../../components/ui/InfoDialog';
+import { ShippingModal, ShippingData } from '../../../components/orders/ShippingModal';
+import { enviarNotificacion } from '../../../lib/whatsappNotifications';
+import { useAuth } from '../../../hooks/useAuth';
 
 export function PendingDeliveriesPage() {
     const navigate = useNavigate();
     usePageHeader('Entregas Pendientes de Despacho');
+    const { profile } = useAuth();
 
     const { deliveries, loading, error, refresh, deliverOrder, addPayment } = usePendingDeliveries();
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedDelivery, setSelectedDelivery] = useState<PendingDelivery | null>(null);
     const [showPagoForm, setShowPagoForm] = useState(false);
+    const [showShippingModal, setShowShippingModal] = useState(false);
 
     const { dialogState: confirmDialogState, closeDialog: closeConfirmDialog, handleConfirm, openConfirm } = useConfirmDialog();
     const { dialogState: infoDialogState, closeDialog: closeInfoDialog, openDialog: openInfoDialog } = useInfoDialog();
@@ -40,7 +45,13 @@ export function PendingDeliveriesPage() {
             setSelectedDelivery(delivery);
             setShowPagoForm(true);
         } else {
-            confirmDelivery(delivery);
+            console.log('Checking delivery type:', delivery.requiere_despacho);
+            if (delivery.tipo === 'orden_trabajo' && delivery.requiere_despacho) {
+                setSelectedDelivery(delivery);
+                setShowShippingModal(true);
+            } else {
+                confirmDelivery(delivery);
+            }
         }
     };
 
@@ -55,11 +66,45 @@ export function PendingDeliveriesPage() {
                 const success = await deliverOrder(delivery.id, delivery.tipo);
                 if (success) {
                     openInfoDialog('Éxito', 'La orden ha sido marcada como entregada correctamente.');
+                    // Notify for normal delivery (finalized) if desired, but user asked specifically for shipping.
+                    // We can stick to just shipping notification for now as requested.
                 } else {
                     openInfoDialog('Error', 'No se pudo actualizar el estado de la orden.');
                 }
             }
         });
+    };
+
+    const handleShippingSubmit = async (data: ShippingData) => {
+        if (!selectedDelivery) return;
+
+        const success = await deliverOrder(selectedDelivery.id, selectedDelivery.tipo, data);
+        if (success) {
+            setShowShippingModal(false);
+
+            // Send WhatsApp Notification
+            if (selectedDelivery.tipo === 'orden_trabajo' && profile?.company_id && selectedDelivery.cliente?.id) {
+                try {
+                    await enviarNotificacion({
+                        companyId: profile.company_id,
+                        clienteId: selectedDelivery.cliente.id,
+                        ordenId: selectedDelivery.id,
+                        tipo: 'orden_despachada',
+                        ordenTipo: 'trabajo'
+                    });
+                    openInfoDialog('Éxito', 'La orden ha sido despachada y se envió la notificación al cliente.');
+                } catch (error) {
+                    console.error('Error sending notification:', error);
+                    openInfoDialog('Éxito', 'La orden ha sido despachada, pero hubo un error al enviar la notificación.');
+                }
+            } else {
+                openInfoDialog('Éxito', 'La orden ha sido despachada y se ha registrado el envío.');
+            }
+
+            setSelectedDelivery(null);
+        } else {
+            openInfoDialog('Error', 'No se pudo registrar el despacho.');
+        }
     };
 
     const handlePagoSubmit = async (data: any) => {
@@ -77,34 +122,48 @@ export function PendingDeliveriesPage() {
 
         if (success) {
             setShowPagoForm(false);
-            // Check if fully paid now? The list refreshes automatically.
-            // But we should notify user.
-            // If fully paid, asking to deliver immediately would be nice, but list refresh might be async.
-            // For now, simple success message.
+
             const nuevoSaldo = selectedDelivery.saldo_pendiente - data.monto;
             if (nuevoSaldo <= 0.01) { // Allowing small float margin
                 openConfirm({
                     title: 'Pago Registrado - Orden Saldada',
-                    message: 'El pago se registró correctamente y la orden está saldada. ¿Deseas entregarla ahora?',
+                    message: selectedDelivery.requiere_despacho
+                        ? 'El pago se registró correctamente y la orden está saldada. ¿Deseas proceder con el despacho?'
+                        : 'El pago se registró correctamente y la orden está saldada. ¿Deseas entregarla ahora?',
                     variant: 'success',
-                    confirmText: 'Sí, Entregar',
+                    confirmText: selectedDelivery.requiere_despacho ? 'Sí, Despachar' : 'Sí, Entregar',
                     cancelText: 'Más tarde',
                     onConfirm: async () => {
-                        await deliverOrder(selectedDelivery.id, selectedDelivery.tipo);
-                        openInfoDialog('Éxito', 'Orden entregada correctamente.');
+                        if (selectedDelivery.requiere_despacho && selectedDelivery.tipo === 'orden_trabajo') {
+                            setShowShippingModal(true);
+                        } else {
+                            await deliverOrder(selectedDelivery.id, selectedDelivery.tipo);
+                            openInfoDialog('Éxito', 'Orden entregada correctamente.');
+                        }
                     }
                 });
             } else {
                 openInfoDialog('Pago Registrado', `Se registró el pago. Saldo restante: $${nuevoSaldo.toFixed(2)}`);
+                setSelectedDelivery(null);
             }
-            setSelectedDelivery(null);
         } else {
             openInfoDialog('Error', 'No se pudo registrar el pago.');
         }
     };
 
-    const getTipoBadge = (tipo: string) => {
-        if (tipo === 'orden_trabajo') return <Badge variant="blue">Orden de Trabajo</Badge>;
+    const getTipoBadge = (tipo: string, requiereDespacho?: boolean) => {
+        if (tipo === 'orden_trabajo') {
+            return (
+                <div className="flex items-center gap-2">
+                    <Badge variant="blue">Orden de Trabajo</Badge>
+                    {requiereDespacho && (
+                        <div className="bg-orange-100 text-orange-700 p-1 rounded-full" title="Requiere Despacho">
+                            <Truck className="w-3 h-3" />
+                        </div>
+                    )}
+                </div>
+            );
+        }
         return <Badge variant="purple">Centro Copiado</Badge>;
     };
 
@@ -168,7 +227,7 @@ export function PendingDeliveriesPage() {
                                 {
                                     key: 'tipo',
                                     header: 'Tipo',
-                                    render: (item) => getTipoBadge(item.tipo),
+                                    render: (item) => getTipoBadge(item.tipo, item.requiere_despacho),
                                 },
                                 {
                                     key: 'numero',
@@ -221,7 +280,8 @@ export function PendingDeliveriesPage() {
                                             </Button>
                                             <Button
                                                 size="sm"
-                                                variant={item.saldo_pendiente > 0 ? "warning" : "success"}
+                                                variant={item.saldo_pendiente > 0 ? "warning" : (item.requiere_despacho ? "primary" : "success")}
+                                                className={item.requiere_despacho && item.saldo_pendiente <= 0 ? "bg-orange-600 hover:bg-orange-700 border-transparent text-white focus:ring-orange-500" : ""}
                                                 onClick={() => handleDeliverClick(item)}
                                             >
                                                 {item.saldo_pendiente > 0 ? (
@@ -230,10 +290,17 @@ export function PendingDeliveriesPage() {
                                                         Cobrar
                                                     </>
                                                 ) : (
-                                                    <>
-                                                        <Check className="w-4 h-4 mr-1" />
-                                                        Entregar
-                                                    </>
+                                                    item.requiere_despacho ? (
+                                                        <>
+                                                            <Truck className="w-4 h-4 mr-1" />
+                                                            Despachar
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Check className="w-4 h-4 mr-1" />
+                                                            Entregar
+                                                        </>
+                                                    )
                                                 )}
                                             </Button>
                                         </div>
@@ -273,6 +340,15 @@ export function PendingDeliveriesPage() {
                 }}
                 onSubmit={handlePagoSubmit}
                 saldoPendiente={selectedDelivery?.saldo_pendiente || 0}
+            />
+
+            <ShippingModal
+                isOpen={showShippingModal}
+                onClose={() => {
+                    setShowShippingModal(false);
+                    setSelectedDelivery(null);
+                }}
+                onSave={handleShippingSubmit}
             />
         </div>
     );
