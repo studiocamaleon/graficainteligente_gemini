@@ -10,7 +10,7 @@ import { Badge } from '../ui/Badge';
 interface AplicarServicioMasivoModalProps {
     isOpen: boolean;
     onClose: () => void;
-    selectedItemsCount: number;
+    selectedItems: any[];
     onConfirm: (servicioSeleccionado: ServicioSeleccionado) => Promise<void>;
 }
 
@@ -25,7 +25,7 @@ export interface ServicioSeleccionado {
 export function AplicarServicioMasivoModal({
     isOpen,
     onClose,
-    selectedItemsCount,
+    selectedItems,
     onConfirm
 }: AplicarServicioMasivoModalProps) {
     const [searchTerm, setSearchTerm] = useState('');
@@ -57,42 +57,119 @@ export function AplicarServicioMasivoModal({
         }
     };
 
+    const calculateTotalDimensions = () => {
+        let totalMt2 = 0;
+        let totalMtLineal = 0;
+        let totalPrecioBase = 0;
+        let totalCantidadItems = 0;
+
+        selectedItems.forEach(item => {
+            const qty = item.cantidad || 1;
+            totalCantidadItems += qty;
+            totalPrecioBase += (item.precio_total || 0);
+
+            // Intentar obtener medidas de la configuración
+            const ancho = Number(item.configuracion?.medida_ancho) || 0; // cm
+            const alto = Number(item.configuracion?.medida_alto) || 0;   // cm
+
+            if (ancho > 0) {
+                // Metros lineales (basado en ancho)
+                totalMtLineal += (ancho / 100) * qty;
+
+                if (alto > 0) {
+                    // Metros cuadrados
+                    totalMt2 += ((ancho * alto) / 10000) * qty;
+                }
+            }
+        });
+
+        return { totalMt2, totalMtLineal, totalPrecioBase, totalCantidadItems };
+    };
+
     const getPrecioInfo = () => {
         if (!selectedServicio) return null;
 
         let tipoImpacto = selectedServicio.tipo_impacto;
         let valorImpacto = selectedServicio.valor_impacto;
+        let valorImpactoSecundario = selectedServicio.valor_impacto_secundario; // Nuevo param
 
         if (selectedNivel) {
             tipoImpacto = selectedNivel.tipo_impacto;
             valorImpacto = selectedNivel.valor_impacto;
+            valorImpactoSecundario = selectedNivel.valor_impacto_secundario;
         }
 
         if (!tipoImpacto || valorImpacto === undefined || valorImpacto === null) return null;
 
-        const esGlobal = tipoImpacto === 'precio_fijo';
+        const { totalMt2, totalMtLineal, totalPrecioBase, totalCantidadItems } = calculateTotalDimensions();
+        const selectedItemsCount = selectedItems.length; // Filas seleccionadas
+
         let precioTotal = 0;
         let precioPorItem = 0;
+        let detalleCalculo = '';
+        let esGlobal = false;
 
-        if (esGlobal) {
-            precioTotal = valorImpacto;
-            precioPorItem = valorImpacto / selectedItemsCount;
-        } else { // precio_unitario o porcentaje_base (simplificado a unitario por ahora si no hay base clara)
-            // Nota: para porcentaje_base necesitaríamos el precio base de cada item, lo cual es complejo aquí.
-            // Asumiremos que en este contexto masivo se aplica como valor unitario directo o sobre un base promedio si fuera necesario.
-            // Por simplicidad, trataremos 'porcentaje' como un caso especial o alertaremos.
-            if (tipoImpacto === 'porcentaje_base') {
-                return { error: 'Los servicios basados en porcentaje no se pueden aplicar masivamente de forma simple aún.' };
-            }
-            precioPorItem = valorImpacto;
-            precioTotal = valorImpacto * selectedItemsCount;
+        switch (tipoImpacto) {
+            case 'precio_fijo':
+                esGlobal = true;
+                precioTotal = valorImpacto;
+                precioPorItem = valorImpacto / selectedItemsCount;
+                break;
+
+            case 'fijo_mt2':
+                esGlobal = true;
+                // Fijo + (Variable * Metros Cuadrados Totales)
+                const variableMt2 = (valorImpactoSecundario || 0) * totalMt2;
+                precioTotal = valorImpacto + variableMt2;
+                precioPorItem = precioTotal / selectedItemsCount;
+                detalleCalculo = `Fijo: $${valorImpacto} + Var: $${(valorImpactoSecundario || 0)} x ${totalMt2.toFixed(2)}m²`;
+                break;
+
+            case 'fijo_mt_lineal':
+                esGlobal = true;
+                // Fijo + (Variable * Metros Lineales Totales)
+                const variableMtLineal = (valorImpactoSecundario || 0) * totalMtLineal;
+                precioTotal = valorImpacto + variableMtLineal;
+                precioPorItem = precioTotal / selectedItemsCount;
+                detalleCalculo = `Fijo: $${valorImpacto} + Var: $${(valorImpactoSecundario || 0)} x ${totalMtLineal.toFixed(2)}m`;
+                break;
+
+            case 'fijo_porcentual':
+                esGlobal = true;
+                // Fijo + (Variable % del Precio Base Total)
+                const variablePorcentual = (totalPrecioBase * (valorImpactoSecundario || 0) / 100);
+                precioTotal = valorImpacto + variablePorcentual;
+                precioPorItem = precioTotal / selectedItemsCount;
+                detalleCalculo = `Fijo: $${valorImpacto} + Var: ${(valorImpactoSecundario || 0)}% de $${totalPrecioBase}`;
+                break;
+
+            case 'por_unidad':
+                // Multiplica el valor por la cantidad total de items físicos (unidades reales, no filas)
+                // OJO: Si la logica anterior era "valor unitario por fila", debemos decidir.
+                // Asumiremos que "por unidad" en contexto masivo multiplica por la suma de cantidades.
+                precioTotal = valorImpacto * totalCantidadItems;
+                precioPorItem = precioTotal / selectedItemsCount; // Promedio por fila
+                esGlobal = false; // No es global fijo, depende de cantidad
+                break;
+
+            default:
+                // Casos simples o no soportados (como porcentaje puro base)
+                if (tipoImpacto === 'porcentaje_base') {
+                    return { error: 'Los servicios basados solo en porcentaje base no se calculan directamente en masivo global.' };
+                }
+                // Fallback a lógica similar a 'por_unidad' o alertar
+                precioPorItem = valorImpacto;
+                precioTotal = valorImpacto * selectedItemsCount; // Asume valor unitario por fila
+                break;
         }
 
         return {
             esGlobal,
             precioTotal,
             precioPorItem,
-            tipoImpacto
+            tipoImpacto,
+            detalleCalculo,
+            stats: { totalMt2, totalMtLineal, totalCantidadItems }
         };
     };
 
@@ -131,13 +208,16 @@ export function AplicarServicioMasivoModal({
                     <div className="flex items-center gap-2">
                         <Info className="w-5 h-5 text-blue-600" />
                         <span className="text-sm text-blue-800">
-                            Aplicando a <strong>{selectedItemsCount}</strong> items seleccionados.
+                            Aplicando a <strong>{selectedItems.length}</strong> items seleccionados.
                         </span>
                     </div>
                     {precioInfo && !precioInfo.error && (
-                        <Badge variant={precioInfo.esGlobal ? "purple" : "blue"}>
-                            {precioInfo.esGlobal ? "Servicio Global (Precio Fijo)" : "Servicio por Unidad"}
-                        </Badge>
+                        <div className="flex gap-2">
+                            {precioInfo.detalleCalculo && <Badge variant="default">{precioInfo.detalleCalculo}</Badge>}
+                            <Badge variant={precioInfo.esGlobal ? "purple" : "blue"}>
+                                {precioInfo.esGlobal ? "Costo Global" : "Costo por Unidad"}
+                            </Badge>
+                        </div>
                     )}
                 </div>
 
@@ -258,7 +338,7 @@ export function AplicarServicioMasivoModal({
                                             <div className="bg-purple-50 text-purple-800 p-2 rounded text-xs flex items-start gap-2">
                                                 <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
                                                 <span>
-                                                    Al ser un servicio de <strong>cobro fijo global</strong>, el costo total de ${precioInfo.precioTotal} se dividirá equitativamente entre los {selectedItemsCount} items.
+                                                    Al ser un servicio de <strong>cobro global</strong>, el costo total de ${precioInfo.precioTotal?.toFixed(2)} se dividirá equitativamente entre los {selectedItems.length} items.
                                                 </span>
                                             </div>
                                         )}

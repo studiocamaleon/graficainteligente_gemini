@@ -21,6 +21,7 @@ export interface ProductConfiguration {
   // Nuevos campos para múltiples líneas
   tipo_venta_real?: 'mt2' | 'mt_lineal' | 'unidad' | 'cantidades_fijas';
   permite_multiples_lineas?: boolean;
+  permite_material_cliente?: boolean;
 
   // Material y variantes
   materiales?: Array<{
@@ -32,6 +33,7 @@ export interface ProductConfiguration {
     espesor?: number;
     unidad_espesor?: string;
     gramaje?: number;
+    precio_por_m2?: number;
   }>;
 
   // Tecnologías y tintas (para productos con impresión)

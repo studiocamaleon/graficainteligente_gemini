@@ -126,8 +126,8 @@ export default function EditarPresupuesto() {
 
     const itemData: CreatePresupuestoItemData = {
       presupuesto_id: presupuesto.id,
-      tipo_item: 'producto_sistema',
-      producto_id: item.producto_id,
+      tipo_item: item.tipo_item || 'producto_sistema',
+      producto_id: item.producto_id || null,
       producto_nombre: item.producto_nombre,
       producto_categoria: item.categoria,
       configuracion: item.configuracion || {},
@@ -425,7 +425,7 @@ export default function EditarPresupuesto() {
                 items={items}
                 onAddItemSistema={handleAddItemSistema}
                 onAddItemPersonalizado={handleAddItemPersonalizado}
-                onEditItem={() => {}}
+                onEditItem={() => { }}
                 onDeleteItem={handleDeleteItem}
                 onAsignarPrecio={handleAsignarPrecio}
               />

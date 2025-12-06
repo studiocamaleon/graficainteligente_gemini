@@ -768,7 +768,7 @@ export function OrdenItemsTab({
       <AplicarServicioMasivoModal
         isOpen={showMasivoModal}
         onClose={() => setShowMasivoModal(false)}
-        selectedItemsCount={selectedItemIds.size}
+        selectedItems={items.filter(i => selectedItemIds.has(i.id || ''))}
         onConfirm={handleAplicarServicioMasivo}
       />
     </div>
