@@ -3,6 +3,8 @@ export type UserRole = 'super_admin' | 'admin' | 'manager' | 'operador_diseno' |
 export type CompanyStatus = 'active' | 'suspended' | 'cancelled';
 
 export type SubscriptionStatus = 'active' | 'cancelled' | 'expired';
+import type { Egreso } from './tesoreria';
+
 
 export type DocumentType = 'DNI' | 'CUIT' | 'CUIL';
 
@@ -46,6 +48,7 @@ export interface Provider {
   tipo_cuenta: AccountType | null;
   tipo_identificador_bancario: BankIdentifierType | null;
   identificador_bancario: string | null;
+  tipo_egreso_id: string | null;
   acepta_transferencias: boolean;
   acepta_cheques: boolean;
   acepta_tarjetas_credito: boolean;
@@ -73,6 +76,7 @@ export interface ProviderFormData {
   tipo_cuenta: AccountType | '';
   tipo_identificador_bancario: BankIdentifierType | '';
   identificador_bancario: string;
+  tipo_egreso_id?: string;
   acepta_transferencias: boolean;
   acepta_cheques: boolean;
   acepta_tarjetas_credito: boolean;
@@ -1704,6 +1708,11 @@ export interface Database {
         Insert: Omit<Provider, 'id' | 'created_at' | 'updated_at' | 'created_by' | 'updated_by'>;
         Update: Partial<Omit<Provider, 'id' | 'created_at' | 'company_id' | 'created_by'>>;
       };
+      egresos: {
+        Row: Egreso;
+        Insert: Omit<Egreso, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<Egreso, 'id' | 'created_at'>>;
+      };
       banks: {
         Row: Bank;
         Insert: Omit<Bank, 'id' | 'created_at' | 'updated_at'>;
@@ -1729,16 +1738,7 @@ export interface Database {
         Insert: Omit<Paso, 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Omit<Paso, 'id' | 'created_at' | 'company_id'>>;
       };
-      grupos_pasos: {
-        Row: GrupoPaso;
-        Insert: Omit<GrupoPaso, 'id' | 'created_at' | 'updated_at'>;
-        Update: Partial<Omit<GrupoPaso, 'id' | 'created_at' | 'company_id'>>;
-      };
-      grupos_pasos_items: {
-        Row: GrupoPasoItem;
-        Insert: Omit<GrupoPasoItem, 'id' | 'created_at'>;
-        Update: Partial<Omit<GrupoPasoItem, 'id' | 'created_at'>>;
-      };
+
       categorias: {
         Row: Categoria;
         Insert: Omit<Categoria, 'id' | 'created_at' | 'updated_at'>;
@@ -1748,6 +1748,16 @@ export interface Database {
         Row: Servicio;
         Insert: Omit<Servicio, 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Omit<Servicio, 'id' | 'created_at' | 'company_id'>>;
+      };
+      recurring_expenses: {
+        Row: RecurringExpense;
+        Insert: Omit<RecurringExpense, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<RecurringExpense, 'id' | 'created_at' | 'company_id'>>;
+      };
+      cheques_cartera: {
+        Row: Cheque;
+        Insert: Omit<Cheque, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<Cheque, 'id' | 'created_at' | 'company_id'>>;
       };
       servicios_niveles_precio: {
         Row: ServicioNivelPrecio;
@@ -1854,11 +1864,6 @@ export interface Database {
         Insert: Omit<OrdenItemRuta, 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Omit<OrdenItemRuta, 'id' | 'created_at' | 'updated_at'>>;
       };
-      ordenes_trabajo_items: {
-        Row: any;
-        Insert: any;
-        Update: any;
-      };
       centro_copiado_tamanios_papel: {
         Row: CentroCopiadoTamanioPapel;
         Insert: Omit<CentroCopiadoTamanioPapel, 'id' | 'created_at' | 'updated_at'>;
@@ -1898,6 +1903,66 @@ export interface Database {
         Row: CentroCopiadoOrdenItem;
         Insert: Omit<CentroCopiadoOrdenItem, 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Omit<CentroCopiadoOrdenItem, 'id' | 'created_at'>>;
+      };
+      tarjetas_credito: {
+        Row: TarjetaCredito;
+        Insert: Omit<TarjetaCredito, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<TarjetaCredito, 'id' | 'created_at'>>;
+      };
+      tarjetas_resumenes: {
+        Row: TarjetaResumen;
+        Insert: Omit<TarjetaResumen, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<TarjetaResumen, 'id' | 'created_at'>>;
+      };
+      tarjetas_consumos: {
+        Row: TarjetaConsumo;
+        Insert: Omit<TarjetaConsumo, 'id' | 'created_at'>;
+        Update: Partial<Omit<TarjetaConsumo, 'id' | 'created_at'>>;
+      };
+    };
+    Functions: {
+      fn_get_clientes_con_saldo: {
+        Args: {
+          p_company_id: string;
+          p_search_term?: string;
+          p_estado_filter?: string | null;
+        };
+        Returns: {
+          id: string;
+          nombre_fantasia: string;
+          razon_social: string;
+          numero_documento: string;
+          acuerdo_pago: string;
+          dia_cierre_semanal: number;
+          dia_cierre_mensual: number;
+          usa_ultimo_dia_mes: boolean;
+          dias_vencimiento_config: number;
+          tiene_cuenta_corriente: boolean;
+          saldo_actual: number;
+          estado_cc: string;
+          dias_vencimiento: number | null;
+          fecha_ultima_liquidacion: string | null;
+        }[];
+      };
+      fn_get_cashflow_projection: {
+        Args: {
+          p_company_id: string;
+          p_days_to_project?: number;
+        };
+        Returns: {
+          fecha: string;
+          ingresos: number;
+          egresos: number;
+          saldo_diario: number;
+          saldo_acumulado: number;
+        }[];
+      };
+      fn_calcular_saldo_cuenta_corriente: {
+        Args: {
+          p_cliente_id: string;
+          p_fecha_hasta: string;
+        };
+        Returns: number;
       };
     };
   };
@@ -2117,4 +2182,119 @@ export interface EvolutivoTasaCumplimiento {
   ordenes_retrasadas: number;
   tasa_cumplimiento: number;
   tendencia: 'up' | 'down' | 'neutral';
+}
+export type RecurringFrequency = 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'yearly';
+
+export interface RecurringExpense {
+  id: string;
+  company_id: string;
+  description: string;
+  amount: number;
+  currency: string;
+  provider_id: string | null;
+  tipo_egreso_id: string;
+  frequency: RecurringFrequency;
+  day_of_month: number | null;
+  day_of_week: number | null;
+  start_date: string;
+  end_date: string | null;
+  is_active: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RecurringExpenseFormData {
+  description: string;
+  amount: number;
+  provider_id: string | null;
+  tipo_egreso_id: string;
+  frequency: RecurringFrequency;
+  day_of_month?: number;
+  day_of_week?: number;
+  start_date: string;
+  end_date?: string | null;
+}
+
+export type ChequeType = 'fisico' | 'echeq';
+export type ChequeStatus = 'pendiente' | 'pagado' | 'anulado' | 'vencido';
+export type ChequeDirection = 'emitido' | 'recibido';
+
+export interface Cheque {
+  id: string;
+  company_id: string;
+  tipo: ChequeType;
+  direction: ChequeDirection;
+  numero_cheque: string;
+  banco: string;
+  fecha_emision: string;
+  fecha_pago: string;
+  monto: number;
+  destinatario: string | null;
+  proveedor_id: string | null;
+  client_id: string | null;
+  orden_id: string | null;
+  estado: ChequeStatus;
+  descripcion: string | null;
+  comprobante_url: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  provider?: {
+    id: string;
+    nombre_fantasia: string;
+    razon_social: string;
+  };
+  client?: {
+    id: string;
+    nombre_fantasia: string;
+    razon_social: string;
+  };
+}
+
+export interface TarjetaCredito {
+  id: string;
+  company_id: string;
+  nombre: string;
+  banco: string;
+  ultimos_4_digitos: string | null;
+  dia_cierre: number;
+  dia_vencimiento: number;
+  color: string;
+  is_active: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TarjetaResumen {
+  id: string;
+  tarjeta_id: string;
+  company_id: string;
+  periodo: string; // "MM/YYYY"
+  fecha_cierre: string;
+  fecha_vencimiento: string;
+  estado: 'abierto' | 'cerrado' | 'pagado';
+  total_consumos: number;
+  total_pagado: number;
+  observaciones: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TarjetaConsumo {
+  id: string;
+  resumen_id: string;
+  tarjeta_id: string;
+  company_id: string;
+  fecha_compra: string;
+  descripcion: string;
+  monto_original: number;
+  monto_cuota: number;
+  cuotas_total: number;
+  nro_cuota: number;
+  comprobante_url: string | null;
+  categoria_id: string | null;
+  created_by: string | null;
+  created_at: string;
 }

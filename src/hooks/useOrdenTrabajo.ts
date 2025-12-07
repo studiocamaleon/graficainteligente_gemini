@@ -14,6 +14,7 @@ import type {
   CentroCopiadoOrdenItem,
   EstadoOrdenCopiado,
 } from '../types/database';
+import { getArgentinaDateString } from '../utils/dates';
 
 export interface OrdenTrabajoServicio {
   id: string;
@@ -121,6 +122,12 @@ interface AddPagoData {
   referencia_pago?: string;
   comprobante_url?: string;
   notas?: string;
+  cheque_data?: {
+    numero_cheque: string;
+    fecha_pago: string;
+    banco: string;
+    titular?: string;
+  };
 }
 
 export function useOrdenTrabajo() {
@@ -557,10 +564,44 @@ export function useOrdenTrabajo() {
       setLoading(true);
       setError(null);
 
+      // Handle Cheque Creation if present
+      let chequeId = null;
+      if (pagoData.cheque_data && pagoData.medio_cobro_id) {
+        const { data: newCheck, error: checkError } = await supabase
+          .from('cheques_cartera')
+          .insert([{
+            company_id: profile?.company_id,
+            tipo: 'fisico',
+            direction: 'recibido',
+            estado: 'pendiente',
+            numero_cheque: pagoData.cheque_data.numero_cheque,
+            banco: pagoData.cheque_data.banco,
+            fecha_emision: getArgentinaDateString(), // Use local date
+            fecha_pago: pagoData.cheque_data.fecha_pago, // Maturity
+            monto: pagoData.monto,
+            destinatario: pagoData.cheque_data.titular || 'Nosotros',
+            descripcion: `Pago Orden #${ordenId}`, // Ideally fetch Order Number but ID is fine for link
+            created_by: profile?.id
+          }])
+          .select()
+          .single();
+
+        if (checkError) throw checkError;
+        chequeId = newCheck.id;
+      }
+
+      // We remove cheque_data from the payload to ordenes_trabajo_pagos
+      const dbPagoData: any = { ...pagoData };
+      delete dbPagoData.cheque_data;
+
+      // Ensure we insert valid fields (ordenes_trabajo_pagos doesn't have cheque_id field usually, but we could add it? 
+      // For now, let's just create the cheque. Linking is implicit via description or we can add metadata in notes?
+      // Actually, let's append cheque info to notes if possible or just rely on 'Cheque' method.
+
       const { error: pagoError } = await supabase.from('ordenes_trabajo_pagos').insert([
         {
           orden_id: ordenId,
-          ...pagoData,
+          ...dbPagoData,
           created_by: profile?.id || null,
         },
       ]);
@@ -572,6 +613,7 @@ export function useOrdenTrabajo() {
         monto: pagoData.monto,
         medio_cobro_id: pagoData.medio_cobro_id,
         metodo_pago: pagoData.metodo_pago,
+        cheque_id: chequeId
       });
 
       return true;

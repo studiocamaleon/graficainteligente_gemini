@@ -41,10 +41,10 @@ export function PendingDeliveriesPage() {
     }, [deliveries, searchTerm]);
 
     const handleDeliverClick = (delivery: PendingDelivery) => {
-        if (delivery.saldo_pendiente > 0) {
-            setSelectedDelivery(delivery);
-            setShowPagoForm(true);
-        } else {
+        // Validation: Must be fully paid OR Client has Current Account
+        const canDeliver = delivery.saldo_pendiente <= 0.01 || delivery.cliente?.tiene_cuenta_corriente;
+
+        if (canDeliver) {
             console.log('Checking delivery type:', delivery.requiere_despacho);
             if (delivery.tipo === 'orden_trabajo' && delivery.requiere_despacho) {
                 setSelectedDelivery(delivery);
@@ -52,22 +52,30 @@ export function PendingDeliveriesPage() {
             } else {
                 confirmDelivery(delivery);
             }
+        } else {
+            // Must pay first
+            setSelectedDelivery(delivery);
+            setShowPagoForm(true);
         }
     };
 
     const confirmDelivery = (delivery: PendingDelivery) => {
+        const hasDebt = delivery.saldo_pendiente > 0.01;
+
         openConfirm({
             title: 'Confirmar Entrega',
-            message: `¿Estás seguro que deseas marcar la orden ${delivery.numero_orden} como ENTREGADA?`,
-            variant: 'success',
+            message: hasDebt
+                ? `La orden ${delivery.numero_orden} tiene un saldo de $${delivery.saldo_pendiente.toLocaleString('es-AR')}. Como el cliente tiene Cuenta Corriente, el saldo se registrará como pendiente en su cuenta. ¿Confirmar entrega?`
+                : `¿Estás seguro que deseas marcar la orden ${delivery.numero_orden} como ENTREGADA?`,
+            variant: hasDebt ? 'warning' : 'success',
             confirmText: 'Confirmar Entrega',
             cancelText: 'Cancelar',
             onConfirm: async () => {
                 const success = await deliverOrder(delivery.id, delivery.tipo);
                 if (success) {
-                    openInfoDialog('Éxito', 'La orden ha sido marcada como entregada correctamente.');
-                    // Notify for normal delivery (finalized) if desired, but user asked specifically for shipping.
-                    // We can stick to just shipping notification for now as requested.
+                    openInfoDialog('Éxito', hasDebt
+                        ? 'Orden entregada. El saldo ha sido imputado a la Cuenta Corriente del cliente.'
+                        : 'La orden ha sido marcada como entregada correctamente.');
                 } else {
                     openInfoDialog('Error', 'No se pudo actualizar el estado de la orden.');
                 }

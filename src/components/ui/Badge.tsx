@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 
-interface BadgeProps {
+interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
   children: ReactNode;
   variant?: 'default' | 'primary' | 'success' | 'warning' | 'danger' | 'info' | 'blue' | 'purple';
   size?: 'sm' | 'md' | 'lg';
@@ -24,10 +24,11 @@ const sizeStyles = {
   lg: 'px-4 py-1.5 text-base',
 };
 
-export function Badge({ children, variant = 'default', size = 'md', className = '' }: BadgeProps) {
+export function Badge({ children, variant = 'default', size = 'md', className = '', ...props }: BadgeProps) {
   return (
     <span
       className={`inline-flex items-center font-semibold rounded-full border ${variantStyles[variant]} ${sizeStyles[size]} ${className}`}
+      {...props}
     >
       {children}
     </span>

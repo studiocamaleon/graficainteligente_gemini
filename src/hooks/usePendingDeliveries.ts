@@ -7,9 +7,10 @@ export interface PendingDelivery {
     id: string;
     numero_orden: string;
     cliente: {
-        id: string; // Added id
+        id: string;
         nombre_fantasia: string;
         numero_documento: string;
+        tiene_cuenta_corriente: boolean; // Added
     } | null;
     fecha_solicitud: string;
     fecha_entrega_estimada: string | null;
@@ -45,7 +46,7 @@ export function usePendingDeliveries() {
           total,
           estado,
           requiere_despacho,
-          cliente:clients(id, nombre_fantasia, numero_documento),
+          cliente:clients(id, nombre_fantasia, numero_documento, tiene_cuenta_corriente),
           pagos:ordenes_trabajo_pagos(monto)
         `)
                 .eq('company_id', profile.company_id)
@@ -63,7 +64,7 @@ export function usePendingDeliveries() {
           fecha_entrega_estimada,
           total,
           estado,
-          cliente:clients(id, nombre_fantasia, numero_documento),
+          cliente:clients(id, nombre_fantasia, numero_documento, tiene_cuenta_corriente),
           pagos:centro_copiado_ordenes_pagos(monto)
         `)
                 .eq('company_id', profile.company_id)

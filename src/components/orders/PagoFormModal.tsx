@@ -12,6 +12,12 @@ export interface PagoFormData {
   medio_cobro_id: string;
   referencia_pago: string;
   notas: string;
+  cheque_data?: {
+    numero_cheque: string;
+    fecha_pago: string;
+    banco: string;
+    titular?: string;
+  };
 }
 
 interface PagoFormModalProps {
@@ -62,7 +68,17 @@ export function PagoFormModal({
     setErrors({});
   }, [pago, isOpen]);
 
-  const mediosActivos = mediosCobro.filter((m) => m.is_active);
+  /* New Cheque Data State */
+  const [chequeData, setChequeData] = useState({
+    numero_cheque: '',
+    fecha_pago: '',
+    banco: '',
+    titular: ''
+  });
+
+  /* Check if selected Medio de Cobro is Cheque */
+  const selectedMedio = mediosCobro.find(m => m.id === formData.medio_cobro_id);
+  const isCheque = selectedMedio?.nombre.toLowerCase().includes('cheque');
 
   const calculos = formData.medio_cobro_id && formData.monto > 0
     ? calcularComisionYLiberacion(formData.medio_cobro_id, formData.monto)
@@ -89,6 +105,12 @@ export function PagoFormModal({
       newErrors.medio_cobro_id = 'Debe seleccionar un medio de cobro';
     }
 
+    if (isCheque) {
+      if (!chequeData.numero_cheque) newErrors.numero_cheque = 'Requerido';
+      if (!chequeData.fecha_pago) newErrors.fecha_pago_cheque = 'Requerido';
+      if (!chequeData.banco) newErrors.banco = 'Requerido';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -98,214 +120,174 @@ export function PagoFormModal({
 
     if (!validate()) return;
 
-    onSubmit(formData);
+    const submitData: any = {
+      ...formData
+    };
+
+    if (isCheque) {
+      submitData.cheque_data = chequeData;
+    }
+
+    onSubmit(submitData);
     onClose();
-  };
-
-  const handleMontoChange = (value: string) => {
-    const monto = parseFloat(value) || 0;
-    setFormData({ ...formData, monto });
-  };
-
-  const handleMontoRapido = (porcentaje: number) => {
-    const monto = (saldoPendiente * porcentaje) / 100;
-    setFormData({ ...formData, monto: Math.round(monto * 100) / 100 });
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-gray-900">
+    <div className={`fixed inset-0 z-50 flex items-center justify-center ${!isOpen ? 'hidden' : ''}`}>
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-6 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+            <DollarSign className="w-5 h-5 text-blue-600" />
             {pago ? 'Editar Pago' : 'Registrar Pago'}
           </h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            <X className="w-6 h-6" />
-          </button>
+          <Button variant="ghost" size="sm" onClick={onClose}>
+            <X className="w-4 h-4" />
+          </Button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          {/* Información del Saldo */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-blue-900">Saldo Pendiente</span>
-              <span className="text-2xl font-bold text-blue-900">
-                ${saldoPendiente.toFixed(2)}
-              </span>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={() => handleMontoRapido(25)}
-              >
-                25%
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={() => handleMontoRapido(50)}
-              >
-                50%
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={() => handleMontoRapido(100)}
-              >
-                100%
-              </Button>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            {/* Fecha de Pago */}
-            <div>
-              <label htmlFor="fecha_pago" className="block text-sm font-medium text-gray-700 mb-1">
-                Fecha de Pago *
-              </label>
-              <Input
-                type="date"
-                id="fecha_pago"
-                value={formData.fecha_pago}
-                onChange={(e) => setFormData({ ...formData, fecha_pago: e.target.value })}
-                max={getArgentinaDateString()}
-              />
-              {errors.fecha_pago && (
-                <p className="text-sm text-red-600 mt-1">{errors.fecha_pago}</p>
-              )}
-            </div>
-
-            {/* Monto */}
-            <div>
-              <label htmlFor="monto" className="block text-sm font-medium text-gray-700 mb-1">
-                Monto *
-              </label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
-                <Input
-                  type="number"
-                  id="monto"
-                  min="0"
-                  step="0.01"
-                  value={formData.monto || ''}
-                  onChange={(e) => handleMontoChange(e.target.value)}
-                  className="pl-7"
-                  placeholder="0.00"
-                />
-              </div>
-              {errors.monto && (
-                <p className="text-sm text-red-600 mt-1">{errors.monto}</p>
-              )}
-            </div>
-          </div>
-
-          {/* Medio de Cobro */}
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="medio_cobro" className="block text-sm font-medium text-gray-700 mb-1">
-              Medio de Cobro *
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Fecha de Cobro (Real)
+            </label>
+            <Input
+              type="date"
+              value={formData.fecha_pago}
+              onChange={(e) => setFormData({ ...formData, fecha_pago: e.target.value })}
+              error={errors.fecha_pago}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Monto
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <span className="text-gray-500 sm:text-sm">$</span>
+              </div>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                className="pl-7"
+                value={formData.monto || ''}
+                onChange={(e) => setFormData({ ...formData, monto: parseFloat(e.target.value) || 0 })}
+                error={errors.monto}
+              />
+            </div>
+            <p className="mt-1 text-xs text-gray-500">
+              Saldo pendiente: ${saldoPendiente.toFixed(2)}
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Medio de Cobro
             </label>
             <MedioCobroSelector
               value={formData.medio_cobro_id}
               onChange={(value) => setFormData({ ...formData, medio_cobro_id: value })}
-              medios={mediosActivos}
-              required
-              showDetails
             />
-            {errors.medio_cobro_id && (
-              <p className="text-sm text-red-600 mt-1">{errors.medio_cobro_id}</p>
-            )}
+            {errors.medio_cobro_id && <p className="text-xs text-red-500 mt-1">{errors.medio_cobro_id}</p>}
           </div>
 
-          {/* Cálculos en Tiempo Real */}
-          {calculos && formData.monto > 0 && (
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                {calculos.comision > 0 && (
-                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
-                    <div className="flex items-center gap-2 mb-1">
-                      <TrendingDown className="w-4 h-4 text-orange-600" />
-                      <span className="text-sm text-orange-700 font-medium">Comisión</span>
-                    </div>
-                    <p className="text-xl font-bold text-orange-900">
-                      ${calculos.comision.toFixed(2)}
-                    </p>
-                    <p className="text-xs text-orange-600 mt-1">
-                      Monto neto: ${calculos.montoNeto.toFixed(2)}
-                    </p>
-                  </div>
-                )}
+          {isCheque && (
+            <div className="bg-blue-50 p-4 rounded-lg space-y-3">
+              <h4 className="text-sm font-semibold text-blue-800 border-b border-blue-200 pb-1">Datos del Cheque Recibido</h4>
 
-                {calculos.diasLiberacion > 0 && (
-                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Calendar className="w-4 h-4 text-purple-600" />
-                      <span className="text-sm text-purple-700 font-medium">Liberación</span>
-                    </div>
-                    <p className="text-xl font-bold text-purple-900">
-                      {calculos.diasLiberacion} días
-                    </p>
-                    <p className="text-xs text-purple-600 mt-1">
-                      {calculos.fechaLiberacion.toLocaleDateString('es-AR')}
-                    </p>
-                  </div>
-                )}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Nro. Cheque *</label>
+                  <Input
+                    value={chequeData.numero_cheque}
+                    onChange={e => setChequeData({ ...chequeData, numero_cheque: e.target.value })}
+                    placeholder="Ej: 556677"
+                    error={errors.numero_cheque}
+                    className="bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Fecha Pago (Venc) *</label>
+                  <Input
+                    type="date"
+                    value={chequeData.fecha_pago}
+                    onChange={e => setChequeData({ ...chequeData, fecha_pago: e.target.value })}
+                    error={errors.fecha_pago_cheque}
+                    className="bg-white"
+                  />
+                </div>
               </div>
 
-              {/* Saldo Restante */}
-              <div className={`border rounded-lg p-3 ${saldoRestante > 0 ? 'bg-amber-50 border-amber-200' : 'bg-green-50 border-green-200'
-                }`}>
-                <div className="flex items-center justify-between">
-                  <span className={`text-sm font-medium ${saldoRestante > 0 ? 'text-amber-700' : 'text-green-700'
-                    }`}>
-                    Saldo Restante después de este pago
-                  </span>
-                  <span className={`text-2xl font-bold ${saldoRestante > 0 ? 'text-amber-900' : 'text-green-900'
-                    }`}>
-                    ${saldoRestante.toFixed(2)}
-                  </span>
-                </div>
-                {saldoRestante > 0 && (
-                  <div className="flex items-center gap-1 mt-2">
-                    <AlertCircle className="w-4 h-4 text-amber-600" />
-                    <p className="text-xs text-amber-700">
-                      Quedará saldo pendiente por cobrar
-                    </p>
-                  </div>
-                )}
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Banco *</label>
+                <Input
+                  value={chequeData.banco}
+                  onChange={e => setChequeData({ ...chequeData, banco: e.target.value })}
+                  placeholder="Ej: Galicia"
+                  error={errors.banco}
+                  className="bg-white"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Titular (Firmante)</label>
+                <Input
+                  value={chequeData.titular}
+                  onChange={e => setChequeData({ ...chequeData, titular: e.target.value })}
+                  placeholder="Opcional"
+                  className="bg-white"
+                />
               </div>
             </div>
           )}
 
-          {/* Referencia */}
+          {calculos && formData.monto > 0 && (
+            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 text-sm space-y-2">
+              {calculos.comision > 0 && (
+                <div className="flex justify-between text-orange-700">
+                  <span className="flex items-center gap-1"><TrendingDown className="w-3 h-3" /> Comisión</span>
+                  <span>-${calculos.comision.toFixed(2)}</span>
+                </div>
+              )}
+              <div className="flex justify-between font-medium text-gray-900 border-t border-gray-200 pt-1">
+                <span>Neto a recibir:</span>
+                <span className="text-green-600">${calculos.montoNeto.toFixed(2)}</span>
+              </div>
+              {calculos.diasLiberacion > 0 && (
+                <div className="text-xs text-blue-600 flex items-center gap-1">
+                  <Calendar className="w-3 h-3" />
+                  <span>Se libera el {calculos.fechaLiberacion.toLocaleDateString()}</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {saldoRestante > 0 && (
+            <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm">
+              <AlertCircle className="w-4 h-4 text-amber-600" />
+              <span>Quedará un saldo pendiente de <strong>${saldoRestante.toFixed(2)}</strong></span>
+            </div>
+          )}
+
           <div>
-            <label htmlFor="referencia" className="block text-sm font-medium text-gray-700 mb-1">
-              Referencia / Comprobante
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Referencia / Nro Comprobante
             </label>
             <Input
-              type="text"
-              id="referencia"
               value={formData.referencia_pago}
               onChange={(e) => setFormData({ ...formData, referencia_pago: e.target.value })}
-              placeholder="Número de transacción, cheque, etc."
+              placeholder="Ej: Transferencia #1234"
             />
           </div>
 
-          {/* Notas */}
           <div>
-            <label htmlFor="notas" className="block text-sm font-medium text-gray-700 mb-1">
-              Notas
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Notas (Opcional)
             </label>
             <textarea
-              id="notas"
               rows={3}
               value={formData.notas}
               onChange={(e) => setFormData({ ...formData, notas: e.target.value })}
@@ -314,13 +296,11 @@ export function PagoFormModal({
             />
           </div>
 
-          {/* Botones */}
           <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
-            <Button type="button" variant="secondary" onClick={onClose}>
+            <Button type="button" variant="outline" onClick={onClose}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={!formData.monto || !formData.medio_cobro_id}>
-              <DollarSign className="w-4 h-4 mr-2" />
+            <Button type="submit">
               {pago ? 'Actualizar Pago' : 'Registrar Pago'}
             </Button>
           </div>

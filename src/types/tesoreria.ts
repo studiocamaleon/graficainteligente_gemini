@@ -14,7 +14,8 @@ export interface TipoEgreso {
 export interface Egreso {
   id: string;
   company_id: string;
-  caja_id: string;
+  caja_id: string | null;
+  tarjeta_id?: string | null;
   tipo_egreso_id: string;
   monto: number;
   concepto: string;
@@ -34,6 +35,10 @@ export interface Egreso {
     moneda: string;
     tipo: string;
   };
+  tarjeta?: {
+    nombre: string;
+    banco: string;
+  };
   tipo_egreso?: {
     nombre: string;
     color: string;
@@ -49,15 +54,22 @@ export interface Egreso {
 }
 
 export interface CreateEgresoData {
-  caja_id: string;
+  caja_id: string | null;
+  tarjeta_id?: string;
   tipo_egreso_id: string;
   monto: number;
   concepto: string;
   fecha: string;
-  numero_comprobante?: string;
   proveedor_id?: string;
-  medio_pago?: 'efectivo' | 'transferencia' | 'cheque' | 'tarjeta' | 'debito' | 'otro';
+  numero_comprobante?: string;
+  medio_pago?: Egreso['medio_pago'];
   notas?: string;
+  cuotas?: number;
+  // Cheque Fields
+  numero_cheque?: string;
+  fecha_pago?: string; // Fecha de cobro/vencimiento
+  banco?: string;
+  destinatario?: string;
 }
 
 export interface UpdateEgresoData {

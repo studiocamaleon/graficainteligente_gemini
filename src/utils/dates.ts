@@ -24,6 +24,10 @@ export function formatDateForInput(date: Date | string | dayjs.Dayjs): string {
 }
 
 export function formatDateDisplay(date: Date | string | dayjs.Dayjs): string {
+  // If string matches YYYY-MM-DD, treat as already in timezone
+  if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return dayjs.tz(date, ARGENTINA_TIMEZONE).format('DD/MM/YYYY');
+  }
   return dayjs(date).tz(ARGENTINA_TIMEZONE).format('DD/MM/YYYY');
 }
 

@@ -25,6 +25,24 @@ export function useCuentasCorrientes(params: UseCuentasCorrientesParams = {}) {
 
     setLoading(true);
     try {
+      // 1. Try Optimized Path (RPC)
+      const { data: cachedData, error: cachedError } = await supabase
+        .rpc('fn_get_clientes_con_saldo', {
+          p_company_id: company.id,
+          p_search_term: searchTerm,
+          p_estado_filter: estadoCC
+        });
+
+      if (!cachedError && cachedData) {
+        setClientes(cachedData as unknown as ClienteConSaldo[]);
+        return;
+      }
+
+      // 2. Fallback Path (Legacy N+1 Logic) if RPC fails or not exists
+      if (cachedError) {
+        console.warn('Optimized fetch failed, falling back to legacy:', cachedError);
+      }
+
       const { data: clientesData, error: clientesError } = await supabase
         .from('clients')
         .select('*')
@@ -51,7 +69,7 @@ export function useCuentasCorrientes(params: UseCuentasCorrientesParams = {}) {
 
           const saldo = saldoData || 0;
 
-          const { estadoCC, diasVencimiento } = determinarEstadoCCDesdeLiquidaciones(liquidaciones || []);
+          const { estadoCC: calcEstado, diasVencimiento } = determinarEstadoCCDesdeLiquidaciones(liquidaciones || []);
 
           return {
             id: cliente.id,
@@ -65,7 +83,7 @@ export function useCuentasCorrientes(params: UseCuentasCorrientesParams = {}) {
             dias_vencimiento_config: cliente.dias_vencimiento,
             saldo_actual: saldo,
             dias_vencimiento: diasVencimiento,
-            estado_cc: estadoCC,
+            estado_cc: calcEstado,
             tiene_cuenta_corriente: cliente.tiene_cuenta_corriente,
           };
         })

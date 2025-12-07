@@ -10,8 +10,12 @@ interface FetchEgresosFilters {
   tipo_egreso_id?: string;
 }
 
+import { useRegistrarConsumo } from './useTarjetas';
+import { getArgentinaDateString } from '../utils/dates';
+
 export function useEgresos(filters?: FetchEgresosFilters) {
   const { company, user } = useAuth();
+  const { registrarConsumo } = useRegistrarConsumo();
   const [egresos, setEgresos] = useState<Egreso[]>([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
@@ -61,16 +65,77 @@ export function useEgresos(filters?: FetchEgresosFilters) {
     }
   };
 
+
   const createEgreso = async (data: CreateEgresoData) => {
     if (!company || !user) throw new Error('No company or user');
 
+    // 1. Tarjetas de Crédito: Consumo a Resumen
+    if (data.medio_pago === 'tarjeta' && data.tarjeta_id) {
+      if (!data.cuotas) throw new Error('Cuotas requeridas para pago con tarjeta');
+
+      await registrarConsumo({
+        tarjeta_id: data.tarjeta_id,
+        fecha_compra: data.fecha,
+        descripcion: data.concepto,
+        monto_total: data.monto,
+        cuotas: data.cuotas,
+        categoria_id: undefined,
+        comprobante_url: undefined
+      });
+    }
+
+    // 2. Cheques: Cartera de Cheques
+    if (data.medio_pago === 'cheque') {
+      if (!data.numero_cheque || !data.banco || !data.fecha_pago) {
+        throw new Error('Faltan datos del cheque');
+      }
+
+      // Crear cheque emitido
+      const { error: checkError } = await supabase
+        .from('cheques_cartera')
+        .insert([{
+          company_id: company.id,
+          tipo: 'fisico', // Default for expense
+          direction: 'emitido',
+          estado: 'pendiente',
+          numero_cheque: data.numero_cheque,
+          banco: data.banco,
+          fecha_emision: getArgentinaDateString(), // Use local date
+          fecha_pago: data.fecha_pago, // Vencimiento
+          monto: data.monto,
+          destinatario: data.destinatario || data.concepto,
+          descripcion: `Pago Egreso: ${data.concepto}`,
+          created_by: user.id
+        }]);
+
+      if (checkError) throw checkError;
+    }
+
+    // Preparamos datos para insert (quitando campos UI-only)
+    const dbData: any = {
+      ...data,
+      company_id: company.id,
+      created_by: user.id
+    };
+
+    // Cleanup fields not in 'egresos' table
+    delete dbData.cuotas;
+    delete dbData.numero_cheque;
+    delete dbData.fecha_pago;
+    delete dbData.banco;
+    delete dbData.destinatario;
+    delete dbData.tarjeta_id; // tarjeta_id is actually in egresos? Let's check type. Yes, but optional.
+
+    // Logic for caja_id:
+    // - Tarjeta: caja_id = null (Deferred via resumen)
+    // - Cheque: caja_id = null (Deferred via cheque portfolio)
+    if (data.medio_pago === 'tarjeta' || data.medio_pago === 'cheque') {
+      dbData.caja_id = null;
+    }
+
     const { data: newEgreso, error } = await supabase
       .from('egresos')
-      .insert([{
-        ...data,
-        company_id: company.id,
-        created_by: user.id,
-      }])
+      .insert([dbData])
       .select(`
         *,
         caja:cajas(nombre, moneda, tipo),

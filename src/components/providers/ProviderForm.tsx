@@ -9,6 +9,7 @@ import { CreateBankModal } from './CreateBankModal';
 import { useLocations } from '../../hooks/useLocations';
 import { useBanks } from '../../hooks/useBanks';
 import { useAuth } from '../../hooks/useAuth';
+import { useTiposEgreso } from '../../hooks/useTiposEgreso';
 import type { Provider, ProviderFormData, DocumentType, AccountType, BankIdentifierType } from '../../types/database';
 
 interface ProviderFormProps {
@@ -39,6 +40,7 @@ export function ProviderForm({ provider, onSubmit, onCancel, isLoading }: Provid
   const { profile } = useAuth();
   const { countries, provinces, cities, fetchProvinces, fetchCities, getArgentinaId } = useLocations();
   const { banks, loading: banksLoading, refetch: refetchBanks } = useBanks('');
+  const { tipos: tiposEgreso } = useTiposEgreso();
 
   const [formData, setFormData] = useState<ProviderFormData>({
     nombre_fantasia: provider?.nombre_fantasia || '',
@@ -56,6 +58,7 @@ export function ProviderForm({ provider, onSubmit, onCancel, isLoading }: Provid
     tipo_cuenta: provider?.tipo_cuenta || '',
     tipo_identificador_bancario: provider?.tipo_identificador_bancario || '',
     identificador_bancario: provider?.identificador_bancario || '',
+    tipo_egreso_id: provider?.tipo_egreso_id || '',
     acepta_transferencias: provider?.acepta_transferencias || false,
     acepta_cheques: provider?.acepta_cheques || false,
     acepta_tarjetas_credito: provider?.acepta_tarjetas_credito || false,
@@ -201,6 +204,16 @@ export function ProviderForm({ provider, onSubmit, onCancel, isLoading }: Provid
                 error={errors.numero_documento}
                 placeholder="20-12345678-9"
               />
+
+              <div className="md:col-span-2">
+                <Select
+                  label="Tipo de Gasto Predeterminado"
+                  value={formData.tipo_egreso_id || ''}
+                  onChange={(value) => setFormData({ ...formData, tipo_egreso_id: value })}
+                  options={tiposEgreso.map(t => ({ value: t.id, label: t.nombre }))}
+                  placeholder="Seleccione la categoría de gasto principal (ej: Insumos, Servicios)"
+                />
+              </div>
             </div>
           </div>
 
@@ -319,9 +332,9 @@ export function ProviderForm({ provider, onSubmit, onCancel, isLoading }: Provid
                 onChange={(e) => setFormData({ ...formData, identificador_bancario: e.target.value })}
                 placeholder={
                   formData.tipo_identificador_bancario === 'CBU' ? '22 dígitos' :
-                  formData.tipo_identificador_bancario === 'CVU' ? '22 dígitos' :
-                  formData.tipo_identificador_bancario === 'Alias' ? 'alias.del.proveedor' :
-                  'Ingrese el identificador'
+                    formData.tipo_identificador_bancario === 'CVU' ? '22 dígitos' :
+                      formData.tipo_identificador_bancario === 'Alias' ? 'alias.del.proveedor' :
+                        'Ingrese el identificador'
                 }
               />
             </div>
