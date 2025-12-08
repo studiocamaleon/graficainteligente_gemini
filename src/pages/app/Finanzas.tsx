@@ -3,6 +3,7 @@ import TesoreriaView from './finanzas/TesoreriaView';
 import CuentasCorrientesView from './finanzas/CuentasCorrientesView';
 import ReportesView from './finanzas/ReportesView';
 import { FacturasView } from './finanzas/FacturasView';
+import CuentasPorPagarPage from './tesoreria/CuentasPorPagarPage';
 import { usePageHeader } from '../../hooks/usePageHeader';
 import { ProtectedModuleRoute } from '../../components/auth/ProtectedModuleRoute';
 
@@ -18,6 +19,14 @@ export default function Finanzas() {
           element={
             <ProtectedModuleRoute moduleId="finance-tesoreria">
               <TesoreriaView />
+            </ProtectedModuleRoute>
+          }
+        />
+        <Route
+          path="/cuentas-por-pagar"
+          element={
+            <ProtectedModuleRoute moduleId="finance-cuentas-por-pagar">
+              <CuentasPorPagarPage />
             </ProtectedModuleRoute>
           }
         />

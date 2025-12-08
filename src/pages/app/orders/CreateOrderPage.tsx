@@ -40,7 +40,7 @@ export function CreateOrderPage() {
   const isEditing = Boolean(id);
 
   const { profile } = useAuth();
-  const { createOrdenConItems, updateOrdenCompleta, getOrdenById, loading, error } = useOrdenTrabajo();
+  const { createOrdenConItems, updateOrdenCompleta, getOrdenById, addPago, loading, error } = useOrdenTrabajo();
   const { showSuccess, showError } = useToast();
   const { createOrden: createOrdenCopiado } = useCentroCopiadoOrdenes({});
 
@@ -59,6 +59,8 @@ export function CreateOrderPage() {
   const [descuentoTotal, setDescuentoTotal] = useState(0);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [ordenCreada, setOrdenCreada] = useState(false);
+  const [ordenCreadaId, setOrdenCreadaId] = useState<string | null>(null); // State for ID
+  const [showPagoModal, setShowPagoModal] = useState(false); // Helper for post-creation payment
   const [isLoadingData, setIsLoadingData] = useState(false);
 
   // Estado para pagos
@@ -311,6 +313,18 @@ export function CreateOrderPage() {
     return Object.keys(errores).length === 0;
   };
 
+  const handlePagoSubmit = async (data: any) => {
+    if (!ordenCreadaId) return;
+
+    const success = await addPago(ordenCreadaId, data);
+    if (success) {
+      showSuccess('Pago registrado correctamente');
+      navigate('/app/orders/ordenes');
+    } else {
+      showError('Error al registrar el pago');
+    }
+  };
+
   const handleCrearOrden = async () => {
     if (!validarFormulario()) {
       alert('Por favor, complete todos los campos requeridos');
@@ -474,7 +488,11 @@ export function CreateOrderPage() {
           sessionStorage.removeItem('ordenTemporalCreacion');
 
           // Marcar orden como creada ANTES de navegar
-          setOrdenCreada(true);
+          if (result) {
+            setOrdenCreada(true);
+            setOrdenCreadaId(result.id); // Save ID
+            setShowPagoModal(true); // Open payment modal
+          }
           isCreatingOrderRef.current = false;
           console.log('[CreateOrderPage] Orden creada exitosamente, cleanup permanentemente deshabilitado');
 
@@ -690,6 +708,22 @@ export function CreateOrderPage() {
         />
       </div>
 
+      {ordenCreadaId && (
+        <PagoFormModal
+          isOpen={showPagoModal}
+          onClose={() => {
+            setShowPagoModal(false);
+            // Si cierra el modal, redirigimos igual
+            navigate('/app/orders/ordenes');
+          }}
+          onSubmit={handlePagoSubmit}
+          saldoPendiente={calcularTotales().total} // Total inicial
+          clientName={(() => {
+            const c = clients.find(cl => cl.id === clienteId);
+            return c?.nombre_fantasia || c?.razon_social || '';
+          })()}
+        />
+      )}
       <PagoFormModal
         isOpen={showPagoForm}
         onClose={() => {
@@ -698,7 +732,11 @@ export function CreateOrderPage() {
         }}
         onSubmit={handleGuardarPago}
         saldoPendiente={calcularSaldoPendiente()}
-        pago={editingPago}
+        pago={editingPago ? {
+          ...editingPago,
+          referencia_pago: editingPago.referencia_pago || '',
+          notas: editingPago.notas || ''
+        } : undefined}
       />
 
       <ConfirmDialog

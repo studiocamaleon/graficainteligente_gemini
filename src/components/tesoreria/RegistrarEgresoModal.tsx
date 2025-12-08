@@ -17,9 +17,15 @@ interface RegistrarEgresoModalProps {
   onClose: () => void;
   onSuccess: () => void;
   onSubmit: (data: CreateEgresoData) => Promise<void>;
+  // Pre-fill data
+  recurrenteId?: string;
+  periodoDevengado?: string;
+  proveedorId?: string;
+  tipoEgresoId?: string;
+  initialData?: Partial<CreateEgresoData>;
 }
 
-export function RegistrarEgresoModal({ isOpen, onClose, onSuccess, onSubmit }: RegistrarEgresoModalProps) {
+export function RegistrarEgresoModal({ isOpen, onClose, onSuccess, onSubmit, recurrenteId, periodoDevengado, proveedorId, tipoEgresoId, initialData }: RegistrarEgresoModalProps) {
   const { showSuccess, showError } = useToast();
   const { cajas } = useCajas();
   const { tarjetas } = useTarjetas();
@@ -29,11 +35,14 @@ export function RegistrarEgresoModal({ isOpen, onClose, onSuccess, onSubmit }: R
   const [formData, setFormData] = useState<CreateEgresoData>({
     caja_id: '',
     tarjeta_id: '',
-    tipo_egreso_id: '',
-    monto: 0,
-    concepto: '',
-    fecha: new Date().toISOString().split('T')[0],
-    cuotas: 1
+    tipo_egreso_id: initialData?.tipo_egreso_id || tipoEgresoId || '',
+    monto: initialData?.monto || 0,
+    concepto: initialData?.concepto || '',
+    fecha: initialData?.fecha || new Date().toISOString().split('T')[0],
+    cuotas: 1,
+    recurrente_id: recurrenteId,
+    periodo_devengado: periodoDevengado,
+    proveedor_id: proveedorId
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});

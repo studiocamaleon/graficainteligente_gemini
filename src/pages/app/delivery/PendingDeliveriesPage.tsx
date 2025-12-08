@@ -340,16 +340,15 @@ export function PendingDeliveriesPage() {
                 onClose={closeInfoDialog}
             />
 
-            <PagoFormModal
-                isOpen={showPagoForm}
-                onClose={() => {
-                    setShowPagoForm(false);
-                    setSelectedDelivery(null);
-                }}
-                onSubmit={handlePagoSubmit}
-                saldoPendiente={selectedDelivery?.saldo_pendiente || 0}
-            />
-
+            {selectedDelivery && (
+                <PagoFormModal
+                    isOpen={!!selectedDelivery}
+                    onClose={() => setSelectedDelivery(null)}
+                    onSubmit={handlePagoSubmit}
+                    saldoPendiente={selectedDelivery.saldo_pendiente}
+                    clientName={selectedDelivery.cliente?.nombre_fantasia || selectedDelivery.cliente?.razon_social}
+                />
+            )}
             <ShippingModal
                 isOpen={showShippingModal}
                 onClose={() => {

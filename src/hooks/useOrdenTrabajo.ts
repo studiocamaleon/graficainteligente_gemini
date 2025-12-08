@@ -127,6 +127,7 @@ interface AddPagoData {
     fecha_pago: string;
     banco: string;
     titular?: string;
+    tipo?: 'fisico' | 'echeq';
   };
 }
 
@@ -571,7 +572,7 @@ export function useOrdenTrabajo() {
           .from('cheques_cartera')
           .insert([{
             company_id: profile?.company_id,
-            tipo: 'fisico',
+            tipo: pagoData.cheque_data.tipo || 'fisico', // Use provided type or default
             direction: 'recibido',
             estado: 'pendiente',
             numero_cheque: pagoData.cheque_data.numero_cheque,

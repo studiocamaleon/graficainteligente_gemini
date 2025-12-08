@@ -38,18 +38,12 @@ END $$;
 COMMENT ON COLUMN companies.logo_url IS 'URL del logo de la empresa almacenado en Supabase Storage';
 
 -- 2. Crear el bucket de storage para logos de empresas
-INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+INSERT INTO storage.buckets (id, name)
 VALUES (
   'company-logos',
-  'company-logos',
-  true,
-  2097152,
-  ARRAY['image/png', 'image/jpeg', 'image/jpg', 'image/x-icon', 'image/vnd.microsoft.icon']
+  'company-logos'
 )
-ON CONFLICT (id) DO UPDATE SET
-  public = true,
-  file_size_limit = 2097152,
-  allowed_mime_types = ARRAY['image/png', 'image/jpeg', 'image/jpg', 'image/x-icon', 'image/vnd.microsoft.icon'];
+ON CONFLICT (id) DO NOTHING;
 
 -- 3. Eliminar políticas existentes si existen
 DROP POLICY IF EXISTS "Public read access for company logos" ON storage.objects;

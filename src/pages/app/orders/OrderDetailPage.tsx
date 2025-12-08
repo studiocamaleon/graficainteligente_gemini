@@ -989,13 +989,10 @@ export function OrderDetailPage() {
 
       <PagoFormModal
         isOpen={showPagoModal}
-        onClose={() => {
-          setShowPagoModal(false);
-          setEditingPago(null);
-        }}
+        onClose={() => setShowPagoModal(false)}
         onSubmit={handleSubmitPago}
-        saldoPendiente={orden ? Number(orden.total || 0) - (orden.pagos || []).reduce((sum: number, p: any) => sum + Number(p.monto), 0) : 0}
-        pago={editingPago}
+        saldoPendiente={saldoPendiente}
+        clientName={orden.cliente?.nombre || orden.cliente?.razon_social} // Pass Client Name
       />
     </div>
   );

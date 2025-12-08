@@ -341,6 +341,13 @@ export const MODULES: Module[] = [
         icon: Briefcase,
       },
       {
+        id: 'finance-cuentas-por-pagar',
+        name: 'Cuentas por Pagar',
+        description: 'Gestión de vencimientos y gastos recurrentes',
+        path: '/app/finanzas/cuentas-por-pagar',
+        icon: FileText,
+      },
+      {
         id: 'finance-cuentas-corrientes',
         name: 'Cuentas Corrientes',
         description: 'Gestión de cuentas corrientes de clientes',

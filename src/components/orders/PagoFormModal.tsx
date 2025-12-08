@@ -3,6 +3,7 @@ import { X, DollarSign, AlertCircle, TrendingDown, Calendar } from 'lucide-react
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { useMediosCobro } from '../../hooks/useMediosCobro';
+import { useBanks } from '../../hooks/useBanks'; // Added import
 import { MedioCobroSelector } from '../medios-cobro/MedioCobroSelector';
 import { getArgentinaDateString, isDateInFuture } from '../../utils/dates';
 
@@ -17,6 +18,7 @@ export interface PagoFormData {
     fecha_pago: string;
     banco: string;
     titular?: string;
+    tipo: 'fisico' | 'echeq';
   };
 }
 
@@ -26,6 +28,7 @@ interface PagoFormModalProps {
   onSubmit: (data: PagoFormData) => void;
   saldoPendiente: number;
   pago?: PagoFormData & { id: string };
+  clientName?: string;
 }
 
 export function PagoFormModal({
@@ -34,8 +37,12 @@ export function PagoFormModal({
   onSubmit,
   saldoPendiente,
   pago,
+  clientName,
 }: PagoFormModalProps) {
-  const { mediosCobro, calcularComisionYLiberacion } = useMediosCobro();
+  const { mediosCobro, fetchMediosCobroActivos, calcularComisionYLiberacion } = useMediosCobro();
+  const { banks } = useBanks('');
+
+
 
   const [formData, setFormData] = useState<PagoFormData>({
     fecha_pago: getArgentinaDateString(),
@@ -68,12 +75,34 @@ export function PagoFormModal({
     setErrors({});
   }, [pago, isOpen]);
 
+  useEffect(() => {
+    if (isOpen) {
+      fetchMediosCobroActivos();
+    }
+  }, [isOpen, fetchMediosCobroActivos]);
+
+  const handlePercentageClick = (pct: number) => {
+    // Si estamos editando un pago, el "saldo real" sobre el cual calcular porcentaje
+    // es el (Saldo Pendiente + Monto del Pago que se está editando).
+    // Si es nuevo pago, es solo Saldo Pendiente.
+    const baseCalculo = pago ? (saldoPendiente + pago.monto) : saldoPendiente;
+    const newMonto = Number((baseCalculo * pct).toFixed(2));
+    setFormData(prev => ({ ...prev, monto: newMonto }));
+  };
+
   /* New Cheque Data State */
-  const [chequeData, setChequeData] = useState({
+  const [chequeData, setChequeData] = useState<{
+    numero_cheque: string;
+    fecha_pago: string;
+    banco: string;
+    titular: string;
+    tipo: 'fisico' | 'echeq';
+  }>({
     numero_cheque: '',
     fecha_pago: '',
     banco: '',
-    titular: ''
+    titular: '',
+    tipo: 'fisico'
   });
 
   /* Check if selected Medio de Cobro is Cheque */
@@ -150,21 +179,34 @@ export function PagoFormModal({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Fecha de Cobro (Real)
-            </label>
-            <Input
-              type="date"
-              value={formData.fecha_pago}
-              onChange={(e) => setFormData({ ...formData, fecha_pago: e.target.value })}
-              error={errors.fecha_pago}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Monto
-            </label>
+            <div className="flex justify-between items-center mb-1">
+              <label className="block text-sm font-medium text-gray-700">
+                Monto
+              </label>
+              <div className="flex gap-1">
+                <button
+                  type="button"
+                  onClick={() => handlePercentageClick(0.25)}
+                  className="px-2 py-0.5 text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 rounded border border-gray-200 transition-colors"
+                >
+                  25%
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handlePercentageClick(0.50)}
+                  className="px-2 py-0.5 text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 rounded border border-gray-200 transition-colors"
+                >
+                  50%
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handlePercentageClick(1.0)}
+                  className="px-2 py-0.5 text-xs bg-blue-50 hover:bg-blue-100 text-blue-600 rounded border border-blue-200 transition-colors font-medium"
+                >
+                  100%
+                </button>
+              </div>
+            </div>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <span className="text-gray-500 sm:text-sm">$</span>
@@ -189,17 +231,46 @@ export function PagoFormModal({
               Medio de Cobro
             </label>
             <MedioCobroSelector
+              medios={mediosCobro}
               value={formData.medio_cobro_id}
               onChange={(value) => setFormData({ ...formData, medio_cobro_id: value })}
             />
             {errors.medio_cobro_id && <p className="text-xs text-red-500 mt-1">{errors.medio_cobro_id}</p>}
           </div>
 
+
           {isCheque && (
             <div className="bg-blue-50 p-4 rounded-lg space-y-3">
               <h4 className="text-sm font-semibold text-blue-800 border-b border-blue-200 pb-1">Datos del Cheque Recibido</h4>
 
               <div className="grid grid-cols-2 gap-3">
+                <div className="col-span-2">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Tipo de Cheque</label>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="cheque_tipo"
+                        checked={chequeData.tipo === 'fisico'}
+                        onChange={() => setChequeData({ ...chequeData, tipo: 'fisico' })}
+                        className="text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-sm text-gray-700">Físico (Papel)</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="cheque_tipo"
+                        checked={chequeData.tipo === 'echeq'}
+                        onChange={() => setChequeData({ ...chequeData, tipo: 'echeq' })}
+                        className="text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-sm text-gray-700">E-Cheq (Digital)</span>
+                    </label>
+                  </div>
+                  {errors.tipo_cheque && <p className="text-xs text-red-500 mt-1">{errors.tipo_cheque}</p>}
+                </div>
+
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Nro. Cheque *</label>
                   <Input
@@ -224,16 +295,33 @@ export function PagoFormModal({
 
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Banco *</label>
-                <Input
+                <select
                   value={chequeData.banco}
                   onChange={e => setChequeData({ ...chequeData, banco: e.target.value })}
-                  placeholder="Ej: Galicia"
-                  error={errors.banco}
-                  className="bg-white"
-                />
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white ${errors.banco ? 'border-red-300' : 'border-gray-300'}`}
+                >
+                  <option value="">Seleccionar Banco...</option>
+
+                  {banks.map(b => (
+                    <option key={b.id} value={b.name}>{b.name}</option>
+                  ))}
+                  <option value="OTRO">OTRO</option>
+                </select>
+                {errors.banco && <p className="text-xs text-red-500 mt-1">{errors.banco}</p>}
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Titular (Firmante)</label>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="block text-xs font-medium text-gray-700">Titular (Firmante)</label>
+                  {clientName && (
+                    <button
+                      type="button"
+                      onClick={() => setChequeData({ ...chequeData, titular: clientName })}
+                      className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                    >
+                      Usar {clientName}
+                    </button>
+                  )}
+                </div>
                 <Input
                   value={chequeData.titular}
                   onChange={e => setChequeData({ ...chequeData, titular: e.target.value })}
@@ -305,7 +393,7 @@ export function PagoFormModal({
             </Button>
           </div>
         </form>
-      </div>
-    </div>
+      </div >
+    </div >
   );
 }

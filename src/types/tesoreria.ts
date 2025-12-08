@@ -70,6 +70,9 @@ export interface CreateEgresoData {
   fecha_pago?: string; // Fecha de cobro/vencimiento
   banco?: string;
   destinatario?: string;
+  // Recurring Link
+  recurrente_id?: string;
+  periodo_devengado?: string;
 }
 
 export interface UpdateEgresoData {

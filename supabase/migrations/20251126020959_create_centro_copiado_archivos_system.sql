@@ -191,41 +191,13 @@ COMMENT ON FUNCTION fn_calcular_espacio_usado_copiado IS 'Calcula el espacio usa
 -- 5. STORAGE BUCKET
 -- =====================================================
 
-INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+INSERT INTO storage.buckets (id, name)
 VALUES (
   'centro-copiado-archivos',
-  'centro-copiado-archivos',
-  false,
-  209715200, -- 200 MB
-  ARRAY[
-    'application/pdf',
-    'application/msword',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'application/vnd.ms-excel',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'application/vnd.ms-powerpoint',
-    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-    'application/vnd.adobe.illustrator',
-    'application/postscript',
-    'image/vnd.adobe.photoshop',
-    'image/jpeg',
-    'image/png',
-    'image/tiff',
-    'image/gif',
-    'image/bmp',
-    'image/webp',
-    'image/svg+xml',
-    'application/zip',
-    'application/x-rar-compressed',
-    'application/x-7z-compressed',
-    'text/plain',
-    'text/csv',
-    'application/octet-stream'
-  ]
+  'centro-copiado-archivos'
 )
 ON CONFLICT (id) DO UPDATE SET
-  file_size_limit = 209715200,
-  allowed_mime_types = EXCLUDED.allowed_mime_types;
+  name = EXCLUDED.name;
 
 -- =====================================================
 -- 6. STORAGE RLS POLICIES

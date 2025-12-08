@@ -98,40 +98,17 @@ $$ LANGUAGE plpgsql;
 -- 4. CREAR STORAGE BUCKETS
 -- =====================================================
 
-INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+INSERT INTO storage.buckets (id, name)
 VALUES (
   'orden-trabajo-archivos',
-  'orden-trabajo-archivos',
-  false,
-  524288000,
-  ARRAY[
-    'application/pdf', 'application/msword', 
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'application/vnd.ms-excel',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'application/vnd.adobe.illustrator', 'application/postscript',
-    'image/vnd.adobe.photoshop', 'image/jpeg', 'image/png', 
-    'image/tiff', 'image/gif', 'image/bmp', 'image/webp', 
-    'image/svg+xml', 'application/zip', 'application/x-rar-compressed',
-    'application/x-7z-compressed', 'text/plain', 'text/csv',
-    'application/octet-stream'
-  ]
+  'orden-trabajo-archivos'
 )
 ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+INSERT INTO storage.buckets (id, name)
 VALUES (
   'orden-produccion-archivos',
-  'orden-produccion-archivos',
-  false,
-  524288000,
-  ARRAY[
-    'application/pdf', 'application/vnd.adobe.illustrator',
-    'application/postscript', 'image/vnd.adobe.photoshop',
-    'image/jpeg', 'image/png', 'image/tiff', 'image/svg+xml',
-    'application/zip', 'application/x-rar-compressed',
-    'application/octet-stream'
-  ]
+  'orden-produccion-archivos'
 )
 ON CONFLICT (id) DO NOTHING;
 

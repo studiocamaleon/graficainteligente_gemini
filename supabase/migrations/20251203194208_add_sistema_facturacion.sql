@@ -157,8 +157,8 @@ CREATE POLICY "Users can insert own company facturas historial"
 -- =====================================================
 
 -- Crear bucket para facturas (si no existe)
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('facturas', 'facturas', false)
+INSERT INTO storage.buckets (id, name)
+VALUES ('facturas', 'facturas')
 ON CONFLICT (id) DO NOTHING;
 
 -- =====================================================

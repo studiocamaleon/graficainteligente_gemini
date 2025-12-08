@@ -95,7 +95,10 @@ export function useEgresos(filters?: FetchEgresosFilters) {
         .from('cheques_cartera')
         .insert([{
           company_id: company.id,
-          tipo: 'fisico', // Default for expense
+          tipo: 'fisico', // Expenses usually physical checks? Or allow e-cheq? 
+          // For now hardcoded as Expenses form doesn't have the selector yet, 
+          // BUT the user asked for refinement in general. 
+          // I will leave 'fisico' here unless I update RegisterEgresoModal too.
           direction: 'emitido',
           estado: 'pendiente',
           numero_cheque: data.numero_cheque,

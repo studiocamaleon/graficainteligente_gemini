@@ -24,35 +24,10 @@ BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM storage.buckets WHERE id = 'presupuestos-archivos'
   ) THEN
-    INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+    INSERT INTO storage.buckets (id, name)
     VALUES (
       'presupuestos-archivos',
-      'presupuestos-archivos',
-      false, -- Privado
-      52428800, -- 50MB
-      ARRAY[
-        'application/pdf',
-        'application/msword',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'application/vnd.ms-excel',
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'application/vnd.adobe.illustrator',
-        'application/postscript',
-        'image/vnd.adobe.photoshop',
-        'image/jpeg',
-        'image/png',
-        'image/tiff',
-        'image/gif',
-        'image/bmp',
-        'image/webp',
-        'image/svg+xml',
-        'application/zip',
-        'application/x-rar-compressed',
-        'application/x-7z-compressed',
-        'text/plain',
-        'text/csv',
-        'application/octet-stream'
-      ]::text[]
+      'presupuestos-archivos'
     );
   END IF;
 END $$;
