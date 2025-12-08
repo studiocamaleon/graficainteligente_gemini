@@ -237,9 +237,8 @@ function MainLayoutContent({ children }: MainLayoutProps) {
   return (
     <div className="min-h-screen bg-gray-50 flex">
       <aside
-        className={`${
-          isSidebarOpen ? 'w-72' : 'w-20'
-        } hidden lg:flex flex-col bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 transition-all duration-300 fixed h-screen z-30 shadow-2xl shadow-blue-500/20`}
+        className={`${isSidebarOpen ? 'w-72' : 'w-20'
+          } hidden lg:flex flex-col bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 transition-all duration-300 fixed h-screen z-30 shadow-2xl shadow-blue-500/20`}
         style={{
           backgroundImage: `
             radial-gradient(circle at 20% 50%, rgba(6, 182, 212, 0.08) 0%, transparent 50%),

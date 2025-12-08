@@ -108,7 +108,12 @@ export function VencimientosList({ vencimientos, onRefresh }: VencimientosListPr
                                     </span>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-bold text-gray-900">
-                                    {formatCurrency(item.monto)}
+                                    {formatCurrency(item.monto_pendiente)}
+                                    {item.monto_pagado > 0 && (
+                                        <div className="text-xs text-green-600 font-normal">
+                                            Pagado: {formatCurrency(item.monto_pagado)}
+                                        </div>
+                                    )}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
                                     <Button
@@ -132,7 +137,7 @@ export function VencimientosList({ vencimientos, onRefresh }: VencimientosListPr
                     onSuccess={() => { }} // Handle in onSubmit directly for stricter flow
                     onSubmit={handlePagar}
                     initialData={{
-                        monto: selectedVencimiento.monto,
+                        monto: selectedVencimiento.monto_pendiente,
                         concepto: selectedVencimiento.descripcion,
                         // Pre-fill type if possible? Ideally we map recurrente->provider->tipo_egreso, but that's complex here.
                         // For now, allow user to select type.

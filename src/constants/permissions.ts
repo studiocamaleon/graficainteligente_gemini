@@ -160,7 +160,9 @@ AVAILABLE_PERMISSIONS.forEach((permission) => {
     'centro-copiado-rangos-precio',
     'centro-copiado-precios',
     'centro-copiado-ordenes',
-    'centro-copiado-ordenes-crear'
+    'centro-copiado-ordenes-crear',
+    'finance',
+    'finance-tesoreria'
   ];
 
   const operadorDisenoViewOnlyModules = [

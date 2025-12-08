@@ -13,6 +13,7 @@ export interface CashflowPoint {
     egreso_cheques: number;
     egreso_tarjetas: number;
     egreso_recurrentes: number;
+    egreso_compras: number;
     // Totals
     total_ingresos: number;
     total_egresos: number;
@@ -84,10 +85,24 @@ export function useCashflow(daysToProject: number = 90) {
                     error: any
                 };
 
+            // Fetch Compras (Pending Bills)
+            const { data: compras } = await supabase
+                .from('compras_proveedores')
+                .select('fecha_vencimiento, monto_total, id')
+                .eq('company_id', company.id)
+                .neq('estado', 'pagado')
+                .gte('fecha_vencimiento', dayjs().format('YYYY-MM-DD')) as {
+                    data: { fecha_vencimiento: string; monto_total: number; id: string; }[] | null,
+                    error: any
+                };
+            // Note: Fallback calculation for compras might be inaccurate if partial payments exist, 
+            // as we are not fetching 'egresos' for each compra here to subtract. 
+            // Ideally rely on RPC. This fallback is a simplified approximation.
+
             // Build Timeline
             const timeline: Record<string, {
                 ing_cheques: number, ing_liqui: number, ing_wip: number,
-                egr_cheques: number, egr_tarjetas: number, egr_recurrentes: number
+                egr_cheques: number, egr_tarjetas: number, egr_recurrentes: number, egr_compras: number
             }> = {};
 
             const startDate = dayjs();
@@ -96,7 +111,7 @@ export function useCashflow(daysToProject: number = 90) {
                 const dateStr = startDate.add(i, 'day').format('YYYY-MM-DD');
                 timeline[dateStr] = {
                     ing_cheques: 0, ing_liqui: 0, ing_wip: 0,
-                    egr_cheques: 0, egr_tarjetas: 0, egr_recurrentes: 0
+                    egr_cheques: 0, egr_tarjetas: 0, egr_recurrentes: 0, egr_compras: 0
                 };
             }
 
@@ -121,13 +136,21 @@ export function useCashflow(daysToProject: number = 90) {
                 }
             });
 
+            // Add Compras
+            compras?.forEach(c => {
+                const date = dayjs(c.fecha_vencimiento).format('YYYY-MM-DD');
+                if (timeline[date]) {
+                    timeline[date].egr_compras += c.monto_total; // Assuming full amount for fallback simplicity
+                }
+            });
+
             // Convert to Array with Accumulator
             const result: CashflowPoint[] = [];
             let currentBalance = saldoInicial;
 
             Object.entries(timeline).sort((a, b) => a[0].localeCompare(b[0])).forEach(([date, values]) => {
                 const total_ingresos = values.ing_cheques + values.ing_liqui + values.ing_wip;
-                const total_egresos = values.egr_cheques + values.egr_tarjetas + values.egr_recurrentes;
+                const total_egresos = values.egr_cheques + values.egr_tarjetas + values.egr_recurrentes + values.egr_compras;
                 const netChange = total_ingresos - total_egresos;
                 currentBalance += netChange;
 
@@ -139,6 +162,7 @@ export function useCashflow(daysToProject: number = 90) {
                     egreso_cheques: values.egr_cheques,
                     egreso_tarjetas: values.egr_tarjetas,
                     egreso_recurrentes: values.egr_recurrentes,
+                    egreso_compras: values.egr_compras,
                     total_ingresos,
                     total_egresos,
                     ingresos: total_ingresos, // Compat

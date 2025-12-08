@@ -13,7 +13,7 @@ interface CajaFormProps {
 
 export interface CajaFormData {
   nombre: string;
-  tipo: 'efectivo' | 'banco' | 'virtual';
+  tipo: 'efectivo' | 'banco' | 'pasarela';
   moneda: string;
   saldo_inicial: number;
   es_principal: boolean;
@@ -24,7 +24,7 @@ export interface CajaFormData {
 const TIPOS_CAJA = [
   { value: 'efectivo', label: 'Efectivo' },
   { value: 'banco', label: 'Banco' },
-  { value: 'virtual', label: 'Virtual (Pasarelas)' },
+  { value: 'pasarela', label: 'Virtual (Pasarelas)' },
 ];
 
 const MONEDAS = [

@@ -1,35 +1,43 @@
-
+import { useState } from 'react';
 import { useVencimientos } from '../../../hooks/useVencimientos';
 import { VencimientosList } from '../../../components/tesoreria/VencimientosList';
 import { PageHeader } from '../../../components/ui/PageHeader';
-import { DollarSign, Calendar, AlertCircle, RefreshCw } from 'lucide-react';
+import { DollarSign, Calendar, AlertCircle, RefreshCw, Plus } from 'lucide-react';
 import { formatCurrency } from '../../../utils/stringUtils';
 import { Button } from '../../../components/ui/Button';
+import { NuevaCompraModal } from '../../../components/tesoreria/NuevaCompraModal';
 
 export default function CuentasPorPagarPage() {
     const { vencimientos, loading, refreshVencimientos } = useVencimientos();
+    const [isCompraModalOpen, setIsCompraModalOpen] = useState(false);
 
     const totalVencido = vencimientos
         .filter(v => v.estado === 'vencido')
-        .reduce((acc, curr) => acc + curr.monto, 0);
+        .reduce((acc, curr) => acc + curr.monto_pendiente, 0);
 
     const totalHoy = vencimientos
         .filter(v => v.estado === 'hoy')
-        .reduce((acc, curr) => acc + curr.monto, 0);
+        .reduce((acc, curr) => acc + curr.monto_pendiente, 0);
 
     const totalProximo = vencimientos
         .filter(v => v.estado === 'proximo')
-        .reduce((acc, curr) => acc + curr.monto, 0);
+        .reduce((acc, curr) => acc + curr.monto_pendiente, 0);
 
     return (
         <div className="space-y-6">
             <PageHeader
                 title="Cuentas por Pagar"
                 description="Gestión de vencimientos, gastos recurrentes y obligaciones pendientes."
-                actions={
-                    <Button variant="outline" onClick={refreshVencimientos} title="Actualizar">
-                        <RefreshCw size={18} />
-                    </Button>
+                action={
+                    <div className="flex gap-2">
+                        <Button onClick={() => setIsCompraModalOpen(true)} className="gap-2">
+                            <Plus size={18} />
+                            Nueva Factura
+                        </Button>
+                        <Button variant="outline" onClick={refreshVencimientos} title="Actualizar">
+                            <RefreshCw size={18} />
+                        </Button>
+                    </div>
                 }
             />
 
@@ -73,6 +81,12 @@ export default function CuentasPorPagarPage() {
                     <VencimientosList vencimientos={vencimientos} onRefresh={refreshVencimientos} />
                 )}
             </div>
+
+            <NuevaCompraModal
+                isOpen={isCompraModalOpen}
+                onClose={() => setIsCompraModalOpen(false)}
+                onSuccess={refreshVencimientos}
+            />
         </div>
     );
 }

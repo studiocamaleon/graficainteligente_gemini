@@ -1,11 +1,16 @@
+import { useState } from 'react';
 import { Banknote, Landmark, Wallet } from 'lucide-react';
 import { CajaSummaryCard } from './CajaSummaryCard';
-import type { ResumenCajaPorTipo } from '../../types/medios-cobro';
+import type { ResumenCajaPorTipo, CajaConMediosCobro } from '../../types/medios-cobro';
+import { ArqueoCajaModal } from './ArqueoCajaModal'; // Import Modal
+import { TransferirCajaModal } from './TransferirCajaModal';
+import { CajaMovimientosModal } from './CajaMovimientosModal';
 
 interface ResumenCajasProps {
   resumenPorTipo: ResumenCajaPorTipo[];
   totalSaldo: number;
   onCajaClick?: (cajaId: string) => void;
+  onRefresh?: () => void; // New Prop
 }
 
 const TIPO_LABELS = {
@@ -41,13 +46,28 @@ const TIPO_COLORS = {
   },
 };
 
-export function ResumenCajas({ resumenPorTipo, totalSaldo, onCajaClick }: ResumenCajasProps) {
+// ... existing code ...
+
+export function ResumenCajas({ resumenPorTipo, totalSaldo, onCajaClick, onRefresh }: ResumenCajasProps) {
   const totalCajas = resumenPorTipo.reduce((sum, r) => sum + r.cantidad_cajas, 0);
+  const [selectedArqueoCaja, setSelectedArqueoCaja] = useState<CajaConMediosCobro | null>(null);
+  const [selectedTransferCaja, setSelectedTransferCaja] = useState<CajaConMediosCobro | null>(null);
+  const [selectedHistoryCaja, setSelectedHistoryCaja] = useState<CajaConMediosCobro | null>(null);
+
+  const handleArqueoSuccess = () => {
+    onRefresh?.();
+  };
+
+  const handleArqueoTransferRequest = (caja: CajaConMediosCobro) => {
+    setSelectedArqueoCaja(null); // Close arqueo modal
+    setSelectedTransferCaja(caja); // Open transfer modal
+  };
 
   return (
     <div className="space-y-6">
       {/* Total General - Diseño Moderno */}
       <div className="bg-gradient-to-r from-slate-800 to-slate-700 rounded-xl p-6 shadow-lg">
+        {/* ... existing header ... */}
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-medium text-slate-300 mb-1">Saldo Total Disponible</p>
@@ -74,7 +94,7 @@ export function ResumenCajas({ resumenPorTipo, totalSaldo, onCajaClick }: Resume
             return (
               <div
                 key={resumen.tipo}
-                className={`${colors.bg} ${colors.border} border rounded-lg p-4 transition-all hover:shadow-md`}
+                className={`bg-white border rounded-lg p-4 transition-all hover:shadow-md ${colors.border}`}
               >
                 <div className="flex items-center gap-3 mb-3">
                   <div className={`${colors.bg} p-2 rounded-lg border ${colors.border}`}>
@@ -96,31 +116,33 @@ export function ResumenCajas({ resumenPorTipo, totalSaldo, onCajaClick }: Resume
         </div>
       )}
 
-      {/* Detalle de Cajas por Tipo */}
-      {resumenPorTipo.map((resumen) => {
-        const Icon = TIPO_ICONS[resumen.tipo];
-        const colors = TIPO_COLORS[resumen.tipo];
+      {/* Render Summary Cards with Transfer Handler */}
+      {resumenPorTipo.map((grupo) => {
+        const Icon = TIPO_ICONS[grupo.tipo];
+        const colors = TIPO_COLORS[grupo.tipo];
 
         return (
-          <div key={`detail-${resumen.tipo}`} className="space-y-3">
+          <section key={grupo.tipo} className="space-y-4">
             <div className="flex items-center gap-2">
               <Icon className={`w-4 h-4 ${colors.icon}`} />
-              <h4 className="font-medium text-gray-700">{TIPO_LABELS[resumen.tipo]}</h4>
+              <h4 className="font-medium text-gray-700">{TIPO_LABELS[grupo.tipo]}</h4>
               <span className="text-xs text-gray-500">
-                ({resumen.cantidad_cajas} {resumen.cantidad_cajas === 1 ? 'caja' : 'cajas'})
+                ({grupo.cantidad_cajas} {grupo.cantidad_cajas === 1 ? 'caja' : 'cajas'})
               </span>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {resumen.cajas.map((caja) => (
-                <CajaSummaryCard
-                  key={caja.id}
-                  caja={caja}
-                  onClick={() => onCajaClick?.(caja.id)}
-                />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {grupo.cajas.map((caja) => (
+                <div key={caja.id} className="cursor-pointer" onClick={() => onCajaClick?.(caja.id)}>
+                  <CajaSummaryCard
+                    caja={caja}
+                    onClickArqueo={(c) => setSelectedArqueoCaja(c)}
+                    onTransferir={(c) => setSelectedTransferCaja(c)}
+                    onHistory={(c) => setSelectedHistoryCaja(c)}
+                  />
+                </div>
               ))}
             </div>
-          </div>
+          </section>
         );
       })}
 
@@ -131,6 +153,28 @@ export function ResumenCajas({ resumenPorTipo, totalSaldo, onCajaClick }: Resume
           <p className="text-sm mt-1">Las cajas se crean automáticamente al configurar medios de cobro</p>
         </div>
       )}
+
+      {/* Modals */}
+      <ArqueoCajaModal
+        isOpen={!!selectedArqueoCaja}
+        onClose={() => setSelectedArqueoCaja(null)}
+        caja={selectedArqueoCaja}
+        onSuccess={handleArqueoSuccess}
+        onTransferRequest={() => selectedArqueoCaja && handleArqueoTransferRequest(selectedArqueoCaja)}
+      />
+
+      <TransferirCajaModal
+        isOpen={!!selectedTransferCaja}
+        onClose={() => setSelectedTransferCaja(null)}
+        cajaOrigen={selectedTransferCaja}
+        onSuccess={() => onRefresh?.()}
+      />
+
+      <CajaMovimientosModal
+        isOpen={!!selectedHistoryCaja}
+        onClose={() => setSelectedHistoryCaja(null)}
+        caja={selectedHistoryCaja}
+      />
     </div>
   );
 }

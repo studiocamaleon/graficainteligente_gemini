@@ -148,6 +148,23 @@ export function useEgresos(filters?: FetchEgresosFilters) {
       .single();
 
     if (error) throw error;
+
+    // Handle Recurring Closure (The "Switch")
+    if (data.cerrar_recurrente && data.recurrente_id && data.periodo_devengado) {
+      // Upsert into recurring_executions to mark as CLOSED
+      const { error: closureError } = await supabase
+        .from('recurring_executions')
+        .upsert({
+          recurring_id: data.recurrente_id,
+          periodo: data.periodo_devengado,
+          estado: 'cerrado',
+          cerrado_manualmente: true, // It was explicit
+          created_by: user.id
+        }, { onConflict: 'recurring_id, periodo' });
+
+      if (closureError) console.error('Error closing recurring period:', closureError);
+    }
+
     await fetchEgresos();
     return newEgreso;
   };

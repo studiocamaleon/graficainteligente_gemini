@@ -73,6 +73,7 @@ export interface CreateEgresoData {
   // Recurring Link
   recurrente_id?: string;
   periodo_devengado?: string;
+  cerrar_recurrente?: boolean;
 }
 
 export interface UpdateEgresoData {
@@ -154,4 +155,24 @@ export interface UpdateIngresoData {
   origen?: string;
   medio_cobro_id?: string;
   notas?: string;
+}
+
+export interface ArqueoCaja {
+  id: string;
+  company_id: string;
+  caja_id: string;
+  fecha_cierre: string;
+  saldo_sistema: number;
+  saldo_real: number;
+  diferencia: number;
+  observaciones: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface CreateArqueoData {
+  caja_id: string;
+  saldo_real: number;
+  observaciones?: string;
+  billetes_detalle?: Record<string, number>;
 }

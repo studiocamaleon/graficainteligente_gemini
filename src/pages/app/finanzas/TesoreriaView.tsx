@@ -12,9 +12,14 @@ import { TarjetasPanel } from '../../../components/tesoreria/TarjetasPanel';
 import { CashflowDashboard } from '../../../components/finanzas/CashflowDashboard';
 import { useCajas } from '../../../hooks/useCajas';
 
+import { useAuth } from '../../../hooks/useAuth';
+
 export default function TesoreriaView() {
+  const { profile } = useAuth();
   const { resumenPorTipo, totalSaldo, refetch } = useCajas();
-  const [activeTab, setActiveTab] = useState('cashflow');
+
+  const isOperadorDiseno = profile?.role === 'operador_diseno';
+  const [activeTab, setActiveTab] = useState(isOperadorDiseno ? 'cajas' : 'cashflow');
   const [refreshing, setRefreshing] = useState(false);
 
   const handleRefresh = async () => {
@@ -23,7 +28,7 @@ export default function TesoreriaView() {
     setTimeout(() => setRefreshing(false), 500);
   };
 
-  const tabs = [
+  const allTabs = [
     { id: 'cashflow', label: 'Proyección (Cashflow)', icon: LineChart },
     { id: 'cajas', label: 'Cajas y Saldos', icon: Wallet },
     { id: 'cheques', label: 'Cartera Cheques', icon: DollarSign },
@@ -33,6 +38,10 @@ export default function TesoreriaView() {
     { id: 'recurrentes', label: 'Gastos Fijos', icon: RefreshCw },
     { id: 'por-cobrar', label: 'Por Cobrar', icon: DollarSign },
   ];
+
+  const tabs = isOperadorDiseno
+    ? allTabs.filter(t => t.id === 'cajas')
+    : allTabs;
 
   return (
     <div className="space-y-6">
@@ -68,6 +77,7 @@ export default function TesoreriaView() {
               // TODO: Abrir modal con detalle de movimientos de la caja
               console.log('Ver detalle de caja:', cajaId);
             }}
+            onRefresh={refetch}
           />
         )}
 

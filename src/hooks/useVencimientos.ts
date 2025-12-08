@@ -10,7 +10,9 @@ export interface Vencimiento {
     proveedor: string;
     proveedor_id: string | null;
     tipo_egreso_id: string | null;
-    monto: number;
+    monto_total: number;
+    monto_pagado: number;
+    monto_pendiente: number;
     fecha_vencimiento: string;
     estado: 'vencido' | 'hoy' | 'proximo';
     dias_atraso: number;

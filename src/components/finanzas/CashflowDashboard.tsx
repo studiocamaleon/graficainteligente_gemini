@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import {
     AreaChart,
     Area,
@@ -25,6 +25,13 @@ import dayjs from 'dayjs';
 export function CashflowDashboard() {
     const [days, setDays] = useState(30);
     const { data, loading } = useCashflow(days);
+    const [chartsReady, setChartsReady] = useState(false);
+
+    useEffect(() => {
+        // Delay rendering of charts to allow layout (Framer Motion) to stabilize
+        const timer = setTimeout(() => setChartsReady(true), 100);
+        return () => clearTimeout(timer);
+    }, []);
 
     // Debug data for troubleshooting
     console.log('Cashflow Data:', data);
@@ -47,8 +54,9 @@ export function CashflowDashboard() {
         const totalEgresos = data.reduce((acc, d) => ({
             cheques: acc.cheques + d.egreso_cheques,
             tarjetas: acc.tarjetas + d.egreso_tarjetas,
-            recurrentes: acc.recurrentes + d.egreso_recurrentes
-        }), { cheques: 0, tarjetas: 0, recurrentes: 0 });
+            recurrentes: acc.recurrentes + d.egreso_recurrentes,
+            compras: acc.compras + d.egreso_compras
+        }), { cheques: 0, tarjetas: 0, recurrentes: 0, compras: 0 });
 
         return { minBalance, maxBalance, currentBalance, endBalance, criticalDays, totalIngresos, totalEgresos };
     }, [data]);
@@ -64,7 +72,7 @@ export function CashflowDashboard() {
         new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(val);
 
     const COLORS_ING = { cheques: '#10b981', liqui: '#3b82f6', wip: '#8b5cf6' };
-    const COLORS_EGR = { cheques: '#ef4444', tarjetas: '#f97316', recurrentes: '#eab308' };
+    const COLORS_EGR = { cheques: '#ef4444', tarjetas: '#f97316', recurrentes: '#eab308', compras: '#ec4899' };
 
     const pieIngresosData = stats ? [
         { name: 'Cheques', value: stats.totalIngresos.cheques, color: COLORS_ING.cheques },
@@ -74,6 +82,7 @@ export function CashflowDashboard() {
 
     const pieEgresosData = stats ? [
         { name: 'Cheques', value: stats.totalEgresos.cheques, color: COLORS_EGR.cheques },
+        { name: 'Proveedores', value: stats.totalEgresos.compras, color: COLORS_EGR.compras },
         { name: 'Tarjetas', value: stats.totalEgresos.tarjetas, color: COLORS_EGR.tarjetas },
         { name: 'Recurrentes', value: stats.totalEgresos.recurrentes, color: COLORS_EGR.recurrentes },
     ].filter(d => d.value > 0) : [];
@@ -147,23 +156,25 @@ export function CashflowDashboard() {
                             <TrendingUp className="w-5 h-5 text-gray-500" />
                             Evolución de Saldo
                         </h3>
-                        <div className="w-full min-w-0" style={{ height: 300 }}>
-                            <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                                    <defs>
-                                        <linearGradient id="colorSaldo" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8} />
-                                            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                                        </linearGradient>
-                                    </defs>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                    <XAxis dataKey="fecha" tickFormatter={(str) => dayjs(str).format('DD/MM')} minTickGap={30} />
-                                    <YAxis tickFormatter={(val) => `$${val / 1000}k`} />
-                                    <Tooltip formatter={(val: number) => formatMoney(val)} labelFormatter={(label) => dayjs(label).format('DD MMMM YYYY')} />
-                                    <ReferenceLine y={0} stroke="#ef4444" strokeDasharray="3 3" />
-                                    <Area type="monotone" dataKey="saldo_acumulado" stroke="#3b82f6" fillOpacity={1} fill="url(#colorSaldo)" name="Saldo Proyectado" />
-                                </AreaChart>
-                            </ResponsiveContainer>
+                        <div className="w-full min-w-0 overflow-hidden" style={{ height: 300 }}>
+                            {chartsReady && (
+                                <ResponsiveContainer width="99%" height="100%" minWidth={0}>
+                                    <AreaChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                                        <defs>
+                                            <linearGradient id="colorSaldo" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8} />
+                                                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                                            </linearGradient>
+                                        </defs>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                        <XAxis dataKey="fecha" tickFormatter={(str) => dayjs(str).format('DD/MM')} minTickGap={30} />
+                                        <YAxis tickFormatter={(val) => `$${val / 1000}k`} />
+                                        <Tooltip formatter={(val: number) => formatMoney(val)} labelFormatter={(label) => dayjs(label).format('DD MMMM YYYY')} />
+                                        <ReferenceLine y={0} stroke="#ef4444" strokeDasharray="3 3" />
+                                        <Area type="monotone" dataKey="saldo_acumulado" stroke="#3b82f6" fillOpacity={1} fill="url(#colorSaldo)" name="Saldo Proyectado" />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            )}
                         </div>
                     </Card>
 
@@ -173,29 +184,32 @@ export function CashflowDashboard() {
                             <BarIcon className="w-5 h-5 text-gray-500" />
                             Composición Diaria
                         </h3>
-                        <div className="w-full min-w-0" style={{ height: 300 }}>
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }} stackOffset="sign">
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                    <XAxis dataKey="fecha" tickFormatter={(str) => dayjs(str).format('DD/MM')} minTickGap={30} />
-                                    <YAxis tickFormatter={(val) => `$${val / 1000}k`} />
-                                    <Tooltip formatter={(val: number) => formatMoney(val)} labelFormatter={(label) => dayjs(label).format('DD MMMM')} />
-                                    <Legend />
-                                    {/* Ingresos */}
-                                    <Bar dataKey="ingreso_cheques" name="Ingreso Cheques" stackId="a" fill={COLORS_ING.cheques} />
-                                    <Bar dataKey="ingreso_liquidaciones" name="Ingreso Cuentas" stackId="a" fill={COLORS_ING.liqui} />
-                                    <Bar dataKey="ingreso_wip" name="Ingreso Producción" stackId="a" fill={COLORS_ING.wip} />
-                                    {/* Egresos (negative values handled by chart logic if data is positive? No, need to verify. Usually better to keep positive and stack separately or use negative values. Here I have separate 'egreso' columns which are positive numbers. I should make them negative for visualization or just stack them downwards? Stacked bars with mixed signs can be tricky in Recharts. Simplest is two charts or one chart where egresos are negative. Let's make them negative in the map or just show positive bars on a separate chart. Let's try mirroring them by calculating negative in render or changing data. I'll use a ReferenceLine and multiply by -1 in datakey? No, recharts needs value. Let's stick to positive stacks for now, maybe side by side? Or just show net?
+                        <div className="w-full min-w-0 overflow-hidden" style={{ height: 300 }}>
+                            {chartsReady && (
+                                <ResponsiveContainer width="99%" height="100%" minWidth={0}>
+                                    <BarChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }} stackOffset="sign">
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                        <XAxis dataKey="fecha" tickFormatter={(str) => dayjs(str).format('DD/MM')} minTickGap={30} />
+                                        <YAxis tickFormatter={(val) => `$${val / 1000}k`} />
+                                        <Tooltip formatter={(val: number) => formatMoney(val)} labelFormatter={(label) => dayjs(label).format('DD MMMM')} />
+                                        <Legend />
+                                        {/* Ingresos */}
+                                        <Bar dataKey="ingreso_cheques" name="Ingreso Cheques" stackId="a" fill={COLORS_ING.cheques} />
+                                        <Bar dataKey="ingreso_liquidaciones" name="Ingreso Cuentas" stackId="a" fill={COLORS_ING.liqui} />
+                                        <Bar dataKey="ingreso_wip" name="Ingreso Producción" stackId="a" fill={COLORS_ING.wip} />
+                                        {/* Egresos (negative values handled by chart logic if data is positive? No, need to verify. Usually better to keep positive and stack separately or use negative values. Here I have separate 'egreso' columns which are positive numbers. I should make them negative for visualization or just stack them downwards? Stacked bars with mixed signs can be tricky in Recharts. Simplest is two charts or one chart where egresos are negative. Let's make them negative in the map or just show positive bars on a separate chart. Let's try mirroring them by calculating negative in render or changing data. I'll use a ReferenceLine and multiply by -1 in datakey? No, recharts needs value. Let's stick to positive stacks for now, maybe side by side? Or just show net?
                                     Actually, user wants breakdown. I will create a SyncId chart below. Or just keep them positive and user compares height.
                                     Let's use negative values for Egresos in a "net flow" chart.
                                     Wait, the previous chart was Area of Balance.
                                     Let's do a Stacked Bar of "Movements". I'll pass negative values in the chart data transformation slightly inside the component.
                                     */}
-                                    <Bar dataKey={(d) => -d.egreso_cheques} name="Egreso Cheques" stackId="a" fill={COLORS_EGR.cheques} />
-                                    <Bar dataKey={(d) => -d.egreso_tarjetas} name="Egreso Tarjetas" stackId="a" fill={COLORS_EGR.tarjetas} />
-                                    <Bar dataKey={(d) => -d.egreso_recurrentes} name="Egreso Fijos" stackId="a" fill={COLORS_EGR.recurrentes} />
-                                </BarChart>
-                            </ResponsiveContainer>
+                                        <Bar dataKey={(d) => -d.egreso_cheques} name="Egreso Cheques" stackId="a" fill={COLORS_EGR.cheques} />
+                                        <Bar dataKey={(d) => -d.egreso_compras} name="Egreso Proveedores" stackId="a" fill={COLORS_EGR.compras} />
+                                        <Bar dataKey={(d) => -d.egreso_tarjetas} name="Egreso Tarjetas" stackId="a" fill={COLORS_EGR.tarjetas} />
+                                        <Bar dataKey={(d) => -d.egreso_recurrentes} name="Egreso Fijos" stackId="a" fill={COLORS_EGR.recurrentes} />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            )}
                         </div>
                     </Card>
                 </div>
@@ -208,18 +222,20 @@ export function CashflowDashboard() {
                             <PieIcon className="w-5 h-5 text-gray-500" />
                             Fuentes de Ingresos
                         </h3>
-                        <div className="h-48 w-full min-w-0">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                    <Pie data={pieIngresosData} cx="50%" cy="50%" innerRadius={40} outerRadius={70} paddingAngle={5} dataKey="value">
-                                        {pieIngresosData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={entry.color} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip formatter={(val: number) => formatMoney(val)} />
-                                    <Legend />
-                                </PieChart>
-                            </ResponsiveContainer>
+                        <div className="h-48 w-full min-w-0 overflow-hidden">
+                            {chartsReady && (
+                                <ResponsiveContainer width="99%" height="100%" minWidth={0}>
+                                    <PieChart>
+                                        <Pie data={pieIngresosData} cx="50%" cy="50%" innerRadius={40} outerRadius={70} paddingAngle={5} dataKey="value">
+                                            {pieIngresosData.map((entry, index) => (
+                                                <Cell key={`cell-${index}`} fill={entry.color} />
+                                            ))}
+                                        </Pie>
+                                        <Tooltip formatter={(val: number) => formatMoney(val)} />
+                                        <Legend />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            )}
                         </div>
                         {pieIngresosData.length === 0 && <div className="text-center text-gray-400 text-sm">Sin ingresos proyectados</div>}
                     </Card>
@@ -229,18 +245,20 @@ export function CashflowDashboard() {
                             <PieIcon className="w-5 h-5 text-gray-500" />
                             Destino de Egresos
                         </h3>
-                        <div className="h-48 w-full min-w-0">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                    <Pie data={pieEgresosData} cx="50%" cy="50%" innerRadius={40} outerRadius={70} paddingAngle={5} dataKey="value">
-                                        {pieEgresosData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={entry.color} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip formatter={(val: number) => formatMoney(val)} />
-                                    <Legend />
-                                </PieChart>
-                            </ResponsiveContainer>
+                        <div className="h-48 w-full min-w-0 overflow-hidden">
+                            {chartsReady && (
+                                <ResponsiveContainer width="99%" height="100%" minWidth={0}>
+                                    <PieChart>
+                                        <Pie data={pieEgresosData} cx="50%" cy="50%" innerRadius={40} outerRadius={70} paddingAngle={5} dataKey="value">
+                                            {pieEgresosData.map((entry, index) => (
+                                                <Cell key={`cell-${index}`} fill={entry.color} />
+                                            ))}
+                                        </Pie>
+                                        <Tooltip formatter={(val: number) => formatMoney(val)} />
+                                        <Legend />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            )}
                         </div>
                         {pieEgresosData.length === 0 && <div className="text-center text-gray-400 text-sm">Sin egresos proyectados</div>}
                     </Card>
@@ -258,7 +276,9 @@ export function CashflowDashboard() {
                                         <div>
                                             <div className="text-sm font-medium text-gray-900">{dayjs(item.fecha).format('DD/MM')}</div>
                                             <div className="text-xs text-gray-500">
-                                                {item.egreso_cheques > 0 ? 'Cheques' : item.egreso_tarjetas > 0 ? 'Tarjeta' : 'Gasto Fijo'}
+                                                {item.egreso_cheques > 0 ? 'Cheques' :
+                                                    item.egreso_compras > 0 ? 'Proveedores' :
+                                                        item.egreso_tarjetas > 0 ? 'Tarjeta' : 'Gasto Fijo'}
                                             </div>
                                         </div>
                                     </div>
@@ -300,6 +320,7 @@ export function CashflowDashboard() {
                             key: 'egresos', header: 'Egresos', width: '30%', render: (item) => (
                                 <div className="space-y-1 text-xs">
                                     {item.egreso_cheques > 0 && <div className="text-red-600 flex justify-between"><span>Cheques:</span> <span>{formatMoney(item.egreso_cheques)}</span></div>}
+                                    {item.egreso_compras > 0 && <div className="text-pink-600 flex justify-between"><span>Proveedores:</span> <span>{formatMoney(item.egreso_compras)}</span></div>}
                                     {item.egreso_tarjetas > 0 && <div className="text-orange-600 flex justify-between"><span>Tarjetas:</span> <span>{formatMoney(item.egreso_tarjetas)}</span></div>}
                                     {item.egreso_recurrentes > 0 && <div className="text-yellow-600 flex justify-between"><span>Fijos:</span> <span>{formatMoney(item.egreso_recurrentes)}</span></div>}
                                     {item.total_egresos === 0 && <span className="text-gray-300">-</span>}
