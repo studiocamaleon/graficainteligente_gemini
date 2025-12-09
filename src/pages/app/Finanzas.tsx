@@ -3,6 +3,7 @@ import TesoreriaView from './finanzas/TesoreriaView';
 import CuentasCorrientesView from './finanzas/CuentasCorrientesView';
 import ReportesView from './finanzas/ReportesView';
 import { FacturasView } from './finanzas/FacturasView';
+
 import CuentasPorPagarPage from './tesoreria/CuentasPorPagarPage';
 import { usePageHeader } from '../../hooks/usePageHeader';
 import { ProtectedModuleRoute } from '../../components/auth/ProtectedModuleRoute';
@@ -14,6 +15,7 @@ export default function Finanzas() {
     <div className="space-y-6">
       <Routes>
         <Route path="/" element={<Navigate to="/app/finanzas/tesoreria" replace />} />
+
         <Route
           path="/tesoreria"
           element={

@@ -1,8 +1,4 @@
 import { forwardRef } from 'react';
-import { PDFLayout } from '../PDFLayout';
-import { PDFTable } from '../PDFTable';
-import { PDFSectionHeader } from '../PDFSectionHeader';
-import { PDFBadge } from '../PDFBadge';
 import { formatCurrency } from '../../../utils/pdfHelpers';
 import { isInfiniteRango, normalizeRangoMax } from '../../../utils/rangoUtils';
 import type { TecnologiaAgrupada } from '../../../hooks/useAllProductosGranFormatoPrecios';
@@ -11,7 +7,7 @@ interface GranFormatoPDFTemplateProps {
   tecnologias: TecnologiaAgrupada[];
 }
 
-const getInkBadgeText = (tinta: string): string => {
+const getInkLabel = (tinta: string): string => {
   const tintaUpper = tinta.toUpperCase();
   const labels: { [key: string]: string } = {
     CMYK: 'CMYK',
@@ -25,94 +21,135 @@ const getInkBadgeText = (tinta: string): string => {
 export const GranFormatoPDFTemplate = forwardRef<HTMLDivElement, GranFormatoPDFTemplateProps>(
   ({ tecnologias }, ref) => {
     return (
-      <PDFLayout
+      <div
         ref={ref}
-        title="Lista de Precios"
-        subtitle="Gran Formato"
+        className="bg-white p-8 font-sans text-gray-900"
+        style={{ minWidth: '210mm', maxWidth: '210mm', margin: '0 auto', minHeight: '297mm' }}
       >
-        <div className="space-y-8">
-          {tecnologias.map((tecnologia) => (
-            <div key={tecnologia.id} className="space-y-4">
-              <PDFSectionHeader
-                title={tecnologia.nombre}
-                color="purple"
-              />
+        {/* Global Styles for Print */}
+        <style type="text/css">
+          {`
+            @page { size: A4; margin: 0; }
+            @media print {
+              body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+              .page-break { page-break-before: always; }
+              .avoid-break { page-break-inside: avoid; }
+            }
+          `}
+        </style>
 
-              {tecnologia.tintas.map((tintaData) => (
-                <div key={tintaData.tinta} className="ml-4 space-y-3">
-                  <div className="flex items-center gap-2 py-2 px-3 bg-gray-50 rounded-lg">
-                    <span className="text-sm font-semibold text-gray-700">Tinta:</span>
-                    <PDFBadge label={getInkBadgeText(tintaData.tinta)} color="blue" />
-                  </div>
+        {/* Header */}
+        <div className="mb-12 border-b border-gray-100 pb-6">
+          <div className="flex justify-between items-end">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Lista de Precios</h1>
+              <p className="text-gray-500 mt-1">Gran Formato</p>
+            </div>
+            <div className="text-right text-xs text-gray-400">
+              Generado el {new Date().toLocaleDateString('es-ES')}
+            </div>
+          </div>
+        </div>
 
-                  {Array.from(tintaData.productosPorRango.entries()).map(([rangoId, productos]) => {
-                    if (productos.length === 0) return null;
+        <div className="space-y-12">
+          {tecnologias.map((tecnologia, techIndex) => (
+            <div key={tecnologia.id} className={`${techIndex > 0 ? 'page-break' : ''}`}>
+              {/* Technology Header */}
+              <div className="mb-8">
+                <h2 className="text-xl font-bold text-slate-900 border-l-4 border-indigo-500 pl-3">
+                  {tecnologia.nombre}
+                </h2>
+              </div>
 
-                    const primerProducto = productos[0];
-                    const columns: any[] = [
-                      { header: 'Producto', key: 'nombre', align: 'left' as const, width: '30%' },
-                      { header: 'Tipo de Venta', key: 'tipo_venta', align: 'center' as const, width: '15%' },
-                    ];
+              <div className="space-y-10">
+                {tecnologia.tintas.map((tintaData) => (
+                  <div key={tintaData.tinta} className="avoid-break">
 
-                    if (primerProducto.tipo_venta === 'mt_lineal') {
-                      columns.push({
-                        header: 'Ancho',
-                        key: 'ancho',
-                        align: 'center' as const,
-                        width: '12%',
-                      });
-                    }
+                    {/* Ink Header */}
+                    <div className="mb-4 flex items-center gap-2">
+                      <span className="text-sm font-bold text-slate-700 uppercase tracking-wider bg-slate-100 px-3 py-1 rounded">
+                        Tinta: {getInkLabel(tintaData.tinta)}
+                      </span>
+                    </div>
 
-                    primerProducto.rangos.forEach((rango) => {
-                      const normalizedMax = normalizeRangoMax(rango.max);
-                      const rangoText = isInfiniteRango(normalizedMax)
-                        ? `≥ ${rango.min} ${primerProducto.unidad_medida}`
-                        : `${rango.min}-${rango.max} ${primerProducto.unidad_medida}`;
-                      columns.push({
-                        header: rangoText,
-                        key: `rango_${rango.min}_${normalizedMax}`,
-                        align: 'right' as const,
-                      });
-                    });
+                    <div className="space-y-6">
+                      {Array.from(tintaData.productosPorRango.entries()).map(([rangoId, productos]) => {
+                        if (productos.length === 0) return null;
 
-                    const tableData = productos.map((producto) => {
-                      const row: Record<string, any> = {
-                        nombre: producto.nombre,
-                        tipo_venta: producto.tipo_venta === 'mt2' ? 'm²' : 'mt lineal',
-                      };
+                        const primerProducto = productos[0];
+                        const isLinear = primerProducto.tipo_venta === 'mt_lineal';
 
-                      if (primerProducto.tipo_venta === 'mt_lineal') {
-                        row.ancho = producto.ancho_fijo ? `${producto.ancho_fijo} cm` : '-';
-                      }
+                        // Extract Ranges for Headers
+                        const ranges = primerProducto.rangos;
 
-                      primerProducto.rangos.forEach((rango) => {
-                        const normalizedMax = normalizeRangoMax(rango.max);
-                        const precioData = producto.precios?.find(
-                          (p) => p.rango_min === rango.min && p.rango_max === normalizedMax
+                        return (
+                          <div key={rangoId} className="border border-gray-200 rounded-lg overflow-hidden avoid-break">
+                            <table className="w-full text-sm text-left">
+                              <thead className="bg-gray-50 text-gray-500 text-xs uppercase font-medium">
+                                <tr>
+                                  <th className="px-4 py-3 border-b border-gray-200 w-1/4">Producto</th>
+                                  <th className="px-4 py-3 border-b border-gray-200 w-24 text-center">Unidad</th>
+                                  {isLinear && (
+                                    <th className="px-4 py-3 border-b border-gray-200 w-20 text-center">Ancho</th>
+                                  )}
+                                  {ranges.map((rango, idx) => {
+                                    const nMax = normalizeRangoMax(rango.max);
+                                    const label = isInfiniteRango(nMax)
+                                      ? `≥ ${rango.min}`
+                                      : `${rango.min}-${nMax}`;
+                                    return (
+                                      <th key={idx} className="px-4 py-3 border-b border-gray-200 text-right">
+                                        {label}
+                                        <span className="normal-case font-normal text-xs text-gray-400 block">{primerProducto.unidad_medida}</span>
+                                      </th>
+                                    );
+                                  })}
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-gray-100">
+                                {productos.map((producto, pIdx) => (
+                                  <tr key={pIdx} className="hover:bg-slate-50/50 avoid-break">
+                                    <td className="px-4 py-3 font-medium text-slate-700">
+                                      {producto.nombre}
+                                    </td>
+                                    <td className="px-4 py-3 text-center text-slate-500 text-xs">
+                                      {producto.tipo_venta === 'mt2' ? 'm²' : 'ml'}
+                                    </td>
+                                    {isLinear && (
+                                      <td className="px-4 py-3 text-center text-slate-600">
+                                        {producto.ancho_fijo ? `${producto.ancho_fijo} cm` : '-'}
+                                      </td>
+                                    )}
+                                    {ranges.map((rango, rIdx) => {
+                                      const nMax = normalizeRangoMax(rango.max);
+                                      const precioObj = producto.precios?.find(
+                                        p => p.rango_min === rango.min && p.rango_max === nMax
+                                      );
+
+                                      return (
+                                        <td key={rIdx} className="px-4 py-3 text-right font-medium text-slate-700">
+                                          {precioObj && precioObj.precio > 0
+                                            ? formatCurrency(precioObj.precio)
+                                            : <span className="text-gray-300">-</span>
+                                          }
+                                        </td>
+                                      );
+                                    })}
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
                         );
-                        row[`rango_${rango.min}_${normalizedMax}`] = precioData
-                          ? formatCurrency(precioData.precio)
-                          : '-';
-                      });
-
-                      return row;
-                    });
-
-                    return (
-                      <PDFTable
-                        key={rangoId}
-                        columns={columns}
-                        data={tableData}
-                        className="mb-4"
-                      />
-                    );
-                  })}
-                </div>
-              ))}
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           ))}
         </div>
-      </PDFLayout>
+      </div>
     );
   }
 );

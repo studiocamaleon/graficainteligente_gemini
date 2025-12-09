@@ -7,6 +7,9 @@ import { usePageHeader } from '../../../hooks/usePageHeader';
 import { useCentroCopiadoPreciosImpresion, PrecioImpresionInput } from '../../../hooks/useCentroCopiadoPreciosImpresion';
 import { CentroCopiadoTintaSection } from '../../../components/centro-copiado/CentroCopiadoTintaSection';
 import { FloatingPreciosSaveButton } from '../../../components/productos/impresion-laser/FloatingPreciosSaveButton';
+import { CentroCopiadoPDFTemplate } from '../../../components/pdf/templates/CentroCopiadoPDFTemplate';
+import { usePDFExport } from '../../../hooks/usePDFExport';
+import { ExportPDFButtonGroup } from '../../../components/ui/ExportPDFButtonGroup';
 import type { TipoTintaCopiado } from '../../../types/database';
 
 type TabType = 'cmyk' | 'bn';
@@ -225,12 +228,57 @@ export function Precios() {
     );
   };
 
+  // ... inside Precios component
+  const { componentRef, isGenerating: isPDFGenerating, handlePrint, handleDownloadPDF } = usePDFExport({
+    filename: `Lista_Precios_Centro_Copiado_${new Date().toISOString().split('T')[0]}.pdf`,
+  });
+
+  const [pdfData, setPdfData] = useState<{
+    cmyk: Map<string, any[]>;
+    bn: Map<string, any[]>;
+  }>({ cmyk: new Map(), bn: new Map() });
+
+  const [isPreparingPDF, setIsPreparingPDF] = useState(false);
+
+  const prepareAndExport = async (action: 'print' | 'download') => {
+    setIsPreparingPDF(true);
+    try {
+      // Fetch prices for both ink types
+      const cmyk = await loadPreciosExistentes('CMYK');
+      const bn = await loadPreciosExistentes('K');
+      setPdfData({ cmyk, bn });
+
+      // Give React a moment to render the template with new data
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      if (action === 'print') {
+        handlePrint();
+      } else {
+        handleDownloadPDF();
+      }
+    } catch (err) {
+      console.error('Error preparing PDF:', err);
+    } finally {
+      setIsPreparingPDF(false);
+    }
+  };
+
+  // ... (existing renderContent function)
+
   return (
     <>
       <div className="space-y-6">
-        <Card padding="none">
-          <Tabs tabs={tabs} activeTab={activeTab} onTabChange={(tabId) => setActiveTab(tabId as TabType)} />
-        </Card>
+        <div className="flex justify-between items-center">
+          <Card padding="none" className="w-fit">
+            <Tabs tabs={tabs} activeTab={activeTab} onTabChange={(tabId) => setActiveTab(tabId as TabType)} />
+          </Card>
+          <ExportPDFButtonGroup
+            onPrint={() => prepareAndExport('print')}
+            onDownload={() => prepareAndExport('download')}
+            isGenerating={isPDFGenerating || isPreparingPDF}
+            label="Exportar Lista"
+          />
+        </div>
 
         <div>{renderContent()}</div>
       </div>
@@ -240,6 +288,26 @@ export function Precios() {
         onSave={handleSaveAll}
         isSaving={isSaving}
       />
+
+      {/* Hidden PDF Template */}
+      <div
+        style={{
+          position: 'absolute',
+          left: '-9999px',
+          top: '0',
+          width: '210mm',
+          minHeight: '297mm'
+        }}
+      >
+        <CentroCopiadoPDFTemplate
+          ref={componentRef}
+          tamanios={tamanios}
+          papeles={papeles}
+          rangos={rangos}
+          preciosCMYK={pdfData.cmyk}
+          preciosBN={pdfData.bn}
+        />
+      </div>
     </>
   );
 }

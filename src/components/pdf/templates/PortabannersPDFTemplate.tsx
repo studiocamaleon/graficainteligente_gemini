@@ -1,6 +1,4 @@
 import { forwardRef } from 'react';
-import { PDFLayout } from '../PDFLayout';
-import { PDFSectionHeader } from '../PDFSectionHeader';
 import type {
   ProductoConPrecios,
   TecnologiaSimple,
@@ -15,6 +13,8 @@ interface Props {
 
 export const PortabannersPDFTemplate = forwardRef<HTMLDivElement, Props>(
   ({ productosPorRango, tecnologias }, ref) => {
+
+    // Helpers
     const getUnidadLabel = (unidadMedida: string) => {
       if (unidadMedida === 'mt2') return 'm²';
       if (unidadMedida === 'mt_lineal') return 'ml';
@@ -49,111 +49,124 @@ export const PortabannersPDFTemplate = forwardRef<HTMLDivElement, Props>(
     };
 
     return (
-      <PDFLayout
+      <div
         ref={ref}
-        title="Lista de Precios - Portabanners"
-        subtitle={`Generada el ${new Date().toLocaleDateString('es-AR')}`}
+        className="bg-white p-8 font-sans text-gray-900"
+        style={{ minWidth: '210mm', maxWidth: '210mm', margin: '0 auto', minHeight: '297mm' }}
       >
-        {productosPorRango.map((grupoProductos, grupoIndex) => {
-          if (grupoProductos.length === 0) return null;
+        {/* Global Styles for Print */}
+        <style type="text/css">
+          {`
+            @page { size: A4; margin: 0; }
+            @media print {
+              body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+              .page-break { page-break-before: always; }
+              .avoid-break { page-break-inside: avoid; }
+            }
+          `}
+        </style>
 
-          const primerProducto = grupoProductos[0];
-          const rangos = primerProducto.rangos;
-          const unidadMedida = primerProducto.unidad_medida;
-          const rangoNombre = primerProducto.rango_nombre;
-
-          return (
-            <div key={grupoIndex} className="mb-8 break-inside-avoid">
-              <PDFSectionHeader title={rangoNombre} />
-
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse text-xs">
-                  <thead>
-                    <tr className="bg-gray-100">
-                      <th
-                        rowSpan={2}
-                        className="border border-gray-300 px-3 py-2 text-left font-semibold align-middle"
-                        style={{ minWidth: '200px' }}
-                      >
-                        Producto / Medida
-                      </th>
-                      {tecnologias.map((tecnologia) => (
-                        <th
-                          key={tecnologia.id}
-                          colSpan={rangos.length}
-                          className="border border-gray-300 px-3 py-2 text-center font-semibold"
-                        >
-                          {tecnologia.nombre}
-                        </th>
-                      ))}
-                    </tr>
-                    <tr className="bg-gray-50">
-                      {tecnologias.map((tecnologia) =>
-                        rangos.map((rango, rangoIndex) => (
-                          <th
-                            key={`${tecnologia.id}-${rangoIndex}`}
-                            className="border border-gray-300 px-2 py-1 text-center text-xs font-medium"
-                          >
-                            {formatRango(rango, unidadMedida)}
-                          </th>
-                        ))
-                      )}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {grupoProductos.map((producto, productoIndex) => (
-                      <tr
-                        key={producto.id}
-                        className={productoIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50'}
-                      >
-                        <td className="border border-gray-300 px-3 py-2">
-                          <div className="font-medium text-gray-900 mb-1">
-                            {producto.nombre}
-                          </div>
-                          <div className="text-xs text-gray-600">
-                            {producto.ancho_cm} × {producto.alto_cm} cm
-                          </div>
-                        </td>
-                        {tecnologias.map((tecnologia) =>
-                          rangos.map((rango, rangoIndex) => {
-                            const hasThisTech = producto.tecnologias.some(
-                              (t) => t.id === tecnologia.id
-                            );
-
-                            const precio = hasThisTech
-                              ? getPrecio(producto, tecnologia.id, rango)
-                              : '-';
-
-                            return (
-                              <td
-                                key={`${tecnologia.id}-${rangoIndex}`}
-                                className={`border border-gray-300 px-2 py-2 text-center ${
-                                  !hasThisTech ? 'bg-gray-100' : ''
-                                }`}
-                              >
-                                {precio}
-                              </td>
-                            );
-                          })
-                        )}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+        {/* Header */}
+        <div className="mb-12 border-b border-gray-100 pb-6">
+          <div className="flex justify-between items-end">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Lista de Precios</h1>
+              <p className="text-gray-500 mt-1">Portabanners</p>
             </div>
-          );
-        })}
-
-        <div className="mt-8 pt-4 border-t border-gray-300 text-xs text-gray-600">
-          <p className="mb-1">
-            <strong>Nota:</strong> Los precios están expresados en pesos argentinos y no incluyen IVA.
-          </p>
-          <p>
-            Las celdas marcadas con "-" indican que la tecnología no está disponible para ese producto.
-          </p>
+            <div className="text-right text-xs text-gray-400">
+              Generado el {new Date().toLocaleDateString('es-ES')}
+            </div>
+          </div>
         </div>
-      </PDFLayout>
+
+        <div className="space-y-12">
+          {productosPorRango.map((grupoProductos, grupoIndex) => {
+            if (grupoProductos.length === 0) return null;
+
+            const primerProducto = grupoProductos[0];
+            const rangos = primerProducto.rangos;
+            const unidadMedida = primerProducto.unidad_medida;
+            const rangoNombre = primerProducto.rango_nombre;
+
+            return (
+              <div key={grupoIndex} className="avoid-break bg-white">
+                <div className="mb-4">
+                  <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                    {rangoNombre}
+                    <span className="text-xs font-normal text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                      Precios por Cantidad
+                    </span>
+                  </h2>
+                </div>
+
+                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                  <table className="w-full text-sm text-left border-collapse">
+                    <thead className="bg-gray-50 text-gray-500 text-xs uppercase font-medium">
+                      {/* Tech Group Headers */}
+                      <tr>
+                        <th rowSpan={2} className="px-4 py-3 border-b border-r border-gray-200 w-1/4 align-bottom">
+                          Producto / Medida
+                        </th>
+                        {tecnologias.map((tecnologia) => (
+                          <th
+                            key={tecnologia.id}
+                            colSpan={rangos.length}
+                            className="px-4 py-2 border-b border-r border-gray-200 text-center bg-slate-100 text-slate-700 last:border-r-0"
+                          >
+                            {tecnologia.nombre}
+                          </th>
+                        ))}
+                      </tr>
+                      {/* Range Headers */}
+                      <tr>
+                        {tecnologias.map((tecnologia) => (
+                          rangos.map((rango, rIdx) => (
+                            <th
+                              key={`${tecnologia.id}-${rIdx}`}
+                              className="px-2 py-2 border-b border-r border-gray-200 text-center text-xs w-16 last:border-r-0"
+                            >
+                              {formatRango(rango, unidadMedida)}
+                            </th>
+                          ))
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {grupoProductos.map((producto, idx) => (
+                        <tr key={idx} className="hover:bg-slate-50/50 avoid-break">
+                          <td className="px-4 py-3 border-r border-gray-100 text-slate-700">
+                            <div className="font-medium">{producto.nombre}</div>
+                            <div className="text-xs text-slate-500">{producto.ancho_cm} × {producto.alto_cm} cm</div>
+                          </td>
+                          {tecnologias.map((tecnologia) => (
+                            rangos.map((rango, rIdx) => {
+                              const hasThisTech = producto.tecnologias.some(
+                                t => t.id === tecnologia.id
+                              );
+                              const precio = hasThisTech
+                                ? getPrecio(producto, tecnologia.id, rango)
+                                : '-';
+
+                              return (
+                                <td
+                                  key={`${tecnologia.id}-${rIdx}`}
+                                  className={`px-2 py-3 border-r border-gray-100 text-right text-slate-700 ${!hasThisTech ? 'bg-gray-50/50 text-gray-400' : ''}`}
+                                >
+                                  {precio}
+                                </td>
+                              );
+                            })
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
     );
   }
 );

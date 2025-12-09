@@ -112,9 +112,66 @@ export function usePDFExport(options: UsePDFExportOptions = {}) {
         onclone: (clonedDoc) => {
           const clonedElement = clonedDoc.querySelector('[data-pdf-content]');
           if (clonedElement) {
-            (clonedElement as HTMLElement).style.display = 'block';
-            (clonedElement as HTMLElement).style.position = 'relative';
-            (clonedElement as HTMLElement).style.visibility = 'visible';
+            const el = clonedElement as HTMLElement;
+            el.style.display = 'block';
+            el.style.position = 'relative';
+            el.style.visibility = 'visible';
+
+            // Smart Page Break Logic
+            const MARGIN_MM = 10;
+            const PAGE_HEIGHT_MM = 297;
+            // Aggressive safety margin: 260mm to ensure we clear the cut line comfortably
+            const SAFE_PRINTABLE_HEIGHT_MM = 260;
+
+            // Calculate pixels per mm based on the Render Width (which will be scaled to Printable Width)
+            const printableWidthMm = 210 - (2 * MARGIN_MM);
+            const pxPerMm = el.scrollWidth / printableWidthMm;
+            const pageHeightPx = SAFE_PRINTABLE_HEIGHT_MM * pxPerMm;
+
+            const avoidBreakElements = Array.from(el.querySelectorAll('.avoid-break'));
+
+            avoidBreakElements.forEach((child) => {
+              const childEl = child as HTMLElement;
+
+              // Use LIVE offsetTop
+              const currentTop = childEl.offsetTop;
+              const height = childEl.offsetHeight;
+
+              const pageIndex = Math.floor((currentTop + 1) / pageHeightPx);
+              const pageBoundary = (pageIndex + 1) * pageHeightPx;
+
+              // Check if element crosses page boundary or is dangerously close to the bottom
+              // (Using strict > comparison against pageBoundary)
+              if (currentTop + height > pageBoundary) {
+                // Calculate distance to next page start
+                let spacer = pageBoundary - currentTop;
+                spacer += 10; // +10px buffer
+
+                let targetElement = childEl;
+
+                // Orphan Detection
+                let prev = childEl.previousElementSibling as HTMLElement;
+
+                // Uncle check
+                if (!prev && childEl.parentElement) {
+                  const parentPrev = childEl.parentElement.previousElementSibling as HTMLElement;
+                  if (parentPrev) {
+                    prev = parentPrev;
+                  }
+                }
+
+                if (prev && (prev.classList.contains('pdf-section-header') || /^H[1-6]$/.test(prev.tagName))) {
+                  const headerTop = prev.offsetTop;
+                  spacer = pageBoundary - headerTop + 10;
+                  targetElement = prev;
+                }
+
+                // Additive Margin Logic
+                const style = window.getComputedStyle(targetElement);
+                const currentMargin = parseFloat(style.marginTop) || 0;
+                targetElement.style.marginTop = `${currentMargin + spacer}px`;
+              }
+            });
           }
         },
       });
@@ -147,10 +204,9 @@ export function usePDFExport(options: UsePDFExportOptions = {}) {
 
       console.log('[PDF Export] Data URL generado correctamente, tamaño base64:', base64Length);
 
-      const margin = 5;
-      const imgWidth = (pageFormat === 'a4' ? 210 : 215.9) - (margin * 2);
-      const pageHeight = pageFormat === 'a4' ? 297 : 279.4;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      const MARGIN_MM = 10;
+      const PAGE_HEIGHT_MM = 297;
+      const PRINTABLE_HEIGHT_MM = PAGE_HEIGHT_MM - (2 * MARGIN_MM); // 277mm
 
       const pdf = new jsPDF({
         orientation: pageOrientation,
@@ -158,37 +214,45 @@ export function usePDFExport(options: UsePDFExportOptions = {}) {
         format: pageFormat,
       });
 
-      let heightLeft = imgHeight;
-      let position = margin;
+      // Calculate dimensions to fit width within margins
+      const pageWidth = pageFormat === 'a4' ? 210 : 215.9;
+      const imgWidth = pageWidth - (2 * MARGIN_MM); // 190mm for A4
 
-      try {
+      // Calculate total height of the image in mm
+      const totalImgHeightMM = (canvas.height * imgWidth) / canvas.width;
+
+      let remainingHeight = totalImgHeightMM;
+      let sourceYOffset = 0; // Where we are in the source image (in mm scale relative to print)
+
+      while (remainingHeight > 0) {
+        if (sourceYOffset > 0) {
+          pdf.addPage();
+        }
+
+        // We place the FULL image, but shifted UP so that the desired chunk falls into the printable area.
+        // The printable area starts at Y = MARGIN_MM.
+        // We want sourceYOffset to align with MARGIN_MM.
+        // So ImageY = MARGIN_MM - sourceYOffset.
+        const positionY = MARGIN_MM - sourceYOffset;
+
         pdf.addImage(
           imageData,
           'PNG',
-          margin,
-          position,
+          MARGIN_MM,
+          positionY,
           imgWidth,
-          imgHeight
+          totalImgHeightMM
         );
-      } catch (addImageError) {
-        console.error('[PDF Export] Error al agregar imagen al PDF:', addImageError);
-        throw new Error('Error al agregar la imagen al PDF. El contenido puede ser demasiado grande.');
-      }
 
-      heightLeft -= pageHeight;
+        // WHITE MASKS to hide content overflow in margins (Prevents duplication/overlap)
+        pdf.setFillColor(255, 255, 255);
+        // Top Margin Mask
+        pdf.rect(0, 0, pageWidth, MARGIN_MM, 'F');
+        // Bottom Margin Mask (Start at Margin + PrintableHeight)
+        pdf.rect(0, MARGIN_MM + PRINTABLE_HEIGHT_MM, pageWidth, MARGIN_MM, 'F');
 
-      while (heightLeft > 0) {
-        position = heightLeft - imgHeight + margin;
-        pdf.addPage();
-        pdf.addImage(
-          imageData,
-          'PNG',
-          margin,
-          position,
-          imgWidth,
-          imgHeight
-        );
-        heightLeft -= pageHeight;
+        sourceYOffset += PRINTABLE_HEIGHT_MM;
+        remainingHeight -= PRINTABLE_HEIGHT_MM;
       }
 
       console.log('[PDF Export] PDF generado exitosamente');
