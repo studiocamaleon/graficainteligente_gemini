@@ -1,5 +1,4 @@
 import { Package, AlertTriangle } from 'lucide-react';
-import { Badge } from '../ui/Badge';
 import { EmptyState } from '../ui/EmptyState';
 import type { PresupuestoItem } from '../../types/presupuestos';
 
@@ -44,118 +43,106 @@ export function PresupuestoItemsTab({ items, presupuestoId, esEditable = false }
     item.precio_unitario_final === null || item.precio_total === null;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Banner informativo si hay items pendientes */}
       {tienePendientes && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <div className="flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <h3 className="text-sm font-semibold text-yellow-900">
-                Items Pendientes de Cotización
-              </h3>
-              <p className="text-sm text-yellow-700 mt-1">
-                {itemsPendientes.length} {itemsPendientes.length === 1 ? 'item' : 'items'} sin precio asignado.
-                {esEditable && (
-                  <> Usa el botón "Editar" para asignar los precios faltantes.</>
-                )}
-              </p>
-            </div>
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex gap-3">
+          <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <h3 className="text-sm font-semibold text-amber-900">
+              Cotización Incompleta
+            </h3>
+            <p className="text-sm text-amber-700 mt-1">
+              Hay {itemsPendientes.length} item(s) sin precio asignado. El total calculado es parcial.
+            </p>
           </div>
         </div>
       )}
 
-      {/* Lista de items */}
-      {items.map((item) => {
-        const isPendiente = esPendiente(item);
-        return (
-          <div
-            key={item.id}
-            className={`rounded-lg p-4 border ${
-              isPendiente
-                ? 'bg-yellow-50/50 border-yellow-200'
-                : 'bg-white border-gray-200'
-            }`}
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-2">
-                  <h3 className="font-semibold text-gray-900">
-                    {item.producto_nombre}
-                  </h3>
-                  {isPendiente && (
-                    <Badge variant="warning">Pendiente de Cotizar</Badge>
-                  )}
-                  {item.tipo_item === 'item_personalizado' && (
-                    <Badge variant="secondary">Personalizado</Badge>
-                  )}
-                  {item.producto_categoria && (
-                    <Badge variant="info">{item.producto_categoria}</Badge>
-                  )}
-                </div>
+      {/* Tabla de Items - Minimalista */}
+      <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm bg-white">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            <tr>
+              <th className="px-6 py-4 text-left w-2/5">Item / Descripción</th>
+              <th className="px-6 py-4 text-right">Cantidad</th>
+              <th className="px-6 py-4 text-right">Unitario</th>
+              <th className="px-6 py-4 text-right">Total</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {items.map((item) => {
+              const isPendiente = esPendiente(item);
 
-                {item.descripcion && (
-                  <p className="text-sm text-gray-600 mb-2">{item.descripcion}</p>
-                )}
+              return (
+                <tr
+                  key={item.id}
+                  className={`group hover:bg-gray-50 transition-colors ${isPendiente ? 'bg-amber-50/30' : ''}`}
+                >
+                  <td className="px-6 py-4 align-top">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className={`font-medium text-base ${isPendiente ? 'text-amber-800' : 'text-gray-900'}`}>
+                          {item.producto_nombre}
+                        </span>
+                        {isPendiente && <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold uppercase">Pendiente</span>}
+                        {item.tipo_item === 'item_personalizado' && <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Personalizado</span>}
+                      </div>
+                      {item.descripcion && (
+                        <p className="text-gray-500 text-xs leading-relaxed max-w-lg">
+                          {item.descripcion}
+                        </p>
+                      )}
+                      {item.producto_categoria && (
+                        <span className="inline-block text-[10px] text-gray-400 font-medium uppercase mt-1">
+                          {item.producto_categoria}
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-right align-top text-gray-600 font-medium pt-5">
+                    {item.cantidad} <span className="text-xs font-normal text-gray-400">u.</span>
+                  </td>
+                  <td className="px-6 py-4 text-right align-top text-gray-600 pt-5">
+                    {isPendiente ? (
+                      <span className="text-amber-600 italic text-xs">A definir</span>
+                    ) : (
+                      formatCurrency(item.precio_unitario_final)
+                    )}
+                  </td>
+                  <td className="px-6 py-4 text-right align-top pt-5">
+                    {isPendiente ? (
+                      <span className="text-gray-300">-</span>
+                    ) : (
+                      <span className="font-bold text-gray-900">{formatCurrency(item.precio_total)}</span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
 
-                <div className="flex flex-wrap gap-4 text-sm text-gray-500">
-                  <span>Cantidad: {item.cantidad}</span>
-                  <span className={isPendiente ? 'text-yellow-700 font-medium' : ''}>
-                    Unitario: {formatCurrency(item.precio_unitario_final)}
-                  </span>
-                  {item.tiempo_produccion_dias && item.tiempo_produccion_dias > 0 && (
-                    <span>⏱️ {item.tiempo_produccion_dias} días</span>
-                  )}
-                </div>
-              </div>
-
-              <div className="text-right">
-                <div className={`text-xl font-bold ${
-                  isPendiente ? 'text-yellow-700' : 'text-gray-900'
-                }`}>
-                  {formatCurrency(item.precio_total)}
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      })}
-
-      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-        <div className="space-y-2">
+      {/* Totales Section */}
+      <div className="flex justify-end pt-4">
+        <div className="w-full md:w-1/3 space-y-3">
           {tienePendientes && (
-            <div className="flex items-center justify-between text-sm border-b border-gray-200 pb-2">
-              <span className="text-gray-600">
-                Items con precio ({itemsCompletos.length})
-              </span>
-              <span className="text-gray-900 font-medium">
-                {formatCurrency(total)}
-              </span>
+            <div className="flex justify-between text-sm text-gray-500">
+              <span>Items cotizados ({itemsCompletos.length})</span>
+              <span className="font-medium text-gray-700">{formatCurrency(total)}</span>
             </div>
           )}
-          {tienePendientes && (
-            <div className="flex items-center justify-between text-sm border-b border-gray-200 pb-2">
-              <span className="text-yellow-700">
-                Items pendientes ({itemsPendientes.length})
-              </span>
-              <span className="text-yellow-700 font-medium">
-                Por Cotizar
-              </span>
+
+          <div className="flex justify-between items-end border-t border-gray-100 pt-4">
+            <div>
+              <span className="block text-sm font-medium text-gray-500 uppercase tracking-wide">Total Estimado</span>
+              {tienePendientes && <span className="text-xs text-amber-600 block mt-1">* Parcial (faltan precios)</span>}
             </div>
-          )}
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-gray-700">
-              {tienePendientes ? 'Subtotal Cotizado' : `Total (${items.length} items)`}
-            </span>
-            <span className="text-2xl font-bold text-gray-900">
+            <span className="text-3xl font-bold text-gray-900 tracking-tight">
               {formatCurrency(total)}
             </span>
           </div>
-          {tienePendientes && (
-            <p className="text-xs text-yellow-700 mt-2">
-              * El total final se calculará una vez que se asignen todos los precios
-            </p>
-          )}
         </div>
       </div>
     </div>

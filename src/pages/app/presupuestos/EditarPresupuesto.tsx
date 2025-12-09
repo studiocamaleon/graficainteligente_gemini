@@ -12,7 +12,6 @@ import { PageHeader } from '../../../components/ui/PageHeader';
 import { Tabs } from '../../../components/ui/Tabs';
 import { PresupuestoGeneralSection } from '../../../components/presupuestos/PresupuestoGeneralSection';
 import { PresupuestoItemsSection } from '../../../components/presupuestos/PresupuestoItemsSection';
-import { ItemsPendientesCotizacion } from '../../../components/presupuestos/ItemsPendientesCotizacion';
 import { PresupuestoCondicionesSection } from '../../../components/presupuestos/PresupuestoCondicionesSection';
 import { PresupuestoResumenSection } from '../../../components/presupuestos/PresupuestoResumenSection';
 import { usePresupuestoValidation } from '../../../hooks/usePresupuestoValidation';
@@ -40,7 +39,6 @@ export default function EditarPresupuesto() {
     clienteId: '',
     vendedorId: user?.id || '',
     canalVenta: '' as CanalVenta | '',
-    fechaEntregaEstimada: '',
     fechaValidez: '',
     notasInternas: '',
     condicionesComerciales: '',
@@ -65,7 +63,6 @@ export default function EditarPresupuesto() {
         clienteId: presupuesto.cliente_id || '',
         vendedorId: presupuesto.vendedor_id || '',
         canalVenta: presupuesto.canal_venta || '',
-        fechaEntregaEstimada: presupuesto.fecha_entrega_estimada?.split('T')[0] || '',
         fechaValidez: presupuesto.fecha_validez?.split('T')[0] || '',
         notasInternas: presupuesto.notas_internas || '',
         condicionesComerciales: presupuesto.condiciones_comerciales || '',
@@ -92,14 +89,8 @@ export default function EditarPresupuesto() {
     if (!formData.clienteId) newErrors.clienteId = 'Selecciona un cliente';
     if (!formData.vendedorId) newErrors.vendedorId = 'Selecciona un vendedor';
     if (!formData.canalVenta) newErrors.canalVenta = 'Selecciona un canal';
-    if (!formData.fechaEntregaEstimada) {
-      newErrors.fechaEntregaEstimada = 'La fecha de entrega es obligatoria';
-    } else {
-      const hoy = new Date().toISOString().split('T')[0];
-      if (formData.fechaEntregaEstimada < hoy) {
-        newErrors.fechaEntregaEstimada = 'La fecha de entrega no puede ser anterior a hoy';
-      }
-    }
+    if (!formData.canalVenta) newErrors.canalVenta = 'Selecciona un canal';
+
     if (!formData.fechaValidez) newErrors.fechaValidez = 'Selecciona una fecha';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -152,7 +143,6 @@ export default function EditarPresupuesto() {
     descripcion: string;
     cantidad: number;
     precio_unitario_final?: number | null;
-    tiempo_produccion_dias?: number;
   }) => {
     if (!presupuesto) return;
 
@@ -171,7 +161,7 @@ export default function EditarPresupuesto() {
       precio_unitario_final: precioUnitario,
       precio_total: precioTotal,
       descripcion: item.descripcion,
-      tiempo_produccion_dias: item.tiempo_produccion_dias,
+      tiempo_produccion_dias: 0, // Default 0
     };
 
     const result = await addItem(itemData);
@@ -286,7 +276,6 @@ export default function EditarPresupuesto() {
         cliente_id: formData.clienteId,
         vendedor_id: formData.vendedorId,
         canal_venta: formData.canalVenta as CanalVenta,
-        fecha_entrega_estimada: formData.fechaEntregaEstimada,
         fecha_validez: formData.fechaValidez,
         condiciones_comerciales: formData.condicionesComerciales,
         notas_internas: formData.notasInternas,
@@ -388,13 +377,11 @@ export default function EditarPresupuesto() {
               clienteId={formData.clienteId}
               vendedorId={formData.vendedorId}
               canalVenta={formData.canalVenta}
-              fechaEntregaEstimada={formData.fechaEntregaEstimada}
               fechaValidez={formData.fechaValidez}
               notasInternas={formData.notasInternas}
               onClienteChange={(id) => setFormData({ ...formData, clienteId: id })}
               onVendedorChange={(id) => setFormData({ ...formData, vendedorId: id })}
               onCanalVentaChange={(canal) => setFormData({ ...formData, canalVenta: canal })}
-              onFechaEntregaEstimadaChange={(fecha) => setFormData({ ...formData, fechaEntregaEstimada: fecha })}
               onFechaValidezChange={(fecha) => setFormData({ ...formData, fechaValidez: fecha })}
               onNotasInternasChange={(notas) => setFormData({ ...formData, notasInternas: notas })}
               errors={errors}
@@ -403,23 +390,6 @@ export default function EditarPresupuesto() {
 
           {activeTab === 'items' && (
             <div className="space-y-6">
-              {/* Banner de items pendientes */}
-              {totales.tienePendientes && (
-                <ItemsPendientesCotizacion
-                  items={items.filter(
-                    (item) => item.precio_unitario_final === null || item.precio_total === null
-                  ).map(item => ({
-                    id: item.id,
-                    producto_nombre: item.producto_nombre,
-                    descripcion: item.descripcion,
-                    cantidad: item.cantidad,
-                    configuracion: item.configuracion,
-                  }))}
-                  porcentajeCompletitud={validation.porcentajeCompletitud}
-                  onAsignarPrecio={handleAsignarPrecio}
-                />
-              )}
-
               {/* Lista de items */}
               <PresupuestoItemsSection
                 items={items}

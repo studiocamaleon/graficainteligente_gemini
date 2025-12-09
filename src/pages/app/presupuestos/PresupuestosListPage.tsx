@@ -2,22 +2,24 @@ import { useState } from 'react';
 import { Plus, CheckCircle, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { usePresupuestos } from '../../../hooks/usePresupuestos';
-import { usePresupuesto } from '../../../hooks/usePresupuesto';
+
 import { useConfirmDialog } from '../../../hooks/useConfirmDialog';
 import { useCompany } from '../../../hooks/useCompany';
+import { useAuth } from '../../../hooks/useAuth';
 import { descargarPresupuestoPDF } from '../../../utils/pdfGenerators/presupuestoPDF';
-import { PresupuestoCard } from '../../../components/presupuestos/PresupuestoCard';
+import { PresupuestosTable } from '../../../components/presupuestos/PresupuestosTable';
 import { PresupuestoFilters } from '../../../components/presupuestos/PresupuestoFilters';
 import { PresupuestosStats } from '../../../components/presupuestos/PresupuestosStats';
 import { Button } from '../../../components/ui/Button';
 import { EmptyState } from '../../../components/ui/EmptyState';
+import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
 import { PageHeader } from '../../../components/ui/PageHeader';
 import { Pagination } from '../../../components/ui/Pagination';
 import type { PresupuestosFilters as FiltersType } from '../../../types/presupuestos';
 
 export default function PresupuestosListPage() {
   const navigate = useNavigate();
-  const { showConfirm } = useConfirmDialog();
+  const { showConfirm, dialogState, closeDialog } = useConfirmDialog();
 
   const [filters, setFilters] = useState<FiltersType>({});
   const [pagination, setPagination] = useState({
@@ -38,6 +40,7 @@ export default function PresupuestosListPage() {
   } = usePresupuestos(filters, pagination);
 
   const { company } = useCompany();
+  const { profile } = useAuth();
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const showSuccess = (message: string) => {
@@ -91,6 +94,7 @@ export default function PresupuestosListPage() {
 
     if (confirmed) {
       const success = await deletePresupuesto(id);
+
       if (success) {
         showSuccess('Presupuesto eliminado correctamente');
       }
@@ -158,6 +162,12 @@ export default function PresupuestosListPage() {
         }
       />
 
+      {error && (
+        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700">
+          <span className="font-bold">Error:</span> {error}
+        </div>
+      )}
+
       {/* Success Message */}
       {successMessage && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3">
@@ -222,22 +232,20 @@ export default function PresupuestosListPage() {
         />
       )}
 
-      {/* Presupuestos Grid */}
+      {/* Presupuestos Table */}
       {!loading && presupuestos.length > 0 && (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {presupuestos.map((presupuesto) => (
-              <PresupuestoCard
-                key={presupuesto.id}
-                presupuesto={presupuesto}
-                onView={handleView}
-                onEdit={handleEdit}
-                onDuplicate={handleDuplicate}
-                onDelete={handleDelete}
-                onEnviar={handleEnviar}
-                onGenerarPDF={handleGenerarPDF}
-              />
-            ))}
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+            <PresupuestosTable
+              presupuestos={presupuestos}
+              onView={handleView}
+              onEdit={handleEdit}
+              onDuplicate={handleDuplicate}
+              onDelete={handleDelete}
+              onEnviar={handleEnviar}
+              onGenerarPDF={handleGenerarPDF}
+              canDelete={['super_admin', 'admin', 'manager'].includes(profile?.role || '')}
+            />
           </div>
 
           {/* Pagination */}
@@ -253,6 +261,16 @@ export default function PresupuestosListPage() {
           )}
         </>
       )}
+      <ConfirmDialog
+        isOpen={dialogState.isOpen}
+        title={dialogState.title}
+        message={dialogState.message}
+        confirmText={dialogState.confirmText}
+        cancelText={dialogState.cancelText}
+        variant={dialogState.variant}
+        onConfirm={dialogState.onConfirm}
+        onClose={closeDialog}
+      />
     </div>
   );
 }

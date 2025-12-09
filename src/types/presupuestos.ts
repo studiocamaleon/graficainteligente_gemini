@@ -222,7 +222,7 @@ export interface CreatePresupuestoData {
   cliente_id: string;
   vendedor_id: string;
   canal_venta: CanalVenta;
-  fecha_entrega_estimada: string;
+  fecha_entrega_estimada?: string;
   fecha_validez?: string;
   condiciones_comerciales?: string;
   notas_internas?: string;
@@ -461,12 +461,12 @@ export interface RechazarPresupuestoData {
 export interface NotificacionPresupuestoData {
   presupuesto_id: string;
   tipo_notificacion:
-    | 'presupuesto_creado'
-    | 'presupuesto_listo'
-    | 'presupuesto_enviado'
-    | 'presupuesto_aprobado'
-    | 'presupuesto_rechazado'
-    | 'presupuesto_vencido';
+  | 'presupuesto_creado'
+  | 'presupuesto_listo'
+  | 'presupuesto_enviado'
+  | 'presupuesto_aprobado'
+  | 'presupuesto_rechazado'
+  | 'presupuesto_vencido';
   telefono_destino: string;
   datos_adicionales?: Record<string, any>;
 }

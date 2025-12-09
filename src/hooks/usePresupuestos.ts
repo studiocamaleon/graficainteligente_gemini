@@ -54,7 +54,8 @@ export function usePresupuestos(
             id,
             numero_orden,
             estado
-          )
+          ),
+          presupuestos_items (count)
         `,
           { count: 'exact' }
         );
@@ -122,7 +123,12 @@ export function usePresupuestos(
 
       if (fetchError) throw fetchError;
 
-      setPresupuestos((data as PresupuestoConRelaciones[]) || []);
+      const presupuestosConCount = (data || []).map((p: any) => ({
+        ...p,
+        items_count: p.presupuestos_items?.[0]?.count || 0,
+      }));
+
+      setPresupuestos((presupuestosConCount as PresupuestoConRelaciones[]) || []);
       setTotal(count || 0);
     } catch (err: any) {
       console.error('Error fetching presupuestos:', err);

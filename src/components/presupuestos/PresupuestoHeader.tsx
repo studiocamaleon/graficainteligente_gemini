@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
   Edit2,
   Copy,
@@ -12,7 +11,6 @@ import {
   User,
   Calendar,
   Package,
-  DollarSign,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../contexts/ToastContext';
@@ -42,16 +40,16 @@ export function PresupuestoHeader({
 
   const getEstadoBadge = () => {
     const estadoConfig = {
-      borrador: { label: 'Borrador', variant: 'secondary' as const, icon: Edit2 },
+      borrador: { label: 'Borrador', variant: 'default' as const, icon: Edit2 },
       pendiente: { label: 'Pendiente', variant: 'warning' as const, icon: Clock },
       enviado: { label: 'Enviado', variant: 'info' as const, icon: Send },
       aprobado: { label: 'Aprobado', variant: 'success' as const, icon: CheckCircle },
       rechazado: { label: 'Rechazado', variant: 'danger' as const, icon: XCircle },
       convertido: { label: 'Convertido', variant: 'success' as const, icon: CheckCircle },
-      vencido: { label: 'Vencido', variant: 'secondary' as const, icon: Clock },
+      vencido: { label: 'Vencido', variant: 'default' as const, icon: Clock },
     };
 
-    const config = estadoConfig[presupuesto.estado];
+    const config = estadoConfig[presupuesto.estado] || estadoConfig.borrador;
     const Icon = config.icon;
 
     return (
@@ -70,7 +68,8 @@ export function PresupuestoHeader({
     }).format(value);
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | undefined | null) => {
+    if (!dateString) return '-';
     return new Date(dateString).toLocaleDateString('es-ES', {
       day: '2-digit',
       month: '2-digit',
@@ -83,164 +82,141 @@ export function PresupuestoHeader({
   const canConvertir = presupuesto.estado === 'aprobado' && !presupuesto.orden_trabajo_id;
 
   return (
-    <div className="bg-white border-b border-gray-200">
-      <div className="px-6 py-4 space-y-4">
-        {/* Título y estado */}
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-1">
-            <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-2xl font-bold text-gray-900">
+    <div className="bg-white border-b border-gray-100 pb-6 mb-6">
+      <div className="px-6 pt-6 space-y-6">
+        {/* Título, Estado y Acciones principales */}
+        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-3 mb-1">
+              <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
                 {presupuesto.numero_presupuesto}
               </h1>
               {getEstadoBadge()}
             </div>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-500">
               Creado el {formatDate(presupuesto.fecha_creacion)}
             </p>
           </div>
 
-          {/* Acciones */}
-          <div className="flex gap-2">
+          {/* Acciones - Agrupadas y limpias */}
+          <div className="flex flex-wrap gap-2 items-center">
             {canEdit && (
               <Button
                 size="sm"
                 variant="secondary"
                 onClick={() => navigate(`/app/presupuestos/${presupuesto.id}/editar`)}
+                className="bg-white border-gray-200 text-gray-700 hover:bg-gray-50"
               >
                 <Edit2 className="w-4 h-4 mr-2" />
                 Editar
               </Button>
             )}
 
-            {canEnviar && (
-              <Button size="sm" onClick={onEnviar}>
-                <Send className="w-4 h-4 mr-2" />
-                Enviar
-              </Button>
-            )}
-
             {canConvertir && onConvertir && (
-              <Button size="sm" onClick={onConvertir}>
+              <Button size="sm" onClick={onConvertir} className="bg-green-600 hover:bg-green-700 text-white border-transparent">
                 <Package className="w-4 h-4 mr-2" />
                 Convertir a Orden
               </Button>
             )}
 
-            <Button size="sm" variant="secondary" onClick={onGenerarPDF}>
-              <FileText className="w-4 h-4 mr-2" />
-              PDF
-            </Button>
+            {canEnviar && (
+              <Button size="sm" onClick={onEnviar} className="bg-indigo-600 hover:bg-indigo-700 text-white border-transparent">
+                <Send className="w-4 h-4 mr-2" />
+                Enviar
+              </Button>
+            )}
 
-            <Button size="sm" variant="secondary" onClick={onDuplicate}>
-              <Copy className="w-4 h-4 mr-2" />
-              Duplicar
-            </Button>
+            <div className="h-6 w-px bg-gray-200 mx-1 hidden md:block"></div>
 
-            <Button size="sm" variant="danger" onClick={onDelete}>
-              <Trash2 className="w-4 h-4 mr-2" />
-              Eliminar
+            <Button size="sm" variant="ghost" onClick={onGenerarPDF} title="Descargar PDF">
+              <FileText className="w-4 h-4" />
+            </Button>
+            <Button size="sm" variant="ghost" onClick={onDuplicate} title="Duplicar">
+              <Copy className="w-4 h-4" />
+            </Button>
+            <Button size="sm" variant="ghost" onClick={onDelete} className="text-red-500 hover:text-red-600 hover:bg-red-50" title="Eliminar">
+              <Trash2 className="w-4 h-4" />
             </Button>
           </div>
         </div>
 
-        {/* Info cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {/* Info Metadata Row - Estilo Stripe (Horizontal) */}
+        <div className="flex flex-wrap gap-8 py-4 border-t border-b border-gray-100">
+
           {/* Cliente */}
-          <div className="bg-gray-50 rounded-lg p-3">
-            <div className="flex items-center gap-2 mb-1">
+          <div className="space-y-1">
+            <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">Cliente</span>
+            <div className="flex items-center gap-2">
               <User className="w-4 h-4 text-gray-400" />
-              <span className="text-xs text-gray-500">Cliente</span>
+              <span className="font-medium text-gray-900">{presupuesto.cliente?.razon_social || 'Sin cliente'}</span>
             </div>
-            <p className="font-semibold text-gray-900 truncate">
-              {presupuesto.cliente?.razon_social || 'Sin cliente'}
-            </p>
           </div>
 
           {/* Validez */}
-          <div className="bg-gray-50 rounded-lg p-3">
-            <div className="flex items-center gap-2 mb-1">
+          <div className="space-y-1">
+            <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">Válido Hasta</span>
+            <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4 text-gray-400" />
-              <span className="text-xs text-gray-500">Válido hasta</span>
+              <span className="font-medium text-gray-900">
+                {presupuesto.fecha_validez ? formatDate(presupuesto.fecha_validez) : '-'}
+              </span>
             </div>
-            <p className="font-semibold text-gray-900">
-              {presupuesto.fecha_validez
-                ? formatDate(presupuesto.fecha_validez)
-                : 'Sin fecha'}
-            </p>
           </div>
 
-          {/* Items */}
-          <div className="bg-gray-50 rounded-lg p-3">
-            <div className="flex items-center gap-2 mb-1">
+          {/* Items Count */}
+          <div className="space-y-1">
+            <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">Items</span>
+            <div className="flex items-center gap-2">
               <Package className="w-4 h-4 text-gray-400" />
-              <span className="text-xs text-gray-500">Items</span>
+              <span className="font-medium text-gray-900">{presupuesto.items_count || 0}</span>
             </div>
-            <p className="font-semibold text-gray-900">
-              {presupuesto.items_count || 0}
-            </p>
           </div>
 
-          {/* Total */}
-          <div className="bg-blue-50 rounded-lg p-3">
-            <div className="flex items-center gap-2 mb-1">
-              <DollarSign className="w-4 h-4 text-blue-600" />
-              <span className="text-xs text-blue-600 font-medium">Total</span>
-            </div>
-            <p className="text-lg font-bold text-blue-600">
+          {/* Total - Highlighted */}
+          <div className="space-y-1 ml-auto">
+            <span className="text-xs font-medium text-gray-400 uppercase tracking-wide text-right block">Total Estimado</span>
+            <div className="font-bold text-2xl text-gray-900 tracking-tight leading-none">
               {formatCurrency(presupuesto.total)}
-            </p>
+            </div>
           </div>
         </div>
 
-        {/* Orden asociada */}
-        {presupuesto.orden_trabajo && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="w-5 h-5 text-green-600" />
-                <span className="text-sm text-green-800">
-                  Convertido a orden:{' '}
-                  <span className="font-semibold">
-                    {presupuesto.orden_trabajo.numero_orden}
-                  </span>
-                </span>
+        {/* Orden asociada & Tracking (Notificaciones contextuales) */}
+        <div className="flex flex-col gap-2">
+          {presupuesto.orden_trabajo && (
+            <div className="flex items-center justify-between bg-green-50/50 border border-green-100 rounded-lg p-3 text-sm">
+              <div className="flex items-center gap-2 text-green-700">
+                <CheckCircle className="w-4 h-4" />
+                <span>Convertido a orden <span className="font-semibold">{presupuesto.orden_trabajo.numero_orden}</span></span>
               </div>
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={() =>
-                  navigate(`/app/orders/${presupuesto.orden_trabajo?.id}`)
-                }
+              <button
+                onClick={() => navigate(`/app/orders/${presupuesto.orden_trabajo?.id}`)}
+                className="flex items-center gap-1 text-green-700 hover:text-green-800 font-medium text-xs uppercase tracking-wide"
               >
-                <ExternalLink className="w-4 h-4 mr-2" />
-                Ver orden
-              </Button>
+                Ver Orden <ExternalLink className="w-3 h-3" />
+              </button>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Tracking link */}
-        {presupuesto.tracking_token && presupuesto.estado === 'enviado' && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <ExternalLink className="w-5 h-5 text-blue-600" />
-                <span className="text-sm text-blue-800">Tracking público activo</span>
+          {presupuesto.tracking_token && presupuesto.estado === 'enviado' && (
+            <div className="flex items-center justify-between bg-blue-50/50 border border-blue-100 rounded-lg p-3 text-sm">
+              <div className="flex items-center gap-2 text-blue-700">
+                <ExternalLink className="w-4 h-4" />
+                <span>Tracking público activo</span>
               </div>
-              <Button
-                size="sm"
-                variant="secondary"
+              <button
                 onClick={() => {
                   const url = `${window.location.origin}/tracking/presupuesto/${presupuesto.tracking_token}`;
                   navigator.clipboard.writeText(url);
-                  showSuccess('Link copiado al portapapeles');
+                  showSuccess('Link copiado');
                 }}
+                className="text-blue-600 hover:text-blue-800 font-medium text-xs uppercase tracking-wide"
               >
-                Copiar link
-              </Button>
+                Copiar Link
+              </button>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );

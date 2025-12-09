@@ -184,6 +184,8 @@ export interface Company {
   language: string;
   description: string | null;
   industry: string | null;
+  whatsapp_notifications_enabled?: boolean;
+  whatsapp_instance_id?: string | null;
   created_at: string;
   updated_at: string;
 }

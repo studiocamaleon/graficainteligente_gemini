@@ -1,4 +1,4 @@
-import { DollarSign, Package, FileText, Calendar, User } from 'lucide-react';
+import { Package, FileText, Calendar, User } from 'lucide-react';
 import type { PresupuestoItem } from '../../types/presupuestos';
 
 interface PresupuestoResumenSectionProps {
@@ -44,108 +44,129 @@ export function PresupuestoResumenSection({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">
-          Resumen Final
-        </h2>
-        <p className="text-sm text-gray-600">
-          Verifica todos los datos antes de guardar
-        </p>
-      </div>
+      {/* Document Container */}
+      <div className="max-w-4xl mx-auto bg-white border border-gray-200 shadow-lg rounded-xl overflow-hidden">
 
-      {/* Datos principales */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-blue-50 rounded-lg">
-              <User className="w-5 h-5 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-xs text-gray-500">Cliente</p>
-              <p className="font-semibold text-gray-900">{clienteNombre || '-'}</p>
+        {/* Document Header Bar */}
+        <div className="bg-gray-50 border-b border-gray-200 p-6 flex justify-between items-start">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Resumen del Presupuesto</h2>
+            <p className="text-sm text-gray-500 mt-1">Revisa los detalles antes de finalizar</p>
+          </div>
+          <div className="text-right">
+            <div className="text-sm text-gray-500 mb-1">Total Estimado</div>
+            <div className="text-3xl font-bold text-blue-600 tracking-tight">
+              {formatCurrency(totales.total)}
             </div>
           </div>
         </div>
 
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-green-50 rounded-lg">
-              <Calendar className="w-5 h-5 text-green-600" />
-            </div>
-            <div>
-              <p className="text-xs text-gray-500">Válido hasta</p>
-              <p className="font-semibold text-gray-900">{formatDate(fechaValidez)}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Items */}
-      <div className="bg-white border border-gray-200 rounded-lg p-4">
-        <div className="flex items-center gap-2 mb-3">
-          <Package className="w-5 h-5 text-gray-400" />
-          <h3 className="font-semibold text-gray-900">Items ({items.length})</h3>
-        </div>
-        <div className="space-y-2">
-          {items.map((item, index) => (
-            <div
-              key={index}
-              className="flex items-center justify-between text-sm py-2 border-b border-gray-100 last:border-0"
-            >
-              <div className="flex-1">
-                <p className="font-medium text-gray-900">{item.producto_nombre}</p>
-                <p className="text-xs text-gray-500">
-                  {item.cantidad} x {formatCurrency(item.precio_unitario_final)}
-                </p>
+        <div className="p-8 space-y-8">
+          {/* Header Grid: Cliente & Fechas */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pb-8 border-b border-gray-100">
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Cliente</label>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
+                  <User className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-900 text-lg">{clienteNombre || 'Sin cliente seleccionado'}</p>
+                  <p className="text-sm text-gray-500">Cliente Registrado</p>
+                </div>
               </div>
-              <p className="font-semibold text-gray-900">
-                {formatCurrency(item.precio_total)}
-              </p>
             </div>
-          ))}
+
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Vigencia</label>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center text-green-600">
+                  <Calendar className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-900 text-lg">{formatDate(fechaValidez)}</p>
+                  <p className="text-sm text-gray-500">Fecha de Vencimiento</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+
+          {/* Items Table Look */}
+          <div>
+            <div className="flex items-center gap-2 mb-4 text-gray-900 font-semibold">
+              <Package className="w-5 h-5 text-gray-400" />
+              <h3>Items ({items.length})</h3>
+            </div>
+
+            <div className="bg-gray-50 rounded-lg border border-gray-100 overflow-hidden">
+              <table className="w-full text-sm text-left">
+                <thead className="bg-gray-100 text-gray-500 uppercase text-xs">
+                  <tr>
+                    <th className="px-4 py-3 font-semibold">Descripción</th>
+                    <th className="px-4 py-3 text-right font-semibold">Cant.</th>
+                    <th className="px-4 py-3 text-right font-semibold">Unitario</th>
+                    <th className="px-4 py-3 text-right font-semibold">Total</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {items.map((item, index) => (
+                    <tr key={index}>
+                      <td className="px-4 py-3">
+                        <p className="font-medium text-gray-900">{item.producto_nombre}</p>
+                      </td>
+                      <td className="px-4 py-3 text-right text-gray-600">{item.cantidad}</td>
+                      <td className="px-4 py-3 text-right text-gray-600">{formatCurrency(item.precio_unitario_final || 0)}</td>
+                      <td className="px-4 py-3 text-right font-medium text-gray-900">{formatCurrency(item.precio_total || 0)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Footer Grid: Condiciones & Totales */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
+            {/* Condiciones */}
+            <div className="order-2 md:order-1">
+              {condicionesText ? (
+                <div className="bg-blue-50/50 rounded-lg p-4 border border-blue-100 h-full">
+                  <div className="flex items-center gap-2 mb-2 text-blue-800 font-medium">
+                    <FileText className="w-4 h-4" />
+                    <h4>Condiciones Comerciales</h4>
+                  </div>
+                  <p className="text-xs text-blue-900/70 whitespace-pre-wrap font-mono leading-relaxed">
+                    {condicionesText}
+                  </p>
+                </div>
+              ) : (
+                <div className="h-full flex items-center justify-center p-6 border-2 border-dashed border-gray-200 rounded-lg text-gray-400 text-sm italic">
+                  Sin condiciones especiales
+                </div>
+              )}
+            </div>
+
+            {/* Total Breakdown */}
+            <div className="order-1 md:order-2 flex flex-col justify-end space-y-3">
+              <div className="flex justify-between text-gray-600 text-sm">
+                <span>Subtotal</span>
+                <span>{formatCurrency(totales.subtotal)}</span>
+              </div>
+              {totales.descuentos > 0 && (
+                <div className="flex justify-between text-red-600 text-sm">
+                  <span>Descuentos</span>
+                  <span>-{formatCurrency(totales.descuentos)}</span>
+                </div>
+              )}
+              <div className="pt-3 border-t border-gray-200 flex justify-between items-end">
+                <span className="font-bold text-xl text-gray-900">Total Final</span>
+                <span className="font-bold text-3xl text-gray-900">{formatCurrency(totales.total)}</span>
+              </div>
+            </div>
+          </div>
+
         </div>
       </div>
-
-      {/* Totales */}
-      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6">
-        <div className="space-y-3">
-          <div className="flex items-center justify-between text-gray-700">
-            <span>Subtotal</span>
-            <span className="font-semibold">{formatCurrency(totales.subtotal)}</span>
-          </div>
-          {totales.descuentos > 0 && (
-            <div className="flex items-center justify-between text-gray-700">
-              <span>Descuentos</span>
-              <span className="font-semibold text-red-600">
-                -{formatCurrency(totales.descuentos)}
-              </span>
-            </div>
-          )}
-          <div className="pt-3 border-t-2 border-blue-200">
-            <div className="flex items-center justify-between">
-              <span className="text-lg font-semibold text-gray-900">Total</span>
-              <span className="text-3xl font-bold text-blue-600">
-                {formatCurrency(totales.total)}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Condiciones */}
-      {condicionesText && (
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <FileText className="w-5 h-5 text-gray-400" />
-            <h3 className="font-semibold text-gray-900">Condiciones Comerciales</h3>
-          </div>
-          <div className="bg-gray-50 rounded-lg p-3 max-h-48 overflow-y-auto">
-            <pre className="text-xs text-gray-700 whitespace-pre-wrap font-sans">
-              {condicionesText}
-            </pre>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -1,15 +1,12 @@
 import { useState } from 'react';
-import { Plus, Trash2, Package, FileText, DollarSign, AlertCircle, Wand2, CheckSquare, Square } from 'lucide-react';
+import { Plus, Trash2, Package, FileText, DollarSign, Wand2, CheckSquare, Square } from 'lucide-react';
 import { Button } from '../ui/Button';
-import { Badge } from '../ui/Badge';
 import { EmptyState } from '../ui/EmptyState';
 import { UniversalAddItemWizard } from '../wizard/UniversalAddItemWizard';
 import { AddItemPersonalizadoModal } from './AddItemPersonalizadoModal';
 import { AsignarPrecioModal } from './AsignarPrecioModal';
 import { AplicarServicioMasivoModal } from '../orders/AplicarServicioMasivoModal';
 import type { PresupuestoItem, ItemPendienteCotizacion } from '../../types/presupuestos';
-
-
 
 interface PresupuestoItemsSectionProps {
   items: PresupuestoItem[];
@@ -19,7 +16,6 @@ interface PresupuestoItemsSectionProps {
     descripcion: string;
     cantidad: number;
     precio_unitario_final?: number | null;
-    tiempo_produccion_dias?: number;
   }) => void;
   onEditItem: (id: string, updates: any) => void;
   onDeleteItem: (id: string) => void;
@@ -179,26 +175,34 @@ export function PresupuestoItemsSection({
         />
       )}
 
-      {/* Items List */}
+      {/* Items List - Compact Table Layout */}
       {items.length > 0 && (
-        <div className="space-y-3">
-          {items.map((item, index) => {
-            const sinPrecio = item.precio_unitario_final === null || item.precio_total === null;
+        <div className="border rounded-xl overflow-hidden shadow-sm">
+          {/* Table Header */}
+          <div className="bg-gray-50/80 border-b border-gray-200 px-4 py-3 flex gap-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            <div className="mt-1 mr-2"><Square className="w-4 h-4 opacity-0" /></div> {/* Spacer for checkbox */}
+            <div className="flex-1">Producto / Descripción</div>
+            <div className="w-32 text-right">Cantidad</div>
+            <div className="w-32 text-right">Unitario</div>
+            <div className="w-32 text-right">Total</div>
+            <div className="w-10"></div> {/* Spacer for actions */}
+          </div>
 
-            return (
-              <div
-                key={item.id || index}
-                className={`rounded-lg p-4 transition-all ${sinPrecio
-                  ? 'bg-yellow-50 border-2 border-yellow-300'
-                  : 'bg-white border border-gray-200 hover:shadow-md'
-                  }`}
-              >
-                <div className="flex items-start justify-between gap-4">
+          <div className="divide-y divide-gray-100 bg-white">
+            {items.map((item, index) => {
+              const sinPrecio = item.precio_unitario_final === null || item.precio_total === null;
+
+              return (
+                <div
+                  key={item.id || index}
+                  className={`group flex items-center gap-4 px-4 py-3 hover:bg-gray-50 transition-colors ${item.id && selectedItemIds.has(item.id) ? 'bg-blue-50/50' : ''
+                    }`}
+                >
                   {/* Selection Checkbox */}
-                  <div className="mt-1 mr-2">
+                  <div className="mt-0.5">
                     <button
                       onClick={() => toggleSelectItem(item.id || '')}
-                      className="text-gray-400 hover:text-blue-600 focus:outline-none"
+                      className="text-gray-300 hover:text-blue-600 focus:outline-none transition-colors"
                     >
                       {item.id && selectedItemIds.has(item.id) ? (
                         <CheckSquare className="w-5 h-5 text-blue-600" />
@@ -209,89 +213,87 @@ export function PresupuestoItemsSection({
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    {/* Nombre y tipo */}
-                    <div className="flex items-center gap-2 mb-2 flex-wrap">
-                      <h3 className="font-semibold text-gray-900">
+                    {/* Nombre y Badges */}
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <h3 className="font-semibold text-gray-900 text-sm truncate">
                         {item.producto_nombre}
                       </h3>
                       {sinPrecio && (
-                        <Badge variant="warning" className="flex items-center gap-1">
-                          <AlertCircle className="w-3 h-3" />
-                          Pendiente de Cotizar
-                        </Badge>
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                          Pendiente
+                        </span>
                       )}
                       {item.tipo_item === 'item_personalizado' && (
-                        <Badge variant="purple">Personalizado</Badge>
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                          Personalizado
+                        </span>
                       )}
                       {item.producto_categoria && (
-                        <Badge variant="info">{item.producto_categoria}</Badge>
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
+                          {item.producto_categoria}
+                        </span>
                       )}
                     </div>
 
-                    {/* Descripción */}
-                    {item.descripcion && (
-                      <p className="text-sm text-gray-600 mb-2">
+                    {/* Descripción Breve */}
+                    {item.descripcion ? (
+                      <p className="text-xs text-gray-500 truncate max-w-lg">
                         {item.descripcion}
                       </p>
+                    ) : (
+                      <p className="text-xs text-gray-300 italic">Sin descripción</p>
                     )}
-
-                    {/* Detalles */}
-                    <div className="flex flex-wrap gap-4 text-sm text-gray-500">
-                      <span>Cantidad: {item.cantidad}</span>
-                      <span>
-                        Unitario: {sinPrecio ? (
-                          <span className="text-yellow-700 font-medium">Por cotizar</span>
-                        ) : (
-                          formatCurrency(item.precio_unitario_final!)
-                        )}
-                      </span>
-                      {item.tiempo_produccion_dias && item.tiempo_produccion_dias > 0 && (
-                        <span>⏱️ {item.tiempo_produccion_dias} días</span>
-                      )}
-                    </div>
                   </div>
 
-                  {/* Precio y acciones */}
-                  <div className="text-right flex flex-col items-end gap-2">
+                  {/* Columna Cantidad */}
+                  <div className="w-32 text-right text-sm text-gray-700">
+                    {item.cantidad} <span className="text-xs text-gray-400">unid.</span>
+                  </div>
+
+                  {/* Columna Unitario */}
+                  <div className="w-32 text-right text-sm text-gray-700">
+                    {sinPrecio ? '-' : formatCurrency(item.precio_unitario_final!)}
+                  </div>
+
+                  {/* Columna Total y Acciones si precio pendiente */}
+                  <div className="w-32 text-right">
                     {sinPrecio ? (
-                      <>
-                        <div className="text-sm font-semibold text-yellow-700 bg-yellow-100 px-3 py-1 rounded-lg">
-                          Por Cotizar
-                        </div>
-                        <Button
-                          size="sm"
-                          variant="primary"
-                          onClick={() => setItemParaAsignarPrecio({
-                            id: item.id,
-                            producto_nombre: item.producto_nombre,
-                            descripcion: item.descripcion,
-                            cantidad: item.cantidad,
-                            configuracion: item.configuracion,
-                          })}
-                        >
-                          <DollarSign className="w-4 h-4 mr-1" />
-                          Asignar Precio
-                        </Button>
-                      </>
-                    ) : (
-                      <div className="text-xl font-bold text-gray-900 mb-2">
-                        {formatCurrency(item.precio_total!)}
-                      </div>
-                    )}
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => onDeleteItem(item.id)}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        title="Eliminar"
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-2 py-1 h-auto"
+                        onClick={() => setItemParaAsignarPrecio({
+                          id: item.id,
+                          producto_nombre: item.producto_nombre,
+                          descripcion: item.descripcion,
+                          cantidad: item.cantidad,
+                          configuracion: item.configuracion,
+                        })}
                       >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
+                        <DollarSign className="w-3 h-3 mr-1" />
+                        Cotizar
+                      </Button>
+                    ) : (
+                      <span className="font-bold text-gray-900 text-sm">
+                        {formatCurrency(item.precio_total!)}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="w-10 flex justify-end">
+                    <button
+                      onClick={() => onDeleteItem(item.id)}
+                      className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+                      title="Eliminar"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       )}
 

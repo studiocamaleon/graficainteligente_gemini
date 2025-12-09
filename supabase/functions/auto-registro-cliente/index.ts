@@ -27,25 +27,25 @@ interface ClienteRegistroData {
 
 function formatPhoneNumber(phone: string): string {
   if (!phone) return '';
-  
+
   let cleaned = phone.replace(/[\s\-()]/g, '');
-  
+
   if (cleaned.startsWith('+')) {
     cleaned = cleaned.substring(1);
   }
-  
+
   if (cleaned.startsWith('54')) {
     return cleaned;
   }
-  
+
   if (cleaned.startsWith('0')) {
     cleaned = cleaned.substring(1);
   }
-  
+
   if (!cleaned.startsWith('54')) {
     cleaned = `54${cleaned}`;
   }
-  
+
   return cleaned;
 }
 
@@ -63,7 +63,7 @@ function validarWhatsApp(phone: string): boolean {
 
 function validarDocumento(tipo: string, numero: string): { valido: boolean; error?: string } {
   const cleaned = numero.replace(/[\s\-]/g, '');
-  
+
   switch (tipo) {
     case 'DNI':
       if (!/^[0-9]{7,8}$/.test(cleaned)) {
@@ -79,7 +79,7 @@ function validarDocumento(tipo: string, numero: string): { valido: boolean; erro
     default:
       return { valido: false, error: 'Tipo de documento inválido' };
   }
-  
+
   return { valido: true };
 }
 
@@ -162,7 +162,7 @@ async function verificarRateLimit(
         })
         .eq('ip_address', ipAddress)
         .eq('company_id', companyId);
-      
+
       return {
         permitido: false,
         mensaje: `Ha superado el límite de ${MAX_INTENTOS_POR_HORA} intentos por hora. Intente nuevamente en ${TIEMPO_BLOQUEO_MINUTOS} minutos.`,
@@ -278,19 +278,19 @@ Deno.serve(async (req: Request) => {
     );
 
     // Obtener IP del cliente
-    const ipAddress = req.headers.get('x-forwarded-for')?.split(',')[0].trim() || 
-                      req.headers.get('x-real-ip') || 
-                      'unknown';
+    const ipAddress = req.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
+      req.headers.get('x-real-ip') ||
+      'unknown';
 
     const body: ClienteRegistroData = await req.json();
 
     // Validaciones básicas
-    if (!body.company_id || !body.nombre_fantasia || !body.razon_social || 
-        !body.tipo_documento || !body.numero_documento || !body.whatsapp) {
+    if (!body.company_id || !body.nombre_fantasia || !body.razon_social ||
+      !body.tipo_documento || !body.numero_documento || !body.whatsapp) {
       return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'Todos los campos obligatorios deben ser completados' 
+        JSON.stringify({
+          success: false,
+          error: 'Todos los campos obligatorios deben ser completados'
         }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -299,9 +299,9 @@ Deno.serve(async (req: Request) => {
     // Validar tipo de documento
     if (!['DNI', 'CUIT', 'CUIL'].includes(body.tipo_documento)) {
       return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'Tipo de documento inválido' 
+        JSON.stringify({
+          success: false,
+          error: 'Tipo de documento inválido'
         }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -311,9 +311,9 @@ Deno.serve(async (req: Request) => {
     const validacionDoc = validarDocumento(body.tipo_documento, body.numero_documento);
     if (!validacionDoc.valido) {
       return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: validacionDoc.error 
+        JSON.stringify({
+          success: false,
+          error: validacionDoc.error
         }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -322,9 +322,9 @@ Deno.serve(async (req: Request) => {
     // Validar WhatsApp
     if (!validarWhatsApp(body.whatsapp)) {
       return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'Número de WhatsApp inválido' 
+        JSON.stringify({
+          success: false,
+          error: 'Número de WhatsApp inválido'
         }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -333,9 +333,9 @@ Deno.serve(async (req: Request) => {
     // Validar email (si se proporciona)
     if (body.email && !validarEmail(body.email)) {
       return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'Email inválido' 
+        JSON.stringify({
+          success: false,
+          error: 'Email inválido'
         }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -345,9 +345,9 @@ Deno.serve(async (req: Request) => {
     const rateLimit = await verificarRateLimit(supabaseAdmin, ipAddress, body.company_id);
     if (!rateLimit.permitido) {
       return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: rateLimit.mensaje 
+        JSON.stringify({
+          success: false,
+          error: rateLimit.mensaje
         }),
         { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -362,7 +362,7 @@ Deno.serve(async (req: Request) => {
 
     if (duplicado) {
       let mensaje = 'Ya existe un cliente registrado con este documento.';
-      
+
       if (clienteExistente.status_aprobacion === 'pending') {
         mensaje = 'Tu solicitud de registro ya está siendo procesada. Por favor espera la confirmación.';
       } else if (clienteExistente.status_aprobacion === 'rejected') {
@@ -372,9 +372,9 @@ Deno.serve(async (req: Request) => {
       }
 
       return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: mensaje 
+        JSON.stringify({
+          success: false,
+          error: mensaje
         }),
         { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -385,7 +385,7 @@ Deno.serve(async (req: Request) => {
       .from('companies')
       .select('name, whatsapp_notifications_enabled')
       .eq('id', body.company_id)
-      .single();
+      .maybeSingle();
 
     if (companyError) {
       console.error('[Company] Error consultando empresa:', companyError);
@@ -439,9 +439,9 @@ Deno.serve(async (req: Request) => {
     if (createError) {
       console.error('[Cliente] Error creando:', createError);
       return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'Error al registrar el cliente. Por favor intente nuevamente.' 
+        JSON.stringify({
+          success: false,
+          error: 'Error al registrar el cliente. Por favor intente nuevamente.'
         }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -601,15 +601,16 @@ Deno.serve(async (req: Request) => {
       }),
       {
         status: 201,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      }
     );
 
   } catch (error) {
     console.error('[Error General]:', error);
     return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: 'Error interno del servidor' 
+      JSON.stringify({
+        success: false,
+        error: 'Error interno del servidor'
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

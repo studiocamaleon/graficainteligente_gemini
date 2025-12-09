@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
-import { X, Route, AlertTriangle } from 'lucide-react';
+import { Route, AlertTriangle } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Select } from '../ui/Select';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { usePasos } from '../../hooks/usePasos';
-import { useAuth } from '../../hooks/useAuth';
 
 interface AddPasoManualModalProps {
   isOpen: boolean;
@@ -27,7 +26,6 @@ export function AddPasoManualModal({
   itemNombre,
   currentStepsCount,
 }: AddPasoManualModalProps) {
-  const { profile } = useAuth();
   const { pasos, loading: loadingPasos } = usePasos({ page: 1, itemsPerPage: 1000 });
 
   const [formData, setFormData] = useState({
@@ -98,15 +96,28 @@ export function AddPasoManualModal({
 
   if (!isOpen) return null;
 
-  // Filtrar pasos por etapa seleccionada si es necesario
-  const pasosDisponibles = pasos.filter((p) => p.is_active);
+  // Mapeo entre valores del select y valores de la BD
+  const getEtapaDB = (formEtapa: string): string => {
+    const map: Record<string, string> = {
+      'pre_prensa': 'Pre-prensa',
+      'principal': 'Produccion',
+      'post_prensa': 'Terminacion',
+      'instalacion': 'Instalacion'
+    };
+    return map[formEtapa] || formEtapa;
+  };
+
+  // Filtrar pasos por etapa seleccionada
+  const pasosDisponibles = pasos.filter(
+    (p) => p.is_active && p.etapa === getEtapaDB(formData.etapa)
+  );
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
       title="Agregar Paso de Producción Manual"
-      maxWidth="xl"
+      size="md"
     >
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Advertencia */}

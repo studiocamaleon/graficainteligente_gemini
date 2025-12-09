@@ -6,6 +6,7 @@ import { usePresupuestos } from '../../../hooks/usePresupuestos';
 import { useConfirmDialog } from '../../../hooks/useConfirmDialog';
 import { useCompany } from '../../../hooks/useCompany';
 import { usePageHeader } from '../../../hooks/usePageHeader';
+import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
 import { descargarPresupuestoPDF } from '../../../utils/pdfGenerators/presupuestoPDF';
 import { Button } from '../../../components/ui/Button';
 import { Tabs } from '../../../components/ui/Tabs';
@@ -21,7 +22,7 @@ type TabId = 'items' | 'archivos' | 'historial';
 export default function DetallePresupuesto() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { showConfirm } = useConfirmDialog();
+  const { showConfirm, dialogState, closeDialog } = useConfirmDialog();
 
   const { presupuesto, loading, error } = usePresupuesto(id || '');
   const { deletePresupuesto, duplicarPresupuesto, enviarPresupuesto, enviarNotificacionPresupuesto, convertirAOrden } = usePresupuestos();
@@ -236,12 +237,22 @@ export default function DetallePresupuesto() {
         </div>
       </Card>
 
-      {/* Modal Convertir */}
       <ConvertirPresupuestoModal
         isOpen={showConvertirModal}
         onClose={() => setShowConvertirModal(false)}
         presupuesto={presupuesto}
         onConvertir={handleConvertir}
+      />
+
+      <ConfirmDialog
+        isOpen={dialogState.isOpen}
+        title={dialogState.title}
+        message={dialogState.message}
+        confirmText={dialogState.confirmText}
+        cancelText={dialogState.cancelText}
+        variant={dialogState.variant}
+        onConfirm={dialogState.onConfirm}
+        onClose={closeDialog}
       />
     </div>
   );

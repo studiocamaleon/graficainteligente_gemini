@@ -13,7 +13,7 @@ interface AddItemPersonalizadoModalProps {
     descripcion: string;
     cantidad: number;
     precio_unitario_final?: number | null;
-    tiempo_produccion_dias?: number;
+    precio_unitario_final?: number | null;
   }) => void;
 }
 
@@ -27,7 +27,6 @@ export function AddItemPersonalizadoModal({
     descripcion: '',
     cantidad: 1,
     precio_unitario_final: 0,
-    tiempo_produccion_dias: 0,
   });
 
   const [cotizarDespues, setCotizarDespues] = useState(false);
@@ -41,7 +40,6 @@ export function AddItemPersonalizadoModal({
         descripcion: '',
         cantidad: 1,
         precio_unitario_final: 0,
-        tiempo_produccion_dias: 0,
       });
       setCotizarDespues(false);
       setErrors({});
@@ -80,10 +78,6 @@ export function AddItemPersonalizadoModal({
     onAdd({
       ...formData,
       precio_unitario_final: cotizarDespues ? null : formData.precio_unitario_final,
-      tiempo_produccion_dias:
-        formData.tiempo_produccion_dias > 0
-          ? formData.tiempo_produccion_dias
-          : undefined,
     });
 
     handleClose();
@@ -95,7 +89,6 @@ export function AddItemPersonalizadoModal({
       descripcion: '',
       cantidad: 1,
       precio_unitario_final: 0,
-      tiempo_produccion_dias: 0,
     });
     setCotizarDespues(false);
     setErrors({});
@@ -166,9 +159,8 @@ export function AddItemPersonalizadoModal({
               }
               placeholder="Describe las características, medidas, materiales, etc."
               rows={4}
-              className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none ${
-                errors.descripcion ? 'border-red-300' : 'border-gray-300'
-              }`}
+              className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none ${errors.descripcion ? 'border-red-300' : 'border-gray-300'
+                }`}
             />
           </div>
           {errors.descripcion && (
@@ -252,27 +244,7 @@ export function AddItemPersonalizadoModal({
           </div>
         )}
 
-        {/* Tiempo de producción (opcional) */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Tiempo de Producción (días)
-          </label>
-          <Input
-            type="number"
-            value={formData.tiempo_produccion_dias}
-            onChange={(e) =>
-              setFormData({
-                ...formData,
-                tiempo_produccion_dias: parseInt(e.target.value) || 0,
-              })
-            }
-            min={0}
-            placeholder="0"
-          />
-          <p className="mt-1 text-xs text-gray-500">
-            Opcional. Días estimados para producir este item.
-          </p>
-        </div>
+
 
         {/* Total - Solo visible si NO está marcado "Cotizar después" */}
         {!cotizarDespues && (

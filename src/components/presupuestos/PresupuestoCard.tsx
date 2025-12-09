@@ -27,6 +27,7 @@ interface PresupuestoCardProps {
   onDelete: (id: string) => void;
   onEnviar?: (id: string) => void;
   onGenerarPDF?: (id: string) => void;
+  canDelete?: boolean;
 }
 
 export function PresupuestoCard({
@@ -37,6 +38,7 @@ export function PresupuestoCard({
   onDelete,
   onEnviar,
   onGenerarPDF,
+  canDelete = false,
 }: PresupuestoCardProps) {
   const [showMenu, setShowMenu] = useState(false);
 
@@ -220,16 +222,21 @@ export function PresupuestoCard({
 
                   <div className="border-t border-gray-200 my-1" />
 
-                  <button
-                    onClick={() => {
-                      onDelete(presupuesto.id);
-                      setShowMenu(false);
-                    }}
-                    className="w-full px-4 py-2 text-left text-sm hover:bg-red-50 text-red-600 flex items-center gap-2"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    Eliminar
-                  </button>
+                  {canDelete && (
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('Delete button clicked in Card', { id: presupuesto.id });
+                        onDelete(presupuesto.id);
+                        setShowMenu(false);
+                      }}
+                      className="w-full px-4 py-2 text-left text-sm hover:bg-red-50 text-red-600 flex items-center gap-2"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Eliminar
+                    </button>
+                  )}
                 </div>
               </>
             )}
