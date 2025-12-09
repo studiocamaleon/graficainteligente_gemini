@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../hooks/useAuth';
-import { TECNOLOGIA_IMPRESION_LASER_ID } from '../../../constants/tecnologias';
+import { CATEGORIA_IMPRESION_LASER_ID } from '../../../constants/categorias';
 
 interface TecnologiaTintasSelectorProps {
   tintasSeleccionadas: string[];
@@ -35,11 +35,11 @@ export function TecnologiaTintasSelector({
     try {
       setIsLoading(true);
 
-      // Obtener la tecnología con sus tintas (son valores directos: 'K', 'CMYK', etc.)
+      // Obtener la tecnología con sus tintas filtrando por categoría de Impresión Láser
       const { data: tecnologiaData, error } = await supabase
         .from('tecnologias')
         .select('id, tintas')
-        .eq('id', TECNOLOGIA_IMPRESION_LASER_ID)
+        .eq('categoria_id', CATEGORIA_IMPRESION_LASER_ID) // Usamos la constante de CATEGORIA, no de tecnología
         .eq('company_id', profile?.company_id)
         .eq('is_active', true)
         .maybeSingle();
@@ -122,11 +122,10 @@ export function TecnologiaTintasSelector({
               key={tinta}
               type="button"
               onClick={() => toggleTinta(tinta)}
-              className={`relative p-3 rounded-lg border-2 transition-all ${
-                isSelected
-                  ? 'border-blue-500 bg-blue-50 shadow-sm'
-                  : 'border-gray-200 bg-white hover:border-gray-300'
-              }`}
+              className={`relative p-3 rounded-lg border-2 transition-all ${isSelected
+                ? 'border-blue-500 bg-blue-50 shadow-sm'
+                : 'border-gray-200 bg-white hover:border-gray-300'
+                }`}
             >
               <div className="flex flex-col items-center justify-center">
                 <p className="text-sm font-medium text-gray-900">{tinta}</p>

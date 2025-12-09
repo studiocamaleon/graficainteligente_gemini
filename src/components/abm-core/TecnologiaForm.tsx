@@ -1,6 +1,8 @@
 import { useState, FormEvent, useEffect } from 'react';
 import { Input } from '../ui/Input';
+import { Select } from '../ui/Select';
 import { Button } from '../ui/Button';
+import { CATEGORIAS_SISTEMA } from '../../constants/categorias';
 import { TintasPasosConfigEditor } from './TintasPasosConfigEditor';
 import { useTecnologia } from '../../hooks/useTecnologias';
 import type { Tecnologia, TintaType, TecnologiaTintaPasoFormData } from '../../types/database';
@@ -14,6 +16,7 @@ interface TecnologiaFormProps {
 export interface TecnologiaFormData {
   nombre: string;
   tintas: TintaType[];
+  categoria_id: string | null;
   configuraciones: TecnologiaTintaPasoFormData[];
 }
 
@@ -28,6 +31,7 @@ export function TecnologiaForm({ tecnologia, onSubmit, onCancel }: TecnologiaFor
   const [formData, setFormData] = useState<TecnologiaFormData>({
     nombre: tecnologia?.nombre || '',
     tintas: tecnologia?.tintas || [],
+    categoria_id: tecnologia?.categoria_id || null,
     configuraciones: [],
   });
 
@@ -123,6 +127,22 @@ export function TecnologiaForm({ tecnologia, onSubmit, onCancel }: TecnologiaFor
               error={errors.nombre}
               required
               placeholder="Ej: Impresión Digital UV, Offset, etc."
+            />
+
+            <Select
+              label="Categoría del Sistema"
+              value={formData.categoria_id || ''}
+              onChange={(value) => {
+                setFormData(prev => ({ ...prev, categoria_id: value || null }));
+              }}
+              options={[
+                { value: '', label: 'Sin categoría específica' },
+                ...Object.values(CATEGORIAS_SISTEMA).map(cat => ({
+                  value: cat.id,
+                  label: cat.nombre
+                }))
+              ]}
+              helperText="Asignar una categoría permite que esta tecnología aparezca automáticamente en el módulo de productos correspondiente (ej: Impresión Láser, Gran Formato)."
             />
 
             <div>

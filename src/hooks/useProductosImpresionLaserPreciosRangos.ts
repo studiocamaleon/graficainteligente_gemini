@@ -55,17 +55,21 @@ export function useProductosImpresionLaserPreciosRangos(productoLaserId?: string
       setIsLoading(true);
       setError(null);
 
-      const { data, error: fetchError } = await supabase
-        .from('productos_impresion_laser_precios')
-        .select('*')
+      const { data, error: fetchError } = await (supabase
+        .from('productos_impresion_laser_precios' as any)
+        .select('*') as any)
         .eq('producto_laser_id', productoLaserId)
         .eq('company_id', profile.company_id)
-        .not('rango_precio_min', 'is', null)
         .order('medida_ancho', { ascending: true })
         .order('medida_alto', { ascending: true })
         .order('rango_precio_min', { ascending: true });
 
       if (fetchError) throw fetchError;
+
+      console.log('🔍 [PreciosLaser] Precios obtenidos:', data?.length);
+      if (data && data.length > 0) {
+        console.log('🔍 [PreciosLaser] Ejemplo de precio:', data[0]);
+      }
 
       setPrecios(data || []);
     } catch (err) {
@@ -92,8 +96,8 @@ export function useProductosImpresionLaserPreciosRangos(productoLaserId?: string
         .from('productos_impresion_laser_precios')
         .delete()
         .eq('producto_laser_id', productoLaserId)
-        .eq('company_id', profile.company_id)
-        .not('rango_precio_min', 'is', null);
+        .eq('company_id', profile.company_id);
+
 
       if (deleteError) throw deleteError;
 
@@ -117,18 +121,21 @@ export function useProductosImpresionLaserPreciosRangos(productoLaserId?: string
         cantidad: null,
       }));
 
-      const { data, error: insertError } = await supabase
-        .from('productos_impresion_laser_precios')
-        .insert(preciosParaInsertar)
-        .select();
+      const { data, error: insertError } = await (supabase
+        .from('productos_impresion_laser_precios' as any)
+        .insert(preciosParaInsertar as any)
+        .select() as any);
 
       if (insertError) throw insertError;
+
+      console.log('✅ [PreciosLaser] Precios guardados:', data?.length);
 
       setPrecios(data || []);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Error al guardar precios';
+      console.error('❌ [PreciosLaser] Error detallado:', err);
       setError(errorMsg);
-      console.error('Error saving precios rangos:', err);
+
       throw err;
     } finally {
       setIsLoading(false);
@@ -147,7 +154,8 @@ export function useProductosImpresionLaserPreciosRangos(productoLaserId?: string
     if (!profile?.company_id) return null;
 
     try {
-      let query = supabase
+      const client = supabase as any;
+      let query = client
         .from('productos_impresion_laser_precios')
         .select('precio')
         .eq('producto_laser_id', productoLaserId)

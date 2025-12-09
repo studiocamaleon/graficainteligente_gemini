@@ -403,6 +403,7 @@ export interface EstacionTrabajo {
 export interface Tecnologia {
   id: string;
   company_id: string;
+  categoria_id: string | null;
   nombre: string;
   tintas: TintaType[];
   is_active: boolean;

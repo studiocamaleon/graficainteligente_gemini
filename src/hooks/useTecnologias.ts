@@ -7,13 +7,21 @@ interface UseTecnologiasParams {
   searchTerm?: string;
   isActive?: boolean | null;
   tintaFilter?: TintaType | null;
+  categoriaId?: string | null;
   page?: number;
   itemsPerPage?: number;
 }
 
 export function useTecnologias(params: UseTecnologiasParams = {}) {
   const { company } = useAuth();
-  const { searchTerm = '', isActive = null, tintaFilter = null, page = 1, itemsPerPage = 25 } = params;
+  const {
+    searchTerm = '',
+    isActive = null,
+    tintaFilter = null,
+    categoriaId = null,
+    page = 1,
+    itemsPerPage = 25
+  } = params;
 
   const [tecnologias, setTecnologias] = useState<Tecnologia[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -40,6 +48,10 @@ export function useTecnologias(params: UseTecnologiasParams = {}) {
 
       if (tintaFilter) {
         query = query.contains('tintas', [tintaFilter]);
+      }
+
+      if (categoriaId) {
+        query = query.eq('categoria_id', categoriaId);
       }
 
       const from = (page - 1) * itemsPerPage;
@@ -77,7 +89,7 @@ export function useTecnologia() {
   const { company } = useAuth();
   const [loading, setLoading] = useState(false);
 
-  const createTecnologia = async (data: { nombre: string; tintas: TintaType[] }) => {
+  const createTecnologia = async (data: { nombre: string; tintas: TintaType[]; categoria_id?: string | null }) => {
     if (!company) return null;
 
     setLoading(true);
@@ -88,6 +100,7 @@ export function useTecnologia() {
           company_id: company.id,
           nombre: data.nombre.trim(),
           tintas: data.tintas,
+          categoria_id: data.categoria_id,
           is_active: true,
         })
         .select()
@@ -106,7 +119,7 @@ export function useTecnologia() {
 
   const updateTecnologia = async (
     id: string,
-    data: { nombre: string; tintas: TintaType[] }
+    data: { nombre: string; tintas: TintaType[]; categoria_id?: string | null }
   ) => {
     setLoading(true);
     try {
@@ -115,6 +128,7 @@ export function useTecnologia() {
         .update({
           nombre: data.nombre.trim(),
           tintas: data.tintas,
+          categoria_id: data.categoria_id,
           updated_at: new Date().toISOString(),
         })
         .eq('id', id)
@@ -133,7 +147,7 @@ export function useTecnologia() {
   };
 
   const createTecnologiaWithTintasPasos = async (
-    data: { nombre: string; tintas: TintaType[] },
+    data: { nombre: string; tintas: TintaType[]; categoria_id?: string | null },
     configuraciones: TecnologiaTintaPasoFormData[]
   ) => {
     if (!company) return null;
@@ -146,6 +160,7 @@ export function useTecnologia() {
           company_id: company.id,
           nombre: data.nombre.trim(),
           tintas: data.tintas,
+          categoria_id: data.categoria_id,
           is_active: true,
         })
         .select()
@@ -178,7 +193,7 @@ export function useTecnologia() {
 
   const updateTecnologiaWithTintasPasos = async (
     id: string,
-    data: { nombre: string; tintas: TintaType[] },
+    data: { nombre: string; tintas: TintaType[]; categoria_id?: string | null },
     configuraciones: TecnologiaTintaPasoFormData[]
   ) => {
     setLoading(true);
@@ -188,6 +203,7 @@ export function useTecnologia() {
         .update({
           nombre: data.nombre.trim(),
           tintas: data.tintas,
+          categoria_id: data.categoria_id,
           updated_at: new Date().toISOString(),
         })
         .eq('id', id)

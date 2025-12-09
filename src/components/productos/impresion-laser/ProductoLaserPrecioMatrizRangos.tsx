@@ -49,19 +49,28 @@ export function ProductoLaserPrecioMatrizRangos({ producto }: Props) {
   });
 
   const getKey = (
-    medidaAncho: number,
-    medidaAlto: number,
+    medidaAncho: number | string,
+    medidaAlto: number | string,
     tinta: string,
     caraImpresa: string,
-    rangoMin: number,
-    rangoMax: number | null
+    rangoMin: number | string,
+    rangoMax: number | string | null
   ) => {
-    const maxStr = rangoMax === null ? 'inf' : rangoMax.toString();
-    return `${medidaAncho}-${medidaAlto}-${tinta}-${caraImpresa}-${rangoMin}-${maxStr}`;
+    // Normalizar números para evitar diferencias "20" vs "20.00"
+    const w = parseFloat(medidaAncho.toString());
+    const h = parseFloat(medidaAlto.toString());
+    const rMin = parseFloat(rangoMin.toString());
+    const rMax = rangoMax === null ? 'inf' : parseFloat(rangoMax.toString());
+
+    return `${w}-${h}-${tinta}-${caraImpresa}-${rMin}-${rMax}`;
   };
 
   useEffect(() => {
-    if (isInitialized.current) return;
+    // Si hay cambios locales sin guardar, no sobrescribir desde DB
+    if (hasLocalChanges.current) return;
+
+    // Si está cargando y no tenemos nada, esperar
+    if (isLoading && precios.length === 0) return;
 
     const initialState: PrecioState = {};
 
@@ -79,7 +88,7 @@ export function ProductoLaserPrecioMatrizRangos({ producto }: Props) {
 
     setPreciosState(initialState);
     isInitialized.current = true;
-  }, [precios]);
+  }, [precios, isLoading]);
 
   const handlePrecioChange = (combinacion: CombinacionConfig, rango: any, value: string) => {
     const key = getKey(
@@ -255,6 +264,9 @@ export function ProductoLaserPrecioMatrizRangos({ producto }: Props) {
                         rango.min,
                         rango.max
                       );
+
+
+
                       const precio = preciosState[key] || '';
                       return (
                         <td key={rangoIndex} className="px-2 py-2">

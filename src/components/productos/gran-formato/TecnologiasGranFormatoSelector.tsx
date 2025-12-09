@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Check, Loader2 } from 'lucide-react';
 import { useTecnologias } from '../../../hooks/useTecnologias';
+import { CATEGORIA_GRAN_FORMATO_ID } from '../../../constants/categorias';
 
 interface TecnologiasGranFormatoSelectorProps {
   tecnologiasSeleccionadas: string[];
@@ -13,15 +14,14 @@ export function TecnologiasGranFormatoSelector({
   onChange,
   error,
 }: TecnologiasGranFormatoSelectorProps) {
-  const { tecnologias, loading } = useTecnologias();
+  const { tecnologias, loading } = useTecnologias({
+    categoriaId: CATEGORIA_GRAN_FORMATO_ID,
+    isActive: true
+  });
   const [tecnologiasDisponibles, setTecnologiasDisponibles] = useState<any[]>([]);
 
   useEffect(() => {
-    // Filtrar para excluir "Impresión Láser"
-    const filtered = tecnologias.filter(
-      (tec) => !tec.nombre.toLowerCase().includes('láser') && !tec.nombre.toLowerCase().includes('laser')
-    );
-    setTecnologiasDisponibles(filtered);
+    setTecnologiasDisponibles(tecnologias);
   }, [tecnologias]);
 
   const toggleTecnologia = (tecnologiaId: string) => {
@@ -57,11 +57,10 @@ export function TecnologiasGranFormatoSelector({
               key={tecnologia.id}
               type="button"
               onClick={() => toggleTecnologia(tecnologia.id)}
-              className={`relative rounded-lg border p-4 transition-all duration-200 text-left ${
-                isSelected
-                  ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-600'
-                  : 'border-gray-300 bg-white hover:border-gray-400'
-              }`}
+              className={`relative rounded-lg border p-4 transition-all duration-200 text-left ${isSelected
+                ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-600'
+                : 'border-gray-300 bg-white hover:border-gray-400'
+                }`}
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1 pr-2">
