@@ -94,169 +94,166 @@ export function usePDFExport(options: UsePDFExportOptions = {}) {
         throw new Error('El elemento a exportar no tiene dimensiones válidas. Asegúrate de que el contenido esté visible.');
       }
 
-      console.log('[PDF Export] Iniciando captura de canvas:', {
-        width: elementWidth,
-        height: elementHeight
-      });
+      // New atom-based visibility toggle implementation starts here
+      // 1. Create a Deep Clone for processing (Hidden but rendered)
+      // We append it to body to ensure it has checking context, but absolute positioned off-screen
+      const clone = element.cloneNode(true) as HTMLElement;
+      clone.style.position = 'absolute';
+      clone.style.left = '-9999px';
+      clone.style.top = '0';
+      // Force exact A4 width context to ensure layouts match
+      clone.style.width = '210mm';
+      // Reset height to auto to let content flow
+      clone.style.height = 'auto';
+      clone.style.minHeight = 'auto';
 
-      await new Promise(resolve => setTimeout(resolve, 100));
+      document.body.appendChild(clone);
 
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: false,
-        logging: false,
-        backgroundColor: '#ffffff',
-        windowWidth: elementWidth,
-        windowHeight: elementHeight,
-        onclone: (clonedDoc) => {
-          const clonedElement = clonedDoc.querySelector('[data-pdf-content]');
-          if (clonedElement) {
-            const el = clonedElement as HTMLElement;
-            el.style.display = 'block';
-            el.style.position = 'relative';
-            el.style.visibility = 'visible';
-
-            // Smart Page Break Logic
-            const MARGIN_MM = 10;
-            const PAGE_HEIGHT_MM = 297;
-            // Aggressive safety margin: 260mm to ensure we clear the cut line comfortably
-            const SAFE_PRINTABLE_HEIGHT_MM = 260;
-
-            // Calculate pixels per mm based on the Render Width (which will be scaled to Printable Width)
-            const printableWidthMm = 210 - (2 * MARGIN_MM);
-            const pxPerMm = el.scrollWidth / printableWidthMm;
-            const pageHeightPx = SAFE_PRINTABLE_HEIGHT_MM * pxPerMm;
-
-            const avoidBreakElements = Array.from(el.querySelectorAll('.avoid-break'));
-
-            avoidBreakElements.forEach((child) => {
-              const childEl = child as HTMLElement;
-
-              // Use LIVE offsetTop
-              const currentTop = childEl.offsetTop;
-              const height = childEl.offsetHeight;
-
-              const pageIndex = Math.floor((currentTop + 1) / pageHeightPx);
-              const pageBoundary = (pageIndex + 1) * pageHeightPx;
-
-              // Check if element crosses page boundary or is dangerously close to the bottom
-              // (Using strict > comparison against pageBoundary)
-              if (currentTop + height > pageBoundary) {
-                // Calculate distance to next page start
-                let spacer = pageBoundary - currentTop;
-                spacer += 10; // +10px buffer
-
-                let targetElement = childEl;
-
-                // Orphan Detection
-                let prev = childEl.previousElementSibling as HTMLElement;
-
-                // Uncle check
-                if (!prev && childEl.parentElement) {
-                  const parentPrev = childEl.parentElement.previousElementSibling as HTMLElement;
-                  if (parentPrev) {
-                    prev = parentPrev;
-                  }
-                }
-
-                if (prev && (prev.classList.contains('pdf-section-header') || /^H[1-6]$/.test(prev.tagName))) {
-                  const headerTop = prev.offsetTop;
-                  spacer = pageBoundary - headerTop + 10;
-                  targetElement = prev;
-                }
-
-                // Additive Margin Logic
-                const style = window.getComputedStyle(targetElement);
-                const currentMargin = parseFloat(style.marginTop) || 0;
-                targetElement.style.marginTop = `${currentMargin + spacer}px`;
-              }
-            });
-          }
-        },
-      });
-
-      if (!canvas || canvas.width === 0 || canvas.height === 0) {
-        throw new Error('El canvas generado no tiene dimensiones válidas');
-      }
-
-      console.log('[PDF Export] Canvas generado:', {
-        width: canvas.width,
-        height: canvas.height
-      });
-
-      let imageData: string;
       try {
-        imageData = canvas.toDataURL('image/png');
-      } catch (canvasError) {
-        console.error('[PDF Export] Error al convertir canvas a Data URL:', canvasError);
-        throw new Error('Error al procesar la imagen del contenido. Intenta reducir el tamaño del contenido.');
-      }
+        // 2. Identify "Atoms" (The smallest units we will toggle visibility for)
+        // Traverser logic:
+        // - If element is .avoid-break -> Atom.
+        // - If element has no children (text) -> Atom.
+        // - Else -> Container (recurse).
 
-      if (!imageData || !imageData.startsWith('data:image/png;base64,')) {
-        throw new Error('El formato de imagen generado no es válido');
-      }
+        const atoms: HTMLElement[] = [];
 
-      const base64Length = imageData.split(',')[1]?.length || 0;
-      if (base64Length < 100) {
-        throw new Error('La imagen generada está vacía o corrupta');
-      }
+        const findAtoms = (el: HTMLElement) => {
+          // If explicitly marked as atomic
+          if (el.classList.contains('avoid-break') || el.tagName === 'TR' || el.tagName === 'IMG') {
+            atoms.push(el);
+            return;
+          }
 
-      console.log('[PDF Export] Data URL generado correctamente, tamaño base64:', base64Length);
+          // If no children, it's a leaf atom (text, etc)
+          if (el.children.length === 0) {
+            // Only add if it has visible height or content
+            if (el.innerText.trim() !== '' || el.offsetHeight > 0) {
+              atoms.push(el);
+            }
+            return;
+          }
 
-      const MARGIN_MM = 10;
-      const PAGE_HEIGHT_MM = 297;
-      const PRINTABLE_HEIGHT_MM = PAGE_HEIGHT_MM - (2 * MARGIN_MM); // 277mm
+          // If it is a container, recurse children
+          Array.from(el.children).forEach(child => findAtoms(child as HTMLElement));
+        };
 
-      const pdf = new jsPDF({
-        orientation: pageOrientation,
-        unit: 'mm',
-        format: pageFormat,
-      });
+        findAtoms(clone);
 
-      // Calculate dimensions to fit width within margins
-      const pageWidth = pageFormat === 'a4' ? 210 : 215.9;
-      const imgWidth = pageWidth - (2 * MARGIN_MM); // 190mm for A4
+        // 3. Simulate Pagination (Measure and Assign pages)
+        const PAGE_LIMIT = 1080; // Increased to ~285mm to match 5mm margins (297-10 = 287mm)
+        // Leaving room for margins.
+        // 1mm ~ 3.78px. 10mm margin ~ 38px.
+        // 1123 - (2 * 38) = 1047px.
+        // Let's use 1000px to be super safe.
 
-      // Calculate total height of the image in mm
-      const totalImgHeightMM = (canvas.height * imgWidth) / canvas.width;
+        // Reset visibility first (ensure everything is block/flex as intended)
+        atoms.forEach(atom => {
+          // We'll use a data attribute to store the assigned page
+          atom.dataset.pdfPage = '';
+        });
 
-      let remainingHeight = totalImgHeightMM;
-      let sourceYOffset = 0; // Where we are in the source image (in mm scale relative to print)
+        // Wait, the "Simulate Pagination" must reference the STATIC layout of the full document.
+        // If an element is at Y=1500px in the full document, it MUST go to Page 2 (approx).
+        // Let's use strict offsetTop logic on the Full Clone.
 
-      while (remainingHeight > 0) {
-        if (sourceYOffset > 0) {
-          pdf.addPage();
+        atoms.forEach(atom => {
+          // Find accumulated top relative to the clone root.
+          let top = 0;
+          let el: HTMLElement | null = atom;
+          while (el && el !== clone) {
+            top += el.offsetTop;
+            el = el.offsetParent as HTMLElement;
+          }
+
+          // Note: This 'top' is roughly the position in the continuous run.
+          // Page 1 ends at 1000px.
+          // Page 2 ends at 2000px.
+          // Element strictly belongs to floor(top / 1000) + 1.
+
+          // But wait, if an element is at 950px and height is 100px (Ends at 1050px).
+          // It crosses the boundary. It should be pushed to Page 2.
+          // The simple "floor" logic puts it on Page 1.
+
+          const atomTop = top;
+          const atomBottom = top + atom.offsetHeight;
+
+          // Check boundary crossing
+          const startPage = Math.floor(atomTop / PAGE_LIMIT) + 1;
+          const endPage = Math.floor(atomBottom / PAGE_LIMIT) + 1;
+
+          let assignedPage = startPage;
+
+          if (endPage > startPage) {
+            // It crosses a break.
+            // We should push it to the next page to strictly avoid break.
+            assignedPage = endPage;
+          }
+
+          atom.dataset.pdfPage = assignedPage.toString();
+        });
+
+        // 4. Generate PDF Pages
+        const pdf = new jsPDF({
+          orientation: pageOrientation === 'portrait' ? 'p' : 'l',
+          unit: 'mm',
+          format: pageFormat,
+        });
+
+        // Find max assigned page
+        let maxPage = 1;
+        atoms.forEach(a => {
+          const p = parseInt(a.dataset.pdfPage || '1');
+          if (p > maxPage) maxPage = p;
+        });
+
+        for (let p = 1; p <= maxPage; p++) {
+          if (p > 1) pdf.addPage();
+
+          // Toggle Visibility
+          atoms.forEach(atom => {
+            const assigned = parseInt(atom.dataset.pdfPage || '1');
+            // Logic:
+            // Show if assigned == p
+            if (assigned === p) {
+              atom.style.display = ''; // Restore default
+              atom.style.visibility = 'visible';
+            } else {
+              atom.style.display = 'none';
+            }
+          });
+
+          // Force reflow
+          clone.offsetHeight;
+
+          // Render
+          const canvas = await html2canvas(clone, {
+            scale: 2,
+            logging: false,
+            useCORS: true,
+            backgroundColor: '#ffffff' // White background
+          });
+
+          const imgData = canvas.toDataURL('image/png');
+          const imgProps = pdf.getImageProperties(imgData);
+          const pdfWidth = pdf.internal.pageSize.getWidth();
+          const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+          // Add with 5mm margin top
+          const MARGIN_MM = 5;
+          pdf.addImage(imgData, 'PNG', 0, MARGIN_MM, pdfWidth, pdfHeight);
+
+          // Optional: Add Page Number
+          pdf.setFontSize(10);
+          pdf.text(`Página ${p} de ${maxPage}`, pdfWidth - 10, pdf.internal.pageSize.getHeight() - 10, { align: 'right' });
         }
 
-        // We place the FULL image, but shifted UP so that the desired chunk falls into the printable area.
-        // The printable area starts at Y = MARGIN_MM.
-        // We want sourceYOffset to align with MARGIN_MM.
-        // So ImageY = MARGIN_MM - sourceYOffset.
-        const positionY = MARGIN_MM - sourceYOffset;
+        pdf.save(filename);
 
-        pdf.addImage(
-          imageData,
-          'PNG',
-          MARGIN_MM,
-          positionY,
-          imgWidth,
-          totalImgHeightMM
-        );
-
-        // WHITE MASKS to hide content overflow in margins (Prevents duplication/overlap)
-        pdf.setFillColor(255, 255, 255);
-        // Top Margin Mask
-        pdf.rect(0, 0, pageWidth, MARGIN_MM, 'F');
-        // Bottom Margin Mask (Start at Margin + PrintableHeight)
-        pdf.rect(0, MARGIN_MM + PRINTABLE_HEIGHT_MM, pageWidth, MARGIN_MM, 'F');
-
-        sourceYOffset += PRINTABLE_HEIGHT_MM;
-        remainingHeight -= PRINTABLE_HEIGHT_MM;
+      } finally {
+        document.body.removeChild(clone);
       }
 
-      console.log('[PDF Export] PDF generado exitosamente');
-      pdf.save(filename);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
       setError(`Error al generar PDF: ${errorMessage}`);

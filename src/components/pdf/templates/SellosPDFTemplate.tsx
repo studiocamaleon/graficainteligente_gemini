@@ -42,7 +42,7 @@ export const SellosPDFTemplate = forwardRef<HTMLDivElement, SellosPDFTemplatePro
     return (
       <div
         ref={ref}
-        className="bg-white p-8 font-sans text-gray-900"
+        className="bg-white p-4 font-sans text-gray-900"
         style={{ minWidth: '210mm', maxWidth: '210mm', margin: '0 auto', minHeight: '297mm' }}
       >
         {/* Global Styles for Print */}
@@ -58,11 +58,11 @@ export const SellosPDFTemplate = forwardRef<HTMLDivElement, SellosPDFTemplatePro
         </style>
 
         {/* Header */}
-        <div className="mb-12 border-b border-gray-100 pb-6">
+        <div className="mb-4 border-b border-gray-100 pb-3">
           <div className="flex justify-between items-end">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Lista de Precios</h1>
-              <p className="text-gray-500 mt-1">Sellos y Accesorios</p>
+              <h1 className="text-xl font-bold text-gray-900 tracking-tight">Lista de Precios</h1>
+              <p className="text-gray-500 mt-0">Sellos y Accesorios</p>
             </div>
             <div className="text-right text-xs text-gray-400">
               Generado el {new Date().toLocaleDateString('es-ES')}
