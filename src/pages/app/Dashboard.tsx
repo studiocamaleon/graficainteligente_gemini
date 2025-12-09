@@ -8,6 +8,8 @@ import { ProximasEntregasTable } from '../../components/dashboard/ProximasEntreg
 import { ActividadRecienteList } from '../../components/dashboard/ActividadRecienteList';
 import { Button } from '../../components/ui/Button';
 
+import { WelcomeIntro } from '../../components/dashboard/WelcomeIntro';
+
 export function Dashboard() {
   const navigate = useNavigate();
   usePageHeader('Centro de Control');
@@ -31,6 +33,7 @@ export function Dashboard() {
 
   return (
     <div className="space-y-6">
+      <WelcomeIntro stats={stats} loading={loading} />
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm text-gray-600">
