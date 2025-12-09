@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Zap } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import { useToast } from '../../contexts/ToastContext';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { fadeInUp } from '../../animations/variants';
@@ -11,6 +12,7 @@ import { BRAND } from '../../constants/branding';
 export function Login() {
   const navigate = useNavigate();
   const { signIn } = useAuth();
+  const { showSuccess } = useToast();
 
   const [formData, setFormData] = useState({
     email: '',
@@ -50,6 +52,7 @@ export function Login() {
           setErrors({ submit: error.message || 'Error al iniciar sesión' });
         }
       } else {
+        showSuccess('¡Bienvenido de nuevo!');
         navigate('/app/dashboard');
       }
     } catch (error) {
