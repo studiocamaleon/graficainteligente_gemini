@@ -6,79 +6,140 @@ export function useServiciosYAcabadosExport() {
     const [isPreparing, setIsPreparing] = useState(false);
 
     // Fetch ALL data (large limit) when needed
-    // We condition the fetch or just fetch always if it's cheap?
-    // Better to fetch on demand. but hooks rule requires top level.
-    // We can use the hooks but with a flag? No, standard hooks don't have 'skip'.
-    // We will just use them with a large page size, but maybe we only want to fetch when button is clicked?
-    // The existing hooks don't support lazy fetching easily without refetch.
-    // We'll instantiate them but they will fetch on mount.
-    // To avoid performance hit on normal load, we might want to NOT call this hook in the main component unless user interacts,
-    // or accept the hit.
-    // Alternative: The hook returns a function that triggers a separate fetch manually using supabase client directly.
-    // That seems cleaner for "Export" actions.
-
-    // Let's go with manual fetch integration to avoid auto-loading 2000 items.
-    const { componentRef, handleDownloadPDF, isGenerating } = usePDFExport({
-        filename: `lista-precios-servicios-acabados-${new Date().toISOString().split('T')[0]}.pdf`,
-        pageOrientation: 'portrait',
-    });
-
-    const [data, setData] = useState<{ servicios: any[]; acabados: any[] }>({ servicios: [], acabados: [] });
+    const [isExporting, setIsExporting] = useState(false);
 
     const handleExport = useCallback(async () => {
         try {
-            setIsPreparing(true);
+            setIsExporting(true);
 
-            // Dynamic import to avoid circular deps if any, or just use direct supabase call
+            // 1. Fetch Data
             const { supabase } = await import('../lib/supabase');
 
-            // 1. Fetch Servicios
             const { data: serviciosData } = await supabase
                 .from('servicios')
                 .select(`
                     *,
-                    servicios_categorias(categoria_id, categoria:categorias(id, nombre, color)),
                     estacion:estaciones_trabajo(id, nombre),
-                    niveles_precio:servicios_niveles_precio(*),
-                    pasos:servicios_pasos(*)
+                    niveles_precio:servicios_niveles_precio(*)
                 `)
                 .eq('is_active', true)
                 .order('nombre');
 
-            // 2. Fetch Acabados
             const { data: acabadosData } = await supabase
                 .from('acabados')
                 .select(`
                     *,
-                    acabados_categorias(categoria_id, categoria:categorias(id, nombre, color)),
                     estacion:estaciones_trabajo(id, nombre),
-                    niveles_precio:acabados_niveles_precio(*),
-                    pasos:acabados_pasos(*)
+                    niveles_precio:acabados_niveles_precio(*)
                 `)
                 .eq('is_active', true)
                 .order('nombre');
 
-            setData({
-                servicios: serviciosData || [],
-                acabados: acabadosData || []
+            const servicios = serviciosData || [];
+            const acabados = acabadosData || [];
+
+            // 2. Initialize PDF
+            const doc = new jsPDF();
+
+            // Title
+            doc.setFontSize(18);
+            doc.text('Lista de Precios - Servicios y Acabados', 14, 20);
+
+            doc.setFontSize(10);
+            doc.setTextColor(100);
+            doc.text(`Generado el ${new Date().toLocaleDateString('es-ES')}`, 14, 28);
+
+            let finalY = 35; // Start position
+
+            // 3. Table: Servicios
+            doc.setFontSize(14);
+            doc.setTextColor(0);
+            doc.text('Servicios', 14, finalY);
+            finalY += 6;
+
+            const serviciosRows = servicios.map((item: any) => {
+                let precioText = '';
+                if (item.tiene_niveles_precio && item.niveles_precio?.length > 0) {
+                    precioText = item.niveles_precio
+                        .sort((a: any, b: any) => a.orden - b.orden)
+                        .map((n: any) => `${n.nombre}: ${formatImpactoForTable(n.tipo_impacto, n.valor_impacto, n.valor_impacto_secundario)}`)
+                        .join('\n');
+                } else {
+                    precioText = formatImpactoForTable(item.tipo_impacto, item.valor_impacto, item.valor_impacto_secundario);
+                }
+
+                return [
+                    item.nombre,
+                    item.estacion?.nombre || '-',
+                    precioText
+                ];
             });
 
-            // Give React time to render the template with new data
-            setTimeout(async () => {
-                await handleDownloadPDF();
-                setIsPreparing(false);
-            }, 500);
+            autoTable(doc, {
+                startY: finalY,
+                head: [['Nombre', 'Estación', 'Regla de Precio / Impacto']],
+                body: serviciosRows,
+                theme: 'grid',
+                headStyles: { fillColor: [63, 81, 181] }, // Indigo 500 equivalent
+                styles: { fontSize: 10, cellPadding: 4, valign: 'middle' },
+                columnStyles: {
+                    0: { fontStyle: 'bold', cellWidth: 60 }, // Nombre
+                    1: { cellWidth: 40 }, // Estacion
+                    2: { cellWidth: 'auto' } // Precio
+                }
+            });
+
+            finalY = (doc as any).lastAutoTable.finalY + 15;
+
+            // 4. Table: Acabados
+            doc.setFontSize(14);
+            doc.text('Acabados', 14, finalY);
+            finalY += 6;
+
+            const acabadosRows = acabados.map((item: any) => {
+                let precioText = '';
+                if (item.tiene_niveles_precio && item.niveles_precio?.length > 0) {
+                    precioText = item.niveles_precio
+                        .sort((a: any, b: any) => a.orden - b.orden)
+                        .map((n: any) => `${n.nombre}: ${formatImpactoForTable(n.tipo_impacto, n.valor_impacto, n.valor_impacto_secundario)}`)
+                        .join('\n');
+                } else {
+                    precioText = formatImpactoForTable(item.tipo_impacto, item.valor_impacto, item.valor_impacto_secundario);
+                }
+
+                return [
+                    item.nombre,
+                    item.estacion?.nombre || '-',
+                    precioText
+                ];
+            });
+
+            autoTable(doc, {
+                startY: finalY,
+                head: [['Nombre', 'Estación', 'Regla de Precio / Impacto']],
+                body: acabadosRows,
+                theme: 'grid',
+                headStyles: { fillColor: [225, 29, 72] }, // Rose 600 equivalent
+                styles: { fontSize: 10, cellPadding: 4, valign: 'middle' },
+                columnStyles: {
+                    0: { fontStyle: 'bold', cellWidth: 60 }, // Nombre
+                    1: { cellWidth: 40 }, // Estacion
+                    2: { cellWidth: 'auto' } // Precio
+                }
+            });
+
+            // 5. Save
+            doc.save(`lista-precios-servicios-acabados-${new Date().toISOString().split('T')[0]}.pdf`);
 
         } catch (error) {
             console.error('Export failed:', error);
-            setIsPreparing(false);
+        } finally {
+            setIsExporting(false);
         }
-    }, [handleDownloadPDF]);
+    }, []);
 
     return {
         handleExport,
-        isExporting: isPreparing || isGenerating,
-        exportData: data,
-        componentRef,
+        isExporting
     };
 }

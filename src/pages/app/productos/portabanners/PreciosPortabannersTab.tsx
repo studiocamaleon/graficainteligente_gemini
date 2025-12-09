@@ -5,9 +5,8 @@ import { EmptyState } from '../../../../components/ui/EmptyState';
 import { ExportPDFButtonGroup } from '../../../../components/ui/ExportPDFButtonGroup';
 import { FloatingPreciosSaveButton } from '../../../../components/productos/impresion-laser/FloatingPreciosSaveButton';
 import { PortabannersMatrizPrecios } from '../../../../components/productos/portabanners/PortabannersMatrizPrecios';
-import { PortabannersPDFTemplate } from '../../../../components/pdf/templates/PortabannersPDFTemplate';
 import { useAllProductosPortabannersPrecios } from '../../../../hooks/useAllProductosPortabannersPrecios';
-import { usePDFExport } from '../../../../hooks/usePDFExport';
+import { usePortabannersExport } from '../../../../hooks/usePortabannersExport';
 import type { PrecioPortabannerInput } from '../../../../hooks/useAllProductosPortabannersPrecios';
 import { useAuth } from '../../../../hooks/useAuth';
 
@@ -28,9 +27,8 @@ export function PreciosPortabannersTab() {
     hasUnsavedChanges,
   } = useAllProductosPortabannersPrecios();
 
-  const { componentRef, isGenerating, handlePrint, handleDownloadPDF } = usePDFExport({
-    filename: `Lista_Precios_Portabanners_${new Date().toISOString().split('T')[0]}.pdf`,
-  });
+  /* Export Logic */
+  const { handleExport, isExporting } = usePortabannersExport();
 
   const handlePreciosChange = useCallback((precios: PrecioPortabannerInput[]) => {
     updatePrecios(precios);
@@ -129,10 +127,11 @@ export function PreciosPortabannersTab() {
       <div className="space-y-6 pb-24">
         <div className="flex justify-end">
           <ExportPDFButtonGroup
-            onPrint={handlePrint}
-            onDownload={handleDownloadPDF}
-            isGenerating={isGenerating}
+            onPrint={() => { }} // Direct download preferred
+            onDownload={() => handleExport(productosPorRango, tecnologias)}
+            isGenerating={isExporting}
             label="Exportar"
+            showPrint={false}
           />
         </div>
 
@@ -178,22 +177,6 @@ export function PreciosPortabannersTab() {
             isSaving={isSaving}
           />
         )}
-      </div>
-
-      <div
-        style={{
-          position: 'absolute',
-          left: '-9999px',
-          top: '0',
-          width: '210mm',
-          minHeight: '297mm'
-        }}
-      >
-        <PortabannersPDFTemplate
-          ref={componentRef}
-          productosPorRango={productosPorRango}
-          tecnologias={tecnologias}
-        />
       </div>
     </>
   );

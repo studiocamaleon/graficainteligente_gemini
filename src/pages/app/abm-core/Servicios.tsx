@@ -14,7 +14,6 @@ import { CategoryColorList } from '../../../components/ui/CategoryColorList';
 import { CollapsibleFilters } from '../../../components/ui/CollapsibleFilters';
 import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
 import { ServicioForm, ServicioFormData } from '../../../components/abm-core/ServicioForm';
-import { ServiciosYAcabadosPDFTemplate } from '../../../components/pdf/templates/ServiciosYAcabadosPDFTemplate';
 
 import { useServicios, useServicio } from '../../../hooks/useServicios';
 import { useCategorias } from '../../../hooks/useCategorias';
@@ -79,7 +78,7 @@ export function Servicios() {
   }, []);
 
   /* Export Logic */
-  const { handleExport, isExporting, exportData, componentRef } = useServiciosYAcabadosExport();
+  const { handleExport, isExporting } = useServiciosYAcabadosExport();
 
   const headerAction = useMemo(
     () => (
@@ -562,13 +561,6 @@ export function Servicios() {
         isLoading={isConfirmLoading}
       />
 
-      <div style={{ position: 'absolute', top: -9999, left: -9999 }}>
-        <ServiciosYAcabadosPDFTemplate
-          ref={componentRef}
-          servicios={exportData.servicios}
-          acabados={exportData.acabados}
-        />
-      </div>
     </div>
   );
 }

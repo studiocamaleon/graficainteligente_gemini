@@ -387,7 +387,7 @@ Deno.serve(async (req: Request) => {
       .eq('id', body.company_id)
       .maybeSingle();
 
-    if (companyError) {
+    if (companyError) {local funciona
       console.error('[Company] Error consultando empresa:', companyError);
       return new Response(
         JSON.stringify({
@@ -464,10 +464,10 @@ Deno.serve(async (req: Request) => {
         console.warn('[Notificación Interna] ⚠️ No se encontraron usuarios admin para notificar');
       } else {
         console.log('[Notificación Interna] Encontrados', admins.length, 'usuarios admin:',
-          admins.map(a => `${a.id.substring(0, 8)}... (${a.role})`).join(', ')
+          admins.map((a: { id: string, role: string }) => `${a.id.substring(0, 8)}... (${a.role})`).join(', ')
         );
 
-        const notificaciones = admins.map(admin => ({
+        const notificaciones = admins.map((admin: { id: string }) => ({
           company_id: body.company_id,
           usuario_id: admin.id,
           tipo: 'nuevo_cliente_registro',
@@ -497,7 +497,7 @@ Deno.serve(async (req: Request) => {
         } else {
           console.log('[Notificación Interna] ✅ Creadas exitosamente:', notifData?.length || 0, 'notificaciones');
           console.log('[Notificación Interna] IDs creados:',
-            notifData?.map(n => n.id.substring(0, 8) + '...').join(', ')
+            notifData?.map((n: { id: string }) => n.id.substring(0, 8) + '...').join(', ')
           );
         }
       }

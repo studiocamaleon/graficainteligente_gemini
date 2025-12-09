@@ -10,8 +10,7 @@ import { AumentoMasivoPreciosModal } from '../../../../components/productos/shar
 import { useAllProductosGranFormatoPrecios } from '../../../../hooks/useAllProductosGranFormatoPrecios';
 import { supabase } from '../../../../lib/supabase';
 import type { PrecioGFInput } from '../../../../hooks/useAllProductosGranFormatoPrecios';
-import { usePDFExport } from '../../../../hooks/usePDFExport';
-import { GranFormatoPDFTemplate } from '../../../../components/pdf/templates/GranFormatoPDFTemplate';
+import { useGranFormatoExport } from '../../../../hooks/useGranFormatoExport';
 import { useAuth } from '../../../../hooks/useAuth';
 import { useToast } from '../../../../contexts/ToastContext';
 
@@ -84,9 +83,8 @@ export function PreciosGranFormatoTab() {
   const [isLoadingSnapshot, setIsLoadingSnapshot] = useState(true);
   const [isAumentoModalOpen, setIsAumentoModalOpen] = useState(false);
 
-  const { componentRef, isGenerating, handlePrint, handleDownloadPDF } = usePDFExport({
-    filename: `Lista_Precios_Gran_Formato_${new Date().toISOString().split('T')[0]}.pdf`,
-  });
+  /* Export Logic */
+  const { handleExport, isExporting } = useGranFormatoExport();
 
   useEffect(() => {
     async function loadSnapshot() {
@@ -399,10 +397,11 @@ export function PreciosGranFormatoTab() {
             </Button>
           )}
           <ExportPDFButtonGroup
-            onPrint={handlePrint}
-            onDownload={handleDownloadPDF}
-            isGenerating={isGenerating}
+            onPrint={() => { }} // No print support yet as direct PDF download is preferred
+            onDownload={() => handleExport(tecnologiasAgrupadas)}
+            isGenerating={isExporting}
             label="Exportar"
+            showPrint={false}
           />
         </div>
 
@@ -422,21 +421,6 @@ export function PreciosGranFormatoTab() {
             isSaving={isSaving}
           />
         )}
-      </div>
-
-      <div
-        style={{
-          position: 'absolute',
-          left: '-9999px',
-          top: '0',
-          width: '210mm',
-          minHeight: '297mm'
-        }}
-      >
-        <GranFormatoPDFTemplate
-          ref={componentRef}
-          tecnologias={tecnologiasAgrupadas}
-        />
       </div>
 
       {isAumentoModalOpen && (

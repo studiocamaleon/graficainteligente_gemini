@@ -7,8 +7,7 @@ import { PlotterCorteMatrizPrecios } from '../../../../components/productos/plot
 import { FloatingPreciosSaveButton } from '../../../../components/productos/impresion-laser/FloatingPreciosSaveButton';
 import { useAllProductosPlotterCortePrecios } from '../../../../hooks/useAllProductosPlotterCortePrecios';
 import type { PrecioPCInput } from '../../../../hooks/useAllProductosPlotterCortePrecios';
-import { usePDFExport } from '../../../../hooks/usePDFExport';
-import { PlotterCortePDFTemplate } from '../../../../components/pdf/templates/PlotterCortePDFTemplate';
+import { usePlotterCorteExport } from '../../../../hooks/usePlotterCorteExport';
 import { useAuth } from '../../../../hooks/useAuth';
 
 interface PreciosSnapshot {
@@ -32,9 +31,8 @@ export function PreciosPlotterCorteTab() {
   const [preciosSnapshot, setPreciosSnapshot] = useState<PreciosSnapshot>({});
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  const { componentRef, isGenerating, handlePrint, handleDownloadPDF } = usePDFExport({
-    filename: `Lista_Precios_Plotter_Corte_${new Date().toISOString().split('T')[0]}.pdf`,
-  });
+  /* Export Logic */
+  const { handleExport, isExporting } = usePlotterCorteExport();
 
   useEffect(() => {
     if (productosPorAncho.length > 0) {
@@ -139,10 +137,11 @@ export function PreciosPlotterCorteTab() {
       <div className="space-y-6 pb-24">
         <div className="flex justify-end">
           <ExportPDFButtonGroup
-            onPrint={handlePrint}
-            onDownload={handleDownloadPDF}
-            isGenerating={isGenerating}
+            onPrint={() => { }} // Direct download preferred
+            onDownload={() => handleExport(productosPorAncho)}
+            isGenerating={isExporting}
             label="Exportar"
+            showPrint={false}
           />
         </div>
 
@@ -165,17 +164,6 @@ export function PreciosPlotterCorteTab() {
         )}
       </div>
 
-      <div
-        style={{
-          position: 'absolute',
-          left: '-9999px',
-          top: '0',
-          width: '210mm',
-          minHeight: '297mm',
-        }}
-      >
-        <PlotterCortePDFTemplate ref={componentRef} productosPorAncho={productosPorAncho} />
-      </div>
     </>
   );
 }

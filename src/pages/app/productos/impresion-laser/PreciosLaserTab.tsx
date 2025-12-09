@@ -8,8 +8,7 @@ import { ProductoLaserPreciosCard } from '../../../../components/productos/impre
 import { FloatingPreciosSaveButton } from '../../../../components/productos/impresion-laser/FloatingPreciosSaveButton';
 import { AumentoMasivoPreciosModal } from '../../../../components/productos/shared/AumentoMasivoPreciosModal';
 import { useAllProductosLaserPrecios } from '../../../../hooks/useAllProductosLaserPrecios';
-import { usePDFExport } from '../../../../hooks/usePDFExport';
-import { ImpresionLaserPDFTemplate } from '../../../../components/pdf/templates/ImpresionLaserPDFTemplate';
+import { useLaserExport } from '../../../../hooks/useLaserExport';
 import { useAuth } from '../../../../hooks/useAuth';
 import { useToast } from '../../../../contexts/ToastContext';
 
@@ -33,9 +32,15 @@ export function PreciosLaserTab() {
 
   const [isAumentoModalOpen, setIsAumentoModalOpen] = useState(false);
 
-  const { componentRef, isGenerating, handlePrint, handleDownloadPDF } = usePDFExport({
-    filename: `Lista_Precios_Impresion_Laser_${new Date().toISOString().split('T')[0]}.pdf`,
-  });
+  /* Export Logic */
+  const { handleExport, isExporting } = useLaserExport();
+
+  const handlePrecioChange = useCallback(
+    (productoId: string, precios: PrecioInput[]) => {
+      updatePreciosForProducto(productoId, precios);
+    },
+    [updatePreciosForProducto]
+  );
 
   // Warn user before leaving with unsaved changes
   useEffect(() => {
@@ -129,10 +134,11 @@ export function PreciosLaserTab() {
             </Button>
           )}
           <ExportPDFButtonGroup
-            onPrint={handlePrint}
-            onDownload={handleDownloadPDF}
-            isGenerating={isGenerating}
+            onPrint={() => { }} // Direct download preferred
+            onDownload={() => handleExport(productos)}
+            isGenerating={isExporting}
             label="Exportar"
+            showPrint={false}
           />
         </div>
 
@@ -152,21 +158,6 @@ export function PreciosLaserTab() {
             isSaving={isSaving}
           />
         )}
-      </div>
-
-      <div
-        style={{
-          position: 'absolute',
-          left: '-9999px',
-          top: '0',
-          width: '210mm',
-          minHeight: '297mm'
-        }}
-      >
-        <ImpresionLaserPDFTemplate
-          ref={componentRef}
-          productos={productos}
-        />
       </div>
 
       {isAumentoModalOpen && (

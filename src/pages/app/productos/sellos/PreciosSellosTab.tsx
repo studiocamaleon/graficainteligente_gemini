@@ -7,8 +7,7 @@ import { SellosPreciosTable } from '../../../../components/productos/sellos/Sell
 import { FloatingPreciosSaveButton } from '../../../../components/productos/impresion-laser/FloatingPreciosSaveButton';
 import { useProductosSellosPrecios } from '../../../../hooks/useProductosSellosPrecios';
 import type { PrecioSelloInput } from '../../../../hooks/useProductosSellosPrecios';
-import { usePDFExport } from '../../../../hooks/usePDFExport';
-import { SellosPDFTemplate } from '../../../../components/pdf/templates/SellosPDFTemplate';
+import { useSellosExport } from '../../../../hooks/useSellosExport';
 import { useAuth } from '../../../../hooks/useAuth';
 
 export function PreciosSellosTab() {
@@ -24,9 +23,8 @@ export function PreciosSellosTab() {
   const [preciosSnapshot, setPreciosSnapshot] = useState<Record<string, number>>({});
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  const { componentRef, isGenerating, handlePrint, handleDownloadPDF } = usePDFExport({
-    filename: `Lista_Precios_Sellos_${new Date().toISOString().split('T')[0]}.pdf`,
-  });
+  /* Export Logic */
+  const { handleExport, isExporting } = useSellosExport();
 
   useEffect(() => {
     if (productos.length > 0) {
@@ -123,10 +121,11 @@ export function PreciosSellosTab() {
       <div className="space-y-6 pb-24">
         <div className="flex justify-end">
           <ExportPDFButtonGroup
-            onPrint={handlePrint}
-            onDownload={handleDownloadPDF}
-            isGenerating={isGenerating}
+            onPrint={() => { }} // Direct download preferred
+            onDownload={() => handleExport(productos)}
+            isGenerating={isExporting}
             label="Exportar"
+            showPrint={false}
           />
         </div>
 
@@ -145,17 +144,6 @@ export function PreciosSellosTab() {
         )}
       </div>
 
-      <div
-        style={{
-          position: 'absolute',
-          left: '-9999px',
-          top: '0',
-          width: '210mm',
-          minHeight: '297mm',
-        }}
-      >
-        <SellosPDFTemplate ref={componentRef} productos={productos} />
-      </div>
     </>
   );
 }

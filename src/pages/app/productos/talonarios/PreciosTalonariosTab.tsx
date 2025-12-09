@@ -8,8 +8,7 @@ import { ProductoTalonarioPreciosCard } from '../../../../components/productos/t
 import { FloatingPreciosSaveButton } from '../../../../components/productos/talonarios/FloatingPreciosSaveButton';
 import { AumentoMasivoPreciosModal } from '../../../../components/productos/shared/AumentoMasivoPreciosModal';
 import { useAllProductosTalonariosPrecios } from '../../../../hooks/useAllProductosTalonariosPrecios';
-import { usePDFExport } from '../../../../hooks/usePDFExport';
-import { TalonariosPDFTemplate } from '../../../../components/pdf/templates/TalonariosPDFTemplate';
+import { useTalonariosExport } from '../../../../hooks/useTalonariosExport';
 import { useAuth } from '../../../../hooks/useAuth';
 import { useToast } from '../../../../contexts/ToastContext';
 
@@ -33,9 +32,8 @@ export function PreciosTalonariosTab() {
     hasUnsavedChanges,
   } = useAllProductosTalonariosPrecios();
 
-  const { componentRef, isGenerating, handlePrint, handleDownloadPDF } = usePDFExport({
-    filename: `Lista_Precios_Impresion_Talonario_${new Date().toISOString().split('T')[0]}.pdf`,
-  });
+  /* Export Logic */
+  const { handleExport, isExporting } = useTalonariosExport();
 
   // Preparar datos para el modal de aumento masivo
   const productosParaAumento = useMemo(() => {
@@ -131,10 +129,11 @@ export function PreciosTalonariosTab() {
             </Button>
           )}
           <ExportPDFButtonGroup
-            onPrint={handlePrint}
-            onDownload={handleDownloadPDF}
-            isGenerating={isGenerating}
+            onPrint={() => { }} // Direct download preferred
+            onDownload={() => handleExport(productos)}
+            isGenerating={isExporting}
             label="Exportar"
+            showPrint={false}
           />
         </div>
 
@@ -156,20 +155,6 @@ export function PreciosTalonariosTab() {
         )}
       </div>
 
-      <div
-        style={{
-          position: 'absolute',
-          left: '-9999px',
-          top: '0',
-          width: '210mm',
-          minHeight: '297mm'
-        }}
-      >
-        <TalonariosPDFTemplate
-          ref={componentRef}
-          productos={productos}
-        />
-      </div>
 
       {isAumentoModalOpen && (
         <AumentoMasivoPreciosModal

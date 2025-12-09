@@ -6,8 +6,7 @@ import { ExportPDFButtonGroup } from '../../../../components/ui/ExportPDFButtonG
 import { MaterialesRigidosPreciosTable } from '../../../../components/productos/materiales-rigidos/MaterialesRigidosPreciosTable';
 import { FloatingPreciosSaveButton } from '../../../../components/productos/impresion-laser/FloatingPreciosSaveButton';
 import { useAllProductosMaterialesRigidosPrecios } from '../../../../hooks/useAllProductosMaterialesRigidosPrecios';
-import { usePDFExport } from '../../../../hooks/usePDFExport';
-import { MaterialesRigidosPDFTemplate } from '../../../../components/pdf/templates/MaterialesRigidosPDFTemplate';
+import { useMaterialesRigidosExport } from '../../../../hooks/useMaterialesRigidosExport';
 import { useAuth } from '../../../../hooks/useAuth';
 
 export function PreciosMaterialesRigidosTab() {
@@ -30,9 +29,8 @@ export function PreciosMaterialesRigidosTab() {
     calcularPrecioM2,
   } = useAllProductosMaterialesRigidosPrecios();
 
-  const { componentRef, isGenerating, handlePrint, handleDownloadPDF } = usePDFExport({
-    filename: `Lista_Precios_Materiales_Rigidos_${new Date().toISOString().split('T')[0]}.pdf`,
-  });
+  /* Export Logic */
+  const { handleExport, isExporting } = useMaterialesRigidosExport();
 
   // Warn user before leaving with unsaved changes
   useEffect(() => {
@@ -96,10 +94,11 @@ export function PreciosMaterialesRigidosTab() {
       <div className="space-y-6 pb-24">
         <div className="flex justify-end gap-3">
           <ExportPDFButtonGroup
-            onPrint={handlePrint}
-            onDownload={handleDownloadPDF}
-            isGenerating={isGenerating}
+            onPrint={() => { }} // Direct download preferred
+            onDownload={() => handleExport(productosAgrupados)}
+            isGenerating={isExporting}
             label="Exportar"
+            showPrint={false}
           />
         </div>
 
@@ -129,20 +128,6 @@ export function PreciosMaterialesRigidosTab() {
         )}
       </div>
 
-      <div
-        style={{
-          position: 'absolute',
-          left: '-9999px',
-          top: '0',
-          width: '210mm',
-          minHeight: '297mm'
-        }}
-      >
-        <MaterialesRigidosPDFTemplate
-          ref={componentRef}
-          productosAgrupados={productosAgrupados}
-        />
-      </div>
 
     </>
   );
