@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { Zap, Plus, Edit2, Power, Eye, Trash2 } from 'lucide-react';
+import { Zap, Plus, Edit2, Power, Eye, Trash2, FileText } from 'lucide-react';
 import { Card } from '../../../components/ui/Card';
 import { Button } from '../../../components/ui/Button';
 import { usePageHeader } from '../../../hooks/usePageHeader';
@@ -14,12 +14,16 @@ import { CategoryColorList } from '../../../components/ui/CategoryColorList';
 import { CollapsibleFilters } from '../../../components/ui/CollapsibleFilters';
 import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
 import { ServicioForm, ServicioFormData } from '../../../components/abm-core/ServicioForm';
+import { ServiciosYAcabadosPDFTemplate } from '../../../components/pdf/templates/ServiciosYAcabadosPDFTemplate';
+
 import { useServicios, useServicio } from '../../../hooks/useServicios';
 import { useCategorias } from '../../../hooks/useCategorias';
 import { useEstaciones } from '../../../hooks/useEstaciones';
 import { useAuth } from '../../../hooks/useAuth';
 import { useDebounce } from '../../../hooks/useDebounce';
 import { useConfirmDialog } from '../../../hooks/useConfirmDialog';
+import { useServiciosYAcabadosExport } from '../../../hooks/useServiciosYAcabadosExport';
+
 import type { TipoImpactoPrecio } from '../../../types/database';
 
 const tipoImpactoLabels: Record<TipoImpactoPrecio, string> = {
@@ -74,15 +78,34 @@ export function Servicios() {
     setIsModalOpen(true);
   }, []);
 
+  /* Export Logic */
+  const { handleExport, isExporting, exportData, componentRef } = useServiciosYAcabadosExport();
+
   const headerAction = useMemo(
-    () =>
-      canEdit ? (
-        <Button variant="primary" onClick={handleOpenCreateModal}>
-          <Plus className="w-5 h-5" />
-          Nuevo Servicio
+    () => (
+      <div className="flex gap-2">
+        <Button
+          variant="outline"
+          onClick={handleExport}
+          disabled={isExporting}
+          className="flex items-center gap-2"
+        >
+          {isExporting ? (
+            <span className="w-4 h-4 border-2 border-gray-600 border-t-transparent rounded-full animate-spin" />
+          ) : (
+            <FileText className="w-4 h-4" />
+          )}
+          {isExporting ? 'Generando...' : 'Descargar Lista'}
         </Button>
-      ) : undefined,
-    [canEdit, handleOpenCreateModal]
+        {canEdit && (
+          <Button variant="primary" onClick={handleOpenCreateModal}>
+            <Plus className="w-5 h-5 ml-1" />
+            Nuevo Servicio
+          </Button>
+        )}
+      </div>
+    ),
+    [canEdit, handleOpenCreateModal, handleExport, isExporting]
   );
 
   usePageHeader('Administra servicios adicionales con precios y configuración flexible', headerAction);
@@ -254,9 +277,8 @@ export function Servicios() {
 
               <button
                 onClick={() => handleToggleStatus(servicio)}
-                className={`p-2 rounded-lg transition-colors ${
-                  servicio.is_active ? 'text-red-600 hover:bg-red-50' : 'text-green-600 hover:bg-green-50'
-                }`}
+                className={`p-2 rounded-lg transition-colors ${servicio.is_active ? 'text-red-600 hover:bg-red-50' : 'text-green-600 hover:bg-green-50'
+                  }`}
                 title={servicio.is_active ? 'Desactivar' : 'Activar'}
                 disabled={mutationLoading}
               >
@@ -539,6 +561,14 @@ export function Servicios() {
         variant={dialogState.variant}
         isLoading={isConfirmLoading}
       />
+
+      <div style={{ position: 'absolute', top: -9999, left: -9999 }}>
+        <ServiciosYAcabadosPDFTemplate
+          ref={componentRef}
+          servicios={exportData.servicios}
+          acabados={exportData.acabados}
+        />
+      </div>
     </div>
   );
 }
