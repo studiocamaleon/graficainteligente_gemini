@@ -162,7 +162,10 @@ AVAILABLE_PERMISSIONS.forEach((permission) => {
     'centro-copiado-ordenes',
     'centro-copiado-ordenes-crear',
     'finance',
-    'finance-tesoreria'
+    'finance-tesoreria',
+    'presupuestos',
+    'presupuestos-lista',
+    'presupuestos-crear'
   ];
 
   const operadorDisenoViewOnlyModules = [

@@ -10,6 +10,7 @@ interface CajaSummaryCardProps {
   onClickArqueo?: (caja: CajaConMediosCobro) => void;
   onTransferir?: (caja: CajaConMediosCobro) => void;
   onHistory?: (caja: CajaConMediosCobro) => void;
+  onRetiro?: (caja: CajaConMediosCobro) => void;
 }
 
 const TIPO_ICONS = {
@@ -24,7 +25,7 @@ const TIPO_COLORS = {
   pasarela: 'bg-purple-50 border-purple-200',
 };
 
-export function CajaSummaryCard({ caja, onClickArqueo, onTransferir, onHistory }: CajaSummaryCardProps) {
+export function CajaSummaryCard({ caja, onClickArqueo, onTransferir, onHistory, onRetiro }: CajaSummaryCardProps) {
   const navigate = useNavigate(); // Added useNavigate
   const Icon = TIPO_ICONS[caja.tipo]; // This line is kept from original, but the new JSX doesn't use it directly for the main icon.
   const saldo = Number(caja.saldo_actual);
@@ -88,6 +89,21 @@ export function CajaSummaryCard({ caja, onClickArqueo, onTransferir, onHistory }
               title="Ver Historial"
             >
               <History className="w-5 h-5" />
+            </Button>
+          )}
+
+          {onRetiro && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+              onClick={(e) => {
+                e.stopPropagation();
+                onRetiro(caja);
+              }}
+              title="Registrar Retiro / Gasto"
+            >
+              <TrendingDown className="w-4 h-4" />
             </Button>
           )}
         </div>

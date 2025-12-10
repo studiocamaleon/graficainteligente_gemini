@@ -5,6 +5,8 @@ import type { ResumenCajaPorTipo, CajaConMediosCobro } from '../../types/medios-
 import { ArqueoCajaModal } from './ArqueoCajaModal'; // Import Modal
 import { TransferirCajaModal } from './TransferirCajaModal';
 import { CajaMovimientosModal } from './CajaMovimientosModal';
+import { RegistrarEgresoModal } from './RegistrarEgresoModal';
+import { useEgresos } from '../../hooks/useEgresos';
 
 interface ResumenCajasProps {
   resumenPorTipo: ResumenCajaPorTipo[];
@@ -53,6 +55,8 @@ export function ResumenCajas({ resumenPorTipo, totalSaldo, onCajaClick, onRefres
   const [selectedArqueoCaja, setSelectedArqueoCaja] = useState<CajaConMediosCobro | null>(null);
   const [selectedTransferCaja, setSelectedTransferCaja] = useState<CajaConMediosCobro | null>(null);
   const [selectedHistoryCaja, setSelectedHistoryCaja] = useState<CajaConMediosCobro | null>(null);
+  const [selectedRetiroCaja, setSelectedRetiroCaja] = useState<CajaConMediosCobro | null>(null);
+  const { createEgreso } = useEgresos();
 
   const handleArqueoSuccess = () => {
     onRefresh?.();
@@ -138,6 +142,7 @@ export function ResumenCajas({ resumenPorTipo, totalSaldo, onCajaClick, onRefres
                     onClickArqueo={(c) => setSelectedArqueoCaja(c)}
                     onTransferir={(c) => setSelectedTransferCaja(c)}
                     onHistory={(c) => setSelectedHistoryCaja(c)}
+                    onRetiro={(c) => setSelectedRetiroCaja(c)}
                   />
                 </div>
               ))}
@@ -174,6 +179,22 @@ export function ResumenCajas({ resumenPorTipo, totalSaldo, onCajaClick, onRefres
         isOpen={!!selectedHistoryCaja}
         onClose={() => setSelectedHistoryCaja(null)}
         caja={selectedHistoryCaja}
+      />
+
+      {/* Modal para Retiro Express desde Caja */}
+      <RegistrarEgresoModal
+        isOpen={!!selectedRetiroCaja}
+        onClose={() => setSelectedRetiroCaja(null)}
+        onSubmit={async (data) => {
+          await createEgreso(data);
+          onRefresh?.();
+        }}
+        onSuccess={() => {
+          setSelectedRetiroCaja(null);
+          onRefresh?.();
+        }}
+        lockedCajaId={selectedRetiroCaja?.id}
+        lockedMedioPago="efectivo"
       />
     </div>
   );

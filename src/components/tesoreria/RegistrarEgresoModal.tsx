@@ -22,10 +22,24 @@ interface RegistrarEgresoModalProps {
   periodoDevengado?: string;
   proveedorId?: string;
   tipoEgresoId?: string;
+  lockedCajaId?: string; // New prop
+  lockedMedioPago?: 'efectivo'; // New prop, currently only supporting cash for this flow
   initialData?: Partial<CreateEgresoData>;
 }
 
-export function RegistrarEgresoModal({ isOpen, onClose, onSuccess, onSubmit, recurrenteId, periodoDevengado, proveedorId, tipoEgresoId, initialData }: RegistrarEgresoModalProps) {
+export function RegistrarEgresoModal({
+  isOpen,
+  onClose,
+  onSuccess,
+  onSubmit,
+  recurrenteId,
+  periodoDevengado,
+  proveedorId,
+  tipoEgresoId,
+  lockedCajaId,
+  lockedMedioPago,
+  initialData
+}: RegistrarEgresoModalProps) {
   const { showSuccess, showError } = useToast();
   const { cajas } = useCajas();
   const { tarjetas } = useTarjetas();
@@ -33,13 +47,14 @@ export function RegistrarEgresoModal({ isOpen, onClose, onSuccess, onSubmit, rec
   const { providers } = useProviders({ isActive: true });
 
   const [formData, setFormData] = useState<CreateEgresoData>({
-    caja_id: '',
+    caja_id: lockedCajaId || initialData?.caja_id || '',
     tarjeta_id: '',
     tipo_egreso_id: initialData?.tipo_egreso_id || tipoEgresoId || '',
     monto: initialData?.monto || 0,
     concepto: initialData?.concepto || '',
     fecha: initialData?.fecha || new Date().toISOString().split('T')[0],
     cuotas: 1,
+    medio_pago: lockedMedioPago || initialData?.medio_pago || undefined,
     recurrente_id: recurrenteId,
     periodo_devengado: periodoDevengado,
     proveedor_id: proveedorId
@@ -102,20 +117,21 @@ export function RegistrarEgresoModal({ isOpen, onClose, onSuccess, onSubmit, rec
 
   const handleClose = () => {
     setFormData({
-      caja_id: '',
+      caja_id: lockedCajaId || '',
       tarjeta_id: '',
       tipo_egreso_id: '',
       monto: 0,
       concepto: '',
       fecha: new Date().toISOString().split('T')[0],
-      cuotas: 1
+      cuotas: 1,
+      medio_pago: lockedMedioPago || undefined
     });
     setErrors({});
     onClose();
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Registrar Egreso">
+    <Modal isOpen={isOpen} onClose={handleClose} title={lockedCajaId ? "Registrar Salida de Caja" : "Registrar Egreso"}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div className="col-span-2">
@@ -137,6 +153,7 @@ export function RegistrarEgresoModal({ isOpen, onClose, onSuccess, onSubmit, rec
             <Select
               value={formData.medio_pago || ''}
               onChange={(value) => setFormData({ ...formData, medio_pago: value as any })}
+              disabled={!!lockedMedioPago}
             >
               <option value="">Seleccionar medio</option>
               <option value="efectivo">Efectivo</option>
@@ -237,7 +254,7 @@ export function RegistrarEgresoModal({ isOpen, onClose, onSuccess, onSubmit, rec
               </div>
             )}
 
-            {!isTarjeta && !isCheque && (formData.medio_pago !== '' && formData.medio_pago !== 'tarjeta' && formData.medio_pago !== 'cheque') && (
+            {!isTarjeta && !isCheque && (formData.medio_pago && formData.medio_pago !== 'tarjeta' && formData.medio_pago !== 'cheque') && (
               <>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Caja *
@@ -246,6 +263,7 @@ export function RegistrarEgresoModal({ isOpen, onClose, onSuccess, onSubmit, rec
                   value={formData.caja_id || ''}
                   onChange={(value) => setFormData({ ...formData, caja_id: value })}
                   error={errors.caja_id}
+                  disabled={!!lockedCajaId}
                 >
                   <option value="">Seleccionar caja</option>
                   {cajas.filter(c => c.is_active).map((caja) => (
