@@ -23,18 +23,13 @@ serve(async (req) => {
             }
         );
 
-        // 1. Authenticate User
+        // 1. Authenticate User (Optional)
         const {
             data: { user },
-            error: authError,
         } = await supabase.auth.getUser();
 
-        if (authError || !user) {
-            return new Response(JSON.stringify({ error: "Unauthorized" }), {
-                status: 401,
-                headers: { ...corsHeaders, "Content-Type": "application/json" },
-            });
-        }
+        // Allow Guest: If no user, we proceed with userId = null
+        const userId = user ? user.id : null;
 
         // 2. Parse Payload
         const { company_id, cliente_id, cliente_info, items, archivos } = await req.json();
@@ -49,11 +44,12 @@ serve(async (req) => {
         // 3. Call RPC (Atomic Transaction)
         const { data, error } = await supabase.rpc("fn_api_create_orden_copiado", {
             p_company_id: company_id,
-            p_user_id: user.id,
+            p_user_id: userId,
             p_cliente_id: cliente_id || null,
             p_cliente_info: cliente_info || null,
             p_items: items,
             p_archivos: archivos || [],
+            p_canal_venta: 'App Mobile'
         });
 
         if (error) {
