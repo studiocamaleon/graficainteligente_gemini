@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { MessageSquare, Globe, Store, User, Smartphone, Truck } from 'lucide-react';
 import { SearchableSelect } from '../ui/SearchableSelect';
 import { DatePicker } from '../ui/DatePicker';
@@ -38,7 +39,8 @@ export function OrdenGeneralSection({
   usuarioLogueado,
   errors = {},
 }: OrdenGeneralSectionProps) {
-  const { clients, loading } = useClients();
+  const [searchTerm, setSearchTerm] = useState('');
+  const { clients, loading } = useClients({ searchTerm, itemsPerPage: 50 });
 
   const canalesVenta: { value: CanalVenta; label: string; icon: any }[] = [
     { value: 'WhatsApp', label: 'WhatsApp', icon: MessageSquare },
@@ -71,6 +73,7 @@ export function OrdenGeneralSection({
             required
             error={errors.cliente}
             emptyMessage="No se encontraron clientes"
+            onSearch={setSearchTerm}
           />
         </div>
 
