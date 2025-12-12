@@ -136,10 +136,21 @@ export default function DetallePresupuesto() {
   }) => {
     if (!presupuesto) return;
 
+    // Detect if this is a "Copy Only" budget
+    const isCopyOnly = presupuesto.items && presupuesto.items.length > 0 && presupuesto.items.every(
+      (item) => item.tipo_item === 'centro_copiado'
+    );
+
     const ordenId = await convertirAOrden(presupuesto.id, params);
     if (ordenId) {
-      showSuccess(`Orden creada desde presupuesto ${presupuesto.numero_presupuesto}`);
-      navigate(`/app/orders/${ordenId}`);
+      if (isCopyOnly) {
+        showSuccess(`Orden de Copiado creada desde presupuesto ${presupuesto.numero_presupuesto}`);
+        // Navigate to Copy Center Orders detail
+        navigate(`/app/centro-copiado/ordenes/${ordenId}`);
+      } else {
+        showSuccess(`Orden creada desde presupuesto ${presupuesto.numero_presupuesto}`);
+        navigate(`/app/orders/${ordenId}`);
+      }
     } else {
       showError('Error al convertir presupuesto');
     }

@@ -17,7 +17,7 @@ export type EstadoPresupuesto =
 
 export type CanalVenta = 'Web' | 'WhatsApp' | 'Mostrador' | 'App Mobile';
 
-export type TipoItemPresupuesto = 'producto_sistema' | 'item_personalizado';
+export type TipoItemPresupuesto = 'producto_sistema' | 'item_personalizado' | 'centro_copiado';
 
 export type AccionHistorial =
   | 'creado'

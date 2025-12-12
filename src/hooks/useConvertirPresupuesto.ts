@@ -17,6 +17,7 @@ interface ConvertirPresupuestoParams {
   medio_cobro_id?: string;
   referencia_pago?: string;
   rutas_personalizadas?: Record<string, RutaStep[]>;
+  requiere_factura?: boolean;
 }
 
 interface ConvertirPresupuestoResult {
@@ -55,6 +56,7 @@ export function useConvertirPresupuesto() {
           p_medio_cobro_id: params.medio_cobro_id || null,
           p_referencia_pago: params.referencia_pago || null,
           p_rutas_personalizadas: params.rutas_personalizadas || null,
+          p_requiere_factura: params.requiere_factura || false,
         }
       );
 
@@ -125,7 +127,7 @@ export function useConvertirPresupuesto() {
         };
       }
 
-      // Advertir sobre items personalizados
+      // Advertir sobre items personalizados que requieren configuración manual de rutas
       const itemsPersonalizados = presupuesto.items.filter(
         (item: any) => item.tipo_item === 'item_personalizado'
       );

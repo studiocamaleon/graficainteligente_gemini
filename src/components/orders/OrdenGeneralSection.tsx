@@ -164,31 +164,7 @@ export function OrdenGeneralSection({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Información de Facturación
-          </label>
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setRequiereFactura(!requiereFactura)}
-              className={`
-                flex items-center justify-center px-4 py-2 rounded-lg border-2 transition-all gap-2 w-full
-                ${requiereFactura
-                  ? 'border-blue-500 bg-blue-50 text-blue-700'
-                  : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
-                }
-              `}
-            >
-              <div className={`w-5 h-5 rounded border flex items-center justify-center ${requiereFactura ? 'border-blue-500 bg-blue-500 text-white' : 'border-gray-400'}`}>
-                {requiereFactura && <span className="text-xs">✓</span>}
-              </div>
-              <span className="text-sm font-medium">Requiere Factura</span>
-            </button>
-          </div>
-        </div>
-      </div>
+
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">

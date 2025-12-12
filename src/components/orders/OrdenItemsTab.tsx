@@ -503,8 +503,18 @@ export function OrdenItemsTab({
       ),
     },
     {
+      key: 'iva',
+      header: 'IVA (21%)',
+      hidden: !requiereFactura,
+      render: (item: OrdenItem) => (
+        <span className="text-gray-500 text-sm">
+          ${(item.precio_total * 0.21).toFixed(2)}
+        </span>
+      ),
+    },
+    {
       key: 'precio_total',
-      header: 'Precio Total',
+      header: 'Subtotal',
       render: (item: OrdenItem) => (
         <span className="font-semibold text-blue-600">
           ${item.precio_total.toFixed(2)}
@@ -524,7 +534,7 @@ export function OrdenItemsTab({
         </Button>
       ),
     },
-  ];
+  ].filter(col => !col.hidden);
 
   return (
     <div className="space-y-6">

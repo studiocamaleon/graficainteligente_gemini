@@ -87,6 +87,7 @@ export function PresupuestoItemsTab({ items, presupuestoId, esEditable = false }
                         </span>
                         {isPendiente && <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold uppercase">Pendiente</span>}
                         {item.tipo_item === 'item_personalizado' && <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Personalizado</span>}
+                        {item.tipo_item === 'centro_copiado' && <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Centro de Copiado</span>}
                       </div>
                       {item.descripcion && (
                         <p className="text-gray-500 text-xs leading-relaxed max-w-lg">

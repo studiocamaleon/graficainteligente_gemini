@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Plus, Trash2, Package, FileText, DollarSign, Wand2, CheckSquare, Square } from 'lucide-react';
+import { Plus, Trash2, Package, FileText, DollarSign, Wand2, CheckSquare, Square, Printer } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { EmptyState } from '../ui/EmptyState';
 import { UniversalAddItemWizard } from '../wizard/UniversalAddItemWizard';
 import { AddItemPersonalizadoModal } from './AddItemPersonalizadoModal';
 import { AsignarPrecioModal } from './AsignarPrecioModal';
 import { AplicarServicioMasivoModal } from '../orders/AplicarServicioMasivoModal';
+import { AsociarOrdenCopiadoModal } from '../orders/AsociarOrdenCopiadoModal';
 import type { PresupuestoItem, ItemPendienteCotizacion } from '../../types/presupuestos';
 
 interface PresupuestoItemsSectionProps {
@@ -127,6 +128,58 @@ export function PresupuestoItemsSection({
 
 
 
+  /* State for Copy Center Modal */
+  const [showCopiadoModal, setShowCopiadoModal] = useState(false);
+
+  const handleAgregarOrdenCopiado = (ordenCopiado: any) => {
+    // ordenCopiado conforms to OrdenCopiadoTemporal interface from the modal
+
+    ordenCopiado.items.forEach((item: any) => {
+      const cantidad = item.config.cantidad_copias || 1;
+      const hojas = item.config.cantidad_hojas || 1;
+
+      // Construir nombre legible y corto
+      const tamanioName = item.config.tamanio_nombre || (String(item.config.tamanio_papel_id).length > 20 ? 'Standard' : item.config.tamanio_papel_id); // Usually it's an ID, getting name is hard without lookup. 
+      // Actually CentroCopiadoItemForm handles IDs but displays Names. The modal returns config with IDs. 
+      // We will rely on description if provided, otherwise generic.
+      // But we can extract some info.
+
+      const tipoTinta = item.config.tipo_tinta === 'CMYK' ? 'Color' : 'B/N';
+      const nombreItem = `Copias ${tipoTinta} - ${tamanioName}`;
+
+      const papelNombre = item.config.papel_detalle || item.config.papel_id;
+
+      const detalleTecnico = [
+        `Papel: ${papelNombre}`,
+        `Caras: ${item.config.cara_impresa === 'frente_y_dorso' ? 'Doble Faz' : 'Simple Faz'}`,
+        `Hojas orig: ${hojas}`,
+        item.config.abrochado ? 'Abrochado' : null,
+        item.config.anillado ? 'Anillado' : null,
+        item.config.corte ? 'Corte' : null,
+        item.config.dobladillo ? 'Dobladillo' : null,
+      ].filter(Boolean).join(' | ');
+
+      const fullDescription = `${item.descripcion || ''}\n${detalleTecnico}`.trim();
+
+      // Fix price calculation
+      const precioTotal = item.precio || 0;
+      const precioUnitario = cantidad > 0 ? (precioTotal / cantidad) : 0;
+
+      onAddItemSistema({
+        tipo_item: 'centro_copiado', // Now supported by types and DB
+        producto_nombre: nombreItem,
+        producto_categoria: 'Centro de Copiado',
+        descripcion: fullDescription,
+        cantidad: cantidad,
+        precio_unitario_final: precioUnitario,
+        precio_total: precioTotal,
+        configuracion: item.config // Store full config for reconstruction/conversion
+      });
+    });
+
+    setShowCopiadoModal(false);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -154,6 +207,15 @@ export function PresupuestoItemsSection({
           <Button
             variant="secondary"
             size="sm"
+            onClick={() => setShowCopiadoModal(true)}
+            className="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border-indigo-200"
+          >
+            <Printer className="w-4 h-4 mr-2" />
+            Centro de Copiado
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={() => setShowPersonalizadoModal(true)}
           >
             <FileText className="w-4 h-4 mr-2" />
@@ -171,7 +233,7 @@ export function PresupuestoItemsSection({
         <EmptyState
           icon={Package}
           title="No hay items agregados"
-          description="Agrega productos del catálogo o items personalizados"
+          description="Agrega productos del catálogo, centro de copiado o items personalizados"
         />
       )}
 
@@ -354,6 +416,15 @@ export function PresupuestoItemsSection({
           onAddItemPersonalizado(item);
           setShowPersonalizadoModal(false);
         }}
+      />
+
+      {/* Modal Centro de Copiado */}
+      <AsociarOrdenCopiadoModal
+        isOpen={showCopiadoModal}
+        onClose={() => setShowCopiadoModal(false)}
+        onGuardar={handleAgregarOrdenCopiado}
+        clienteNombre="Cliente del Presupuesto" // In specific Budget flow we might not have client name loaded in this component directly if not passed props, but we will assume generic or check props.
+      // Actually props has no client name. It's fine, the modal uses it for display only.
       />
 
       {/* Modal Asignar Precio */}

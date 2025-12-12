@@ -52,7 +52,7 @@ export function CreateOrderPage() {
   const [canalVenta, setCanalVenta] = useState<CanalVenta>('Mostrador');
   const [fechaEntrega, setFechaEntrega] = useState('');
   const [notasInternas, setNotasInternas] = useState('');
-  const [requiereFactura, setRequiereFactura] = useState(false);
+  const [requiereFactura, setRequiereFactura] = useState(true);
   const [requiereDespacho, setRequiereDespacho] = useState(false);
 
   const [items, setItems] = useState<any[]>([]);
@@ -89,7 +89,7 @@ export function CreateOrderPage() {
     setCanalVenta('Mostrador');
     setFechaEntrega('');
     setNotasInternas('');
-    setRequiereFactura(false);
+    setRequiereFactura(true);
     setRequiereDespacho(false);
     setItems([]);
     setDescuentoTotal(0);

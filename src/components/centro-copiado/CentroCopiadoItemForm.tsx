@@ -14,7 +14,9 @@ import type { TipoTintaCopiado, CaraImpresaCopiado, TipoAnillado, TipoPlastifica
 
 export interface ItemCopiadoConfig {
   tamanio_papel_id: string;
+  tamanio_nombre?: string;
   papel_id: string;
+  papel_detalle?: string;
   tipo_tinta: TipoTintaCopiado;
   cara_impresa: CaraImpresaCopiado;
   cantidad_hojas: number;
@@ -153,6 +155,30 @@ export function CentroCopiadoItemForm({
     });
   };
 
+  const handleTamanioChange = (id: string) => {
+    const tamanio = tamanios.find(t => t.id === id);
+    onChange({
+      ...value,
+      tamanio_papel_id: id,
+      tamanio_nombre: tamanio?.nombre
+    });
+  };
+
+  const handlePapelChange = (id: string) => {
+    const papel = papeles.find(p => p.id === id);
+    // Construct detail: Name + Thickness (if exists)
+    let detalle = papel?.variante_nombre || '';
+    if (papel?.espesor) {
+      detalle += ` ${papel.espesor}${papel.unidad_espesor || 'gr'}`;
+    }
+
+    onChange({
+      ...value,
+      papel_id: id,
+      papel_detalle: detalle
+    });
+  };
+
   const getResumenItem = () => {
     const tamanio = tamanios.find(t => t.id === value.tamanio_papel_id);
     const papel = papeles.find(p => p.id === value.papel_id);
@@ -255,7 +281,7 @@ export function CentroCopiadoItemForm({
                     <TamaniosPapelSelector
                       tamanios={tamanios}
                       selectedId={value.tamanio_papel_id}
-                      onSelect={(id) => handleFieldChange('tamanio_papel_id', id)}
+                      onSelect={handleTamanioChange}
                       loading={loadingTamanios}
                     />
                   </div>
@@ -265,7 +291,7 @@ export function CentroCopiadoItemForm({
                     <TiposPapelSelector
                       papeles={papeles}
                       selectedId={value.papel_id}
-                      onSelect={(id) => handleFieldChange('papel_id', id)}
+                      onSelect={handlePapelChange}
                       loading={loadingPapeles}
                     />
                   </div>
