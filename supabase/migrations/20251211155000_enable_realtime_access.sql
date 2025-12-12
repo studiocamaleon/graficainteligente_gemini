@@ -9,5 +9,9 @@ CREATE POLICY "Anon can view orders"
   TO anon
   USING (true);
 
--- Also ensure the publication is enabled for this table (Supabase usually handles this via UI, but good to ensure if using custom replication)
--- ALTER PUBLICATION supabase_realtime ADD TABLE centro_copiado_ordenes;
+-- Ensure the publication is enabled for this table
+-- This is critical: RLS allows access, but Publication emits the event.
+DROP PUBLICATION IF EXISTS supabase_realtime;
+CREATE PUBLICATION supabase_realtime WITH (publish = 'insert, update, delete, truncate');
+ALTER PUBLICATION supabase_realtime ADD TABLE centro_copiado_ordenes;
+
