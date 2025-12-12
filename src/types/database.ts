@@ -1547,9 +1547,12 @@ export interface CentroCopiadoOrden {
   fecha_entrega_real: string | null;
   total: number;
   observaciones: string | null;
+  requiere_factura: boolean;
+  numero_factura: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  canal_venta: CanalVenta;
 }
 
 export interface CentroCopiadoOrdenItem {
@@ -1610,6 +1613,7 @@ export interface CentroCopiadoOrdenResumida {
   total: number;
   items: CentroCopiadoOrdenItem[];
   orden_trabajo_numero?: string;
+  requiere_factura?: boolean;
 }
 
 export interface TotalesConsolidadosOrden {

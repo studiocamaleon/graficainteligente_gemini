@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { Switch } from '../../../components/ui/Switch';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Calendar, User, FileText, DollarSign, AlertCircle, Download, ExternalLink } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
@@ -19,7 +20,8 @@ import { InfoDialog } from '../../../components/ui/InfoDialog';
 import { useCentroCopiadoOrdenArchivos } from '../../../hooks/useCentroCopiadoOrdenArchivos';
 import { OrdenPagosTab } from '../../../components/orders/OrdenPagosTab';
 import { PagoFormModal } from '../../../components/orders/PagoFormModal';
-import type { EstadoOrdenCopiado, TipoItemCopiado } from '../../../types/database';
+import { ChannelBadge } from '../../../components/orders/ChannelBadge';
+import type { EstadoOrdenCopiado, TipoItemCopiado, CanalVenta } from '../../../types/database'; // Added CanalVenta type
 import { useAuth } from '../../../hooks/useAuth';
 
 export function DetalleOrdenCopiado() {
@@ -32,8 +34,48 @@ export function DetalleOrdenCopiado() {
   const [showPagoModal, setShowPagoModal] = useState(false);
   const [pagoEditando, setPagoEditando] = useState<any>(null);
 
-  const { orden, loading, error, refetch } = useCentroCopiadoOrden(id);
+  const { orden, loading, error, refetch, updateOrden } = useCentroCopiadoOrden(id);
   const { updateEstado } = useCentroCopiadoOrdenes();
+  const [updating, setUpdating] = useState(false);
+
+  // ... (previous code)
+
+  const handleToggleFactura = async (checked: boolean) => {
+    if (!orden) return;
+
+    // Constraint: Validar si ya tiene factura
+    if (orden.numero_factura && !checked) {
+      openInfoDialog('Acción no permitida', 'No se puede desactivar la opción de factura porque esta orden ya tiene un número de factura asignado.');
+      return;
+    }
+
+    // Constraint: Validar si es parte de una OT
+    if (orden.orden_trabajo_id) {
+      const otNumero = (orden as any).orden_trabajo?.numero_orden;
+      openInfoDialog('Acción no permitida', `Esta orden está asociada a la Orden de Trabajo #${otNumero || ''}. Por favor, gestione la facturación desde allí.`);
+      return;
+    }
+
+    try {
+      setUpdating(true);
+
+      // Calcular subtotal real sumando items
+      const subtotal = orden.items?.reduce((acc, item) => acc + (Number(item.subtotal) || 0), 0) || 0;
+      const iva = checked ? subtotal * 0.21 : 0;
+      const total = subtotal + iva;
+
+      await updateOrden(orden.id, {
+        requiere_factura: checked,
+        total: total
+      });
+
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   const { archivos, descargarArchivo, descargarTodosArchivos } = useCentroCopiadoOrdenArchivos(id);
   const { pagos, createPago, updatePago, deletePago, calcularTotales } = useCentroCopiadoOrdenPagos(id);
   const { dialogState: confirmDialogState, closeDialog: closeConfirmDialog, handleConfirm, openConfirm } = useConfirmDialog();
@@ -196,12 +238,21 @@ export function DetalleOrdenCopiado() {
   const puedeFinalizar = orden.estado === 'en_proceso';
   const puedeEntregar = orden.estado === 'finalizada';
 
+  // Calculate Subtotal from Items Sum to ensure it is Net
+  const subtotal = orden.items?.reduce((acc, item) => acc + (Number(item.subtotal) || 0), 0) || 0;
+  const iva = orden.requiere_factura ? subtotal * 0.21 : 0;
+
+  // Total is Subtotal + Taxes.
+  // Note: We ignore orden.total from DB for display purposes here because it might differ during optimistic updates or if logic drifted. 
+  // Calculating it fresh ensures consistency with the displayed subtotal.
+  const total = subtotal + iva;
+
   const totales = {
-    subtotal: orden.total,
+    subtotal: subtotal,
     descuentoAplicado: 0,
-    subtotalConDescuento: orden.total,
-    iva: 0,
-    total: orden.total,
+    subtotalConDescuento: subtotal,
+    iva: iva,
+    total: total,
   };
 
   const tabs = [
@@ -310,6 +361,13 @@ export function DetalleOrdenCopiado() {
               {orden.cliente?.email && (
                 <p className="text-sm text-gray-500">{orden.cliente.email}</p>
               )}
+
+              <div className="mt-4 pt-4 border-t border-gray-100">
+                <div className="flex items-center gap-2 mb-2">
+                  <h3 className="text-sm font-medium text-gray-700">Canal de Venta</h3>
+                </div>
+                <ChannelBadge canal={orden.canal_venta || 'Mostrador'} showLabel={true} />
+              </div>
             </div>
 
             <div>
@@ -344,7 +402,31 @@ export function DetalleOrdenCopiado() {
                 <DollarSign className="w-4 h-4 text-gray-400" />
                 <h3 className="text-sm font-medium text-gray-700">Total</h3>
               </div>
-              <p className="text-2xl font-bold text-green-600">${Number(orden.total).toFixed(2)}</p>
+              <p className="text-2xl font-bold text-green-600">${total.toFixed(2)}</p>
+
+              <div className="mt-3">
+                <Switch
+                  checked={orden.requiere_factura}
+                  onChange={handleToggleFactura}
+                  label="Requiere Factura"
+                  disabled={!!orden.numero_factura || !!orden.orden_trabajo_id}
+                />
+
+                {orden.requiere_factura && (
+                  <p className="text-xs text-blue-600 mt-1 ml-11">+ IVA incluido</p>
+                )}
+
+                {orden.numero_factura ? (
+                  <p className="text-xs text-amber-600 mt-1 ml-11">
+                    No editable (Ya tiene factura: {orden.numero_factura})
+                  </p>
+                ) : orden.orden_trabajo_id ? (
+                  <p className="text-xs text-amber-600 mt-1 ml-11">
+                    Gestionado desde la Orden de Trabajo #{(orden as any).orden_trabajo?.numero_orden || ''}
+                    {(orden as any).orden_trabajo?.numero_factura ? ` (Factura: ${(orden as any).orden_trabajo.numero_factura})` : ''}
+                  </p>
+                ) : null}
+              </div>
             </div>
           </div>
 
@@ -384,82 +466,114 @@ export function DetalleOrdenCopiado() {
                 description="Esta orden no tiene items configurados"
               />
             ) : (
-              <Table
-                columns={[
-                  {
-                    key: 'numero',
-                    header: '#',
-                    render: (item, index) => <Badge variant="secondary">{index + 1}</Badge>,
-                  },
-                  {
-                    key: 'tipo',
-                    header: 'Tipo',
-                    render: (item) => <span className="font-medium">{getTipoItemLabel(item.tipo_item)}</span>,
-                  },
-                  {
-                    key: 'descripcion',
-                    header: 'Descripción',
-                    render: (item) => {
-                      if (item.tipo_item === 'impresion') {
-                        return (
-                          <div className="text-sm">
-                            <div>
-                              {item.tamanio_papel?.nombre} - {item.papel?.variante_nombre}
-                              {item.papel?.espesor && ` ${item.papel.espesor}${item.papel.unidad_espesor}`}
-                            </div>
-                            <div className="text-gray-500">
-                              {item.tipo_tinta === 'CMYK' ? 'Color' : 'B/N'} -{' '}
-                              {item.cara_impresa === 'frente' ? 'Frente' : 'Frente y Dorso'}
-                            </div>
-                            {item.descripcion && (
-                              <div className="mt-1 text-xs text-gray-500 italic border-t border-gray-100 pt-1">
-                                Note: {item.descripcion}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      }
-                      return <span className="text-sm text-gray-600">{item.descripcion || '-'}</span>;
+              <>
+                <Table
+                  columns={[
+                    {
+                      key: 'numero',
+                      header: '#',
+                      render: (item, index) => <Badge variant="secondary">{index + 1}</Badge>,
                     },
-                  },
-                  {
-                    key: 'cantidad',
-                    header: 'Cantidad',
-                    render: (item) => (
-                      <div className="text-sm">
-                        {item.cantidad_hojas && <div>{item.cantidad_hojas} hojas</div>}
-                        <div className="text-gray-500">{item.cantidad_unidades} copias</div>
+                    {
+                      key: 'tipo',
+                      header: 'Tipo',
+                      render: (item) => <span className="font-medium">{getTipoItemLabel(item.tipo_item)}</span>,
+                    },
+                    {
+                      key: 'descripcion',
+                      header: 'Descripción',
+                      render: (item) => {
+                        if (item.tipo_item === 'impresion') {
+                          return (
+                            <div className="text-sm">
+                              <div>
+                                {item.tamanio_papel?.nombre} - {item.papel?.variante_nombre}
+                                {item.papel?.espesor && ` ${item.papel.espesor}${item.papel.unidad_espesor}`}
+                              </div>
+                              <div className="text-gray-500">
+                                {item.tipo_tinta === 'CMYK' ? 'Color' : 'B/N'} -{' '}
+                                {item.cara_impresa === 'frente' ? 'Frente' : 'Frente y Dorso'}
+                              </div>
+                              {item.descripcion && (
+                                <div className="mt-1 text-xs text-gray-500 italic border-t border-gray-100 pt-1">
+                                  Note: {item.descripcion}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        }
+                        return <span className="text-sm text-gray-600">{item.descripcion || '-'}</span>;
+                      },
+                    },
+                    {
+                      key: 'cantidad',
+                      header: 'Cantidad',
+                      render: (item) => (
+                        <div className="text-sm">
+                          {item.cantidad_hojas && <div>{item.cantidad_hojas} hojas</div>}
+                          <div className="text-gray-500">{item.cantidad_unidades} copias</div>
+                        </div>
+                      ),
+                    },
+                    {
+                      key: 'terminaciones',
+                      header: 'Terminaciones',
+                      render: (item) => (
+                        <div className="space-y-1">
+                          {item.tipo_anillado && (
+                            <Badge variant="primary">
+                              {item.tipo_anillado === 'ring_wire' ? 'Ring Wire' : 'Plástico'}
+                            </Badge>
+                          )}
+                          {item.tipo_plastificado && <Badge variant="primary">{item.tipo_plastificado}</Badge>}
+                          {!item.tipo_anillado && !item.tipo_plastificado && (
+                            <span className="text-sm text-gray-400">-</span>
+                          )}
+                        </div>
+                      ),
+                    },
+                    {
+                      key: 'subtotal',
+                      header: 'Subtotal',
+                      render: (item) => (
+                        <span className="font-semibold text-gray-900">${Number(item.subtotal).toFixed(2)}</span>
+                      ),
+                    },
+                    ...(orden.requiere_factura ? [{
+                      key: 'iva',
+                      header: 'IVA (21%)',
+                      render: (item: any) => (
+                        <span className="text-sm text-gray-600">
+                          ${(Number(item.subtotal || 0) * 0.21).toFixed(2)}
+                        </span>
+                      ),
+                    }] : []),
+                  ]}
+                  data={orden.items}
+                  keyExtractor={(item) => item.id}
+                />
+
+                <div className="mt-8 border-t border-gray-200 pt-6">
+                  <div className="w-full md:w-1/2 lg:w-1/3 ml-auto space-y-3">
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-gray-600">Subtotal Neto</span>
+                      <span className="font-medium text-gray-900">${subtotal.toFixed(2)}</span>
+                    </div>
+
+                    {orden.requiere_factura && (
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-600">IVA (21%)</span>
+                        <span className="font-medium text-blue-600">+${iva.toFixed(2)}</span>
                       </div>
-                    ),
-                  },
-                  {
-                    key: 'terminaciones',
-                    header: 'Terminaciones',
-                    render: (item) => (
-                      <div className="space-y-1">
-                        {item.tipo_anillado && (
-                          <Badge variant="primary">
-                            {item.tipo_anillado === 'ring_wire' ? 'Ring Wire' : 'Plástico'}
-                          </Badge>
-                        )}
-                        {item.tipo_plastificado && <Badge variant="primary">{item.tipo_plastificado}</Badge>}
-                        {!item.tipo_anillado && !item.tipo_plastificado && (
-                          <span className="text-sm text-gray-400">-</span>
-                        )}
-                      </div>
-                    ),
-                  },
-                  {
-                    key: 'subtotal',
-                    header: 'Subtotal',
-                    render: (item) => (
-                      <span className="font-semibold text-gray-900">${Number(item.subtotal).toFixed(2)}</span>
-                    ),
-                  },
-                ]}
-                data={orden.items}
-                keyExtractor={(item) => item.id}
-              />
+                    )}
+
+                    <div className="flex justify-between items-center text-base pt-3 border-t border-gray-200">
+                      <span className="font-bold text-gray-900">Total Final</span>
+                      <span className="font-bold text-green-600 text-xl">${total.toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
+              </>
             )}
           </div>
         </Card>

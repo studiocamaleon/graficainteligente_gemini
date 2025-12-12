@@ -101,9 +101,27 @@ export function OrdenCopiadoAsociadaCard({
                 <DollarSign className="w-4 h-4 text-green-600" />
                 <span className="text-xs font-medium text-gray-600">Total</span>
               </div>
-              <p className="text-lg font-bold text-green-600">
-                ${Number(ordenCopiado.total).toFixed(2)}
-              </p>
+
+              {ordenCopiado.requiere_factura ? (
+                <div className="flex flex-col items-end">
+                  {(() => {
+                    const itemsTotal = ordenCopiado.items?.reduce((acc, i) => acc + (Number(i.subtotal) || 0), 0) || 0;
+                    return (
+                      <>
+                        <span className="text-xs text-gray-500">Subtotal: ${itemsTotal.toFixed(2)}</span>
+                        <span className="text-xs text-gray-500">IVA (21%): ${(itemsTotal * 0.21).toFixed(2)}</span>
+                        <p className="text-lg font-bold text-green-600 mt-1">
+                          ${Number(ordenCopiado.total).toFixed(2)}
+                        </p>
+                      </>
+                    );
+                  })()}
+                </div>
+              ) : (
+                <p className="text-lg font-bold text-green-600">
+                  ${Number(ordenCopiado.total).toFixed(2)}
+                </p>
+              )}
             </div>
           </div>
 

@@ -16,6 +16,7 @@ interface CentroCopiadoResumenOrdenProps {
   onCancelar: () => void;
   guardando: boolean;
   containerRef: RefObject<HTMLDivElement>;
+  requiereFactura: boolean;
 }
 
 export function CentroCopiadoResumenOrden({
@@ -26,6 +27,7 @@ export function CentroCopiadoResumenOrden({
   onCancelar,
   guardando,
   containerRef,
+  requiereFactura,
 }: CentroCopiadoResumenOrdenProps) {
   const { tamanios } = useCentroCopiadoTamanios();
   const { papeles } = useCentroCopiadoPapeles();
@@ -81,7 +83,9 @@ export function CentroCopiadoResumenOrden({
 
   const subtotal = items.reduce((sum, item) => sum + (item.precio || 0), 0);
   const montoDescuento = descuento > 0 ? (subtotal * descuento) / 100 : 0;
-  const total = subtotal - montoDescuento;
+  const subtotalNeto = subtotal - montoDescuento;
+  const iva = requiereFactura ? subtotalNeto * 0.21 : 0;
+  const total = subtotalNeto + iva;
 
   const puedeGuardar = itemsCompletos.length > 0 && !guardando;
 
@@ -136,138 +140,158 @@ export function CentroCopiadoResumenOrden({
 
   const fixedStyles = isLargeScreen
     ? {
-        position: 'fixed' as const,
-        top: '88px',
-        left: `${dimensions.left}px`,
-        width: `${dimensions.width}px`,
-        maxHeight: 'calc(100vh - 104px)',
-        overflowY: 'auto' as const,
-        zIndex: 20,
-      }
+      position: 'fixed' as const,
+      top: '88px',
+      left: `${dimensions.left}px`,
+      width: `${dimensions.width}px`,
+      maxHeight: 'calc(100vh - 104px)',
+      overflowY: 'auto' as const,
+      zIndex: 20,
+    }
     : {};
 
   return (
     <div style={fixedStyles}>
-    <Card className="h-fit shadow-lg">
-      <div className="p-4">
-        <div className="flex items-center gap-2 mb-4">
-          <ShoppingCart className="w-5 h-5 text-blue-600" />
-          <h3 className="text-base font-bold text-gray-900">Resumen de Orden</h3>
-          <Badge variant="default">{items.length}</Badge>
-        </div>
-
-        {items.length === 0 ? (
-          <div className="text-center py-8">
-            <AlertCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-sm text-gray-500">No hay items agregados</p>
+      <Card className="h-fit shadow-lg">
+        <div className="p-4">
+          <div className="flex items-center gap-2 mb-4">
+            <ShoppingCart className="w-5 h-5 text-blue-600" />
+            <h3 className="text-base font-bold text-gray-900">Resumen de Orden</h3>
+            <Badge variant="default">{items.length}</Badge>
           </div>
-        ) : (
-          <>
-            <div className="space-y-2 mb-4 max-h-96 overflow-y-auto">
-              {items.map((item, index) => (
-                <div
-                  key={item.id}
-                  className="p-2 bg-gray-50 rounded-lg border border-gray-200"
-                >
-                  <div className="flex items-start justify-between gap-2 mb-1">
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <Badge variant="primary" className="text-xs flex-shrink-0">
-                        #{index + 1}
-                      </Badge>
-                      <span className="text-xs text-gray-700 line-clamp-2 break-words">
-                        {getItemDescripcion(item)}
-                      </span>
+
+          {items.length === 0 ? (
+            <div className="text-center py-8">
+              <AlertCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+              <p className="text-sm text-gray-500">No hay items agregados</p>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-2 mb-4 max-h-96 overflow-y-auto">
+                {items.map((item, index) => (
+                  <div
+                    key={item.id}
+                    className="p-2 bg-gray-50 rounded-lg border border-gray-200"
+                  >
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <Badge variant="primary" className="text-xs flex-shrink-0">
+                          #{index + 1}
+                        </Badge>
+                        <span className="text-xs text-gray-700 line-clamp-2 break-words">
+                          {getItemDescripcion(item)}
+                        </span>
+                      </div>
+                      {item.precio !== undefined && (
+                        <span className="text-xs font-semibold text-gray-900 whitespace-nowrap flex-shrink-0">
+                          ${item.precio.toFixed(2)}
+                        </span>
+                      )}
                     </div>
-                    {item.precio !== undefined && (
-                      <span className="text-xs font-semibold text-gray-900 whitespace-nowrap flex-shrink-0">
-                        ${item.precio.toFixed(2)}
-                      </span>
+                    {!itemsCompletos.find((i) => i.id === item.id) && (
+                      <div className="flex items-center gap-1 mt-2">
+                        <AlertCircle className="w-3 h-3 text-amber-500" />
+                        <span className="text-xs text-amber-600">Configuración incompleta</span>
+                      </div>
                     )}
                   </div>
-                  {!itemsCompletos.find((i) => i.id === item.id) && (
-                    <div className="flex items-center gap-1 mt-2">
-                      <AlertCircle className="w-3 h-3 text-amber-500" />
-                      <span className="text-xs text-amber-600">Configuración incompleta</span>
+                ))}
+              </div>
+
+              <div className="border-t pt-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  {requiereFactura ? (
+                    <>
+                      <span className="text-sm text-gray-600">Subtotal Neto</span>
+                      <span className="text-sm font-semibold text-gray-900">
+                        ${subtotalNeto.toFixed(2)}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-sm text-gray-600">Subtotal</span>
+                      <span className="text-sm font-semibold text-gray-900">
+                        ${subtotal.toFixed(2)}
+                      </span>
+                    </>
+                  )}
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block text-xs font-medium text-gray-700">
+                    Descuento (%)
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.1"
+                      value={descuento || ''}
+                      onChange={(e) => onDescuentoChange(parseFloat(e.target.value) || 0)}
+                      placeholder="0"
+                    />
+                    <span className="text-xs text-gray-600">%</span>
+                  </div>
+                  {montoDescuento > 0 && (
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-red-600">Monto descuento</span>
+                      <span className="font-medium text-red-600">-${montoDescuento.toFixed(2)}</span>
                     </div>
                   )}
                 </div>
-              ))}
-            </div>
 
-            <div className="border-t pt-3 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Subtotal</span>
-                <span className="text-sm font-semibold text-gray-900">
-                  ${subtotal.toFixed(2)}
-                </span>
-              </div>
-
-              <div className="space-y-1">
-                <label className="block text-xs font-medium text-gray-700">
-                  Descuento (%)
-                </label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="0.1"
-                    value={descuento || ''}
-                    onChange={(e) => onDescuentoChange(parseFloat(e.target.value) || 0)}
-                    placeholder="0"
-                  />
-                  <span className="text-xs text-gray-600">%</span>
-                </div>
-                {montoDescuento > 0 && (
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-red-600">Monto descuento</span>
-                    <span className="font-medium text-red-600">-${montoDescuento.toFixed(2)}</span>
+                {requiereFactura && iva > 0 && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">IVA (21%)</span>
+                    <span className="text-sm font-semibold text-gray-900">
+                      ${iva.toFixed(2)}
+                    </span>
                   </div>
                 )}
-              </div>
 
-              <div className="border-t pt-2 flex items-center justify-between">
-                <span className="text-sm font-bold text-gray-900">Total</span>
-                <div className="flex items-center gap-1">
-                  <DollarSign className="w-4 h-4 text-green-600" />
-                  <span className="text-xl font-bold text-green-600">
-                    ${total.toFixed(2)}
-                  </span>
+                <div className="border-t pt-2 flex items-center justify-between">
+                  <span className="text-sm font-bold text-gray-900">Total</span>
+                  <div className="flex items-center gap-1">
+                    <DollarSign className="w-4 h-4 text-green-600" />
+                    <span className="text-xl font-bold text-green-600">
+                      ${total.toFixed(2)}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {itemsCompletos.length < items.length && (
-              <div className="mt-3 p-2 bg-amber-50 border border-amber-200 rounded-lg">
-                <p className="text-xs text-amber-700">
-                  Completa todos los items para poder guardar la orden
-                </p>
+              {itemsCompletos.length < items.length && (
+                <div className="mt-3 p-2 bg-amber-50 border border-amber-200 rounded-lg">
+                  <p className="text-xs text-amber-700">
+                    Completa todos los items para poder guardar la orden
+                  </p>
+                </div>
+              )}
+
+              <div className="mt-4 space-y-2">
+                <Button
+                  variant="primary"
+                  onClick={onGuardar}
+                  disabled={!puedeGuardar}
+                  isLoading={guardando}
+                  className="w-full"
+                >
+                  {guardando ? 'Guardando...' : 'Guardar Orden'}
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={onCancelar}
+                  disabled={guardando}
+                  className="w-full"
+                >
+                  Cancelar
+                </Button>
               </div>
-            )}
-
-            <div className="mt-4 space-y-2">
-              <Button
-                variant="primary"
-                onClick={onGuardar}
-                disabled={!puedeGuardar}
-                isLoading={guardando}
-                className="w-full"
-              >
-                {guardando ? 'Guardando...' : 'Guardar Orden'}
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={onCancelar}
-                disabled={guardando}
-                className="w-full"
-              >
-                Cancelar
-              </Button>
-            </div>
-          </>
-        )}
-      </div>
-    </Card>
+            </>
+          )}
+        </div>
+      </Card>
     </div>
   );
 }

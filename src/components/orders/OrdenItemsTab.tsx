@@ -685,9 +685,23 @@ export function OrdenItemsTab({
                     </div>
 
                     <div className="flex items-center gap-2 ml-4">
-                      <span className="text-lg font-bold text-green-600">
-                        ${oc.total.toFixed(2)}
-                      </span>
+                      <div className="flex flex-col items-end gap-1">
+                        {requiereFactura ? (
+                          <>
+                            <div className="text-right">
+                              <span className="text-xs text-gray-500 block">Subtotal: ${oc.total.toFixed(2)}</span>
+                              <span className="text-xs text-gray-500 block">IVA (21%): ${(oc.total * 0.21).toFixed(2)}</span>
+                            </div>
+                            <span className="text-lg font-bold text-green-600">
+                              ${(oc.total * 1.21).toFixed(2)}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-lg font-bold text-green-600">
+                            ${oc.total.toFixed(2)}
+                          </span>
+                        )}
+                      </div>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -734,7 +748,8 @@ export function OrdenItemsTab({
             ))}
           </div>
         </div>
-      )}
+      )
+      }
 
       <UniversalAddItemWizard
         isOpen={showAddModal}
@@ -748,61 +763,65 @@ export function OrdenItemsTab({
         onAdd={handleAgregarItemPersonalizado}
       />
 
-      {clienteNombre && onOrdenesCopiadoAsociadasChange && (
-        <AsociarOrdenCopiadoModal
-          isOpen={showAsociarOCModal}
-          onClose={() => {
-            setShowAsociarOCModal(false);
-            setOrdenCopiadoEditando(undefined);
-          }}
-          onGuardar={(nuevaOrden) => {
-            if (ordenCopiadoEditando) {
-              // Editar orden existente
-              onOrdenesCopiadoAsociadasChange(
-                ordenesCopiadoAsociadas.map((o) =>
-                  o.id === ordenCopiadoEditando.id ? nuevaOrden : o
-                )
-              );
-            } else {
-              // Agregar nueva orden
-              onOrdenesCopiadoAsociadasChange([
-                ...ordenesCopiadoAsociadas,
-                nuevaOrden,
-              ]);
-            }
-            setOrdenCopiadoEditando(undefined);
-          }}
-          clienteNombre={clienteNombre}
-          ordenEditando={ordenCopiadoEditando}
-        />
-      )}
+      {
+        clienteNombre && onOrdenesCopiadoAsociadasChange && (
+          <AsociarOrdenCopiadoModal
+            isOpen={showAsociarOCModal}
+            onClose={() => {
+              setShowAsociarOCModal(false);
+              setOrdenCopiadoEditando(undefined);
+            }}
+            onGuardar={(nuevaOrden) => {
+              if (ordenCopiadoEditando) {
+                // Editar orden existente
+                onOrdenesCopiadoAsociadasChange(
+                  ordenesCopiadoAsociadas.map((o) =>
+                    o.id === ordenCopiadoEditando.id ? nuevaOrden : o
+                  )
+                );
+              } else {
+                // Agregar nueva orden
+                onOrdenesCopiadoAsociadasChange([
+                  ...ordenesCopiadoAsociadas,
+                  nuevaOrden,
+                ]);
+              }
+              setOrdenCopiadoEditando(undefined);
+            }}
+            clienteNombre={clienteNombre}
+            ordenEditando={ordenCopiadoEditando}
+          />
+        )
+      }
 
       {/* Toolbar de Acciones Masivas */}
-      {selectedItemIds.size > 0 && (
-        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-white border border-blue-200 shadow-xl rounded-full px-6 py-3 flex items-center gap-4 z-50 animate-in fade-in slide-in-from-bottom-4">
-          <div className="text-sm font-medium text-gray-700 border-r pr-4 mr-2">
-            {selectedItemIds.size} items seleccionados
+      {
+        selectedItemIds.size > 0 && (
+          <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-white border border-blue-200 shadow-xl rounded-full px-6 py-3 flex items-center gap-4 z-50 animate-in fade-in slide-in-from-bottom-4">
+            <div className="text-sm font-medium text-gray-700 border-r pr-4 mr-2">
+              {selectedItemIds.size} items seleccionados
+            </div>
+
+            <Button
+              onClick={() => setShowMasivoModal(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-6"
+              size="sm"
+            >
+              <Wand2 className="w-4 h-4 mr-2" />
+              Aplicar Servicio
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSelectedItemIds(new Set())}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              Cancelar
+            </Button>
           </div>
-
-          <Button
-            onClick={() => setShowMasivoModal(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-6"
-            size="sm"
-          >
-            <Wand2 className="w-4 h-4 mr-2" />
-            Aplicar Servicio
-          </Button>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setSelectedItemIds(new Set())}
-            className="text-gray-500 hover:text-gray-700"
-          >
-            Cancelar
-          </Button>
-        </div>
-      )}
+        )
+      }
 
       <AplicarServicioMasivoModal
         isOpen={showMasivoModal}
@@ -810,6 +829,6 @@ export function OrdenItemsTab({
         selectedItems={items.filter(i => selectedItemIds.has(i.id || ''))}
         onConfirm={handleAplicarServicioMasivo}
       />
-    </div>
+    </div >
   );
 }

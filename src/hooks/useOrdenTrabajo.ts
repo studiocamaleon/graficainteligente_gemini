@@ -80,6 +80,8 @@ interface UpdateOrdenData {
   notas_internas?: string | null;
   requiere_factura?: boolean;
   requiere_despacho?: boolean;
+  total?: number;
+  subtotal_iva?: number;
 }
 
 interface AddItemData {
@@ -209,7 +211,7 @@ export function useOrdenTrabajo() {
           .order('created_at', { ascending: false }),
         supabase
           .from('centro_copiado_ordenes')
-          .select('id, numero_orden, estado, total')
+          .select('id, numero_orden, estado, total, requiere_factura')
           .eq('orden_trabajo_id', id)
           .maybeSingle(),
         // Obtener la factura activa (última creación o reemplazo)
@@ -357,6 +359,9 @@ export function useOrdenTrabajo() {
       if (data.fecha_estimada_entrega !== undefined)
         updateData.fecha_estimada_entrega = data.fecha_estimada_entrega;
       if (data.notas_internas !== undefined) updateData.notas_internas = data.notas_internas;
+      if (data.requiere_factura !== undefined) updateData.requiere_factura = data.requiere_factura;
+      if (data.total !== undefined) updateData.total = data.total;
+      if (data.subtotal_iva !== undefined) updateData.subtotal_iva = data.subtotal_iva;
 
       const { error: updateError } = await supabase
         .from('ordenes_trabajo')

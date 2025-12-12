@@ -38,6 +38,7 @@ interface CreateOrdenCopiadoData {
   orden_trabajo_id?: string;
   fecha_entrega_estimada?: string;
   observaciones?: string;
+  requiere_factura?: boolean;
 }
 
 export function useCentroCopiadoOrdenes(params: UseCentroCopiadoOrdenesParams = {}) {
@@ -159,20 +160,35 @@ export function useCentroCopiadoOrdenes(params: UseCentroCopiadoOrdenesParams = 
         const today = getArgentinaDate();
         const dateStr = today.format('YYYYMMDD');
 
-        const { count } = await supabase
+        // Obtener la última orden del día para calcular la secuencia
+        const { data: lastOrder } = await supabase
           .from('centro_copiado_ordenes')
-          .select('*', { count: 'exact', head: true })
+          .select('numero_orden')
           .eq('company_id', profile.company_id)
-          .gte('created_at', startOfDay(today).toISOString());
+          .gte('created_at', startOfDay(today).toISOString())
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
-        const numeroSecuencia = String((count || 0) + 1).padStart(4, '0');
+        let nextSequence = 1;
+        if (lastOrder?.numero_orden) {
+          const parts = lastOrder.numero_orden.split('-');
+          if (parts.length === 3) {
+            const lastSequence = parseInt(parts[2], 10);
+            if (!isNaN(lastSequence)) {
+              nextSequence = lastSequence + 1;
+            }
+          }
+        }
+
+        const numeroSecuencia = String(nextSequence).padStart(4, '0');
         const numeroOrden = `CC-${dateStr}-${numeroSecuencia}`;
 
         const ordenData = {
           company_id: profile.company_id,
           numero_orden: numeroOrden,
           cliente_id: data.cliente_id,
-          origen: data.origen,
+          canal_venta: data.origen, // Map origin to expected DB column
           orden_trabajo_id: data.orden_trabajo_id || null,
           estado: 'pendiente' as EstadoOrdenCopiado,
           fecha_solicitud: new Date().toISOString(),
@@ -181,6 +197,7 @@ export function useCentroCopiadoOrdenes(params: UseCentroCopiadoOrdenesParams = 
           total: 0,
           observaciones: data.observaciones || null,
           created_by: profile.id,
+          requiere_factura: data.requiere_factura || false,
         };
 
         const { data: newOrden, error: insertError } = await supabase

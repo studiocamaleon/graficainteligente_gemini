@@ -8,6 +8,7 @@ import { DatePicker } from '../../../components/ui/DatePicker';
 import { Tabs } from '../../../components/ui/Tabs';
 import { Tooltip } from '../../../components/ui/Tooltip';
 import { CentroCopiadoItemForm, ItemCopiadoConfig } from '../../../components/centro-copiado/CentroCopiadoItemForm';
+import { Switch } from '../../../components/ui/Switch';
 import { CentroCopiadoResumenOrden } from '../../../components/centro-copiado/CentroCopiadoResumenOrden';
 import { CentroCopiadoArchivosSection } from '../../../components/centro-copiado/CentroCopiadoArchivosSection';
 import { OrdenPagosTab } from '../../../components/orders/OrdenPagosTab';
@@ -58,6 +59,7 @@ export function CrearOrdenCopiado() {
   const [activeTab, setActiveTab] = useState('items');
   const [clienteId, setClienteId] = useState<string>(clienteIdParam || '');
   const [origen, setOrigen] = useState<CanalVenta>('Mostrador');
+  const [requiereFactura, setRequiereFactura] = useState(false);
   const [fechaEntrega, setFechaEntrega] = useState('');
   const [observaciones, setObservaciones] = useState('');
   const [items, setItems] = useState<ItemWithId[]>([]);
@@ -203,8 +205,8 @@ export function CrearOrdenCopiado() {
     const subtotal = items.reduce((sum, item) => sum + (item.precio || 0), 0);
     const descuentoMonto = (subtotal * descuento) / 100;
     const subtotalConDescuento = subtotal - descuentoMonto;
-    const iva = 0; // Centro de copiado no tiene IVA
-    const total = subtotalConDescuento;
+    const iva = requiereFactura ? subtotalConDescuento * 0.21 : 0;
+    const total = subtotalConDescuento + iva;
     const totalPagos = pagos.reduce((sum, pago) => sum + pago.monto, 0);
     const saldoPendiente = total - totalPagos;
 
@@ -307,6 +309,7 @@ export function CrearOrdenCopiado() {
         orden_trabajo_id: ordenTrabajoIdParam || undefined,
         fecha_entrega_estimada: fechaEntregaCompleta,
         observaciones: observaciones || undefined,
+        requiere_factura: requiereFactura,
       };
 
       const nuevaOrden = await createOrden(datosOrden);
@@ -536,6 +539,14 @@ export function CrearOrdenCopiado() {
                     </div>
                   </div>
 
+                  <div className="flex items-center gap-2 mb-4">
+                    <Switch
+                      checked={requiereFactura}
+                      onChange={setRequiereFactura}
+                      label="Requiere Factura (+21% IVA)"
+                    />
+                  </div>
+
                   <div>
                     <DatePicker
                       label="Fecha Entrega Estimada"
@@ -631,9 +642,10 @@ export function CrearOrdenCopiado() {
             onCancelar={cancelar}
             guardando={guardando}
             containerRef={resumenContainerRef}
+            requiereFactura={requiereFactura}
           />
         </div>
-      </div>
+      </div >
 
       <PagoFormModal
         isOpen={showPagoForm}
@@ -654,6 +666,6 @@ export function CrearOrdenCopiado() {
         buttonText={dialogState.buttonText}
         onClose={closeDialog}
       />
-    </div>
+    </div >
   );
 }

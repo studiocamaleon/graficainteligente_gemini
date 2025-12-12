@@ -453,13 +453,19 @@ export function CreateOrderPage() {
               try {
                 const nuevaOrdenCopiado = await createOrdenCopiado({
                   cliente_id: clienteId,
+                  origen: canalVenta, // Heredar canal de venta de la OT
                   orden_trabajo_id: result.id,
                   fecha_entrega_estimada: oc.fecha_entrega_estimada ? `${oc.fecha_entrega_estimada}T00:00:00` : undefined,
                   observaciones: oc.observaciones || undefined,
+                  requiere_factura: requiereFactura, // Propagar estado de facturación de la OT
                 });
 
                 if (nuevaOrdenCopiado) {
-                  await supabase.from('centro_copiado_ordenes').update({ total: oc.total }).eq('id', nuevaOrdenCopiado.id);
+                  // Calcular total con IVA si aplica
+                  const totalItems = oc.total || 0; // Este es el neto sumado de items
+                  const totalConIva = requiereFactura ? totalItems * 1.21 : totalItems;
+
+                  await supabase.from('centro_copiado_ordenes').update({ total: totalConIva }).eq('id', nuevaOrdenCopiado.id);
 
                   for (const item of oc.items) {
                     await supabase.from('centro_copiado_ordenes_items').insert({

@@ -52,7 +52,8 @@ export function useCentroCopiadoOrden(ordenId?: string) {
           `
           *,
           cliente:clients(id, nombre_fantasia, numero_documento, whatsapp, email),
-          created_by_profile:profiles!centro_copiado_ordenes_created_by_fkey(id, full_name, avatar_url)
+          created_by_profile:profiles!centro_copiado_ordenes_created_by_fkey(id, full_name, avatar_url),
+          orden_trabajo:ordenes_trabajo(id, numero_orden, numero_factura)
         `
         )
         .eq('id', ordenId)
@@ -91,6 +92,30 @@ export function useCentroCopiadoOrden(ordenId?: string) {
     }
   }, [profile?.company_id, ordenId]);
 
+  const updateOrden = useCallback(
+    async (id: string, updates: Partial<CentroCopiadoOrden>) => {
+      if (!profile?.company_id) return false;
+
+      try {
+        const { error: updateError } = await supabase
+          .from('centro_copiado_ordenes')
+          .update(updates)
+          .eq('id', id)
+          .eq('company_id', profile.company_id);
+
+        if (updateError) throw updateError;
+
+        await fetchOrden();
+        return true;
+      } catch (err) {
+        console.error('Error upgrading orden:', err);
+        setError(err instanceof Error ? err.message : 'Error al actualizar orden');
+        return false;
+      }
+    },
+    [profile?.company_id, fetchOrden]
+  );
+
   useEffect(() => {
     fetchOrden();
   }, [fetchOrden]);
@@ -100,5 +125,6 @@ export function useCentroCopiadoOrden(ordenId?: string) {
     loading,
     error,
     refetch: fetchOrden,
+    updateOrden,
   };
 }
