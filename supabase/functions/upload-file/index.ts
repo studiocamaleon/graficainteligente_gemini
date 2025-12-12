@@ -29,6 +29,7 @@ serve(async (req) => {
         const file = formData.get('file');
         const companyId = formData.get('company_id');
         const userId = formData.get('user_id'); // Or extract from Auth Token
+        const ordenTemporalId = formData.get('orden_temporal_id');
 
         if (!file || !companyId) {
             return new Response(JSON.stringify({ error: "Missing file or company_id" }), {
@@ -61,6 +62,7 @@ serve(async (req) => {
                 tamano_bytes: file.size,
                 storage_path: storageData.path,
                 uploaded_by: userId || null, // Nullable if guest
+                orden_temporal_id: ordenTemporalId || null,
                 // orden_copiado_id is NULL initially
             })
             .select('id')
@@ -81,7 +83,27 @@ serve(async (req) => {
         });
 
     } catch (error) {
-        return new Response(JSON.stringify({ error: error.message }), {
+        console.error("Upload Error:", error);
+
+        // Debug: List buckets to verify access
+        let buckets = [];
+        try {
+            const supabaseAdmin = createClient(
+                Deno.env.get("SUPABASE_URL") ?? "",
+                Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+            );
+            const { data } = await supabaseAdmin.storage.listBuckets();
+            buckets = data || [];
+        } catch (e) {
+            console.error("Bucket List Error:", e);
+        }
+
+        return new Response(JSON.stringify({
+            error: error.message,
+            stack: error.stack,
+            details: error,
+            visible_buckets: buckets.map(b => b.name)
+        }), {
             status: 500,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
         });

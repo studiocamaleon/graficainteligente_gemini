@@ -212,7 +212,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const origin = frontend_origin || Deno.env.get("FRONTEND_URL") || "https://www.graficainteligente.com";
+    const origin = frontend_origin || Deno.env.get("FRONTEND_URL") || "https://www.grafica.ar";
     let mensaje = '';
 
     if (tipo_notificacion === 'presupuesto_listo') {

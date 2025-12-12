@@ -28,27 +28,44 @@ serve(async (req) => {
             });
         }
 
-        // Parallel fetch for catalog data
-        const [papers, sizes, finishes, prices] = await Promise.all([
+        // Parallel fetch for catalog data and company info
+        const [papers, sizes, finishes, bindings, prices, ranges, company] = await Promise.all([
             supabase.from("centro_copiado_papeles")
                 .select("id, material_id, variante_nombre, espesor").eq("company_id", companyId).eq("is_active", true),
 
             supabase.from("centro_copiado_tamanios_papel")
                 .select("id, nombre, ancho_mm, alto_mm").eq("company_id", companyId).eq("is_active", true),
 
-            supabase.from("centro_copiado_plastificados") // Example finish
+            supabase.from("centro_copiado_plastificados")
                 .select("id, tipo, precio").eq("company_id", companyId).eq("is_active", true),
+
+            supabase.from("centro_copiado_rangos_anillado")
+                .select("id, hojas_desde, hojas_hasta, precio_ring_wire, precio_plastico").eq("company_id", companyId).eq("is_active", true),
 
             supabase.from("centro_copiado_precios_impresion")
                 .select("id, tamanio_papel_id, papel_id, tipo_tinta, rango_precio_id, cara_impresa, precio")
+                .eq("company_id", companyId),
+
+            supabase.from("centro_copiado_rangos_precio_impresion")
+                .select("id, nombre, hojas_desde, hojas_hasta")
                 .eq("company_id", companyId)
+                .eq("is_active", true)
+                .order('hojas_desde', { ascending: true }),
+
+            supabase.from("companies")
+                .select("address, phone_code, contact_phone, email, logo_url, name")
+                .eq("id", companyId)
+                .single()
         ]);
 
         return new Response(JSON.stringify({
             papers: papers.data,
             sizes: sizes.data,
-            finishes: finishes.data,
-            prices: prices.data // Optional, if the app needs to calculate price locally
+            finishes: finishes.data, // Plastificados
+            bindings: bindings.data, // Anillados
+            prices: prices.data,
+            ranges: ranges.data,
+            company: company.data
         }), {
             status: 200,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
