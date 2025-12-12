@@ -53,7 +53,7 @@ async function testAutoRegistroCliente() {
     whatsapp: '+5491112345678', // Número de test
     email: 'test@cliente.com',
     domicilio: 'Calle Test 123',
-    frontend_origin: 'https://test.graficainteligente.com'
+    frontend_origin: 'https://test.grafica.ar'
   };
 
   console.log('2️⃣ Datos de test preparados:');

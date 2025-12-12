@@ -193,7 +193,7 @@ Deno.serve(async (req: Request) => {
           }
         }
 
-        const origin = frontend_origin || Deno.env.get('FRONTEND_URL') || 'https://www.graficainteligente.com';
+        const origin = frontend_origin || Deno.env.get('FRONTEND_URL') || 'https://www.grafica.ar';
         mensaje = generateNuevaOrdenTrabajoMessage(orden, cliente, items, company, ordenesCopiado, origin);
       } else if (tipo === 'orden_finalizada') {
         const saldoPendiente = parseFloat(orden.total || 0) - pagosTotal;
