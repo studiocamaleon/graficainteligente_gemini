@@ -26,6 +26,7 @@ export function useClient() {
         country_id: clientData.country_id || null,
         province_id: clientData.province_id || null,
         city_id: clientData.city_id || null,
+        app_pin: clientData.app_pin || null,
         company_id: profile.company_id,
       };
 
@@ -57,7 +58,9 @@ export function useClient() {
         ...clientData,
         country_id: clientData.country_id || null,
         province_id: clientData.province_id || null,
+        province_id: clientData.province_id || null,
         city_id: clientData.city_id || null,
+        app_pin: clientData.app_pin || null,
       };
 
       const { data, error: updateError } = await supabase

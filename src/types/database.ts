@@ -157,6 +157,7 @@ export interface Client {
   is_active: boolean;
   created_by: string | null;
   updated_by: string | null;
+  app_pin: string | null;
   created_at: string;
   updated_at: string;
 }

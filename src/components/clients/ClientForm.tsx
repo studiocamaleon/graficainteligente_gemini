@@ -32,6 +32,7 @@ export interface ClientFormData {
   usa_ultimo_dia_mes: boolean;
   dias_vencimiento: number;
   is_active: boolean;
+  app_pin?: string;
 }
 
 const DOCUMENT_TYPES: DocumentType[] = ['DNI', 'CUIT', 'CUIL'];
@@ -76,6 +77,7 @@ export function ClientForm({ client, onSubmit, onCancel }: ClientFormProps) {
     usa_ultimo_dia_mes: client?.usa_ultimo_dia_mes || false,
     dias_vencimiento: client?.dias_vencimiento || 7,
     is_active: client?.is_active ?? true,
+    app_pin: client?.app_pin || '',
   });
 
   useEffect(() => {
@@ -142,6 +144,10 @@ export function ClientForm({ client, onSubmit, onCancel }: ClientFormProps) {
 
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = 'Email inválido';
+    }
+
+    if (formData.app_pin && !/^\d{4}$/.test(formData.app_pin)) {
+      newErrors.app_pin = 'El PIN debe ser de 4 dígitos';
     }
 
     if (formData.tiene_cuenta_corriente && !formData.acuerdo_pago) {
@@ -234,8 +240,16 @@ export function ClientForm({ client, onSubmit, onCancel }: ClientFormProps) {
             label="Email"
             type="email"
             value={formData.email}
-            onChange={(e) => handleChange('email', e.target.value)}
             error={errors.email}
+          />
+
+          <Input
+            label="PIN de App (Opcional)"
+            value={formData.app_pin || ''}
+            onChange={(e) => handleChange('app_pin', e.target.value.replace(/\D/g, '').slice(0, 4))}
+            error={errors.app_pin}
+            helperText="4 dígitos numéricos para acceso a la App de invitados"
+            maxLength={4}
           />
         </div>
       </div>
