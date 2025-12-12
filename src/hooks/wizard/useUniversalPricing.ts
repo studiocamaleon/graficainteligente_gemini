@@ -342,7 +342,7 @@ async function getPrecioPlotterCorte(
   if (!precioEnRango) return null;
 
   // Precio por metro lineal
-  const metrosLineales = config.medida_alto || 1;
+  const metrosLineales = config.medida_alto ? config.medida_alto / 100 : 1;
   return precioEnRango.precio * metrosLineales;
 }
 
