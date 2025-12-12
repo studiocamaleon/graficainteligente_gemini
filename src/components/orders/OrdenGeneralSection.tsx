@@ -51,7 +51,8 @@ export function OrdenGeneralSection({
 
   const clientesOptions = clients.map(c => ({
     value: c.id,
-    label: `${c.nombre_fantasia} (${c.numero_documento})`,
+    label: c.nombre_fantasia || c.razon_social,
+    subtitle: c.nombre_fantasia ? c.razon_social : undefined,
   }));
 
   return (

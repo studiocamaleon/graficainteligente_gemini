@@ -72,7 +72,12 @@ export function CrearOrdenCopiado() {
   const [initialized, setInitialized] = useState(false);
   const resumenContainerRef = useRef<HTMLDivElement>(null);
 
-  const { clients, loading: loadingClients } = useClients({ page: 1, itemsPerPage: 100 });
+  const [searchTerm, setSearchTerm] = useState('');
+  const { clients, loading: loadingClients } = useClients({
+    page: 1,
+    itemsPerPage: 1000,
+    searchTerm
+  });
   const { createOrden } = useCentroCopiadoOrdenes();
   const { createItemImpresion } = useCentroCopiadoOrdenItems();
   const { asociarConOrden, limpiarTemporales, updateArchivo } = useCentroCopiadoArchivos({ ordenTemporalId });
@@ -430,6 +435,7 @@ export function CrearOrdenCopiado() {
 
   const cancelar = async () => {
     // Limpiar archivos temporales si existen
+
     try {
       await limpiarTemporales(ordenTemporalId);
     } catch (err) {
@@ -437,11 +443,6 @@ export function CrearOrdenCopiado() {
     }
     navigate('/app/centro-copiado/ordenes');
   };
-
-  const clientesOptions = clients.map((client) => ({
-    value: client.id,
-    label: `${client.nombre_fantasia} (${client.numero_documento})`,
-  }));
 
   const infoGeneralCompleta = clienteId && fechaEntrega;
 
@@ -477,7 +478,7 @@ export function CrearOrdenCopiado() {
                 {infoGeneralCollapsed && clienteSeleccionado && (
                   <span className="text-sm text-gray-600">
                     {clienteSeleccionado.nombre_fantasia}
-                    {fechaEntrega && ` • ${new Date(fechaEntrega).toLocaleDateString()}`}
+                    {fechaEntrega && ` • ${new Date(fechaEntrega).toLocaleDateString()} `}
                   </span>
                 )}
               </div>
@@ -496,10 +497,15 @@ export function CrearOrdenCopiado() {
                       Cliente *
                     </label>
                     <SearchableSelect
-                      options={clientesOptions}
+                      placeholder="Buscar cliente..."
+                      onSearch={setSearchTerm}
+                      options={clients.map(c => ({
+                        value: c.id,
+                        label: c.nombre_fantasia || c.razon_social,
+                        subtitle: c.nombre_fantasia ? c.razon_social : undefined,
+                      }))}
                       value={clienteId}
                       onChange={setClienteId}
-                      placeholder="Buscar cliente..."
                       disabled={!!clienteIdParam || loadingClients}
                     />
                     {clienteIdParam && (
@@ -524,12 +530,12 @@ export function CrearOrdenCopiado() {
                               type="button"
                               onClick={() => setOrigen(canal.value)}
                               className={`
-                                flex items-center justify-center p-4 rounded-lg border-2 transition-all
+                                flex items - center justify - center p - 4 rounded - lg border - 2 transition - all
                                 ${isSelected
                                   ? 'border-blue-500 bg-blue-50 text-blue-700'
                                   : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
                                 }
-                              `}
+    `}
                             >
                               <Icon className="w-6 h-6" />
                             </button>
@@ -601,7 +607,7 @@ export function CrearOrdenCopiado() {
 
             <div className="space-y-3">
               {items.map((item, index) => (
-                <div key={item.id} id={`item-${item.id}`}>
+                <div key={item.id} id={`item - ${item.id} `}>
                   <CentroCopiadoItemForm
                     itemNumber={index + 1}
                     nombreArchivo={item.nombreArchivo}

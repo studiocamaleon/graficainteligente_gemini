@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { UserCircle, Calendar, Phone } from 'lucide-react';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
@@ -34,7 +34,8 @@ export function PresupuestoGeneralSection({
   onNotasInternasChange,
   errors = {},
 }: PresupuestoGeneralSectionProps) {
-  const { clients } = useClients();
+  const [searchTerm, setSearchTerm] = useState('');
+  const { clients } = useClients({ searchTerm, itemsPerPage: 1000 });
   const { members: teamMembers } = useTeamMembers();
 
   // Obtener vendedores (admin, super_admin, vendedor)
@@ -44,8 +45,8 @@ export function PresupuestoGeneralSection({
 
   const clienteOptions = (clients || []).map((client) => ({
     value: client.id,
-    label: client.razon_social,
-    subtitle: client.email || client.whatsapp || undefined,
+    label: client.nombre_fantasia || client.razon_social,
+    subtitle: client.nombre_fantasia ? client.razon_social : undefined,
   }));
 
   const vendedorOptions = [
@@ -110,7 +111,9 @@ export function PresupuestoGeneralSection({
               options={clienteOptions}
               value={clienteId}
               onChange={onClienteChange}
-              placeholder="Buscar cliente por nombre, razón social..."
+              placeholder="Buscar cliente..." // Updated placeholder
+              loading={false}
+              onSearch={setSearchTerm}
               error={errors.clienteId}
             />
             {errors.clienteId && (

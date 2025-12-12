@@ -4,6 +4,7 @@ import { ChevronDown, Search, X, Plus } from 'lucide-react';
 interface SearchableSelectOption {
   value: string;
   label: string;
+  subtitle?: string;
 }
 
 interface SearchableSelectProps {
@@ -49,18 +50,12 @@ export function SearchableSelect({
   const selectedOption = options.find((opt) => opt.value === value);
   const displayValue = selectedOption?.label || '';
 
-  console.log('🔘 SearchableSelect renderizado', {
-    value,
-    valueType: typeof value,
-    optionsCount: options.length,
-    selectedOption,
-    displayValue,
-    loading
-  });
-
-  const filteredOptions = options.filter((option) =>
-    option.label.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredOptions = onSearch
+    ? options
+    : options.filter((option) =>
+      option.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      option.subtitle?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -146,9 +141,8 @@ export function SearchableSelect({
               />
             )}
             <ChevronDown
-              className={`w-5 h-5 text-slate-400 transition-transform duration-200 ${
-                isOpen ? 'transform rotate-180' : ''
-              }`}
+              className={`w-5 h-5 text-slate-400 transition-transform duration-200 ${isOpen ? 'transform rotate-180' : ''
+                }`}
             />
           </div>
         </button>
@@ -186,10 +180,19 @@ export function SearchableSelect({
                     onClick={() => handleSelect(option.value)}
                     className={`
                       w-full px-4 py-2.5 text-left hover:bg-blue-50 transition-colors
-                      ${option.value === value ? 'bg-blue-100 text-blue-700 font-medium' : 'text-slate-700'}
+                      ${option.value === value ? 'bg-blue-100' : ''}
                     `}
                   >
-                    {option.label}
+                    <div className="flex flex-col">
+                      <span className={`font-medium ${option.value === value ? 'text-blue-700' : 'text-slate-900'}`}>
+                        {option.label}
+                      </span>
+                      {option.subtitle && (
+                        <span className={`text-xs ${option.value === value ? 'text-blue-600' : 'text-slate-500'}`}>
+                          {option.subtitle}
+                        </span>
+                      )}
+                    </div>
                   </button>
                 ))
               )}
