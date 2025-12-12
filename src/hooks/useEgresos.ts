@@ -128,6 +128,7 @@ export function useEgresos(filters?: FetchEgresosFilters) {
     delete dbData.banco;
     delete dbData.destinatario;
     delete dbData.tarjeta_id; // tarjeta_id is actually in egresos? Let's check type. Yes, but optional.
+    delete dbData.cerrar_recurrente;
 
     // Logic for caja_id:
     // - Tarjeta: caja_id = null (Deferred via resumen)

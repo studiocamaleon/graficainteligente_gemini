@@ -7,12 +7,13 @@ import { Badge } from '../ui/Badge';
 import { useRecurringExpenses } from '../../hooks/useRecurringExpenses';
 import { CreateRecurringExpenseModal } from './CreateRecurringExpenseModal';
 import { useConfirmDialog } from '../../hooks/useConfirmDialog';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { useToast } from '../../contexts/ToastContext';
 import type { RecurringExpense } from '../../types/database';
 
 export function RecurringExpensesPanel() {
     const { expenses, loading, createExpense, updateExpense, deleteExpense, refetch } = useRecurringExpenses();
-    const { confirm } = useConfirmDialog();
+    const { showConfirm, dialogState, closeDialog, handleConfirm, isLoading: isConfirmLoading } = useConfirmDialog();
     const { showSuccess, showError } = useToast();
 
     const [showModal, setShowModal] = useState(false);
@@ -24,12 +25,12 @@ export function RecurringExpensesPanel() {
     };
 
     const handleDelete = async (id: string) => {
-        if (await confirm({
+        if (await showConfirm({
             title: 'Eliminar Gasto Recurrente',
             message: '¿Estás seguro? Esto no eliminará los gastos históricos ya generados.',
             confirmText: 'Eliminar',
             type: 'danger'
-        })) {
+        } as any)) {
             try {
                 await deleteExpense(id);
                 showSuccess('Gasto eliminado');
@@ -184,6 +185,18 @@ export function RecurringExpensesPanel() {
                 onSubmit={handleFormSubmit}
                 onSuccess={() => refetch()}
                 expenseToEdit={expenseToEdit}
+            />
+
+            <ConfirmDialog
+                isOpen={dialogState.isOpen}
+                onClose={closeDialog}
+                onConfirm={handleConfirm}
+                title={dialogState.title}
+                message={dialogState.message}
+                confirmText={dialogState.confirmText}
+                cancelText={dialogState.cancelText}
+                variant={dialogState.variant}
+                isLoading={isConfirmLoading}
             />
         </div>
     );
