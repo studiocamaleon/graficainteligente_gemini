@@ -70,7 +70,7 @@ export function ProvinceForm({ province, onSubmit, onCancel }: ProvinceFormProps
         <Input
           label="Nombre de la Provincia/Estado"
           value={formData.name}
-          onChange={(value) => setFormData({ ...formData, name: value })}
+          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
           error={errors.name}
           required
           placeholder="Buenos Aires"
@@ -81,7 +81,7 @@ export function ProvinceForm({ province, onSubmit, onCancel }: ProvinceFormProps
         <Input
           label="Código (opcional)"
           value={formData.code}
-          onChange={(value) => setFormData({ ...formData, code: value.toUpperCase() })}
+          onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
           placeholder="BA"
           maxLength={10}
         />

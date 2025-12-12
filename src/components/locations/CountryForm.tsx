@@ -54,7 +54,7 @@ export function CountryForm({ country, onSubmit, onCancel }: CountryFormProps) {
         <Input
           label="Nombre del País"
           value={formData.name}
-          onChange={(value) => setFormData({ ...formData, name: value })}
+          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
           error={errors.name}
           required
           placeholder="Argentina"
@@ -65,7 +65,7 @@ export function CountryForm({ country, onSubmit, onCancel }: CountryFormProps) {
         <Input
           label="Código ISO (2 letras)"
           value={formData.iso_code}
-          onChange={(value) => setFormData({ ...formData, iso_code: value.toUpperCase() })}
+          onChange={(e) => setFormData({ ...formData, iso_code: e.target.value.toUpperCase() })}
           error={errors.iso_code}
           required
           placeholder="AR"
@@ -75,7 +75,7 @@ export function CountryForm({ country, onSubmit, onCancel }: CountryFormProps) {
         <Input
           label="Código Telefónico"
           value={formData.phone_code}
-          onChange={(value) => setFormData({ ...formData, phone_code: value })}
+          onChange={(e) => setFormData({ ...formData, phone_code: e.target.value })}
           error={errors.phone_code}
           required
           placeholder="+54"

@@ -110,7 +110,7 @@ export function CityForm({ city, onSubmit, onCancel }: CityFormProps) {
         <Input
           label="Nombre de la Ciudad"
           value={formData.name}
-          onChange={(value) => setFormData({ ...formData, name: value })}
+          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
           error={errors.name}
           required
           placeholder="Buenos Aires"
@@ -121,7 +121,7 @@ export function CityForm({ city, onSubmit, onCancel }: CityFormProps) {
         <Input
           label="Código Postal (opcional)"
           value={formData.postal_code}
-          onChange={(value) => setFormData({ ...formData, postal_code: value })}
+          onChange={(e) => setFormData({ ...formData, postal_code: e.target.value })}
           placeholder="C1000"
           maxLength={10}
         />
