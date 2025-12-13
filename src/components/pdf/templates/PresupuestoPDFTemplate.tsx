@@ -30,7 +30,8 @@ export function PresupuestoPDFTemplate({
       (sum, item) => sum + Number(item.precio_total),
       0
     ),
-    descuentos: 0, // Placeholder if needed
+    descuentos: 0,
+    total: 0
   };
   totales.total = totales.subtotal - totales.descuentos;
 
@@ -116,8 +117,8 @@ export function PresupuestoPDFTemplate({
                   <p className="text-gray-500 text-xs mt-0.5">{item.descripcion || '-'}</p>
                 </td>
                 <td className="py-4 text-right whitespace-nowrap">{item.cantidad}</td>
-                <td className="py-4 text-right whitespace-nowrap">{formatCurrency(item.precio_unitario_final)}</td>
-                <td className="py-4 text-right whitespace-nowrap font-medium text-gray-900">{formatCurrency(item.precio_total)}</td>
+                <td className="py-4 text-right whitespace-nowrap">{formatCurrency(item.precio_unitario_final || 0)}</td>
+                <td className="py-4 text-right whitespace-nowrap font-medium text-gray-900">{formatCurrency(item.precio_total || 0)}</td>
               </tr>
             ))}
           </tbody>
@@ -139,7 +140,10 @@ export function PresupuestoPDFTemplate({
           )}
           <div className="flex justify-between items-baseline pt-3 border-t border-gray-100">
             <span className="text-lg font-bold text-gray-900">Total</span>
-            <span className="text-2xl font-bold text-gray-900">{formatCurrency(totales.total)}</span>
+            <div className="text-right">
+              <span className="text-2xl font-bold text-gray-900 block">{formatCurrency(totales.total)}</span>
+              <span className="text-xs text-gray-500 font-medium">(+ IVA)</span>
+            </div>
           </div>
         </div>
       </div>

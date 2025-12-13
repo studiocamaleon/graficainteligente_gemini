@@ -88,6 +88,9 @@ export interface PresupuestoConRelaciones extends Presupuesto {
     nombre_fantasia?: string;
     email?: string;
     whatsapp?: string;
+    telefono?: string;
+    domicilio?: string;
+    direccion?: string;
   };
   vendedor?: {
     id: string;
@@ -100,6 +103,7 @@ export interface PresupuestoConRelaciones extends Presupuesto {
     estado: string;
   };
   items_count?: number;
+  items?: PresupuestoItem[];
   archivos_count?: number;
 }
 

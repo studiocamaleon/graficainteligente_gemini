@@ -84,7 +84,7 @@ export default function CrearPresupuesto() {
       tipo_item: item.tipo_item || 'producto_sistema',
       producto_id: item.producto_id || null,
       producto_nombre: item.producto_nombre,
-      producto_categoria: item.categoria,
+      producto_categoria: item.producto_categoria || item.categoria,
       configuracion: item.configuracion || {},
       cantidad: item.cantidad,
       precio_base: item.precio_base || 0,
@@ -97,7 +97,7 @@ export default function CrearPresupuesto() {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
-    setItems([...items, nuevoItem]);
+    setItems(prev => [...prev, nuevoItem]);
   };
 
   const handleAddItemPersonalizado = (item: {
@@ -127,16 +127,12 @@ export default function CrearPresupuesto() {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
-    setItems([...items, nuevoItem]);
+    setItems(prev => [...prev, nuevoItem]);
   };
 
   const handleEditItem = (id: string, updates: any) => {
-    setItems(items.map(item => {
+    setItems(prev => prev.map(item => {
       if (item.id === id) {
-        // Generate new description if needed? 
-        // Ideally we should pass description in updates if it changed.
-        // But if we only passed raw data, we might need to regenerate it here?
-        // For now assume updates contains what we need or we merge.
         return { ...item, ...updates };
       }
       return item;

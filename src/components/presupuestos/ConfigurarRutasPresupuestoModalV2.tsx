@@ -39,8 +39,10 @@ export function ConfigurarRutasPresupuestoModalV2({
 
   useEffect(() => {
     if (isOpen) {
-      // Filtrar solo items personalizados (con guión bajo como en BD)
-      const itemsPersonalizados = items.filter(item => item.tipo_item === 'item_personalizado');
+      // Filtrar solo items personalizados verdaderos (excluyendo servicios globales)
+      const itemsPersonalizados = items.filter(item =>
+        item.tipo_item === 'item_personalizado' && !item.configuracion?.es_servicio_global
+      );
 
       // Inicializar items con rutas vacías si no existen
       setItemsWithRoutes(
@@ -147,9 +149,8 @@ export function ConfigurarRutasPresupuestoModalV2({
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
             <div
-              className={`h-full transition-all duration-300 rounded-full ${
-                allConfigured ? 'bg-green-500' : 'bg-blue-500'
-              }`}
+              className={`h-full transition-all duration-300 rounded-full ${allConfigured ? 'bg-green-500' : 'bg-blue-500'
+                }`}
               style={{
                 width: `${totalItems > 0 ? (itemsConfigurados / totalItems) * 100 : 0}%`,
               }}

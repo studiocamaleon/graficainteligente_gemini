@@ -8,6 +8,7 @@ import { AsignarPrecioModal } from './AsignarPrecioModal';
 import { AplicarServicioMasivoModal } from '../orders/AplicarServicioMasivoModal';
 import { AsociarOrdenCopiadoModal } from '../orders/AsociarOrdenCopiadoModal';
 import type { PresupuestoItem, ItemPendienteCotizacion } from '../../types/presupuestos';
+import { Badge } from '../ui/Badge';
 
 interface PresupuestoItemsSectionProps {
   items: PresupuestoItem[];
@@ -23,7 +24,39 @@ interface PresupuestoItemsSectionProps {
   onAsignarPrecio: (itemId: string, precioUnitario: number) => Promise<boolean>;
 }
 
+// Helper to render config details
+// Helper to render config details
+const renderConfiguracion = (config: any) => {
+  if (!config) return null;
+
+  // Only render if we have services to show
+  const hasServices = (config.servicios_seleccionados && config.servicios_seleccionados.length > 0) ||
+    (config.acabados_seleccionados && config.acabados_seleccionados.length > 0);
+
+  if (!hasServices) return null;
+
+  return (
+    <div className="space-y-1 mt-0.5">
+      {/* Services Badges */}
+      <div className="flex flex-wrap gap-1 mt-1">
+        {config.servicios_seleccionados?.map((s: any, idx: number) => (
+          <Badge key={`srv-${idx}`} variant="blue" size="sm" className="text-[10px] px-1.5 h-auto py-0.5">
+            {s.nivel ? `${s.nombre} (${s.nivel})` : s.nombre}
+          </Badge>
+        ))}
+        {config.acabados_seleccionados?.map((a: any, idx: number) => (
+          <Badge key={`acb-${idx}`} variant="purple" size="sm" className="text-[10px] px-1.5 h-auto py-0.5">
+            {a.nombre}
+          </Badge>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 export function PresupuestoItemsSection({
+  // ... rest of component
+
   items,
   onAddItemSistema,
   onAddItemPersonalizado,
@@ -86,6 +119,7 @@ export function PresupuestoItemsSection({
 
     const descripcionDetallada = `Aplicado a ${selectedItemIds.size} items:\n${itemsList.join('\n')}`;
 
+    // 1. Create the new "Service" item (Billing Line)
     const nuevoItem = {
       id: `service-${Date.now()}-${Math.random()}`, // Temp ID
       producto_nombre: `[Servicio] ${servicio.nombre}${nivel ? ` - ${nivel.nombre}` : ''}`,
@@ -93,14 +127,42 @@ export function PresupuestoItemsSection({
       descripcion: descripcionDetallada,
       cantidad: 1,
       precio_unitario_final: precioTotalCalculado,
-      precio_total: precioTotalCalculado, // Assuming qty 1 for the service line itself
+      precio_total: precioTotalCalculado,
       tiempo_produccion_dias: 0,
       tipo_item: 'item_personalizado',
-      configuracion: {}
+      configuracion: {
+        es_servicio_global: true,
+        servicio_id: servicio.id,
+        nivel_id: nivel?.id,
+        tipo_impacto: 'precio_fijo'
+      }
     };
 
-    // Add to budget
-    onAddItemSistema(nuevoItem); // reusing system add or custom add
+    // Add service line to budget
+    onAddItemSistema(nuevoItem);
+
+    // 2. Update Target Items Configuration (So they generate routes with this service)
+    itemsAfectados.forEach(item => {
+      if (!item.id) return;
+
+      const currentConfig = item.configuracion || {};
+      const currentServices = currentConfig.servicios_seleccionados || [];
+
+      const newServiceEntry = {
+        servicio_id: servicio.id,
+        nombre: servicio.nombre,
+        nivel: nivel?.nombre,
+        tipo_impacto: 'precio_fijo' // Metadata useful for route generation
+      };
+
+      // Update item
+      onEditItem(item.id, {
+        configuracion: {
+          ...currentConfig,
+          servicios_seleccionados: [...currentServices, newServiceEntry]
+        }
+      });
+    });
 
     setSelectedItemIds(new Set());
     setShowMasivoModal(false);
@@ -393,13 +455,16 @@ export function PresupuestoItemsSection({
                       )}
                     </div>
 
+                    {/* Configuración y Badges de Servicios */}
+                    {renderConfiguracion(item.configuracion)}
+
                     {/* Descripción Breve */}
                     {item.descripcion ? (
-                      <p className="text-xs text-gray-500 truncate max-w-lg">
+                      <p className="text-xs text-gray-500 truncate max-w-lg mt-0.5">
                         {item.descripcion}
                       </p>
                     ) : (
-                      <p className="text-xs text-gray-300 italic">Sin descripción</p>
+                      <p className="text-xs text-gray-300 italic mt-0.5">Sin descripción</p>
                     )}
                   </div>
 

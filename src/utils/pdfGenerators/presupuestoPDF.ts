@@ -182,8 +182,8 @@ export async function generarPresupuestoPDF(
     const tableBody = items.map(item => [
       item.producto_nombre + (item.descripcion ? `\n${item.descripcion}` : ''),
       item.cantidad.toString(),
-      formatCurrency(item.precio_unitario_final),
-      formatCurrency(item.precio_total)
+      formatCurrency(item.precio_unitario_final || 0),
+      formatCurrency(item.precio_total || 0)
     ]);
 
     autoTable(doc, {
@@ -291,6 +291,12 @@ export async function generarPresupuestoPDF(
   doc.setTextColor(...COLORS.text);
   doc.text('Total', totalsX, yPosition + 2); // adjustment
   doc.text(formatCurrency(totales.total), pageWidth - margin, yPosition + 2, { align: 'right' });
+
+  // (+ IVA) Legend
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.setTextColor(...COLORS.secondaryText);
+  doc.text('(+ IVA)', pageWidth - margin, yPosition + 7, { align: 'right' });
 
   yPosition += 20;
 

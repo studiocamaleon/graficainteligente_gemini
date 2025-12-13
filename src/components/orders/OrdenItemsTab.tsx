@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, Dispatch, SetStateAction } from 'react';
 import { Plus, Trash2, Package, FileText, Printer, ChevronDown, ChevronUp, Calendar, Edit2 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -34,7 +34,7 @@ interface OrdenItem {
 
 interface OrdenItemsTabProps {
   items: OrdenItem[];
-  setItems: (items: OrdenItem[]) => void;
+  setItems: Dispatch<SetStateAction<OrdenItem[]>>;
   descuentoTotal: number;
   setDescuentoTotal: (descuento: number) => void;
   requiereFactura?: boolean;
@@ -222,12 +222,19 @@ export function OrdenItemsTab({
         nuevoItem.id = oldId;
       }
 
-      newItems[editingIndex] = nuevoItem;
-      setItems(newItems);
+      setItems(prev => {
+        const newItems = [...prev];
+        const oldId = prev[editingIndex].id;
+        if (oldId && !oldId.startsWith('temp-')) {
+          nuevoItem.id = oldId;
+        }
+        newItems[editingIndex] = nuevoItem;
+        return newItems;
+      });
       setEditingIndex(null);
       setItemToEdit(null);
     } else {
-      setItems([...items, nuevoItem]);
+      setItems(prev => [...prev, nuevoItem]);
     }
 
     setShowAddModal(false);

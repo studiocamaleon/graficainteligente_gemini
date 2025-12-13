@@ -299,7 +299,7 @@ export default function PresupuestoTracking() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-100">
-                  {presupuesto.items.map((item) => {
+                  {(presupuesto.items || []).map((item) => {
                     const configuracionFormateada = formatConfiguracionProducto(
                       item.configuracion,
                       item.producto_categoria
@@ -340,12 +340,15 @@ export default function PresupuestoTracking() {
               <div className="w-full md:w-1/2 lg:w-1/3 bg-gray-50 rounded-lg p-6 space-y-3">
                 <div className="flex justify-between text-sm text-gray-600">
                   <span>Subtotal</span>
-                  <span className="font-medium">{formatCurrency(presupuesto.items.reduce((sum, i) => sum + i.precio_total, 0))}</span>
+                  <span className="font-medium">{formatCurrency((presupuesto.items || []).reduce((sum, i) => sum + i.precio_total, 0))}</span>
                 </div>
                 {/* Add Tax/Discount rows here if available in data */}
                 <div className="pt-3 border-t border-gray-200 flex justify-between items-baseline">
                   <span className="text-base font-bold text-gray-900">Total</span>
-                  <span className="text-2xl font-bold text-gray-900 tabular-nums">{formatCurrency(presupuesto.total)}</span>
+                  <div className="text-right">
+                    <span className="text-2xl font-bold text-gray-900 tabular-nums block">{formatCurrency(presupuesto.total)}</span>
+                    <span className="text-xs text-gray-500 font-medium">(+ IVA)</span>
+                  </div>
                 </div>
               </div>
             </div>

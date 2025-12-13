@@ -58,7 +58,7 @@ export function ConvertirPresupuestoModal({
 
   // Contar items personalizados
   const itemsPersonalizadosArray = presupuesto.items?.filter(
-    (item) => item.tipo_item === 'item_personalizado'
+    (item) => item.tipo_item === 'item_personalizado' && !item.configuracion?.es_servicio_global
   ) || [];
 
   const itemsPersonalizados = itemsPersonalizadosArray.length;
