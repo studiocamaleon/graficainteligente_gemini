@@ -40,7 +40,7 @@ export function PresupuestoGeneralSection({
 
   // Obtener vendedores (admin, super_admin, vendedor)
   const vendedores = (teamMembers || []).filter((member) =>
-    ['vendedor', 'admin', 'super_admin'].includes(member.role)
+    ['vendedor', 'admin', 'super_admin', 'manager', 'operador_diseno'].includes(member.role)
   );
 
   const clienteOptions = (clients || []).map((client) => ({

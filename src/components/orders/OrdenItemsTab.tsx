@@ -61,6 +61,11 @@ export function OrdenItemsTab({
   const [ordenCopiadoEditando, setOrdenCopiadoEditando] = useState<any>(undefined);
   const [ordenesExpanded, setOrdenesExpanded] = useState<Record<string, boolean>>({});
 
+  // Edit State
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editingItemType, setEditingItemType] = useState<'catalogo' | 'personalizado'>('catalogo');
+  const [itemToEdit, setItemToEdit] = useState<any>(null);
+
   // Selección Múltiple
   const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
   const [showMasivoModal, setShowMasivoModal] = useState(false);
@@ -202,7 +207,29 @@ export function OrdenItemsTab({
       rutas_generadas: itemData.rutas_generadas || [], // Guardar rutas pregeneradas
     } as any;
 
-    setItems([...items, nuevoItem]);
+
+
+    if (editingIndex !== null) {
+      // Update existing
+      const newItems = [...items];
+      // Preserve ID if it wasn't temp, or use new temp. Ideally preserve ID.
+      // Actually, for consistency if we regenerate everything we might lose ID but it's likely better to keep the old ID if it exists?
+      // But the Wizard generates new routes causing ID mismatches if we are not careful?
+      // Let's keep the OLD ID if it wasn't temp, or keep temp ID. 
+      // Actually, safeguard:
+      const oldId = items[editingIndex].id;
+      if (oldId && !oldId.startsWith('temp-')) {
+        nuevoItem.id = oldId;
+      }
+
+      newItems[editingIndex] = nuevoItem;
+      setItems(newItems);
+      setEditingIndex(null);
+      setItemToEdit(null);
+    } else {
+      setItems([...items, nuevoItem]);
+    }
+
     setShowAddModal(false);
   };
 
@@ -235,8 +262,37 @@ export function OrdenItemsTab({
       },
     };
 
-    setItems([...items, nuevoItem]);
+
+
+    if (editingIndex !== null) {
+      const newItems = [...items];
+      const oldId = items[editingIndex].id;
+      if (oldId && !oldId.startsWith('temp-')) {
+        nuevoItem.id = oldId;
+      }
+      newItems[editingIndex] = nuevoItem;
+      setItems(newItems);
+      setEditingIndex(null);
+      setItemToEdit(null);
+    } else {
+      setItems([...items, nuevoItem]);
+    }
+
     setShowAddPersonalizadoModal(false);
+  };
+
+  const handleEditarItem = (index: number) => {
+    const item = items[index];
+    setEditingIndex(index);
+    setItemToEdit(item);
+
+    if (item.tipo_item === 'personalizado') {
+      setEditingItemType('personalizado');
+      setShowAddPersonalizadoModal(true);
+    } else {
+      setEditingItemType('catalogo');
+      setShowAddModal(true);
+    }
   };
 
   const handleEliminarItem = (index: number) => {
@@ -525,14 +581,27 @@ export function OrdenItemsTab({
       key: 'acciones',
       header: '',
       render: (_: OrdenItem, index: number) => (
-        <Button
-          variant="danger"
-          size="sm"
-          onClick={() => handleEliminarItem(index)}
-        >
-          <Trash2 className="w-4 h-4" />
-        </Button>
+        <div className="flex items-center justify-end gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleEditarItem(index)}
+            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-2"
+            title="Editar"
+          >
+            <Edit2 className="w-4 h-4" />
+          </Button>
+          <Button
+            variant="danger"
+            size="sm"
+            onClick={() => handleEliminarItem(index)}
+            title="Eliminar"
+          >
+            <Trash2 className="w-4 h-4" />
+          </Button>
+        </div>
       ),
+      width: '90px'
     },
   ].filter(col => !col.hidden);
 
@@ -556,12 +625,20 @@ export function OrdenItemsTab({
             </div>
           )}
           <div className="flex items-center gap-2">
-            <Button onClick={() => setShowAddModal(true)}>
+            <Button onClick={() => {
+              setEditingIndex(null);
+              setItemToEdit(null);
+              setShowAddModal(true);
+            }}>
               <Plus className="w-4 h-4" />
               Item de Catálogo
             </Button>
             <Button
-              onClick={() => setShowAddPersonalizadoModal(true)}
+              onClick={() => {
+                setEditingIndex(null);
+                setItemToEdit(null);
+                setShowAddPersonalizadoModal(true);
+              }}
               variant="outline"
               className="border-dashed"
             >
@@ -753,14 +830,26 @@ export function OrdenItemsTab({
 
       <UniversalAddItemWizard
         isOpen={showAddModal}
-        onClose={() => setShowAddModal(false)}
+        onClose={() => {
+          setShowAddModal(false);
+          setEditingIndex(null);
+          setItemToEdit(null);
+        }}
         onAgregar={handleAgregarItem}
+        initialData={itemToEdit}
+        isEditing={editingIndex !== null}
       />
 
       <AddItemPersonalizadoOrdenModal
         isOpen={showAddPersonalizadoModal}
-        onClose={() => setShowAddPersonalizadoModal(false)}
+        onClose={() => {
+          setShowAddPersonalizadoModal(false);
+          setEditingIndex(null);
+          setItemToEdit(null);
+        }}
         onAdd={handleAgregarItemPersonalizado}
+        initialData={itemToEdit}
+        isEditing={editingIndex !== null}
       />
 
       {

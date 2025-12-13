@@ -628,6 +628,7 @@ export function CreateOrderPage() {
           <OrdenGeneralSection
             clienteId={clienteId}
             setClienteId={setClienteId}
+            selectedClient={clienteSeleccionado}
             canalVenta={canalVenta}
             setCanalVenta={setCanalVenta}
             fechaEntrega={fechaEntrega}

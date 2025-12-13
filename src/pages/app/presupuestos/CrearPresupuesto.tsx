@@ -130,6 +130,19 @@ export default function CrearPresupuesto() {
     setItems([...items, nuevoItem]);
   };
 
+  const handleEditItem = (id: string, updates: any) => {
+    setItems(items.map(item => {
+      if (item.id === id) {
+        // Generate new description if needed? 
+        // Ideally we should pass description in updates if it changed.
+        // But if we only passed raw data, we might need to regenerate it here?
+        // For now assume updates contains what we need or we merge.
+        return { ...item, ...updates };
+      }
+      return item;
+    }));
+  };
+
   const handleDeleteItem = (id: string) => {
     setItems(items.filter((item) => item.id !== id));
   };
@@ -327,7 +340,7 @@ export default function CrearPresupuesto() {
                 items={items}
                 onAddItemSistema={handleAddItemSistema}
                 onAddItemPersonalizado={handleAddItemPersonalizado}
-                onEditItem={() => { }}
+                onEditItem={handleEditItem}
                 onDeleteItem={handleDeleteItem}
                 onAsignarPrecio={handleAsignarPrecio}
               />

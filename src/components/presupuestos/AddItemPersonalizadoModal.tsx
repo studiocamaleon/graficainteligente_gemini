@@ -15,12 +15,16 @@ interface AddItemPersonalizadoModalProps {
     precio_unitario_final?: number | null;
     precio_unitario_final?: number | null;
   }) => void;
+  initialData?: any;
+  isEditing?: boolean;
 }
 
 export function AddItemPersonalizadoModal({
   isOpen,
   onClose,
   onAdd,
+  initialData,
+  isEditing = false,
 }: AddItemPersonalizadoModalProps) {
   const [formData, setFormData] = useState({
     producto_nombre: '',
@@ -33,18 +37,30 @@ export function AddItemPersonalizadoModal({
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
+    console.log('[BudgetPersonalizadoModal] isOpen:', isOpen, 'initialData:', initialData, 'isEditing:', isEditing);
     if (isOpen) {
-      // Reset form cuando se abre
-      setFormData({
-        producto_nombre: '',
-        descripcion: '',
-        cantidad: 1,
-        precio_unitario_final: 0,
-      });
-      setCotizarDespues(false);
+      if (initialData && isEditing) {
+        console.log('[BudgetPersonalizadoModal] Hydrating...');
+        setFormData({
+          producto_nombre: initialData.producto_nombre || '',
+          descripcion: initialData.descripcion || '',
+          cantidad: initialData.cantidad || 1,
+          precio_unitario_final: initialData.precio_unitario_final || 0,
+        });
+        setCotizarDespues(initialData.precio_unitario_final === null);
+      } else {
+        // Reset form cuando se abre
+        setFormData({
+          producto_nombre: '',
+          descripcion: '',
+          cantidad: 1,
+          precio_unitario_final: 0,
+        });
+        setCotizarDespues(false);
+      }
       setErrors({});
     }
-  }, [isOpen]);
+  }, [isOpen, initialData, isEditing]);
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -111,7 +127,7 @@ export function AddItemPersonalizadoModal({
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title="Agregar Item Personalizado"
+      title={isEditing ? "Editar Item Personalizado" : "Agregar Item Personalizado"}
       size="lg"
     >
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -282,7 +298,7 @@ export function AddItemPersonalizadoModal({
           <Button type="button" variant="secondary" onClick={handleClose}>
             Cancelar
           </Button>
-          <Button type="submit">Agregar Item</Button>
+          <Button type="submit">{isEditing ? 'Guardar Cambios' : 'Agregar Item'}</Button>
         </div>
       </form>
     </Modal>

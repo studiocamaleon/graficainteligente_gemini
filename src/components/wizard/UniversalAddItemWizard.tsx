@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
-import { X, ChevronRight, ChevronLeft, Loader } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Loader } from 'lucide-react';
 import { UniversalProductSearchStep } from './steps/UniversalProductSearchStep';
 import { ConfigurationStep, type SelectedConfiguration } from './steps/ConfigurationStep';
 import { ServicesAndFinishingsStep, type SelectedService, type SelectedFinishing } from './steps/ServicesAndFinishingsStep';
@@ -15,6 +15,8 @@ interface UniversalAddItemWizardProps {
   isOpen: boolean;
   onClose: () => void;
   onAgregar: (itemData: any) => Promise<void>;
+  initialData?: any;
+  isEditing?: boolean;
 }
 
 type WizardStep = 'search' | 'configuration' | 'services' | 'summary';
@@ -26,7 +28,7 @@ const stepTitles: Record<WizardStep, string> = {
   summary: 'Resumen'
 };
 
-export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: UniversalAddItemWizardProps) {
+export function UniversalAddItemWizard({ isOpen, onClose, onAgregar, initialData, isEditing = false }: UniversalAddItemWizardProps) {
   const [currentStep, setCurrentStep] = useState<WizardStep>('search');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProduct, setSelectedProduct] = useState<UniversalProductSearchResult | null>(null);
@@ -63,6 +65,8 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
   const [precioAcabados, setPrecioAcabados] = useState(0);
   const [precioTotal, setPrecioTotal] = useState<number | null>(null);
 
+  /* Removed Debug State */
+
   // Cargar configuración del producto
   const { config, isLoading: loadingConfig } = useProductConfiguration(
     selectedProduct?.id || null,
@@ -85,7 +89,7 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
 
   // Inicializar configuración cuando se carga el config
   useEffect(() => {
-    if (!config) return;
+    if (!config || isEditing) return;
 
     const newConfig: Partial<SelectedConfiguration> = {};
 
@@ -123,6 +127,149 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
 
     setSelectedConfig(prev => ({ ...prev, ...newConfig }));
   }, [config]);
+
+  // Hydrate from initialData for Editing
+  useEffect(() => {
+    console.log('[UniversalWizard] Checking hydration. isOpen:', isOpen, 'isEditing:', isEditing, 'initialData:', !!initialData);
+
+    if (isOpen && initialData) {
+      console.log('[UniversalWizard] Hydrating START. Product ID:', initialData.producto_id);
+
+      // Force step to configuration when editing
+      if (isEditing) {
+        setCurrentStep('configuration');
+      }
+
+      // 1. Set Product if different or missing
+      if (!selectedProduct || selectedProduct.id !== initialData.producto_id) {
+        const product: UniversalProductSearchResult = {
+          id: initialData.producto_id,
+          nombre: initialData.producto_nombre,
+          categoria: initialData.categoria || initialData.producto_categoria,
+          categoria_id: initialData.categoria_id,
+          precio_base: 0,
+          permite_personalizacion: true
+        };
+        console.log('[UniversalWizard] Setting selectedProduct:', product);
+        setSelectedProduct(product);
+      }
+    }
+  }, [initialData, isOpen, isEditing]); // Removed selectedProduct from dependency to avoid loop, logic handles it
+
+  // Apply initialData configuration once config is loaded
+  useEffect(() => {
+    if (initialData && config && isOpen) {
+      console.log('[UniversalWizard] Applying initial config vs loaded config');
+      const savedConfig = initialData.configuracion;
+      console.log('[UniversalWizard] Saved Config Keys:', Object.keys(savedConfig));
+
+      // Map saved config back to SelectedConfiguration state
+      const restoredConfig: SelectedConfiguration = {
+        lineas_medidas: savedConfig.lineas_medidas || [],
+        cantidad: initialData.cantidad || 1,
+        medida_ancho: savedConfig.medida_ancho || savedConfig.ancho || null,
+        medida_alto: savedConfig.medida_alto || savedConfig.alto || null,
+        medida_mt2: savedConfig.medida_mt2 || null, // Ensure this is mapped
+        material_id: savedConfig.material_id || null,
+        material_nombre: savedConfig.material_nombre || null,
+        variante_id: savedConfig.variante_id || null,
+        variante_nombre: savedConfig.variante_nombre || null,
+        espesor: savedConfig.espesor || null,
+        unidad_espesor: savedConfig.unidad_espesor || null,
+        gramaje: savedConfig.gramaje || null,
+        tecnologia_id: savedConfig.tecnologia_id || null,
+        tecnologia_nombre: savedConfig.tecnologia_nombre || null,
+        tinta: savedConfig.tinta || null,
+        tinta_nombre: savedConfig.tinta_nombre || null,
+        cara_impresa: savedConfig.cara_impresa || null,
+        tipo_copia: savedConfig.tipo_copia || null,
+        color: savedConfig.color || null,
+        marca: savedConfig.marca || null,
+        usa_material_catalogo: savedConfig.usa_material_catalogo ?? false // Default false
+      };
+
+      console.log('[UniversalWizard] Restored base config (Partial):', restoredConfig);
+
+      // DIAGNOSTICS
+      if (config.tecnologias) {
+        const foundTec = config.tecnologias.find(t => t.tecnologia_id === restoredConfig.tecnologia_id);
+        console.log('[UniversalWizard] Technologies available:', config.tecnologias);
+        console.log('[UniversalWizard] Resotred Tec ID:', restoredConfig.tecnologia_id);
+        console.log('[UniversalWizard] Found in config?', !!foundTec);
+      }
+      if (restoredConfig.tecnologia_id && config.tecnologias && !config.tecnologias.some(t => t.tecnologia_id === restoredConfig.tecnologia_id)) {
+        console.warn('[UniversalWizard] WARNING: Restored tecnologia_id not found in current config options!');
+        // Maybe it's because the ID in config.tecnologias is 'id' or 'tecnologia_id'?
+        // Interface says: { id: string, tecnologia_id: string, ... }
+        // savedConfig.tecnologia_id should match t.tecnologia_id.
+      }
+
+      // Handle Services and Finishings for lines
+      const itemServicios = savedConfig.servicios_seleccionados ? savedConfig.servicios_seleccionados.map((s: any) => ({
+        servicio_id: s.servicio_id,
+        servicio_nombre: s.nombre || s.servicio_nombre,
+        nivel_id: s.nivel_id || null,
+        nivel_nombre: s.nivel || s.nivel_nombre,
+        tipo_impacto: 'precio_fijo', // Safe default
+        valor_porcentaje: 0,
+        valor_monto: 0,
+        cantidad: s.cantidad || 1
+      })) : [];
+
+      const itemAcabados = savedConfig.acabados_seleccionados ? savedConfig.acabados_seleccionados.map((a: any) => ({
+        acabado_id: a.acabado_id,
+        acabado_nombre: a.nombre || a.acabado_nombre,
+        nivel_id: a.nivel_id || null,
+        nivel_nombre: a.nivel || a.nivel_nombre,
+        tipo_impacto: 'precio_fijo',
+        valor_porcentaje: 0,
+        valor_monto: 0,
+        cantidad: a.cantidad || 1
+      })) : [];
+
+      // Special handling for Multi-line products that were saved as single items
+      if (config.permite_multiples_lineas) {
+        console.log('[UniversalWizard] Product allows multi-lines. Checking lineas_medidas...');
+        if (!restoredConfig.lineas_medidas || restoredConfig.lineas_medidas.length === 0) {
+          console.log('[UniversalWizard] No lines found (probably single item edit). constructing line from config.');
+          // Construct a line from the top-level dimenions
+          if (restoredConfig.medida_ancho) {
+            restoredConfig.lineas_medidas = [{
+              id: `line-${Date.now()}`,
+              ancho: restoredConfig.medida_ancho,
+              alto: restoredConfig.medida_alto || 0,
+              ancho_seleccionado: restoredConfig.medida_ancho,
+              metros_lineales: restoredConfig.medida_alto, // For PL/GF
+              mt2_calculado: restoredConfig.medida_mt2 || savedConfig.mt2_total || 0,
+              cantidad: initialData.cantidad || 1,
+
+              // IMPORTANT: Map services/finishings to the line so the table can show/edit them
+              servicios: itemServicios,
+              acabados: itemAcabados,
+
+              // Pricing (optional for hydration but good for table)
+              precio_unitario_final: initialData.precio_unitario_final,
+              precio_total_linea: initialData.precio_total,
+            }];
+          }
+        }
+      }
+
+      /* Removed debug storage */
+
+      setSelectedConfig(prev => {
+        const next = { ...prev, ...restoredConfig };
+        console.log('[UniversalWizard] Setting final selectedConfig:', next);
+        return next;
+      });
+
+      // Restore global Services/Finishings state (for the Services Step)
+      // Note: For multi-line, services are usually per-line, but we also track them globally for the wizard state?
+      // The wizard seems to store them in 'selectedServicios' state separately.
+      if (itemServicios.length > 0) setSelectedServicios(itemServicios);
+      if (itemAcabados.length > 0) setSelectedAcabados(itemAcabados);
+    }
+  }, [config, initialData, isOpen]);
 
   const isConfigurationComplete = (): boolean => {
     console.log('[UniversalWizard] === Validando configuración completa ===');
@@ -584,10 +731,10 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
             <div key={step} className="flex items-center">
               <div
                 className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium transition-colors ${index === currentIndex
-                    ? 'bg-blue-600 text-white'
-                    : index < currentIndex
-                      ? 'bg-green-500 text-white'
-                      : 'bg-gray-200 text-gray-600'
+                  ? 'bg-blue-600 text-white'
+                  : index < currentIndex
+                    ? 'bg-green-500 text-white'
+                    : 'bg-gray-200 text-gray-600'
                   }`}
               >
                 {index + 1}
@@ -620,8 +767,8 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title="Agregar Producto"
-      size="xl"
+      title={isEditing ? 'Editar Item' : stepTitles[currentStep]}
+    // Removed maxWidth as it is not supported
     >
       <div className="flex flex-col h-full">
         {/* Step Indicator */}
@@ -655,6 +802,7 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
                 selectedServicios={selectedServicios}
                 selectedAcabados={selectedAcabados}
                 onConfigChange={handleConfigChange}
+                isEditing={isEditing}
               />
             ) : null
           )}
@@ -723,7 +871,7 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar }: Universal
                 disabled={!canProceedToNext() || isSubmitting}
                 className="bg-green-600 hover:bg-green-700"
               >
-                {isSubmitting ? 'Agregando...' : 'Agregar a la Orden'}
+                {isSubmitting ? (isEditing ? 'Guardando...' : 'Agregando...') : (isEditing ? 'Guardar Cambios' : 'Agregar a la Orden')}
               </Button>
             )}
           </div>

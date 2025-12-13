@@ -13,6 +13,7 @@ interface ConfigurationStepProps {
   selectedServicios?: SelectedService[];
   selectedAcabados?: SelectedFinishing[];
   onConfigChange: (config: Partial<SelectedConfiguration>) => void;
+  isEditing?: boolean;
 }
 
 // Interface para una línea de medida/cantidad individual
@@ -138,7 +139,8 @@ export function ConfigurationStep({
   selectedConfig,
   selectedServicios = [],
   selectedAcabados = [],
-  onConfigChange
+  onConfigChange,
+  isEditing = false
 }: ConfigurationStepProps) {
   const [localConfig, setLocalConfig] = useState(selectedConfig);
 
@@ -166,6 +168,9 @@ export function ConfigurationStep({
 
   // Auto-seleccionar opciones únicas al cargar
   useEffect(() => {
+    // If we are editing, DO NOT auto-select defaults as it might overwrite hydrated data with stale localConfig
+    if (isEditing) return;
+
     const autoSelections: Partial<SelectedConfiguration> = {};
 
     // Auto-seleccionar medida única
@@ -371,8 +376,8 @@ export function ConfigurationStep({
                     <Card
                       key={`${medida.ancho}x${medida.alto}`}
                       className={`p-4 cursor-pointer transition-all ${isSelected
-                          ? 'ring-2 ring-blue-600 bg-blue-50 border-blue-600'
-                          : 'hover:border-blue-300 hover:shadow-md'
+                        ? 'ring-2 ring-blue-600 bg-blue-50 border-blue-600'
+                        : 'hover:border-blue-300 hover:shadow-md'
                         }`}
                       onClick={() => handleChange({ medida_ancho: medida.ancho, medida_alto: medida.alto })}
                     >
@@ -409,8 +414,8 @@ export function ConfigurationStep({
             <div className="grid grid-cols-2 gap-4">
               <Card
                 className={`p-4 cursor-pointer transition-all ${localConfig.usa_material_catalogo === true
-                    ? 'ring-2 ring-blue-600 bg-blue-50 border-blue-600'
-                    : 'hover:border-blue-300 hover:shadow-md'
+                  ? 'ring-2 ring-blue-600 bg-blue-50 border-blue-600'
+                  : 'hover:border-blue-300 hover:shadow-md'
                   }`}
                 onClick={() => handleChange({
                   usa_material_catalogo: true,
@@ -431,8 +436,8 @@ export function ConfigurationStep({
 
               <Card
                 className={`p-4 cursor-pointer transition-all ${localConfig.usa_material_catalogo === false
-                    ? 'ring-2 ring-blue-600 bg-blue-50 border-blue-600'
-                    : 'hover:border-blue-300 hover:shadow-md'
+                  ? 'ring-2 ring-blue-600 bg-blue-50 border-blue-600'
+                  : 'hover:border-blue-300 hover:shadow-md'
                   }`}
                 onClick={() => handleChange({
                   usa_material_catalogo: false,
@@ -535,8 +540,8 @@ export function ConfigurationStep({
                     <Card
                       key={variante}
                       className={`p-4 cursor-pointer transition-all ${isSelected
-                          ? 'ring-2 ring-blue-600 bg-blue-50 border-blue-600'
-                          : 'hover:border-blue-300 hover:shadow-md'
+                        ? 'ring-2 ring-blue-600 bg-blue-50 border-blue-600'
+                        : 'hover:border-blue-300 hover:shadow-md'
                         }`}
                       onClick={() => handleVarianteSelection(variante)}
                     >
@@ -574,8 +579,8 @@ export function ConfigurationStep({
                       <Card
                         key={espesor}
                         className={`p-4 cursor-pointer transition-all ${isSelected
-                            ? 'ring-2 ring-blue-600 bg-blue-50 border-blue-600'
-                            : 'hover:border-blue-300 hover:shadow-md'
+                          ? 'ring-2 ring-blue-600 bg-blue-50 border-blue-600'
+                          : 'hover:border-blue-300 hover:shadow-md'
                           }`}
                         onClick={() => handleEspesorSelection(espesor)}
                       >
@@ -642,8 +647,8 @@ export function ConfigurationStep({
                   <Card
                     key={material.id}
                     className={`p-4 cursor-pointer transition-all ${isSelected
-                        ? 'ring-2 ring-blue-600 bg-blue-50 border-blue-600'
-                        : 'hover:border-blue-300 hover:shadow-md'
+                      ? 'ring-2 ring-blue-600 bg-blue-50 border-blue-600'
+                      : 'hover:border-blue-300 hover:shadow-md'
                       }`}
                     onClick={() => {
                       handleChange({
@@ -704,8 +709,8 @@ export function ConfigurationStep({
                   <Card
                     key={material.id}
                     className={`p-4 cursor-pointer transition-all ${isSelected
-                        ? 'ring-2 ring-blue-600 bg-blue-50 border-blue-600'
-                        : 'hover:border-blue-300 hover:shadow-md'
+                      ? 'ring-2 ring-blue-600 bg-blue-50 border-blue-600'
+                      : 'hover:border-blue-300 hover:shadow-md'
                       }`}
                     onClick={() => {
                       handleChange({
@@ -763,8 +768,8 @@ export function ConfigurationStep({
                       <Card
                         key={tec.tecnologia_id}
                         className={`p-4 cursor-pointer transition-all ${isSelected
-                            ? 'ring-2 ring-blue-600 bg-blue-50 border-blue-600'
-                            : 'hover:border-blue-300 hover:shadow-md'
+                          ? 'ring-2 ring-blue-600 bg-blue-50 border-blue-600'
+                          : 'hover:border-blue-300 hover:shadow-md'
                           }`}
                         onClick={() => {
                           handleChange({
@@ -815,8 +820,8 @@ export function ConfigurationStep({
                         <Card
                           key={tinta}
                           className={`p-4 cursor-pointer transition-all ${isSelected
-                              ? 'ring-2 ring-blue-600 bg-blue-50 border-blue-600'
-                              : 'hover:border-blue-300 hover:shadow-md'
+                            ? 'ring-2 ring-blue-600 bg-blue-50 border-blue-600'
+                            : 'hover:border-blue-300 hover:shadow-md'
                             }`}
                           onClick={() => {
                             handleChange({
@@ -916,8 +921,8 @@ export function ConfigurationStep({
             {config.caras_impresas.includes('solo_frente') && (
               <Card
                 className={`p-4 cursor-pointer transition-all ${localConfig.cara_impresa === 'solo_frente'
-                    ? 'ring-2 ring-blue-600 bg-blue-50 border-blue-600'
-                    : 'hover:border-blue-300 hover:shadow-md'
+                  ? 'ring-2 ring-blue-600 bg-blue-50 border-blue-600'
+                  : 'hover:border-blue-300 hover:shadow-md'
                   }`}
                 onClick={() => handleChange({ cara_impresa: 'solo_frente' })}
               >
@@ -936,8 +941,8 @@ export function ConfigurationStep({
             {config.caras_impresas.includes('frente_y_dorso') && (
               <Card
                 className={`p-4 cursor-pointer transition-all ${localConfig.cara_impresa === 'frente_y_dorso'
-                    ? 'ring-2 ring-blue-600 bg-blue-50 border-blue-600'
-                    : 'hover:border-blue-300 hover:shadow-md'
+                  ? 'ring-2 ring-blue-600 bg-blue-50 border-blue-600'
+                  : 'hover:border-blue-300 hover:shadow-md'
                   }`}
                 onClick={() => handleChange({ cara_impresa: 'frente_y_dorso' })}
               >
@@ -968,8 +973,8 @@ export function ConfigurationStep({
             {config.tipo_copia.includes('duplicado') && (
               <Card
                 className={`p-4 cursor-pointer transition-all ${localConfig.tipo_copia === 'duplicado'
-                    ? 'border-2 border-blue-600 bg-blue-50'
-                    : 'border border-gray-200 hover:border-blue-300'
+                  ? 'border-2 border-blue-600 bg-blue-50'
+                  : 'border border-gray-200 hover:border-blue-300'
                   }`}
                 onClick={() => handleChange({ tipo_copia: 'duplicado' })}
               >
@@ -986,8 +991,8 @@ export function ConfigurationStep({
             {config.tipo_copia.includes('triplicado') && (
               <Card
                 className={`p-4 cursor-pointer transition-all ${localConfig.tipo_copia === 'triplicado'
-                    ? 'border-2 border-blue-600 bg-blue-50'
-                    : 'border border-gray-200 hover:border-blue-300'
+                  ? 'border-2 border-blue-600 bg-blue-50'
+                  : 'border border-gray-200 hover:border-blue-300'
                   }`}
                 onClick={() => handleChange({ tipo_copia: 'triplicado' })}
               >
@@ -1004,8 +1009,8 @@ export function ConfigurationStep({
             {config.tipo_copia.includes('cuadruplicado') && (
               <Card
                 className={`p-4 cursor-pointer transition-all ${localConfig.tipo_copia === 'cuadruplicado'
-                    ? 'border-2 border-blue-600 bg-blue-50'
-                    : 'border border-gray-200 hover:border-blue-300'
+                  ? 'border-2 border-blue-600 bg-blue-50'
+                  : 'border border-gray-200 hover:border-blue-300'
                   }`}
                 onClick={() => handleChange({ tipo_copia: 'cuadruplicado' })}
               >

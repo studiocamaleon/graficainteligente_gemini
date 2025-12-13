@@ -3,12 +3,14 @@ import { MessageSquare, Globe, Store, User, Smartphone, Truck } from 'lucide-rea
 import { SearchableSelect } from '../ui/SearchableSelect';
 import { DatePicker } from '../ui/DatePicker';
 import { Tooltip } from '../ui/Tooltip';
+
 import { useClients } from '../../hooks/useClients';
-import type { CanalVenta } from '../../types/database';
+import type { CanalVenta, Client } from '../../types/database';
 
 interface OrdenGeneralSectionProps {
   clienteId: string;
   setClienteId: (id: string) => void;
+  selectedClient?: Client;
   canalVenta: CanalVenta;
   setCanalVenta: (canal: CanalVenta) => void;
   fechaEntrega: string;
@@ -26,6 +28,7 @@ interface OrdenGeneralSectionProps {
 export function OrdenGeneralSection({
   clienteId,
   setClienteId,
+  selectedClient,
   canalVenta,
   setCanalVenta,
   fechaEntrega,
@@ -54,6 +57,15 @@ export function OrdenGeneralSection({
     label: c.nombre_fantasia || c.razon_social,
     subtitle: c.nombre_fantasia ? c.razon_social : undefined,
   }));
+
+  // Ensure selected client is always in options (for display purposes)
+  if (selectedClient && !clientesOptions.find(o => o.value === selectedClient.id)) {
+    clientesOptions.unshift({
+      value: selectedClient.id,
+      label: selectedClient.nombre_fantasia || selectedClient.razon_social,
+      subtitle: selectedClient.nombre_fantasia ? selectedClient.razon_social : undefined,
+    });
+  }
 
   return (
     <div className="p-6 space-y-6">

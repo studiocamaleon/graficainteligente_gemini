@@ -7,6 +7,7 @@ import { useMediosCobro } from '../../hooks/useMediosCobro';
 import { useConfirmDialog } from '../../hooks/useConfirmDialog';
 import { formatDateDisplay } from '../../utils/dates';
 import { PaymentMethodIcon } from './PaymentMethodIcon';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 import type { CentroCopiadoOrdenResumida } from '../../types/database';
 
 interface Totales {
@@ -49,7 +50,7 @@ export function OrdenPagosTab({
   ordenCopiado,
 }: OrdenPagosTabProps) {
   const { mediosCobro } = useMediosCobro();
-  const { showConfirm } = useConfirmDialog();
+  const { showConfirm, dialogState, closeDialog, handleConfirm, isLoading: isConfirmLoading } = useConfirmDialog();
 
   const totalPagado = pagos.reduce((sum, p) => sum + p.monto, 0);
   const saldoPendiente = totales.total - totalPagado;
@@ -283,6 +284,18 @@ export function OrdenPagosTab({
           )}
         </>
       )}
+
+      <ConfirmDialog
+        isOpen={dialogState.isOpen}
+        onClose={closeDialog}
+        onConfirm={handleConfirm}
+        title={dialogState.title}
+        message={dialogState.message}
+        confirmText={dialogState.confirmText}
+        cancelText={dialogState.cancelText}
+        variant={dialogState.variant}
+        isLoading={isConfirmLoading}
+      />
     </div>
   );
 }

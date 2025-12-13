@@ -170,6 +170,25 @@ export default function EditarPresupuesto() {
     }
   };
 
+  const handleEditItem = async (id: string, updates: any) => {
+    // Optimistic update locally
+    const oldItems = [...items];
+    setItems(items.map(i => i.id === id ? { ...i, ...updates } : i));
+
+    // Update in DB
+    // Note: updateItem from hook handles DB update
+    const success = await updateItem(id, updates);
+    if (!success) {
+      // Revert on failure
+      setItems(oldItems);
+      setErrorMessage('Error al actualizar el item');
+    } else {
+      // Recalculate totals if price changed
+      const updatedList = items.map(i => i.id === id ? { ...i, ...updates } : i);
+      await actualizarTotales(updatedList);
+    }
+  };
+
   const handleDeleteItem = async (itemId: string) => {
     const success = await deleteItemDB(itemId);
     if (success) {
@@ -395,7 +414,7 @@ export default function EditarPresupuesto() {
                 items={items}
                 onAddItemSistema={handleAddItemSistema}
                 onAddItemPersonalizado={handleAddItemPersonalizado}
-                onEditItem={() => { }}
+                onEditItem={handleEditItem}
                 onDeleteItem={handleDeleteItem}
                 onAsignarPrecio={handleAsignarPrecio}
               />
