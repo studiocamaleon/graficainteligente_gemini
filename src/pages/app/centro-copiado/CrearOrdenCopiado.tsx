@@ -76,9 +76,10 @@ export function CrearOrdenCopiado() {
   const { clients, loading: loadingClients } = useClients({
     page: 1,
     itemsPerPage: 1000,
+    itemsPerPage: 1000,
     searchTerm
   });
-  const { createOrden } = useCentroCopiadoOrdenes();
+  const { createOrden } = useCentroCopiadoOrdenes({ enabled: false });
   const { createItemImpresion } = useCentroCopiadoOrdenItems();
   const { asociarConOrden, limpiarTemporales, updateArchivo } = useCentroCopiadoArchivos({ ordenTemporalId });
   const { createPago } = useCentroCopiadoOrdenPagos();

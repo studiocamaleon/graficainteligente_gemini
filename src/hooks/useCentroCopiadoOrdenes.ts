@@ -58,10 +58,11 @@ export function useCentroCopiadoOrdenes(params: UseCentroCopiadoOrdenesParams = 
     fechaHasta = null,
     page = 1,
     itemsPerPage = 25,
+    enabled = true,
   } = params;
 
   const fetchOrdenes = useCallback(async () => {
-    if (!profile?.company_id) return;
+    if (!profile?.company_id || !enabled) return;
 
     try {
       setLoading(true);
@@ -155,12 +156,13 @@ export function useCentroCopiadoOrdenes(params: UseCentroCopiadoOrdenesParams = 
     profile?.company_id,
     searchTerm,
     estado,
-    estados, // Add logic to deps
+    Array.isArray(estados) ? estados.join(',') : '', // Stabilize array dependency
     clienteId,
     fechaDesde,
     fechaHasta,
     page,
     itemsPerPage,
+    enabled,
   ]);
 
   useEffect(() => {

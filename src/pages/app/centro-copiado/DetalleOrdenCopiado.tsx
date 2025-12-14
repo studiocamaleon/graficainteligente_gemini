@@ -35,7 +35,7 @@ export function DetalleOrdenCopiado() {
   const [pagoEditando, setPagoEditando] = useState<any>(null);
 
   const { orden, loading, error, refetch, updateOrden } = useCentroCopiadoOrden(id);
-  const { updateEstado } = useCentroCopiadoOrdenes();
+  const { updateEstado } = useCentroCopiadoOrdenes({ enabled: false });
   const [updating, setUpdating] = useState(false);
 
   // ... (previous code)
