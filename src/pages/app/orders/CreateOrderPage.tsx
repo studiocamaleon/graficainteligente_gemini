@@ -346,7 +346,7 @@ export function CreateOrderPage() {
     const ordenData = {
       cliente_id: clienteId,
       canal_venta: canalVenta,
-      fecha_estimada_entrega: fechaEntrega,
+      fecha_estimada_entrega: fechaEntrega ? `${fechaEntrega}T12:00:00` : null,
       notas_internas: notasInternas || undefined,
       // Totales calculados
       subtotal: totales.subtotal,
@@ -455,7 +455,7 @@ export function CreateOrderPage() {
                   cliente_id: clienteId,
                   origen: canalVenta, // Heredar canal de venta de la OT
                   orden_trabajo_id: result.id,
-                  fecha_entrega_estimada: oc.fecha_entrega_estimada ? `${oc.fecha_entrega_estimada}T00:00:00` : undefined,
+                  fecha_entrega_estimada: oc.fecha_entrega_estimada ? `${oc.fecha_entrega_estimada}T12:00:00` : undefined,
                   observaciones: oc.observaciones || undefined,
                   requiere_factura: requiereFactura, // Propagar estado de facturación de la OT
                 });

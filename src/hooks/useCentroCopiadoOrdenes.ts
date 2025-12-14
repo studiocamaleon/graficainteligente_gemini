@@ -11,6 +11,7 @@ import type {
 interface UseCentroCopiadoOrdenesParams {
   searchTerm?: string;
   estado?: EstadoOrdenCopiado | null;
+  estados?: EstadoOrdenCopiado[];
   clienteId?: string | null;
   fechaDesde?: string | null;
   fechaHasta?: string | null;
@@ -51,6 +52,7 @@ export function useCentroCopiadoOrdenes(params: UseCentroCopiadoOrdenesParams = 
   const {
     searchTerm = '',
     estado = null,
+    estados = [],
     clienteId = null,
     fechaDesde = null,
     fechaHasta = null,
@@ -81,6 +83,10 @@ export function useCentroCopiadoOrdenes(params: UseCentroCopiadoOrdenesParams = 
         query = query.eq('estado', estado);
       }
 
+      if (estados && estados.length > 0) {
+        query = query.in('estado', estados);
+      }
+
       if (clienteId) {
         query = query.eq('cliente_id', clienteId);
       }
@@ -94,9 +100,22 @@ export function useCentroCopiadoOrdenes(params: UseCentroCopiadoOrdenesParams = 
       }
 
       if (searchTerm) {
-        query = query.or(
-          `numero_orden.ilike.%${searchTerm}%,observaciones.ilike.%${searchTerm}%`
-        );
+        // First find clients matching the search term
+        const { data: matchingClients } = await supabase
+          .from('clients')
+          .select('id')
+          .ilike('nombre_fantasia', `%${searchTerm}%`)
+          .limit(20);
+
+        const clientIds = matchingClients?.map((c) => c.id) || [];
+
+        let orCondition = `numero_orden.ilike.%${searchTerm}%,observaciones.ilike.%${searchTerm}%`;
+
+        if (clientIds.length > 0) {
+          orCondition += `,cliente_id.in.(${clientIds.join(',')})`;
+        }
+
+        query = query.or(orCondition);
       }
 
       const from = (page - 1) * itemsPerPage;
@@ -136,6 +155,7 @@ export function useCentroCopiadoOrdenes(params: UseCentroCopiadoOrdenesParams = 
     profile?.company_id,
     searchTerm,
     estado,
+    estados, // Add logic to deps
     clienteId,
     fechaDesde,
     fechaHasta,

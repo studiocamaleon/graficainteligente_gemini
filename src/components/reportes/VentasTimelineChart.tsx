@@ -120,11 +120,17 @@ export function VentasTimelineChart({ data, loading }: VentasTimelineChartProps)
 
         {/* Etiquetas de fecha (abajo) */}
         <div className="absolute left-24 right-16 bottom-0 flex items-center justify-center gap-2 text-xs text-gray-600">
-          {data.map((item, index) => (
-            <span key={index} className="flex-1 text-center">
-              {new Date(item.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' })}
-            </span>
-          ))}
+          {data.map((item, index) => {
+            // Fix: Parse manually to avoid UTC conversion shift
+            const [year, month, day] = item.fecha.split('-').map(Number);
+            const date = new Date(year, month - 1, day);
+
+            return (
+              <span key={index} className="flex-1 text-center">
+                {date.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' })}
+              </span>
+            )
+          })}
         </div>
       </div>
     </div>

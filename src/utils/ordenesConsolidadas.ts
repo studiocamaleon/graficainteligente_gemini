@@ -40,16 +40,16 @@ export function calcularTotalesConsolidados(
   totalOC: number,
   aplicarIVA: boolean = false
 ): TotalesConsolidados {
-  const subtotalTotal = subtotalOT + totalOC;
-  const subtotalConDescuentos = subtotalTotal - descuentosOT;
-  const iva = aplicarIVA ? subtotalConDescuentos * 0.21 : 0;
-  const totalFinal = subtotalConDescuentos + iva;
+  const subtotalTotal = Number((subtotalOT + totalOC).toFixed(2));
+  const subtotalConDescuentos = Number((subtotalTotal - descuentosOT).toFixed(2));
+  const iva = aplicarIVA ? Number((subtotalConDescuentos * 0.21).toFixed(2)) : 0;
+  const totalFinal = Number((subtotalConDescuentos + iva).toFixed(2));
 
   return {
-    subtotalItems: subtotalOT,
-    subtotalOrdenesCopiado: totalOC,
+    subtotalItems: Number(subtotalOT.toFixed(2)),
+    subtotalOrdenesCopiado: Number(totalOC.toFixed(2)),
     subtotalTotal,
-    descuentos: descuentosOT,
+    descuentos: Number(descuentosOT.toFixed(2)),
     subtotalConDescuentos,
     iva,
     totalFinal,
@@ -66,8 +66,8 @@ export function calcularSaldoPendiente(
   totales: TotalesConsolidados,
   pagos: Pago[]
 ): number {
-  const totalPagado = pagos.reduce((sum, pago) => sum + Number(pago.monto), 0);
-  return Math.max(0, totales.totalFinal - totalPagado);
+  const totalPagado = Number(pagos.reduce((sum, pago) => sum + Number(pago.monto), 0).toFixed(2));
+  return Math.max(0, Number((totales.totalFinal - totalPagado).toFixed(2)));
 }
 
 /**
@@ -76,7 +76,7 @@ export function calcularSaldoPendiente(
  * @returns Total pagado
  */
 export function calcularTotalPagado(pagos: Pago[]): number {
-  return pagos.reduce((sum, pago) => sum + Number(pago.monto), 0);
+  return Number(pagos.reduce((sum, pago) => sum + Number(pago.monto), 0).toFixed(2));
 }
 
 /**

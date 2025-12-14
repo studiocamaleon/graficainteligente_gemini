@@ -126,7 +126,7 @@ export function PagoFormModal({
 
     if (!formData.monto || formData.monto <= 0) {
       newErrors.monto = 'El monto debe ser mayor a 0';
-    } else if (formData.monto > saldoPendiente) {
+    } else if (formData.monto > (Number(saldoPendiente.toFixed(2)) + 0.01)) {
       newErrors.monto = `El monto no puede exceder el saldo pendiente ($${saldoPendiente.toFixed(2)})`;
     }
 

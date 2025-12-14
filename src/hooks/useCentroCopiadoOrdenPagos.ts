@@ -190,8 +190,8 @@ export function useCentroCopiadoOrdenPagos(ordenCopiadoId?: string) {
   );
 
   const calcularTotales = useCallback((totalOrden: number) => {
-    const totalPagado = pagos.reduce((sum, p) => sum + p.monto, 0);
-    const saldoPendiente = totalOrden - totalPagado;
+    const totalPagado = Number(pagos.reduce((sum, p) => sum + p.monto, 0).toFixed(2));
+    const saldoPendiente = Number((totalOrden - totalPagado).toFixed(2));
     const porcentajePagado = totalOrden > 0 ? (totalPagado / totalOrden) * 100 : 0;
 
     return {

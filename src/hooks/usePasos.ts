@@ -37,7 +37,23 @@ export function usePasos(params: UsePasosParams = {}) {
       }
 
       if (searchTerm) {
-        query = query.or(`nombre.ilike.%${searchTerm}%,estaciones_trabajo.nombre.ilike.%${searchTerm}%`);
+        // 1. Find matching stations first
+        const { data: matchingStations } = await supabase
+          .from('estaciones_trabajo')
+          .select('id')
+          .ilike('nombre', `%${searchTerm}%`)
+          .eq('company_id', company.id)
+          .limit(50);
+
+        const stationIds = matchingStations?.map(s => s.id) || [];
+
+        // 2. Build OR clause: match step name OR match station ID
+        let orClause = `nombre.ilike.%${searchTerm}%`;
+        if (stationIds.length > 0) {
+          orClause += `,estacion_id.in.(${stationIds.join(',')})`;
+        }
+
+        query = query.or(orClause);
       }
 
       if (isActive !== null) {

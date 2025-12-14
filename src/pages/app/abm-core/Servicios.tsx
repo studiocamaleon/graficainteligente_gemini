@@ -83,19 +83,7 @@ export function Servicios() {
   const headerAction = useMemo(
     () => (
       <div className="flex gap-2">
-        <Button
-          variant="outline"
-          onClick={handleExport}
-          disabled={isExporting}
-          className="flex items-center gap-2"
-        >
-          {isExporting ? (
-            <span className="w-4 h-4 border-2 border-gray-600 border-t-transparent rounded-full animate-spin" />
-          ) : (
-            <FileText className="w-4 h-4" />
-          )}
-          {isExporting ? 'Generando...' : 'Descargar Lista'}
-        </Button>
+
         {canEdit && (
           <Button variant="primary" onClick={handleOpenCreateModal}>
             <Plus className="w-5 h-5 ml-1" />

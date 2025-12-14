@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, FileText, Eye, Calendar, DollarSign, CheckCircle, AlertCircle, Clock } from 'lucide-react';
+import { Switch } from '../../../components/ui/Switch';
 import { supabase } from '../../../lib/supabase';
 import { Card } from '../../../components/ui/Card';
 import { Button } from '../../../components/ui/Button';
@@ -11,20 +12,31 @@ import { Select } from '../../../components/ui/Select';
 import { EmptyState } from '../../../components/ui/EmptyState';
 import { Pagination } from '../../../components/ui/Pagination';
 import { usePageHeader } from '../../../hooks/usePageHeader';
+
+
 import { useCentroCopiadoOrdenes } from '../../../hooks/useCentroCopiadoOrdenes';
+import { useDebounce } from '../../../hooks/useDebounce';
 import type { EstadoOrdenCopiado } from '../../../types/database';
 
 export function Ordenes() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [estadoFiltro, setEstadoFiltro] = useState<EstadoOrdenCopiado | ''>('');
+  const [mostrarSoloActivas, setMostrarSoloActivas] = useState(true);
   const [page, setPage] = useState(1);
   const itemsPerPage = 25;
   const [pagosPorOrden, setPagosPorOrden] = useState<Record<string, { totalPagado: number }>>({});
 
+  const debouncedSearchTerm = useDebounce(searchTerm, 500);
+
+  const estados = useMemo(() =>
+    !estadoFiltro && mostrarSoloActivas ? ['pendiente', 'en_proceso'] as EstadoOrdenCopiado[] : [],
+    [estadoFiltro, mostrarSoloActivas]);
+
   const { ordenes, totalCount, loading } = useCentroCopiadoOrdenes({
-    searchTerm,
+    searchTerm: debouncedSearchTerm,
     estado: estadoFiltro || null,
+    estados,
     page,
     itemsPerPage,
   });
@@ -55,6 +67,11 @@ export function Ordenes() {
 
     fetchPagos();
   }, [ordenes]);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearchTerm, estadoFiltro, mostrarSoloActivas]);
 
   const headerAction = useMemo(
     () => (
@@ -279,6 +296,8 @@ export function Ordenes() {
             currentPage={page}
             totalPages={Math.ceil(totalCount / itemsPerPage)}
             onPageChange={setPage}
+            totalItems={totalCount}
+            itemsPerPage={itemsPerPage}
           />
         )}
       </>
@@ -289,27 +308,37 @@ export function Ordenes() {
     <div className="space-y-6">
       <Card>
         <div className="p-4 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="md:col-span-2">
-              <SearchInput
-                value={searchTerm}
-                onChange={setSearchTerm}
-                placeholder="Buscar por número de orden u observaciones..."
-              />
-            </div>
+          <div className="flex flex-col sm:flex-row gap-4 mb-6 justify-between items-end sm:items-center">
+            <div className="flex flex-col sm:flex-row gap-4 flex-1 w-full sm:w-auto">
+              <div className="w-full sm:w-64">
+                <SearchInput
+                  value={searchTerm}
+                  onChange={setSearchTerm}
+                  placeholder="Buscar por cliente, orden..."
+                />
+              </div>
+              <div className="w-full sm:w-48">
+                <Select
+                  value={estadoFiltro}
+                  onChange={(e) => setEstadoFiltro(e.target.value as EstadoOrdenCopiado | '')}
+                >
+                  <option value="">Todos los estados</option>
+                  <option value="pendiente">Pendiente</option>
+                  <option value="en_proceso">En Proceso</option>
+                  <option value="finalizada">Finalizada</option>
+                  <option value="entregada">Entregada</option>
+                  <option value="cancelada">Cancelada</option>
+                </Select>
+              </div>
 
-            <div>
-              <Select
-                value={estadoFiltro}
-                onChange={(e) => setEstadoFiltro(e.target.value as EstadoOrdenCopiado | '')}
-              >
-                <option value="">Todos los estados</option>
-                <option value="pendiente">Pendiente</option>
-                <option value="en_proceso">En Proceso</option>
-                <option value="finalizada">Finalizada</option>
-                <option value="entregada">Entregada</option>
-                <option value="cancelada">Cancelada</option>
-              </Select>
+              <div className="flex items-center pt-2 sm:pt-0">
+                <Switch
+                  checked={mostrarSoloActivas}
+                  onChange={setMostrarSoloActivas}
+                  label="Ocultar terminadas"
+                  disabled={!!estadoFiltro}
+                />
+              </div>
             </div>
           </div>
         </div>
