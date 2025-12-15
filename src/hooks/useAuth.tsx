@@ -103,6 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    // Verify session immediately
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       if (session?.user) {
@@ -112,11 +113,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    // Listen for changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log(`🔐 Auth State Change: ${event}`, {
+        user: session?.user?.email,
+        expires_at: session?.expires_at ? new Date(session.expires_at * 1000).toLocaleString() : 'N/A'
+      });
+
       setUser(session?.user ?? null);
 
       if (session?.user) {
-        loadUserData(session.user);
+        // Only reload user data if it's a SIGNED_IN event or similar, 
+        // to avoid reloading on every TOKEN_REFRESHED if not strictly necessary. 
+        // However, keeping original logic for safety, but maybe optimize dependent on event?
+        // For now, let's keep it robust as requested.
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
+          loadUserData(session.user);
+        }
       } else {
         setProfile(null);
         setCompany(null);
@@ -124,7 +137,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    return () => subscription.unsubscribe();
+    // Keep-Alive Mechanism
+    // Check session every 4 minutes (240000 ms) to keep it fresh
+    const KEEP_ALIVE_INTERVAL = 4 * 60 * 1000;
+    const intervalId = setInterval(async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error('⚠️ Error refreshing session during keep-alive:', error);
+        } else if (session) {
+          console.log('💓 Session Heartbeat: Active', {
+            expires_at: new Date(session.expires_at! * 1000).toLocaleTimeString()
+          });
+        }
+      } catch (err) {
+        console.error('⚠️ Unexpected error in keep-alive:', err);
+      }
+    }, KEEP_ALIVE_INTERVAL);
+
+    return () => {
+      subscription.unsubscribe();
+      clearInterval(intervalId);
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {

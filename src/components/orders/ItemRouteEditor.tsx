@@ -35,7 +35,7 @@ export function ItemRouteEditor({
     getRutasPorEtapa,
   } = useOrdenItemRutas({ ordenItemId });
 
-  const { pasos, loading: loadingPasos } = usePasos({ isActive: true });
+  const { pasos, loading: loadingPasos } = usePasos({ isActive: true, itemsPerPage: 1000 });
   const {
     dialogState,
     isLoading: isConfirmLoading,
@@ -139,8 +139,13 @@ export function ItemRouteEditor({
       variant: 'warning',
       onConfirm: async () => {
         try {
+          console.log('🔄 Restaurando ruta:', { ordenItemId, productoId });
           await deleteAllRutas(ordenItemId);
-          await copiarRutaDesdePlantilla(ordenItemId, productoId);
+          const copiedCount = await copiarRutaDesdePlantilla(ordenItemId, productoId);
+          console.log('✅ Ruta restaurada. Pasos copiados:', copiedCount);
+          if (copiedCount === 0) {
+            console.warn('⚠️ La restauración no copió ningún paso. Verifique la plantilla del producto.');
+          }
         } catch (error) {
           console.error('Error restaurando ruta:', error);
         }
@@ -202,11 +207,10 @@ export function ItemRouteEditor({
             {rutasEtapa.map((ruta, index) => (
               <div
                 key={ruta.id}
-                className={`p-3 rounded-lg border-2 ${
-                  ruta.es_modificado
-                    ? 'bg-amber-50 border-amber-200'
-                    : 'bg-white border-gray-200'
-                }`}
+                className={`p-3 rounded-lg border-2 ${ruta.es_modificado
+                  ? 'bg-amber-50 border-amber-200'
+                  : 'bg-white border-gray-200'
+                  }`}
               >
                 <div className="flex items-start gap-2 mb-2">
                   <span className="flex items-center justify-center w-6 h-6 rounded-full bg-gray-100 text-gray-700 text-xs font-medium flex-shrink-0">
@@ -289,7 +293,7 @@ export function ItemRouteEditor({
             {rutas.length} {rutas.length === 1 ? 'paso' : 'pasos'} en total
           </p>
         </div>
-        {!readonly && rutas.length > 0 && (
+        {!readonly && (
           <Button
             variant="outline"
             size="sm"
