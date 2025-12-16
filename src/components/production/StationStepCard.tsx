@@ -2,7 +2,7 @@ import { Clock, Package, User, FileText, PauseCircle } from 'lucide-react';
 import { Card } from '../ui/Card';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
-import { calcularTiempoTranscurrido, formatearFechaOrden } from '../../utils/timeUtils';
+import { calcularTiempoTranscurrido, calcularTiempoNeto, formatearFechaOrden } from '../../utils/timeUtils';
 import type { EstadoPaso } from '../../types/database';
 
 interface StationStepCardProps {
@@ -23,6 +23,7 @@ interface StationStepCardProps {
     categoria_motivo: string;
     fecha_inicio_pausa: string;
   } | null;
+  tiempo_pausado_total?: number;
   onViewDetails: () => void;
 }
 
@@ -38,6 +39,7 @@ export function StationStepCard({
   fecha_inicio,
   fecha_creacion_orden,
   pausa_activa,
+  tiempo_pausado_total = 0,
   onViewDetails,
 }: StationStepCardProps) {
   const isEnProceso = estado_paso === 'en_proceso';
@@ -126,7 +128,7 @@ export function StationStepCard({
             ) : isEnProceso && fecha_inicio ? (
               <div className="flex items-center gap-1 text-orange-600 font-medium">
                 <Clock className="w-3.5 h-3.5" />
-                <span>{calcularTiempoTranscurrido(fecha_inicio)}</span>
+                <span>{calcularTiempoNeto(fecha_inicio, tiempo_pausado_total)}</span>
               </div>
             ) : (
               <div className="flex items-center gap-1">

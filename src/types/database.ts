@@ -1188,7 +1188,7 @@ export interface PedidoOpcion {
   created_at: string;
 }
 
-export type EstadoPaso = 'pendiente' | 'en_proceso' | 'completado' | 'omitido';
+export type EstadoPaso = 'pendiente' | 'en_proceso' | 'pausado' | 'completado' | 'omitido';
 
 export interface OrigenCondicion {
   tipo: string;

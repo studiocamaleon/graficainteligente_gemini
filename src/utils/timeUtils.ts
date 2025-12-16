@@ -1,9 +1,24 @@
-export function calcularTiempoTranscurrido(fechaInicio: string): string {
-  const ahora = new Date();
-  const inicio = new Date(fechaInicio);
-  const diferenciaMs = ahora.getTime() - inicio.getTime();
+export function calcularTiempoTranscurrido(fechaInicio: string | number): string {
+  const ahora = new Date().getTime();
+  const inicio = typeof fechaInicio === 'string' ? new Date(fechaInicio).getTime() : fechaInicio;
+  const diferenciaMs = ahora - inicio;
 
-  const minutos = Math.floor(diferenciaMs / (1000 * 60));
+  return formatearDuracion(diferenciaMs);
+}
+
+export function calcularTiempoNeto(fechaInicio: string, tiempoPausadoTotalMs: number = 0): string {
+  const ahora = new Date().getTime();
+  const inicio = new Date(fechaInicio).getTime();
+  // Tiempo total desde inicio menos el tiempo que estuvo pausado
+  let diferenciaMs = (ahora - inicio) - tiempoPausadoTotalMs;
+
+  if (diferenciaMs < 0) diferenciaMs = 0;
+
+  return formatearDuracion(diferenciaMs);
+}
+
+function formatearDuracion(ms: number): string {
+  const minutos = Math.floor(ms / (1000 * 60));
   const horas = Math.floor(minutos / 60);
   const dias = Math.floor(horas / 24);
 

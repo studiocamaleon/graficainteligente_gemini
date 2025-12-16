@@ -25,6 +25,7 @@ export interface StationStep {
     categoria_motivo: string;
     fecha_inicio_pausa: string;
   } | null;
+  tiempo_pausado_total: number;
 }
 
 interface RutaConOrden {
@@ -132,34 +133,46 @@ export function useProductionStations(params: UseProductionStationsParams = {}) 
         return;
       }
 
-      // Obtener IDs de rutas pausadas
-      const rutasPausadasIds = rutasData
-        .filter((r: any) => r.estado_paso === 'pausado')
-        .map((r: any) => r.id);
+      // Obtener todas las pausas (activas e históricas) para las rutas visibles
+      // Esto nos permite calcular el tiempo neto descontando las pausas cerradas
+      const rutasIds = rutasData.map((r: any) => r.id);
 
-      // Obtener información de pausas activas para rutas pausadas
       let pausasActivasMap = new Map<string, any>();
-      if (rutasPausadasIds.length > 0) {
+      let tiempoPausadoTotalMap = new Map<string, number>();
+
+      if (rutasIds.length > 0) {
         const { data: pausasData } = await supabase
           .from('ordenes_items_rutas_pausas')
           .select(`
             ruta_id,
             categoria_motivo,
             fecha_inicio_pausa,
+            fecha_fin_pausa,
             motivo:pasos_motivos_pausa(
               nombre
             )
           `)
-          .in('ruta_id', rutasPausadasIds)
-          .is('fecha_fin_pausa', null);
+          .in('ruta_id', rutasIds);
 
         if (pausasData) {
           pausasData.forEach((pausa: any) => {
-            pausasActivasMap.set(pausa.ruta_id, {
-              motivo_nombre: pausa.motivo?.nombre || 'Sin motivo',
-              categoria_motivo: pausa.categoria_motivo,
-              fecha_inicio_pausa: pausa.fecha_inicio_pausa,
-            });
+            // 1. Detectar Pausa Activa (sin fecha fin)
+            if (!pausa.fecha_fin_pausa) {
+              pausasActivasMap.set(pausa.ruta_id, {
+                motivo_nombre: pausa.motivo?.nombre || 'Sin motivo',
+                categoria_motivo: pausa.categoria_motivo,
+                fecha_inicio_pausa: pausa.fecha_inicio_pausa,
+              });
+            }
+            // 2. Acumular Tiempo Pausado (pausas cerradas)
+            else {
+              const inicio = new Date(pausa.fecha_inicio_pausa).getTime();
+              const fin = new Date(pausa.fecha_fin_pausa).getTime();
+              const duracionMs = fin - inicio;
+
+              const actual = tiempoPausadoTotalMap.get(pausa.ruta_id) || 0;
+              tiempoPausadoTotalMap.set(pausa.ruta_id, actual + duracionMs);
+            }
           });
         }
       }
@@ -236,6 +249,7 @@ export function useProductionStations(params: UseProductionStationsParams = {}) 
             fecha_creacion_orden: ruta.orden_item.orden.fecha_creacion,
             orden_id: ruta.orden_item.orden.id,
             pausa_activa: ruta.pausa_activa || null,
+            tiempo_pausado_total: tiempoPausadoTotalMap.get(ruta.id) || 0,
             global_task_id: ruta.global_task_id,
           };
 
