@@ -11,6 +11,8 @@ interface OrdenCopiadoAsociadaCardProps {
   numeroOrdenTrabajo: string;
   onDesvincular: () => Promise<void>;
   canDesvincular?: boolean;
+  totalOrdenTrabajo?: number;
+  totalPagado?: number;
 }
 
 const getEstadoBadge = (estado: EstadoOrdenCopiado) => {
@@ -40,6 +42,8 @@ export function OrdenCopiadoAsociadaCard({
   numeroOrdenTrabajo,
   onDesvincular,
   canDesvincular = false,
+  totalOrdenTrabajo = 0,
+  totalPagado = 0,
 }: OrdenCopiadoAsociadaCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [showDesvincularModal, setShowDesvincularModal] = useState(false);
@@ -209,6 +213,8 @@ export function OrdenCopiadoAsociadaCard({
           onConfirm={handleDesvincular}
           ordenCopiado={ordenCopiado}
           numeroOrdenTrabajo={numeroOrdenTrabajo}
+          totalOrdenTrabajo={totalOrdenTrabajo}
+          totalPagado={totalPagado}
         />
       )}
     </>

@@ -897,6 +897,8 @@ export function OrderDetailPage() {
                         numeroOrdenTrabajo={orden.numero_orden}
                         onDesvincular={handleDesvincularOrdenCopiado}
                         canDesvincular={isAdmin}
+                        totalOrdenTrabajo={orden.total}
+                        totalPagado={orden.pagos?.reduce((acc, p) => acc + Number(p.monto), 0) || 0}
                       />
                     </div>
                   )}

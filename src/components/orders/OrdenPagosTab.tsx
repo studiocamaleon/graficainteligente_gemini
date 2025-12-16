@@ -242,9 +242,9 @@ export function OrdenPagosTab({
                         <div className="text-2xl font-bold text-gray-900">
                           ${pago.monto.toFixed(2)}
                         </div>
-                        {pago.comision_aplicada && pago.comision_aplicada > 0 && (
+                        {(pago.comision_aplicada || 0) > 0 && (
                           <div className="text-xs text-orange-600 mt-0.5">
-                            -${pago.comision_aplicada.toFixed(2)} comisión
+                            -${(pago.comision_aplicada || 0).toFixed(2)} comisión
                           </div>
                         )}
                       </div>

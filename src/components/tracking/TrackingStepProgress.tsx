@@ -93,17 +93,16 @@ export function TrackingStepProgress({ pasos }: TrackingStepProgressProps) {
                     <p className="text-sm text-gray-400">{getEtapaLabel(paso.tipo_etapa)}</p>
                   </div>
                   <span
-                    className={`text-xs px-3 py-1 rounded-full font-medium ${
-                      paso.estado_paso === 'completado'
+                    className={`text-xs px-3 py-1 rounded-full font-medium ${paso.estado_paso === 'completado'
                         ? 'bg-green-500/20 text-green-300'
                         : paso.estado_paso === 'en_proceso'
-                        ? 'bg-cyan-500/20 text-cyan-300'
-                        : paso.estado_paso === 'pausado'
-                        ? 'bg-orange-500/20 text-orange-300 animate-pulse'
-                        : paso.estado_paso === 'omitido'
-                        ? 'bg-red-500/20 text-red-300'
-                        : 'bg-gray-500/20 text-gray-400'
-                    }`}
+                          ? 'bg-cyan-500/20 text-cyan-300'
+                          : paso.estado_paso === 'pausado'
+                            ? 'bg-orange-500/20 text-orange-300 animate-pulse'
+                            : paso.estado_paso === 'omitido'
+                              ? 'bg-red-500/20 text-red-300'
+                              : 'bg-gray-500/20 text-gray-400'
+                      }`}
                   >
                     {getEstadoPasoLabel(paso.estado_paso)}
                   </span>
@@ -126,8 +125,8 @@ export function TrackingStepProgress({ pasos }: TrackingStepProgressProps) {
                               {paso.pausa_info.tiempo_pausado_horas < 1
                                 ? `${Math.round(paso.pausa_info.tiempo_pausado_horas * 60)} minutos`
                                 : paso.pausa_info.tiempo_pausado_horas < 24
-                                ? `${Math.floor(paso.pausa_info.tiempo_pausado_horas)} horas`
-                                : `${Math.floor(paso.pausa_info.tiempo_pausado_horas / 24)} días`}
+                                  ? `${Math.floor(paso.pausa_info.tiempo_pausado_horas)} horas`
+                                  : `${Math.floor(paso.pausa_info.tiempo_pausado_horas / 24)} días`}
                             </span>
                           </div>
                         )}
@@ -151,7 +150,7 @@ export function TrackingStepProgress({ pasos }: TrackingStepProgressProps) {
                 )}
 
                 {/* Indicador de pausas previas */}
-                {paso.cantidad_pausas && paso.cantidad_pausas > 0 && paso.estado_paso !== 'pausado' && (
+                {(paso.cantidad_pausas || 0) > 0 && paso.estado_paso !== 'pausado' && (
                   <div className="mt-2 text-xs text-gray-500 flex items-center gap-1">
                     <Pause className="w-3 h-3" />
                     <span>

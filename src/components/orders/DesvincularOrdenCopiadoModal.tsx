@@ -11,6 +11,8 @@ interface DesvincularOrdenCopiadoModalProps {
   onConfirm: () => Promise<void>;
   ordenCopiado: CentroCopiadoOrdenResumida;
   numeroOrdenTrabajo: string;
+  totalOrdenTrabajo?: number;
+  totalPagado?: number;
 }
 
 export function DesvincularOrdenCopiadoModal({
@@ -19,9 +21,23 @@ export function DesvincularOrdenCopiadoModal({
   onConfirm,
   ordenCopiado,
   numeroOrdenTrabajo,
+  totalOrdenTrabajo = 0,
+  totalPagado = 0,
 }: DesvincularOrdenCopiadoModalProps) {
   const [confirmado, setConfirmado] = useState(false);
   const [procesando, setProcesando] = useState(false);
+
+  // Calcular totales para la simulación
+  const totalOC = Number(ordenCopiado.total || 0);
+  const totalConsolidado = Number(totalOrdenTrabajo || 0);
+  const totalPagadoNum = Number(totalPagado || 0);
+
+  // Evitar división por cero
+  const porcentajeOC = totalConsolidado > 0 ? (totalOC / totalConsolidado) : 0;
+
+  // Calcular pagos proporcionales
+  const pagoAsignadoOC = totalPagadoNum * porcentajeOC;
+  const nuevoSaldoPendienteOC = Math.max(0, totalOC - pagoAsignadoOC);
 
   const handleConfirmar = async () => {
     if (!confirmado) return;
@@ -90,23 +106,16 @@ export function DesvincularOrdenCopiadoModal({
             </div>
 
             <div className="flex items-start gap-2">
-              <div className="w-2 h-2 bg-blue-600 rounded-full mt-1.5 flex-shrink-0" />
+              <div className="w-2 h-2 bg-green-600 rounded-full mt-1.5 flex-shrink-0" />
               <p className="text-gray-700">
-                Los <strong>pagos actuales permanecerán en la orden de trabajo</strong>
-              </p>
-            </div>
-
-            <div className="flex items-start gap-2">
-              <div className="w-2 h-2 bg-amber-600 rounded-full mt-1.5 flex-shrink-0" />
-              <p className="text-gray-700">
-                La orden de copiado tendrá <strong>saldo pendiente completo (${Number(ordenCopiado.total).toFixed(2)})</strong> y deberás gestionar sus pagos de forma independiente
+                Los <strong>pagos actuales se redistribuirán proporcionalmente</strong> entre ambas órdenes según sus montos totales.
               </p>
             </div>
 
             <div className="flex items-start gap-2">
               <div className="w-2 h-2 bg-blue-600 rounded-full mt-1.5 flex-shrink-0" />
               <p className="text-gray-700">
-                Cada orden gestionará sus <strong>propios pagos de manera independiente</strong>
+                La orden de copiado tendrá el saldo pendiente ajustado y deberás gestionar sus futuros pagos de forma independiente
               </p>
             </div>
           </div>
@@ -115,15 +124,21 @@ export function DesvincularOrdenCopiadoModal({
         {/* Resumen de montos */}
         <Card className="bg-gray-50">
           <div className="p-4">
-            <h4 className="font-medium text-gray-900 mb-3">Resumen de Montos</h4>
+            <h4 className="font-medium text-gray-900 mb-3">Previsualización de Saldos</h4>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-600">Total Orden de Copiado:</span>
-                <span className="font-semibold text-gray-900">${Number(ordenCopiado.total).toFixed(2)}</span>
+                <span className="font-semibold text-gray-900">${totalOC.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Pago Asignado (Estimado):</span>
+                <span className="font-semibold text-green-600">
+                  ${pagoAsignadoOC.toFixed(2)}
+                </span>
               </div>
               <div className="flex justify-between pt-2 border-t">
                 <span className="text-amber-700">Nuevo Saldo Pendiente OC:</span>
-                <span className="font-bold text-amber-700">${Number(ordenCopiado.total).toFixed(2)}</span>
+                <span className="font-bold text-amber-700">${nuevoSaldoPendienteOC.toFixed(2)}</span>
               </div>
             </div>
           </div>

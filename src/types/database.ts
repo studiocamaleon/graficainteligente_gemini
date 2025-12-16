@@ -1939,6 +1939,16 @@ export interface Database {
         Insert: Omit<CentroCopiadoOrdenItem, 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Omit<CentroCopiadoOrdenItem, 'id' | 'created_at'>>;
       };
+      centro_copiado_ordenes_pagos: {
+        Row: CentroCopiadoOrdenPago;
+        Insert: Omit<CentroCopiadoOrdenPago, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<CentroCopiadoOrdenPago, 'id' | 'created_at'>>;
+      };
+      ordenes_trabajo_pagos: {
+        Row: OrdenTrabajoPago;
+        Insert: Omit<OrdenTrabajoPago, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<OrdenTrabajoPago, 'id' | 'created_at'>>;
+      };
       tarjetas_credito: {
         Row: TarjetaCredito;
         Insert: Omit<TarjetaCredito, 'id' | 'created_at' | 'updated_at'>;

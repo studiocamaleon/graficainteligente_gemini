@@ -6,8 +6,8 @@ import { TrackingHeader } from '../../components/tracking/TrackingHeader';
 import { TrackingStatusMessage } from '../../components/tracking/TrackingStatusMessage';
 import { TrackingItemCard } from '../../components/tracking/TrackingItemCard';
 import { TrackingFooter } from '../../components/tracking/TrackingFooter';
-import { RefreshCw, Radio } from 'lucide-react';
-import { Button } from '../../components/ui/Button';
+import { TrackingWhatsAppButton } from '../../components/tracking/TrackingWhatsAppButton';
+import { Radio } from 'lucide-react';
 import dayjs from 'dayjs';
 import 'dayjs/locale/es';
 
@@ -74,15 +74,7 @@ export function OrderTracking() {
               )}
             </div>
 
-            <Button
-              onClick={refetch}
-              variant="outline"
-              className="flex items-center space-x-2 border-cyan-500/30 hover:border-cyan-500/50 text-cyan-400 hover:bg-cyan-500/10 transition-all duration-300"
-              disabled={isUpdating}
-            >
-              <RefreshCw className={`w-4 h-4 ${isUpdating ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">Actualizar</span>
-            </Button>
+
           </div>
 
           {data.items.length === 0 ? (
@@ -112,6 +104,8 @@ export function OrderTracking() {
         </div>
 
         <TrackingFooter />
+
+        <TrackingWhatsAppButton phoneNumber={data.company_phone} />
       </div>
     </div>
   );

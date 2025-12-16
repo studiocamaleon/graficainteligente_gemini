@@ -24,6 +24,10 @@ export interface Pago {
   id: string;
   monto: number;
   fecha_pago: string;
+  notas?: string;
+  medio_cobro_id?: string;
+  referencia_pago?: string;
+  [key: string]: any; // Allow other properties from DB models
 }
 
 /**

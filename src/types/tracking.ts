@@ -52,6 +52,7 @@ export interface TrackingData {
   cliente_nombre: string;
   company_id: string;
   company_address: string | null;
+  company_phone: string | null;
   company_business_hours: CompanyBusinessHours[];
   items: TrackingItem[];
 }
