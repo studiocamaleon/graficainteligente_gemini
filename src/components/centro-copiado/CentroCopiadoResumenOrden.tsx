@@ -17,6 +17,7 @@ interface CentroCopiadoResumenOrdenProps {
   guardando: boolean;
   containerRef: RefObject<HTMLDivElement>;
   requiereFactura: boolean;
+  buttonText?: string;
 }
 
 export function CentroCopiadoResumenOrden({
@@ -28,6 +29,7 @@ export function CentroCopiadoResumenOrden({
   guardando,
   containerRef,
   requiereFactura,
+  buttonText,
 }: CentroCopiadoResumenOrdenProps) {
   const { tamanios } = useCentroCopiadoTamanios();
   const { papeles } = useCentroCopiadoPapeles();
@@ -281,7 +283,7 @@ export function CentroCopiadoResumenOrden({
                   isLoading={guardando}
                   className="w-full"
                 >
-                  {guardando ? 'Guardando...' : 'Guardar Orden'}
+                  {guardando ? 'Guardando...' : (buttonText || 'Guardar Orden')}
                 </Button>
                 <Button
                   variant="secondary"

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Switch } from '../../../components/ui/Switch';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Calendar, User, FileText, DollarSign, AlertCircle, Download, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Calendar, User, FileText, DollarSign, AlertCircle, Download, ExternalLink, Edit } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
 import { Badge } from '../../../components/ui/Badge';
@@ -235,23 +235,25 @@ export function DetalleOrdenCopiado() {
   }
 
   const puedeCancelar = orden.estado !== 'cancelada' && orden.estado !== 'entregada';
+  const puedeEditar = orden.estado === 'pendiente'; // Sólo permitir editar en estado pendiente
   const puedeIniciar = orden.estado === 'pendiente';
   const puedeFinalizar = orden.estado === 'en_proceso';
   const puedeEntregar = orden.estado === 'finalizada';
 
   // Calculate Subtotal from Items Sum to ensure it is Net
   const subtotal = orden.items?.reduce((acc, item) => acc + (Number(item.subtotal) || 0), 0) || 0;
-  const iva = orden.requiere_factura ? subtotal * 0.21 : 0;
 
-  // Total is Subtotal + Taxes.
-  // Note: We ignore orden.total from DB for display purposes here because it might differ during optimistic updates or if logic drifted. 
-  // Calculating it fresh ensures consistency with the displayed subtotal.
-  const total = subtotal + iva;
+  // Use stored discount or 0
+  const descuento = Number(orden.total_descuentos) || 0;
+  const subtotalConDescuento = subtotal - descuento;
+
+  const iva = orden.requiere_factura ? subtotalConDescuento * 0.21 : 0;
+  const total = subtotalConDescuento + iva;
 
   const totales = {
     subtotal: subtotal,
-    descuentoAplicado: 0,
-    subtotalConDescuento: subtotal,
+    descuentoAplicado: descuento,
+    subtotalConDescuento: subtotalConDescuento,
     iva: iva,
     total: total,
   };
@@ -271,6 +273,17 @@ export function DetalleOrdenCopiado() {
         </Button>
 
         <div className="flex gap-2">
+          {puedeEditar && (
+            <Button
+              variant="secondary"
+              onClick={() => navigate(`/app/centro-copiado/ordenes/editar/${orden.id}`)}
+              title="Editar Orden"
+            >
+              <Edit className="w-4 h-4 mr-2" />
+              Editar
+            </Button>
+          )}
+
           {puedeIniciar && (
             <Button
               variant="primary"
@@ -558,9 +571,16 @@ export function DetalleOrdenCopiado() {
                 <div className="mt-8 border-t border-gray-200 pt-6">
                   <div className="w-full md:w-1/2 lg:w-1/3 ml-auto space-y-3">
                     <div className="flex justify-between items-center text-sm">
-                      <span className="text-gray-600">Subtotal Neto</span>
+                      <span className="text-gray-600">Subtotal</span>
                       <span className="font-medium text-gray-900">${subtotal.toFixed(2)}</span>
                     </div>
+
+                    {totales.descuentoAplicado > 0 && (
+                      <div className="flex justify-between items-center text-sm text-green-600">
+                        <span>Descuento</span>
+                        <span>-${totales.descuentoAplicado.toFixed(2)}</span>
+                      </div>
+                    )}
 
                     {orden.requiere_factura && (
                       <div className="flex justify-between items-center text-sm">

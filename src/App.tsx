@@ -285,6 +285,14 @@ function AppRoutes() {
                   }
                 />
                 <Route
+                  path="centro-copiado/ordenes/editar/:id"
+                  element={
+                    <ProtectedModuleRoute moduleId="centro-copiado-ordenes-crear">
+                      <CrearOrdenCopiado />
+                    </ProtectedModuleRoute>
+                  }
+                />
+                <Route
                   path="centro-copiado/ordenes/:id"
                   element={
                     <ProtectedModuleRoute moduleId="centro-copiado-ordenes">

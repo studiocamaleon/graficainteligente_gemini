@@ -1567,6 +1567,8 @@ export interface CentroCopiadoOrden {
   created_at: string;
   updated_at: string;
   canal_venta: CanalVenta;
+  subtotal: number;
+  total_descuentos: number;
 }
 
 export interface CentroCopiadoOrdenItem {

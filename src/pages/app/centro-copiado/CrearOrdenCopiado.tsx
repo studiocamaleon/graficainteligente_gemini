@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
 import { Plus, ArrowLeft, ChevronDown, ChevronUp, MessageSquare, Globe, Store, Smartphone } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
@@ -19,6 +19,7 @@ import { useCentroCopiadoOrdenes } from '../../../hooks/useCentroCopiadoOrdenes'
 import { useCentroCopiadoOrdenItems } from '../../../hooks/useCentroCopiadoOrdenItems';
 import { useCentroCopiadoArchivos } from '../../../hooks/useCentroCopiadoArchivos';
 import { useCentroCopiadoOrdenPagos } from '../../../hooks/useCentroCopiadoOrdenPagos';
+import { useCentroCopiadoOrden } from '../../../hooks/useCentroCopiadoOrden';
 import { useInfoDialog } from '../../../hooks/useInfoDialog';
 import { InfoDialog } from '../../../components/ui/InfoDialog';
 import { supabase } from '../../../lib/supabase';
@@ -48,6 +49,8 @@ export function CrearOrdenCopiado() {
   const navigate = useNavigate();
   const { profile } = useAuth();
   const [searchParams] = useSearchParams();
+  const { id } = useParams();
+  const isEditing = !!id;
   const clienteIdParam = searchParams.get('cliente_id');
   const ordenTrabajoIdParam = searchParams.get('orden_trabajo_id');
 
@@ -55,6 +58,10 @@ export function CrearOrdenCopiado() {
   const [ordenTemporalId] = useState(() =>
     `temp_${Date.now()}_${Math.random().toString(36).substring(7)}`
   );
+
+  // Hooks for Edit Mode
+  const { orden: ordenEditar, loading: loadingOrden } = useCentroCopiadoOrden(id);
+  const { archivos: archivosOrden, refetch: refetchArchivos } = useCentroCopiadoArchivos({ ordenId: id });
 
   const [activeTab, setActiveTab] = useState('items');
   const [clienteId, setClienteId] = useState<string>(clienteIdParam || '');
@@ -76,16 +83,15 @@ export function CrearOrdenCopiado() {
   const { clients, loading: loadingClients } = useClients({
     page: 1,
     itemsPerPage: 1000,
-    itemsPerPage: 1000,
     searchTerm
   });
-  const { createOrden } = useCentroCopiadoOrdenes({ enabled: false });
+  const { createOrden, updateOrdenCompleta } = useCentroCopiadoOrdenes({ enabled: false });
   const { createItemImpresion } = useCentroCopiadoOrdenItems();
   const { asociarConOrden, limpiarTemporales, updateArchivo } = useCentroCopiadoArchivos({ ordenTemporalId });
   const { createPago } = useCentroCopiadoOrdenPagos();
   const { dialogState, openDialog, closeDialog } = useInfoDialog();
 
-  usePageHeader('Crea una nueva orden de copiado con items personalizados');
+  usePageHeader(isEditing ? 'Editar orden de copiado' : 'Crea una nueva orden de copiado con items personalizados');
 
   const canalesVenta: { value: CanalVenta; label: string; icon: any }[] = [
     { value: 'WhatsApp', label: 'WhatsApp', icon: MessageSquare },
@@ -150,15 +156,72 @@ export function CrearOrdenCopiado() {
 
   useEffect(() => {
     if (!initialized) {
-      setItems([]);
-      setClienteId(clienteIdParam || '');
-      setFechaEntrega('');
-      setObservaciones('');
-      setDescuento(0);
-      // No agregar item inicial - se crean al subir archivos
-      setInitialized(true);
+      if (isEditing && ordenEditar && archivosOrden) {
+        // Hydrate from existing order
+        setClienteId(ordenEditar.cliente_id || '');
+        setOrigen((ordenEditar.canal_venta as CanalVenta) || 'Mostrador');
+        if (ordenEditar.fecha_entrega_estimada) {
+          setFechaEntrega(ordenEditar.fecha_entrega_estimada.split('T')[0]);
+        }
+        setObservaciones(ordenEditar.observaciones || '');
+        setRequiereFactura(ordenEditar.requiere_factura || false);
+
+        // Hydrate Items
+        const hydratedItems: ItemWithId[] = ordenEditar.items.map(dbItem => {
+          // Find linked file
+          const linkedFile = archivosOrden.find(a => a.item_generado_id === dbItem.id);
+
+          const config: Partial<ItemCopiadoConfig> = {
+            tamanio_papel_id: dbItem.tamanio_papel_id || undefined,
+            papel_id: dbItem.papel_id || undefined,
+            tipo_tinta: dbItem.tipo_tinta || undefined,
+            cara_impresa: dbItem.cara_impresa || undefined,
+            cantidad_hojas: dbItem.cantidad_hojas || 0,
+            cantidad_copias: dbItem.cantidad_unidades || 1,
+            anillado: dbItem.tipo_anillado ? { tipo: dbItem.tipo_anillado } : undefined,
+            plastificado: dbItem.tipo_plastificado ? {
+              tipo: dbItem.tipo_plastificado,
+              todas_hojas: true, // Default to true as we're not tracking partials yet
+            } : undefined,
+            guillotinado: dbItem.con_guillotinado ? { cantidad_hojas: dbItem.cantidad_hojas || 0 } : undefined
+          };
+
+          return {
+            id: dbItem.id,
+            config,
+            precio: dbItem.subtotal,
+            isCollapsed: true,
+            archivoId: linkedFile?.id,
+            nombreArchivo: linkedFile?.nombre_archivo,
+            descripcion: dbItem.descripcion || undefined
+          };
+        });
+
+        setItems(hydratedItems);
+
+        // Calculate and set Discount Percentage
+        // Note: ordenEditar.subtotal is stored as Net Amount (Gross - Discount) in the DB
+        if (ordenEditar.subtotal > 0 && ordenEditar.total_descuentos > 0) {
+          const subtotalBruto = ordenEditar.subtotal + ordenEditar.total_descuentos;
+          const discountPercentage = (ordenEditar.total_descuentos / subtotalBruto) * 100;
+          setDescuento(Number(discountPercentage.toFixed(2)));
+        } else {
+          setDescuento(0);
+        }
+
+        // We could hydrate payments here if we fetched them
+
+        setInitialized(true);
+      } else if (!isEditing) {
+        setItems([]);
+        setClienteId(clienteIdParam || '');
+        setFechaEntrega('');
+        setObservaciones('');
+        setDescuento(0);
+        setInitialized(true);
+      }
     }
-  }, [initialized, clienteIdParam]);
+  }, [initialized, clienteIdParam, isEditing, ordenEditar, archivosOrden]);
 
   const actualizarItem = useCallback((id: string, config: Partial<ItemCopiadoConfig>) => {
     setItems((prev) =>
@@ -316,8 +379,30 @@ export function CrearOrdenCopiado() {
         fecha_entrega_estimada: fechaEntregaCompleta,
         observaciones: observaciones || undefined,
         requiere_factura: requiereFactura,
+        total: totales.total,
+        subtotal: totales.subtotalConDescuento, // Guardamos el subtotal neto
+        total_descuentos: totales.descuentoAplicado,
       };
 
+      if (isEditing && id) {
+        // UPDATE MODE
+        const success = await updateOrdenCompleta(id, datosOrden, items);
+
+        if (!success) {
+          throw new Error('Error al actualizar la orden');
+        }
+
+        openDialog(
+          'Orden Actualizada',
+          `La orden ha sido actualizada exitosamente.`,
+          () => {
+            navigate(`/app/centro-copiado/ordenes/${id}`);
+          }
+        );
+        return; // Exit early
+      }
+
+      // CREATE MODE
       const nuevaOrden = await createOrden(datosOrden);
 
       if (!nuevaOrden) {
@@ -438,7 +523,9 @@ export function CrearOrdenCopiado() {
     // Limpiar archivos temporales si existen
 
     try {
-      await limpiarTemporales(ordenTemporalId);
+      if (!isEditing) {
+        await limpiarTemporales(ordenTemporalId);
+      }
     } catch (err) {
       console.error('Error limpiando archivos temporales:', err);
     }
@@ -582,11 +669,13 @@ export function CrearOrdenCopiado() {
             )}
           </Card>
 
-          <CentroCopiadoArchivosSection
-            ordenTemporalId={ordenTemporalId}
-            onArchivoGenerado={handleArchivoGenerado}
-            disabled={false}
-          />
+          <div className="bg-white p-4 rounded-b-lg border-x border-b border-gray-200">
+            <CentroCopiadoArchivosSection
+              ordenId={isEditing ? id : undefined}
+              ordenTemporalId={!isEditing ? ordenTemporalId : undefined}
+              onArchivoGenerado={handleArchivoGenerado}
+            />
+          </div>
 
           <Tabs
             tabs={[
@@ -642,14 +731,19 @@ export function CrearOrdenCopiado() {
 
         <div ref={resumenContainerRef} className="lg:col-span-1 lg:min-h-[600px]">
           <CentroCopiadoResumenOrden
-            items={items}
+            items={items.map(item => ({
+              id: item.id,
+              precio: item.precio || 0,
+              config: item.config
+            }))}
             descuento={descuento}
             onDescuentoChange={setDescuento}
+            guardando={guardando}
             onGuardar={guardarOrden}
             onCancelar={cancelar}
-            guardando={guardando}
             containerRef={resumenContainerRef}
             requiereFactura={requiereFactura}
+            buttonText={isEditing ? 'Guardar Cambios' : 'Crear Orden'}
           />
         </div>
       </div >

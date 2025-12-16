@@ -17,6 +17,7 @@ interface UseCentroCopiadoOrdenesParams {
   fechaHasta?: string | null;
   page?: number;
   itemsPerPage?: number;
+  enabled?: boolean;
 }
 
 interface OrdenCopiadoWithRelations extends CentroCopiadoOrden {
@@ -40,6 +41,9 @@ interface CreateOrdenCopiadoData {
   fecha_entrega_estimada?: string;
   observaciones?: string;
   requiere_factura?: boolean;
+  total: number;
+  subtotal: number;
+  total_descuentos: number;
 }
 
 export function useCentroCopiadoOrdenes(params: UseCentroCopiadoOrdenesParams = {}) {
@@ -216,7 +220,9 @@ export function useCentroCopiadoOrdenes(params: UseCentroCopiadoOrdenesParams = 
           fecha_solicitud: new Date().toISOString(),
           fecha_entrega_estimada: data.fecha_entrega_estimada || null,
           fecha_entrega_real: null,
-          total: 0,
+          total: data.total,
+          subtotal: data.subtotal,
+          total_descuentos: data.total_descuentos,
           observaciones: data.observaciones || null,
           created_by: profile.id,
           requiere_factura: data.requiere_factura || false,
@@ -291,6 +297,142 @@ export function useCentroCopiadoOrdenes(params: UseCentroCopiadoOrdenesParams = 
     [updateOrden]
   );
 
+  const updateOrdenCompleta = useCallback(
+    async (ordenId: string, data: CreateOrdenCopiadoData, items: ItemWithId[]) => {
+      if (!profile?.company_id) {
+        setError('No se pudo obtener la información del usuario');
+        return false;
+      }
+
+      try {
+        setError(null);
+        setLoading(true);
+
+        // 1. Actualizar datos de la orden
+        const { error: updateOrderError } = await supabase
+          .from('centro_copiado_ordenes')
+          .update({
+            cliente_id: data.cliente_id,
+            canal_venta: data.origen,
+            orden_trabajo_id: data.orden_trabajo_id || null,
+            fecha_entrega_estimada: data.fecha_entrega_estimada || null,
+            total: data.total,
+            subtotal: data.subtotal,
+            total_descuentos: data.total_descuentos,
+            observaciones: data.observaciones || null,
+            requiere_factura: data.requiere_factura || false,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', ordenId)
+          .eq('company_id', profile.company_id);
+
+        if (updateOrderError) throw updateOrderError;
+
+        // 2. Gestionar Items
+        // Obtener items actuales para saber cuáles eliminar
+        const { data: currentItems } = await supabase
+          .from('centro_copiado_ordenes_items')
+          .select('id')
+          .eq('orden_copiado_id', ordenId);
+
+        const currentIds = currentItems?.map((i) => i.id) || [];
+        const incomingIds = items
+          .filter((i) => !i.id.startsWith('temp_')) // Solo IDs reales (UUIDs)
+          .map((i) => i.id);
+
+        // Identificar items a eliminar
+        const itemsToDelete = currentIds.filter((id) => !incomingIds.includes(id));
+
+        if (itemsToDelete.length > 0) {
+          const { error: deleteError } = await supabase
+            .from('centro_copiado_ordenes_items')
+            .delete()
+            .in('id', itemsToDelete);
+
+          if (deleteError) throw deleteError;
+        }
+
+        // Procesar items (Insertar o Actualizar)
+        for (const item of items) {
+          const config = item.config;
+
+          // Validar config mínima necesaria
+          if (
+            !config.tamanio_papel_id ||
+            !config.papel_id ||
+            !config.tipo_tinta ||
+            !config.cara_impresa ||
+            !config.cantidad_hojas ||
+            !config.cantidad_copias
+          ) {
+            continue;
+          }
+
+          const itemData = {
+            orden_copiado_id: ordenId,
+            tipo_item: 'impresion',
+            tamanio_papel_id: config.tamanio_papel_id,
+            papel_id: config.papel_id,
+            tipo_tinta: config.tipo_tinta,
+            cara_impresa: config.cara_impresa,
+            cantidad_hojas: config.cantidad_hojas,
+            cantidad_unidades: config.cantidad_copias,
+            tipo_anillado: config.anillado?.tipo || null,
+            tipo_plastificado: config.plastificado?.tipo || null,
+            cantidad_plastificado: config.plastificado?.cantidad_especifica
+              ? config.plastificado.cantidad_especifica
+              : (config.plastificado?.todas_hojas ? config.cantidad_hojas : null),
+            con_guillotinado: !!config.guillotinado,
+            precio_unitario: (item.precio || 0) / (config.cantidad_copias || 1),
+            subtotal: item.precio || 0,
+            descripcion: item.descripcion || null,
+          };
+
+          if (item.id.startsWith('temp_')) {
+            // INSERTAR NUEVO ITEM
+            const { data: newItem, error: insertError } = await supabase
+              .from('centro_copiado_ordenes_items')
+              .insert(itemData)
+              .select()
+              .single();
+
+            if (insertError) throw insertError;
+
+            // Asociar archivo si existe
+            if (newItem && item.archivoId) {
+              await supabase
+                .from('centro_copiado_ordenes_archivos')
+                .update({ item_generado_id: newItem.id })
+                .eq('id', item.archivoId);
+            }
+          } else {
+            // ACTUALIZAR ITEM EXISTENTE
+            const { error: updateItemError } = await supabase
+              .from('centro_copiado_ordenes_items')
+              .update(itemData)
+              .eq('id', item.id);
+
+            if (updateItemError) throw updateItemError;
+
+            // Nota: No actualizamos asociación de archivos en edición de items existentes 
+            // a menos que sea explícitamente necesario, lo cual requeriría lógica extra.
+          }
+        }
+
+        await fetchOrdenes();
+        return true;
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Error al actualizar la orden completa';
+        setError(errorMessage);
+        console.error('Error updating orden completa:', err);
+        return false;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [profile?.company_id, fetchOrdenes]
+  );
+
   const deleteOrden = useCallback(
     async (ordenId: string) => {
       if (!profile?.company_id) {
@@ -329,6 +471,7 @@ export function useCentroCopiadoOrdenes(params: UseCentroCopiadoOrdenesParams = 
     fetchOrdenes,
     createOrden,
     updateOrden,
+    updateOrdenCompleta,
     updateEstado,
     deleteOrden,
   };
