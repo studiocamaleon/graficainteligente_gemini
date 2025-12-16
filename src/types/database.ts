@@ -1452,6 +1452,9 @@ export interface OrdenItemRuta {
   created_at: string;
   updated_at: string;
   global_task_id?: string | null;
+  cantidad_pausas?: number;
+  tiempo_pausado_total?: any; // Postgres interval or number
+  tiempo_trabajo_efectivo?: any; // Postgres interval or number
 }
 
 // ============================================================================

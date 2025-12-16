@@ -56,7 +56,7 @@ export function StepPerformanceChart({ data, loading, limit = 10 }: StepPerforma
           const etapaColor = etapaColors[paso.tipo_etapa as keyof typeof etapaColors] || 'gray';
 
           return (
-            <div key={paso.paso_id || index} className="space-y-2">
+            <div key={`${paso.paso_id}-${index}`} className="space-y-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 flex-1 min-w-0">
                   <span className="font-medium text-gray-900 truncate">{paso.paso_nombre}</span>

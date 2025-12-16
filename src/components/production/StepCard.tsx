@@ -1,6 +1,7 @@
 import { Clock, CheckCircle2, XCircle, User, MessageSquare, Pause } from 'lucide-react';
 import type { OrdenItemRuta } from '../../types/database';
 import { formatDate } from '../../utils/stringUtils';
+import { calcularTiempoNeto } from '../../utils/timeUtils';
 
 interface StepCardProps {
   ruta: OrdenItemRuta;
@@ -59,46 +60,38 @@ export function StepCard({ ruta, isActive, canStart, children }: StepCardProps) 
   const Icon = style.icon;
 
   const calcularDuracion = (): string | null => {
-    if (!ruta.fecha_inicio || !ruta.fecha_fin) return null;
+    // Caso 1: Paso completado (tiene fecha_fin)
+    if (ruta.fecha_inicio && ruta.fecha_fin) {
+      const inicio = new Date(ruta.fecha_inicio).getTime();
+      const fin = new Date(ruta.fecha_fin).getTime();
 
-    const inicio = new Date(ruta.fecha_inicio);
-    const fin = new Date(ruta.fecha_fin);
+      // Calcular duración bruta
+      let diffMs = fin - inicio;
 
-    // Validar que las fechas sean válidas
-    if (isNaN(inicio.getTime()) || isNaN(fin.getTime())) {
-      console.warn('Fechas inválidas en ruta:', { fecha_inicio: ruta.fecha_inicio, fecha_fin: ruta.fecha_fin });
-      return null;
+      // Restar tiempo pausado si existe
+      if (ruta.tiempo_pausado_total) {
+        diffMs -= ruta.tiempo_pausado_total;
+      }
+
+      if (diffMs < 0) diffMs = 0;
+
+      const diffMins = Math.floor(diffMs / 60000);
+
+      if (diffMins < 1) return '< 1 min';
+      if (diffMins < 60) return `${diffMins} min`;
+
+      const hours = Math.floor(diffMins / 60);
+      const mins = diffMins % 60;
+
+      return mins === 0 ? `${hours}h` : `${hours}h ${mins}m`;
     }
 
-    const diffMs = fin.getTime() - inicio.getTime();
-
-    // Si la diferencia es negativa, hay un error
-    if (diffMs < 0) {
-      console.warn('Fecha fin anterior a fecha inicio:', { inicio, fin });
-      return null;
+    // Caso 2: Paso en proceso (sin fecha_fin pero con fecha_inicio)
+    if (ruta.fecha_inicio && ruta.estado_paso === 'en_proceso') {
+      return calcularTiempoNeto(ruta.fecha_inicio, ruta.tiempo_pausado_total || 0);
     }
 
-    const diffMins = Math.floor(diffMs / 60000);
-
-    // Menos de 1 minuto
-    if (diffMins < 1) {
-      return '< 1 min';
-    }
-
-    // Menos de 1 hora
-    if (diffMins < 60) {
-      return `${diffMins} min`;
-    }
-
-    // Más de 1 hora
-    const hours = Math.floor(diffMins / 60);
-    const mins = diffMins % 60;
-
-    if (mins === 0) {
-      return `${hours}h`;
-    }
-
-    return `${hours}h ${mins}m`;
+    return null;
   };
 
   const duracion = calcularDuracion();

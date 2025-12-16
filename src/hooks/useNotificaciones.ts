@@ -249,7 +249,7 @@ export function useNotificaciones() {
               console.log('[Notificaciones] ✅ Canal realtime conectado exitosamente');
               setChannel(realtimeChannel);
             } else if (status === 'CLOSED') {
-              console.warn('[Notificaciones] ⚠️ Canal realtime cerrado');
+              console.log('[Notificaciones] ℹ️ Canal realtime cerrado');
               setChannel(null);
             } else if (status === 'CHANNEL_ERROR') {
               console.error('[Notificaciones] ❌ Error en canal realtime');

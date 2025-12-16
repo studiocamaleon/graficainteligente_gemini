@@ -22,9 +22,9 @@ function normalizarTipoEtapa(etapa: string): TipoEtapaRuta {
 
   // 1. Si ya está normalizado, devolver sin cambios
   if (etapaLower === 'pre_prensa' ||
-      etapaLower === 'principal' ||
-      etapaLower === 'post_prensa' ||
-      etapaLower === 'instalacion') {
+    etapaLower === 'principal' ||
+    etapaLower === 'post_prensa' ||
+    etapaLower === 'instalacion') {
     return etapaLower as TipoEtapaRuta;
   }
 
@@ -35,8 +35,8 @@ function normalizarTipoEtapa(etapa: string): TipoEtapaRuta {
 
   // 3. Post-prensa (verificar ANTES que pre para evitar que "post_prensa" sea capturado por "pre")
   if (etapaLower.includes('post') ||
-      etapaLower.includes('terminacion') ||
-      etapaLower.includes('acabado')) {
+    etapaLower.includes('terminacion') ||
+    etapaLower.includes('acabado')) {
     return 'post_prensa';
   }
 
@@ -125,6 +125,46 @@ export function useOrdenItemRutas(options: UseOrdenItemRutasOptions = {}) {
         })));
       }
 
+      let pausasActivasMap = new Map<string, any>();
+      let tiempoPausadoTotalMap = new Map<string, number>();
+
+      if (data && data.length > 0) {
+        const rutasIds = data.map((r: any) => r.id);
+        const { data: pausasData } = await supabase
+          .from('ordenes_items_rutas_pausas')
+          .select(`
+            ruta_id,
+            categoria_motivo,
+            fecha_inicio_pausa,
+            fecha_fin_pausa,
+            motivo:pasos_motivos_pausa(
+              nombre
+            )
+          `)
+          .in('ruta_id', rutasIds);
+
+        if (pausasData) {
+          pausasData.forEach((pausa: any) => {
+            // 1. Detectar Pausa Activa (sin fecha fin)
+            if (!pausa.fecha_fin_pausa) {
+              pausasActivasMap.set(pausa.ruta_id, {
+                motivo_nombre: pausa.motivo?.nombre || 'Sin motivo',
+                categoria_motivo: pausa.categoria_motivo,
+                fecha_inicio_pausa: pausa.fecha_inicio_pausa,
+              });
+            }
+            // 2. Acumular Tiempo Pausado (pausas cerradas)
+            else {
+              const inicio = new Date(pausa.fecha_inicio_pausa).getTime();
+              const fin = new Date(pausa.fecha_fin_pausa).getTime();
+              const duracionMs = fin - inicio;
+              const actual = tiempoPausadoTotalMap.get(pausa.ruta_id) || 0;
+              tiempoPausadoTotalMap.set(pausa.ruta_id, actual + duracionMs);
+            }
+          });
+        }
+      }
+
       // Normalizar tipo_etapa al leer para manejar datos legacy
       const rutasNormalizadas = (data || []).map((ruta: any) => {
         const etapaNormalizada = normalizarTipoEtapa(ruta.tipo_etapa);
@@ -141,7 +181,8 @@ export function useOrdenItemRutas(options: UseOrdenItemRutasOptions = {}) {
         return {
           ...rutaLimpia,
           tipo_etapa: etapaNormalizada,
-          responsable_nombre: responsableNombre
+          responsable_nombre: responsableNombre,
+          tiempo_pausado_total: tiempoPausadoTotalMap.get(ruta.id) || 0,
         };
       });
 
