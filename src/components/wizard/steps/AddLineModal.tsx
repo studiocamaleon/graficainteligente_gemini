@@ -91,7 +91,12 @@ export function AddLineModal({
     }
   }, [isOpen]);
 
-  const mt2Calculado = ancho && alto ? (ancho * alto) / 10000 : 0;
+  const mt2Calculado = config.tipo_venta_real === 'mt2'
+    ? (ancho && alto ? (ancho * alto) / 10000 : 0)
+    : (config.tipo_venta_real === 'mt_lineal' && anchoSeleccionado && metrosLineales
+      ? (anchoSeleccionado * (metrosLineales * 100)) / 10000
+      : 0);
+
   const mt2Total = mt2Calculado * cantidad;
 
   // Real-time Pricing Logic
@@ -191,7 +196,7 @@ export function AddLineModal({
       id: existingLine?.id || crypto.randomUUID(),
       ancho: config.tipo_venta_real === 'mt2' ? ancho : undefined,
       alto: config.tipo_venta_real === 'mt2' ? alto : undefined,
-      mt2_calculado: config.tipo_venta_real === 'mt2' ? mt2Calculado : undefined,
+      mt2_calculado: (config.tipo_venta_real === 'mt2' || config.tipo_venta_real === 'mt_lineal') ? mt2Calculado : undefined,
       ancho_seleccionado: config.tipo_venta_real === 'mt_lineal' ? anchoSeleccionado || undefined : undefined,
       metros_lineales: config.tipo_venta_real === 'mt_lineal' ? metrosLineales : undefined,
       cantidad,

@@ -398,7 +398,11 @@ export function OrdenItemsTab({
           {(config.medida_ancho || config.medida_alto) && (
             <span>
               {config.medida_ancho && config.medida_alto
-                ? `${config.medida_ancho}x${config.medida_alto} ${config.unidad_medida || ((config.categoria === 'Impresion Laser' || config.tecnologia_nombre === 'Impresion Laser') ? 'mm' : 'cm')}`
+                ? (
+                  config.es_metro_lineal
+                    ? `${config.medida_ancho}x${config.medida_alto} cm (${(config.medida_alto / 100).toLocaleString('es-AR')} ml)`
+                    : `${config.medida_ancho}x${config.medida_alto} ${config.unidad_medida || ((config.categoria === 'Impresion Laser' || config.tecnologia_nombre === 'Impresion Laser') ? 'mm' : 'cm')}`
+                )
                 : `${config.medida_ancho || config.medida_alto} ${config.unidad_medida || ((config.categoria === 'Impresion Laser' || config.tecnologia_nombre === 'Impresion Laser') ? 'mm' : 'cm')}`
               }
             </span>

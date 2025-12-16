@@ -8,7 +8,7 @@ import { ServicesAndFinishingsStep, type SelectedService, type SelectedFinishing
 import { UniversalSummaryStep } from './steps/UniversalSummaryStep';
 import { useProductConfiguration } from '../../hooks/wizard/useProductConfiguration';
 import { useUniversalPricing } from '../../hooks/wizard/useUniversalPricing';
-import type { UniversalProductSearchResult } from '../../hooks/wizard/useUniversalProductSearch';
+import type { UniversalProductSearchResult, ProductCategory } from '../../hooks/wizard/useUniversalProductSearch';
 import { generateProductionRoutes } from '../../utils/generateProductionRoutes';
 
 interface UniversalAddItemWizardProps {
@@ -142,14 +142,12 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar, initialData
 
       // 1. Set Product if different or missing
       if (!selectedProduct || selectedProduct.id !== initialData.producto_id) {
-        const product: UniversalProductSearchResult = {
+        const product = {
           id: initialData.producto_id,
           nombre: initialData.producto_nombre,
           categoria: initialData.categoria || initialData.producto_categoria,
-          categoria_id: initialData.categoria_id,
-          precio_base: 0,
-          permite_personalizacion: true
-        };
+          categoria_id: initialData.categoria_id
+        } as unknown as UniversalProductSearchResult;
         console.log('[UniversalWizard] Setting selectedProduct:', product);
         setSelectedProduct(product);
       }
@@ -239,7 +237,7 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar, initialData
               ancho: restoredConfig.medida_ancho,
               alto: restoredConfig.medida_alto || 0,
               ancho_seleccionado: restoredConfig.medida_ancho,
-              metros_lineales: restoredConfig.medida_alto, // For PL/GF
+              metros_lineales: restoredConfig.medida_alto || undefined, // For PL/GF
               mt2_calculado: restoredConfig.medida_mt2 || savedConfig.mt2_total || 0,
               cantidad: initialData.cantidad || 1,
 
@@ -360,7 +358,7 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar, initialData
     // Validar material si es necesario
     if (config.materiales && config.materiales.length > 0) {
       // Para UV, validar según el tipo de material elegido
-      if (config.categoria === 'Impresión UV sobre Rígidos') {
+      if (config.categoria === 'Impresión UV sobre Rígidos' as ProductCategory) {
         // Si permite material del cliente, debe haber elegido una opción
         if (config.permite_material_cliente && selectedConfig.usa_material_catalogo === undefined) {
           console.log('[UniversalWizard] ❌ UV: No ha elegido tipo de material');
@@ -460,7 +458,8 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar, initialData
       cara_impresa: null,
       tipo_copia: null,
       color: null,
-      marca: null
+      marca: null,
+      usa_material_catalogo: false
     });
     setSelectedServicios([]);
     setSelectedAcabados([]);
@@ -586,7 +585,8 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar, initialData
             categoria: selectedProduct.categoria,
             unidad_medida: selectedProduct.unidad_medida || null,
             medida_ancho: linea.ancho || linea.ancho_seleccionado || null,
-            medida_alto: linea.alto || null,
+            medida_alto: linea.alto || (linea.metros_lineales ? Math.round(linea.metros_lineales * 100) : null),
+            es_metro_lineal: !!linea.metros_lineales,
             mt2_total: linea.mt2_calculado,
             mt_lineal_total: linea.metros_lineales,
             material_id: selectedConfig.material_id,
@@ -665,6 +665,7 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar, initialData
           color: selectedConfig.color,
           marca: selectedConfig.marca,
           usa_material_catalogo: selectedConfig.usa_material_catalogo,
+          es_metro_lineal: selectedConfig.es_metro_lineal,
           servicios_seleccionados: selectedServicios.map(s => ({
             servicio_id: s.servicio_id,
             nombre: s.servicio_nombre,

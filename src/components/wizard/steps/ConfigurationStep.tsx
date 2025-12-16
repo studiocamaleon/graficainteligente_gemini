@@ -103,6 +103,9 @@ export interface SelectedConfiguration {
 
   // Para Impresión UV sobre Rígidos
   usa_material_catalogo: boolean;
+
+  // Metadata para visualización
+  es_metro_lineal?: boolean;
 }
 
 // ===============================================
@@ -497,21 +500,31 @@ export function ConfigurationStep({
           {config.tipo_medida === 'ancho_maximo' && localConfig.medida_ancho && (
             <div className="mt-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Alto (metros lineales)
+                Alto / Largo (metros lineales)
               </label>
               <Input
                 type="number"
-                min="0.1"
-                step="0.1"
-                value={localConfig.medida_alto || ''}
+                min="0.01"
+                step="0.01"
+                value={localConfig.medida_alto ? localConfig.medida_alto / 100 : ''}
                 onChange={(e) => {
                   const value = parseFloat(e.target.value);
                   if (!isNaN(value)) {
-                    handleChange({ medida_alto: value });
+                    handleChange({
+                      medida_alto: Math.round(value * 100), // Convert Meters to CM
+                      es_metro_lineal: true
+                    });
+                  } else {
+                    handleChange({ medida_alto: null });
                   }
                 }}
-                placeholder="Ingresa el alto en metros"
+                placeholder="Ingresa el largo en metros (ej: 1.5)"
               />
+              {localConfig.medida_alto && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Se guardará como {localConfig.medida_alto} cm
+                </p>
+              )}
             </div>
           )}
         </Card>
