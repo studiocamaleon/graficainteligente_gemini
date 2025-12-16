@@ -22,6 +22,7 @@ import { useCentroCopiadoOrdenPagos } from '../../../hooks/useCentroCopiadoOrden
 import { useCentroCopiadoOrden } from '../../../hooks/useCentroCopiadoOrden';
 import { useInfoDialog } from '../../../hooks/useInfoDialog';
 import { InfoDialog } from '../../../components/ui/InfoDialog';
+import { QuickClientModal } from '../../../components/clients/QuickClientModal';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../hooks/useAuth';
 import type { CanalVenta } from '../../../types/database';
@@ -80,16 +81,24 @@ export function CrearOrdenCopiado() {
   const resumenContainerRef = useRef<HTMLDivElement>(null);
 
   const [searchTerm, setSearchTerm] = useState('');
-  const { clients, loading: loadingClients } = useClients({
+  const { dialogState, openDialog, closeDialog } = useInfoDialog();
+  const [showQuickClientModal, setShowQuickClientModal] = useState(false);
+  const { clients, loading: loadingClients, refetch: refetchClients } = useClients({
     page: 1,
     itemsPerPage: 1000,
     searchTerm
   });
+
   const { createOrden, updateOrdenCompleta } = useCentroCopiadoOrdenes({ enabled: false });
   const { createItemImpresion } = useCentroCopiadoOrdenItems();
   const { asociarConOrden, limpiarTemporales, updateArchivo } = useCentroCopiadoArchivos({ ordenTemporalId });
   const { createPago } = useCentroCopiadoOrdenPagos();
-  const { dialogState, openDialog, closeDialog } = useInfoDialog();
+
+  const handleClientCreated = (newClient: any) => {
+    // Manually push to clients if needed, or trigger refetch
+    refetchClients();
+    setClienteId(newClient.id);
+  };
 
   usePageHeader(isEditing ? 'Editar orden de copiado' : 'Crea una nueva orden de copiado con items personalizados');
 
@@ -443,9 +452,7 @@ export function CrearOrdenCopiado() {
           cantidad_unidades: config.cantidad_copias,
           tipo_anillado: config.anillado?.tipo,
           tipo_plastificado: config.plastificado?.tipo,
-          cantidad_plastificado: config.plastificado?.todas_hojas
-            ? config.cantidad_hojas
-            : config.plastificado?.cantidad_especifica,
+
           con_guillotinado: !!config.guillotinado,
           precio_unitario: (item.precio || 0) / (config.cantidad_copias || 1),
           subtotal: item.precio || 0,
@@ -582,20 +589,34 @@ export function CrearOrdenCopiado() {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Cliente *
+                      Cliente <span className="text-red-500">*</span>
                     </label>
-                    <SearchableSelect
-                      placeholder="Buscar cliente..."
-                      onSearch={setSearchTerm}
-                      options={clients.map(c => ({
-                        value: c.id,
-                        label: c.nombre_fantasia || c.razon_social,
-                        subtitle: c.nombre_fantasia ? c.razon_social : undefined,
-                      }))}
-                      value={clienteId}
-                      onChange={setClienteId}
-                      disabled={!!clienteIdParam || loadingClients}
-                    />
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        <SearchableSelect
+                          placeholder="Buscar cliente..."
+                          onSearch={setSearchTerm}
+                          options={clients.map(c => ({
+                            value: c.id,
+                            label: c.nombre_fantasia || c.razon_social,
+                            subtitle: c.nombre_fantasia ? c.razon_social : undefined,
+                          }))}
+                          value={clienteId}
+                          onChange={setClienteId}
+                          disabled={!!clienteIdParam || loadingClients}
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="px-3"
+                        onClick={() => setShowQuickClientModal(true)}
+                        title="Crear nuevo cliente rápido"
+                        disabled={!!clienteIdParam}
+                      >
+                        <Plus className="w-5 h-5 text-blue-600" />
+                      </Button>
+                    </div>
                     {clienteIdParam && (
                       <p className="mt-1 text-xs text-gray-500">
                         Cliente heredado de la orden de trabajo
@@ -766,6 +787,13 @@ export function CrearOrdenCopiado() {
         variant={dialogState.variant}
         buttonText={dialogState.buttonText}
         onClose={closeDialog}
+      />
+
+      <QuickClientModal
+        isOpen={showQuickClientModal}
+        onClose={() => setShowQuickClientModal(false)}
+        onClientCreated={handleClientCreated}
+        initialName={searchTerm}
       />
     </div >
   );

@@ -7,6 +7,17 @@ import type {
   EstadoOrdenCopiado,
   CentroCopiadoOrdenItem
 } from '../types/database';
+import type { ItemCopiadoConfig } from '../components/centro-copiado/CentroCopiadoItemForm';
+
+interface ItemWithId {
+  id: string;
+  config: Partial<ItemCopiadoConfig>;
+  precio?: number;
+  isCollapsed?: boolean;
+  archivoId?: string;
+  nombreArchivo?: string;
+  descripcion?: string;
+}
 
 interface UseCentroCopiadoOrdenesParams {
   searchTerm?: string;
@@ -379,9 +390,7 @@ export function useCentroCopiadoOrdenes(params: UseCentroCopiadoOrdenesParams = 
             cantidad_unidades: config.cantidad_copias,
             tipo_anillado: config.anillado?.tipo || null,
             tipo_plastificado: config.plastificado?.tipo || null,
-            cantidad_plastificado: config.plastificado?.cantidad_especifica
-              ? config.plastificado.cantidad_especifica
-              : (config.plastificado?.todas_hojas ? config.cantidad_hojas : null),
+
             con_guillotinado: !!config.guillotinado,
             precio_unitario: (item.precio || 0) / (config.cantidad_copias || 1),
             subtotal: item.precio || 0,

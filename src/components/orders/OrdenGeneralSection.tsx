@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { MessageSquare, Globe, Store, User, Smartphone, Truck } from 'lucide-react';
+import { MessageSquare, Globe, Store, User, Smartphone, Truck, Plus } from 'lucide-react';
 import { SearchableSelect } from '../ui/SearchableSelect';
 import { DatePicker } from '../ui/DatePicker';
 import { Tooltip } from '../ui/Tooltip';
+import { Button } from '../ui/Button';
 
 import { useClients } from '../../hooks/useClients';
 import type { CanalVenta, Client } from '../../types/database';
+import { QuickClientModal } from '../clients/QuickClientModal';
 
 interface OrdenGeneralSectionProps {
   clienteId: string;
@@ -43,7 +45,10 @@ export function OrdenGeneralSection({
   errors = {},
 }: OrdenGeneralSectionProps) {
   const [searchTerm, setSearchTerm] = useState('');
-  const { clients, loading } = useClients({ searchTerm, itemsPerPage: 50 });
+  const { clients, loading, refetch } = useClients({ searchTerm, itemsPerPage: 50 });
+
+  const [showQuickClientModal, setShowQuickClientModal] = useState(false);
+  const [newlyCreatedClients, setNewlyCreatedClients] = useState<Client[]>([]);
 
   const canalesVenta: { value: CanalVenta; label: string; icon: any }[] = [
     { value: 'WhatsApp', label: 'WhatsApp', icon: MessageSquare },
@@ -52,7 +57,12 @@ export function OrdenGeneralSection({
     { value: 'App Mobile', label: 'App Mobile', icon: Smartphone },
   ];
 
-  const clientesOptions = clients.map(c => ({
+  // Merge backend clients with locally created ones to ensure they appear even before refetch finishes
+  const allClients = [...newlyCreatedClients, ...clients];
+  // Deduplicate by ID just in case
+  const uniqueClients = Array.from(new Map(allClients.map(item => [item.id, item])).values());
+
+  const clientesOptions = uniqueClients.map(c => ({
     value: c.id,
     label: c.nombre_fantasia || c.razon_social,
     subtitle: c.nombre_fantasia ? c.razon_social : undefined,
@@ -67,6 +77,13 @@ export function OrdenGeneralSection({
     });
   }
 
+  const handleClientCreated = (newClient: Client) => {
+    setNewlyCreatedClients(prev => [newClient, ...prev]);
+    setClienteId(newClient.id);
+    // Optional: trigger search refresh if needed, but local update is instant
+    // refetch(); 
+  };
+
   return (
     <div className="p-6 space-y-6">
       <div className="border-b border-gray-200 pb-4">
@@ -75,19 +92,33 @@ export function OrdenGeneralSection({
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <SearchableSelect
-            label="Cliente"
-            value={clienteId}
-            onChange={(value) => setClienteId(value)}
-            options={clientesOptions}
-            placeholder="Buscar cliente por nombre..."
-            loading={loading}
-            disabled={loading}
-            required
-            error={errors.cliente}
-            emptyMessage="No se encontraron clientes"
-            onSearch={setSearchTerm}
-          />
+          <label className="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <SearchableSelect
+                // label="Cliente" // Managed externally for layout
+                value={clienteId}
+                onChange={(value) => setClienteId(value)}
+                options={clientesOptions}
+                placeholder="Buscar cliente por nombre..."
+                loading={loading}
+                disabled={loading}
+                required
+                error={errors.cliente}
+                emptyMessage="No se encontraron clientes"
+                onSearch={setSearchTerm}
+              />
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              className="px-3"
+              onClick={() => setShowQuickClientModal(true)}
+              title="Crear nuevo cliente rápido"
+            >
+              <Plus className="w-5 h-5 text-blue-600" />
+            </Button>
+          </div>
         </div>
 
         <div>
@@ -191,6 +222,13 @@ export function OrdenGeneralSection({
           placeholder="Agrega notas internas sobre esta orden..."
         />
       </div>
+
+      <QuickClientModal
+        isOpen={showQuickClientModal}
+        onClose={() => setShowQuickClientModal(false)}
+        onClientCreated={handleClientCreated}
+        initialName={searchTerm}
+      />
     </div>
   );
 }

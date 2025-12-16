@@ -112,6 +112,18 @@ export function ClientForm({ client, onSubmit, onCancel }: ClientFormProps) {
     return cleaned;
   };
 
+  const formatDocumento = (value: string, type: string): string => {
+    const numbers = value.replace(/\D/g, '');
+    if (type === 'CUIT' || type === 'CUIL') {
+      if (numbers.length > 11) return value; // Don't format if too long
+      if (numbers.length === 11) {
+        return `${numbers.slice(0, 2)}-${numbers.slice(2, 10)}-${numbers.slice(10)}`;
+      }
+      return numbers; // Return numbers while typing
+    }
+    return value; // For DNI, return as is (allow user to type or not)
+  };
+
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
@@ -138,7 +150,9 @@ export function ClientForm({ client, onSubmit, onCancel }: ClientFormProps) {
       }
     }
 
-    if (formData.whatsapp && formData.whatsapp.length < 12) {
+    if (!formData.whatsapp.trim()) {
+      newErrors.whatsapp = 'El WhatsApp es requerido';
+    } else if (formData.whatsapp.length < 12) {
       newErrors.whatsapp = 'Formato de WhatsApp inválido';
     }
 
@@ -223,9 +237,10 @@ export function ClientForm({ client, onSubmit, onCancel }: ClientFormProps) {
           <Input
             label="Número de Documento"
             value={formData.numero_documento}
-            onChange={(e) => handleChange('numero_documento', e.target.value)}
+            onChange={(e) => handleChange('numero_documento', formatDocumento(e.target.value, formData.tipo_documento))}
             error={errors.numero_documento}
             required
+            placeholder={formData.tipo_documento === 'CUIT' ? 'XX-XXXXXXXX-X' : ''}
           />
 
           <Input
@@ -234,6 +249,7 @@ export function ClientForm({ client, onSubmit, onCancel }: ClientFormProps) {
             onChange={(e) => handleChange('whatsapp', formatWhatsApp(e.target.value))}
             error={errors.whatsapp}
             helperText="Se guardará en formato internacional: 549XXXXXXXXX"
+            required
           />
 
           <Input
