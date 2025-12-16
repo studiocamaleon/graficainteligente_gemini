@@ -144,6 +144,7 @@ export function DetalleOrdenCopiado() {
       impresion: 'Impresión',
       anillado: 'Anillado',
       plastificado: 'Plastificado',
+      guillotinado: 'Guillotinado',
     };
     return labels[tipo] || tipo;
   };
@@ -526,7 +527,8 @@ export function DetalleOrdenCopiado() {
                             </Badge>
                           )}
                           {item.tipo_plastificado && <Badge variant="primary">{item.tipo_plastificado}</Badge>}
-                          {!item.tipo_anillado && !item.tipo_plastificado && (
+                          {item.con_guillotinado && <Badge variant="primary">Guillotinado</Badge>}
+                          {!item.tipo_anillado && !item.tipo_plastificado && !item.con_guillotinado && (
                             <span className="text-sm text-gray-400">-</span>
                           )}
                         </div>

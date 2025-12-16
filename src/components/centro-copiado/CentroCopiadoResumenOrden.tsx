@@ -135,6 +135,10 @@ export function CentroCopiadoResumenOrden({
       partes.push(`Plast.`);
     }
 
+    if (config.guillotinado) {
+      partes.push(`Guill.`);
+    }
+
     return partes.join(' • ') || 'Sin configurar';
   };
 
