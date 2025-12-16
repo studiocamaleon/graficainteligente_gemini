@@ -1462,7 +1462,7 @@ export type TipoTintaCopiado = 'CMYK' | 'K';
 export type CaraImpresaCopiado = 'frente' | 'frente_y_dorso';
 export type TipoAnillado = 'ring_wire' | 'plastico';
 export type TipoPlastificado = 'A4' | 'SRA3' | 'Carnet';
-export type TipoItemCopiado = 'impresion' | 'anillado' | 'plastificado';
+export type TipoItemCopiado = 'impresion' | 'anillado' | 'plastificado' | 'guillotinado';
 export type EstadoOrdenCopiado = 'pendiente' | 'en_proceso' | 'finalizada' | 'entregada' | 'cancelada';
 
 export interface CentroCopiadoTamanioPapel {
@@ -1504,6 +1504,17 @@ export interface CentroCopiadoPlastificado {
   id: string;
   company_id: string;
   tipo: TipoPlastificado;
+  precio: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CentroCopiadoRangoGuillotinado {
+  id: string;
+  company_id: string;
+  hojas_desde: number;
+  hojas_hasta: number | null;
   precio: number;
   is_active: boolean;
   created_at: string;
@@ -1566,6 +1577,7 @@ export interface CentroCopiadoOrdenItem {
   cantidad_hojas: number | null;
   tipo_anillado: TipoAnillado | null;
   tipo_plastificado: TipoPlastificado | null;
+  con_guillotinado: boolean;
   cantidad_unidades: number;
   precio_unitario: number;
   subtotal: number;
@@ -1649,6 +1661,12 @@ export interface CentroCopiadoRangoAnilladoFormData {
 
 export interface CentroCopiadoPlastificadoFormData {
   tipo: TipoPlastificado;
+  precio: number;
+}
+
+export interface CentroCopiadoRangoGuillotinadoFormData {
+  hojas_desde: number;
+  hojas_hasta: number | null;
   precio: number;
 }
 
@@ -1892,6 +1910,12 @@ export interface Database {
         Insert: Omit<CentroCopiadoPlastificado, 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Omit<CentroCopiadoPlastificado, 'id' | 'created_at' | 'company_id'>>;
       };
+      centro_copiado_rangos_guillotinado: {
+        Row: CentroCopiadoRangoGuillotinado;
+        Insert: Omit<CentroCopiadoRangoGuillotinado, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<CentroCopiadoRangoGuillotinado, 'id' | 'created_at' | 'company_id'>>;
+      };
+
       centro_copiado_rangos_precio_impresion: {
         Row: CentroCopiadoRangoPrecioImpresion;
         Insert: Omit<CentroCopiadoRangoPrecioImpresion, 'id' | 'created_at' | 'updated_at'>;

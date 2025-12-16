@@ -37,6 +37,7 @@ interface CreateItemImpresionData {
   tipo_anillado?: TipoAnillado;
   tipo_plastificado?: TipoPlastificado;
   cantidad_plastificado?: number;
+  con_guillotinado?: boolean;
   precio_unitario: number;
   subtotal: number;
   descripcion?: string;
@@ -103,6 +104,7 @@ export function useCentroCopiadoOrdenItems(ordenCopiadoId?: string) {
           cantidad_unidades: data.cantidad_unidades,
           tipo_anillado: data.tipo_anillado || null,
           tipo_plastificado: data.tipo_plastificado || null,
+          con_guillotinado: data.con_guillotinado || false,
           precio_unitario: data.precio_unitario,
           subtotal: data.subtotal,
           descripcion: data.descripcion || null,

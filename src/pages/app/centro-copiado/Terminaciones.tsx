@@ -1,3 +1,4 @@
+
 import { useState, useMemo, useCallback } from 'react';
 import { Scissors, Plus, Edit2, Trash2 } from 'lucide-react';
 import { Card } from '../../../components/ui/Card';
@@ -12,18 +13,21 @@ import { usePageHeader } from '../../../hooks/usePageHeader';
 import { useConfirmDialog } from '../../../hooks/useConfirmDialog';
 import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
 import { useCentroCopiadoRangosAnillado } from '../../../hooks/useCentroCopiadoRangosAnillado';
+import { useCentroCopiadoRangosGuillotinado } from '../../../hooks/useCentroCopiadoRangosGuillotinado';
 import { useCentroCopiadoPlastificados } from '../../../hooks/useCentroCopiadoPlastificados';
 import { RangoAnilladoForm } from '../../../components/centro-copiado/RangoAnilladoForm';
+import { RangoGuillotinadoForm } from '../../../components/centro-copiado/RangoGuillotinadoForm';
 import { PlastificadoForm } from '../../../components/centro-copiado/PlastificadoForm';
-import type { CentroCopiadoRangoAnillado, CentroCopiadoPlastificado } from '../../../types/database';
+import type { CentroCopiadoRangoAnillado, CentroCopiadoRangoGuillotinado, CentroCopiadoPlastificado } from '../../../types/database';
 
-type TabType = 'anillados' | 'plastificados';
+type TabType = 'anillados' | 'guillotinado' | 'plastificados';
 
 export function Terminaciones() {
   const [activeTab, setActiveTab] = useState<TabType>('anillados');
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedAnillado, setSelectedAnillado] = useState<CentroCopiadoRangoAnillado | null>(null);
+  const [selectedGuillotinado, setSelectedGuillotinado] = useState<CentroCopiadoRangoGuillotinado | null>(null);
   const [selectedPlastificado, setSelectedPlastificado] = useState<CentroCopiadoPlastificado | null>(null);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
 
@@ -35,6 +39,15 @@ export function Terminaciones() {
     deleteRango: deleteAnillado,
     fetchRangos: fetchAnillados,
   } = useCentroCopiadoRangosAnillado();
+
+  const {
+    rangos: guillotinados,
+    loading: loadingGuillotinados,
+    createRango: createGuillotinado,
+    updateRango: updateGuillotinado,
+    deleteRango: deleteGuillotinado,
+    fetchRangos: fetchGuillotinados,
+  } = useCentroCopiadoRangosGuillotinado();
 
   const {
     plastificados,
@@ -55,6 +68,7 @@ export function Terminaciones() {
 
   const handleOpenCreateModal = useCallback(() => {
     setSelectedAnillado(null);
+    setSelectedGuillotinado(null);
     setSelectedPlastificado(null);
     setModalMode('create');
     setIsModalOpen(true);
@@ -68,6 +82,13 @@ export function Terminaciones() {
           Nuevo Rango de Anillado
         </Button>
       );
+    } else if (activeTab === 'guillotinado') {
+      return (
+        <Button variant="primary" onClick={handleOpenCreateModal}>
+          <Plus className="w-5 h-5" />
+          Nuevo Rango de Guillotinado
+        </Button>
+      );
     } else if (activeTab === 'plastificados') {
       return (
         <Button variant="primary" onClick={handleOpenCreateModal}>
@@ -79,10 +100,11 @@ export function Terminaciones() {
     return undefined;
   }, [activeTab, handleOpenCreateModal]);
 
-  usePageHeader('Gestiona los servicios de terminación: anillados y plastificados con sus precios', headerAction);
+  usePageHeader('Gestiona los servicios de terminación: anillados, guillotinado y plastificados', headerAction);
 
   const tabs = [
     { id: 'anillados', name: 'Anillados', icon: Scissors },
+    { id: 'guillotinado', name: 'Guillotinado', icon: Scissors },
     { id: 'plastificados', name: 'Plastificados', icon: Scissors },
   ];
 
@@ -96,6 +118,16 @@ export function Terminaciones() {
     );
   }, [anillados, searchTerm]);
 
+  const filteredGuillotinados = useMemo(() => {
+    if (!searchTerm) return guillotinados;
+    const search = searchTerm.toLowerCase();
+    return guillotinados.filter(
+      (g) =>
+        g.hojas_desde.toString().includes(search) ||
+        (g.hojas_hasta?.toString().includes(search) ?? false)
+    );
+  }, [guillotinados, searchTerm]);
+
   const filteredPlastificados = useMemo(() => {
     if (!searchTerm) return plastificados;
     const search = searchTerm.toLowerCase();
@@ -104,6 +136,12 @@ export function Terminaciones() {
 
   const handleEditAnillado = (anillado: CentroCopiadoRangoAnillado) => {
     setSelectedAnillado(anillado);
+    setModalMode('edit');
+    setIsModalOpen(true);
+  };
+
+  const handleEditGuillotinado = (guillotinado: CentroCopiadoRangoGuillotinado) => {
+    setSelectedGuillotinado(guillotinado);
     setModalMode('edit');
     setIsModalOpen(true);
   };
@@ -121,6 +159,18 @@ export function Terminaciones() {
         const success = await deleteAnillado(anillado.id);
         if (success) {
           await fetchAnillados();
+        }
+      }
+    );
+  };
+
+  const handleDeleteGuillotinado = async (guillotinado: CentroCopiadoRangoGuillotinado) => {
+    confirmDelete(
+      `Rango ${guillotinado.hojas_desde} - ${guillotinado.hojas_hasta || '∞'} hojas`,
+      async () => {
+        const success = await deleteGuillotinado(guillotinado.id);
+        if (success) {
+          await fetchGuillotinados();
         }
       }
     );
@@ -150,6 +200,22 @@ export function Terminaciones() {
       if (result) {
         setIsModalOpen(false);
         await fetchAnillados();
+      }
+    }
+  };
+
+  const handleSubmitGuillotinado = async (data: any) => {
+    if (modalMode === 'create') {
+      const result = await createGuillotinado(data);
+      if (result) {
+        setIsModalOpen(false);
+        await fetchGuillotinados();
+      }
+    } else if (selectedGuillotinado) {
+      const result = await updateGuillotinado(selectedGuillotinado.id, data);
+      if (result) {
+        setIsModalOpen(false);
+        await fetchGuillotinados();
       }
     }
   };
@@ -268,6 +334,95 @@ export function Terminaciones() {
     );
   };
 
+  const renderGuillotinadosTab = () => {
+    if (loadingGuillotinados) {
+      return (
+        <Card>
+          <div className="p-12 text-center">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+            <p className="text-gray-600">Cargando rangos de guillotinado...</p>
+          </div>
+        </Card>
+      );
+    }
+
+    if (guillotinados.length === 0) {
+      return (
+        <Card>
+          <div className="p-12">
+            <EmptyState
+              icon={Scissors}
+              title="No hay rangos de guillotinado configurados"
+              description="Comienza agregando rangos de cantidad de hojas con precios para guillotinado."
+            />
+          </div>
+        </Card>
+      );
+    }
+
+    return (
+      <Card>
+        <div className="p-6">
+          <SearchInput
+            value={searchTerm}
+            onChange={setSearchTerm}
+            placeholder="Buscar rango..."
+            className="mb-4"
+          />
+
+          <Table
+            columns={[
+              {
+                key: 'rango',
+                header: 'Rango de Hojas',
+                render: (guillotinado: CentroCopiadoRangoGuillotinado) => (
+                  <div className="flex items-center gap-2">
+                    <Badge variant="primary">
+                      {guillotinado.hojas_desde} - {guillotinado.hojas_hasta || '∞'}
+                    </Badge>
+                  </div>
+                )
+              },
+              {
+                key: 'precio',
+                header: 'Precio',
+                render: (guillotinado: CentroCopiadoRangoGuillotinado) => (
+                  <span className="font-medium text-green-600">
+                    ${guillotinado.precio.toFixed(2)}
+                  </span>
+                )
+              },
+              {
+                key: 'actions',
+                header: 'Acciones',
+                render: (guillotinado: CentroCopiadoRangoGuillotinado) => (
+                  <div className="flex items-center justify-end gap-2">
+                    <button
+                      onClick={() => handleEditGuillotinado(guillotinado)}
+                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      title="Editar"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteGuillotinado(guillotinado)}
+                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Eliminar"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                )
+              },
+            ]}
+            data={filteredGuillotinados}
+            keyExtractor={(guillotinado) => guillotinado.id}
+          />
+        </div>
+      </Card>
+    );
+  };
+
   const renderPlastificadosTab = () => {
     if (loadingPlastificados) {
       return (
@@ -368,6 +523,8 @@ export function Terminaciones() {
     switch (activeTab) {
       case 'anillados':
         return renderAnilladosTab();
+      case 'guillotinado':
+        return renderGuillotinadosTab();
       case 'plastificados':
         return renderPlastificadosTab();
       default:
@@ -391,15 +548,25 @@ export function Terminaciones() {
             ? modalMode === 'create'
               ? 'Nuevo Rango de Anillado'
               : 'Editar Rango de Anillado'
-            : modalMode === 'create'
-            ? 'Agregar Precio de Plastificado'
-            : 'Editar Precio de Plastificado'
+            : activeTab === 'guillotinado'
+              ? modalMode === 'create'
+                ? 'Nuevo Rango de Guillotinado'
+                : 'Editar Rango de Guillotinado'
+              : modalMode === 'create'
+                ? 'Agregar Precio de Plastificado'
+                : 'Editar Precio de Plastificado'
         }
       >
         {activeTab === 'anillados' ? (
           <RangoAnilladoForm
             rango={modalMode === 'edit' ? selectedAnillado || undefined : undefined}
             onSubmit={handleSubmitAnillado}
+            onCancel={() => setIsModalOpen(false)}
+          />
+        ) : activeTab === 'guillotinado' ? (
+          <RangoGuillotinadoForm
+            rango={modalMode === 'edit' ? selectedGuillotinado || undefined : undefined}
+            onSubmit={handleSubmitGuillotinado}
             onCancel={() => setIsModalOpen(false)}
           />
         ) : (

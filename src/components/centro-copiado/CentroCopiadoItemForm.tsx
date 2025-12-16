@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Trash2, ChevronDown, ChevronUp, DollarSign, File, FileText, CheckCircle2 } from 'lucide-react';
 import { Card } from '../ui/Card';
@@ -28,6 +29,9 @@ export interface ItemCopiadoConfig {
     tipo: TipoPlastificado;
     todas_hojas: boolean;
     cantidad_especifica?: number;
+  };
+  guillotinado?: {
+    cantidad_hojas: number;
   };
 }
 
@@ -115,10 +119,18 @@ export function CentroCopiadoItemForm({
           }
           : undefined;
 
+        const configGuillotinado = value.guillotinado
+          ? {
+            cantidad_hojas: value.cantidad_hojas || 0,
+            cantidad_copias: value.cantidad_copias || 1,
+          }
+          : undefined;
+
         const desglose = await calcularPrecioCompleto(
           configImpresion,
           configAnillado,
-          configPlastificado
+          configPlastificado,
+          configGuillotinado
         );
 
         setPrecioCalculado(desglose.subtotal_item);
@@ -148,6 +160,7 @@ export function CentroCopiadoItemForm({
   const handleTerminacionesChange = (terminaciones: {
     anillado?: { tipo: TipoAnillado };
     plastificado?: { tipo: TipoPlastificado; todas_hojas: boolean; cantidad_especifica?: number };
+    guillotinado?: { cantidad_hojas: number };
   }) => {
     onChange({
       ...value,
@@ -457,6 +470,7 @@ export function CentroCopiadoItemForm({
                     cantidadCopias={value.cantidad_copias || 1}
                     anillado={value.anillado}
                     plastificado={value.plastificado}
+                    guillotinado={value.guillotinado}
                     onChange={handleTerminacionesChange}
                   />
                 </div>

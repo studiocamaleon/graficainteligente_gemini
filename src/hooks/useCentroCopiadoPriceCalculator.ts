@@ -30,6 +30,11 @@ interface ConfiguracionPlastificado {
   cantidad_copias: number;
 }
 
+export interface ConfiguracionGuillotinado {
+  cantidad_hojas: number;
+  cantidad_copias: number;
+}
+
 interface DesglosePrecios {
   precio_impresion_unitario: number;
   precio_impresion_total: number;
@@ -37,6 +42,8 @@ interface DesglosePrecios {
   precio_anillado_total: number;
   precio_plastificado_unitario: number;
   precio_plastificado_total: number;
+  precio_guillotinado_unitario: number;
+  precio_guillotinado_total: number;
   subtotal_item: number;
   total_copias: number;
 }
@@ -108,6 +115,8 @@ export function useCentroCopiadoPriceCalculator() {
           precio_anillado_total: 0,
           precio_plastificado_unitario: 0,
           precio_plastificado_total: 0,
+          precio_guillotinado_unitario: 0,
+          precio_guillotinado_total: 0,
           subtotal_item: precioImpresionTotal,
           total_copias: config.cantidad_copias,
         };
@@ -233,11 +242,65 @@ export function useCentroCopiadoPriceCalculator() {
     [profile?.company_id]
   );
 
+  const calcularPrecioGuillotinado = useCallback(
+    async (config: ConfiguracionGuillotinado): Promise<number> => {
+      if (!profile?.company_id) {
+        throw new Error('No se pudo obtener la información del usuario');
+      }
+
+      if (!config.cantidad_hojas || !config.cantidad_copias) {
+        return 0;
+      }
+
+      try {
+        const { data: rangos, error: rangosError } = await supabase
+          .from('centro_copiado_rangos_guillotinado')
+          .select('*')
+          .eq('company_id', profile.company_id)
+          .eq('is_active', true)
+          .order('hojas_desde', { ascending: true });
+
+        if (rangosError) throw rangosError;
+
+        if (!rangos || rangos.length === 0) {
+          throw new Error('No hay rangos de guillotinado configurados. Por favor, configure los rangos en la sección de Terminaciones.');
+        }
+
+        const rangoAplicable = rangos.find(
+          (rango) =>
+            config.cantidad_hojas >= rango.hojas_desde &&
+            (rango.hojas_hasta === null || config.cantidad_hojas <= rango.hojas_hasta)
+        );
+
+        if (!rangoAplicable) {
+          const rangoMin = rangos[0]?.hojas_desde || 0;
+          const rangoMax = rangos[rangos.length - 1]?.hojas_hasta;
+          const rangoInfo = rangoMax
+            ? `entre ${rangoMin} y ${rangoMax} hojas`
+            : `desde ${rangoMin} hojas`;
+          throw new Error(`No hay rango de guillotinado para ${config.cantidad_hojas} hojas. Los rangos configurados son ${rangoInfo}.`);
+        }
+
+        const precioTotal = Number(rangoAplicable.precio);
+
+        return precioTotal * config.cantidad_copias;
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Error al calcular precio de guillotinado';
+        setError(errorMessage);
+        throw err;
+      }
+    },
+    [profile?.company_id]
+  );
+
+
+
   const calcularPrecioCompleto = useCallback(
     async (
       configImpresion: ConfiguracionImpresion,
       configAnillado?: ConfiguracionAnillado,
-      configPlastificado?: ConfiguracionPlastificado
+      configPlastificado?: ConfiguracionPlastificado,
+      configGuillotinado?: ConfiguracionGuillotinado
     ): Promise<DesglosePrecios> => {
       try {
         setCalculating(true);
@@ -262,10 +325,18 @@ export function useCentroCopiadoPriceCalculator() {
           }
         }
 
+        let precioGuillotinadoTotal = 0;
+        let precioGuillotinadoUnitario = 0;
+        if (configGuillotinado) {
+          precioGuillotinadoTotal = await calcularPrecioGuillotinado(configGuillotinado);
+          precioGuillotinadoUnitario = precioGuillotinadoTotal / configGuillotinado.cantidad_copias;
+        }
+
         const subtotal =
           preciosImpresion.precio_impresion_total +
           precioAnilladoTotal +
-          precioPlastificadoTotal;
+          precioPlastificadoTotal +
+          precioGuillotinadoTotal;
 
         return {
           precio_impresion_unitario: preciosImpresion.precio_impresion_unitario,
@@ -274,6 +345,8 @@ export function useCentroCopiadoPriceCalculator() {
           precio_anillado_total: precioAnilladoTotal,
           precio_plastificado_unitario: precioPlastificadoUnitario,
           precio_plastificado_total: precioPlastificadoTotal,
+          precio_guillotinado_unitario: precioGuillotinadoUnitario,
+          precio_guillotinado_total: precioGuillotinadoTotal,
           subtotal_item: subtotal,
           total_copias: configImpresion.cantidad_copias,
         };
@@ -285,7 +358,7 @@ export function useCentroCopiadoPriceCalculator() {
         setCalculating(false);
       }
     },
-    [calcularPrecioImpresion, calcularPrecioAnillado, calcularPrecioPlastificado]
+    [calcularPrecioImpresion, calcularPrecioAnillado, calcularPrecioPlastificado, calcularPrecioGuillotinado]
   );
 
   return {
@@ -294,6 +367,7 @@ export function useCentroCopiadoPriceCalculator() {
     calcularPrecioImpresion,
     calcularPrecioAnillado,
     calcularPrecioPlastificado,
+    calcularPrecioGuillotinado,
     calcularPrecioCompleto,
   };
 }

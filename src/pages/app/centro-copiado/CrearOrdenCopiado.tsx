@@ -361,6 +361,7 @@ export function CrearOrdenCopiado() {
           cantidad_plastificado: config.plastificado?.todas_hojas
             ? config.cantidad_hojas
             : config.plastificado?.cantidad_especifica,
+          con_guillotinado: !!config.guillotinado,
           precio_unitario: (item.precio || 0) / (config.cantidad_copias || 1),
           subtotal: item.precio || 0,
           descripcion: item.descripcion || undefined,
