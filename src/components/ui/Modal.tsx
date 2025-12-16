@@ -10,6 +10,7 @@ interface ModalProps {
   children: ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
   showCloseButton?: boolean;
+  footer?: ReactNode;
 }
 
 const sizeStyles = {
@@ -26,7 +27,8 @@ export function Modal({
   title,
   children,
   size = 'md',
-  showCloseButton = true
+  showCloseButton = true,
+  footer
 }: ModalProps) {
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -91,6 +93,11 @@ export function Modal({
                 <div className="flex-1 overflow-y-auto p-6">
                   {children}
                 </div>
+                {footer && (
+                  <div className="border-t border-gray-200 p-6 bg-gray-50 rounded-b-xl">
+                    {footer}
+                  </div>
+                )}
               </motion.div>
             </div>
           </div>

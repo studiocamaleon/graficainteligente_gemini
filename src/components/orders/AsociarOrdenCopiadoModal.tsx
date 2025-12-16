@@ -1,9 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Plus, Trash2, FileText, Calendar, X } from 'lucide-react';
+import { Plus, FileText } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
-import { Card } from '../ui/Card';
-import { Badge } from '../ui/Badge';
 import { DatePicker } from '../ui/DatePicker';
 import { CentroCopiadoItemForm, ItemCopiadoConfig } from '../centro-copiado/CentroCopiadoItemForm';
 
@@ -26,7 +24,6 @@ interface AsociarOrdenCopiadoModalProps {
   isOpen: boolean;
   onClose: () => void;
   onGuardar: (orden: OrdenCopiadoTemporal) => void;
-  clienteNombre: string;
   ordenEditando?: OrdenCopiadoTemporal;
 }
 
@@ -34,7 +31,6 @@ export function AsociarOrdenCopiadoModal({
   isOpen,
   onClose,
   onGuardar,
-  clienteNombre,
   ordenEditando,
 }: AsociarOrdenCopiadoModalProps) {
   const [fechaEntrega, setFechaEntrega] = useState('');
@@ -46,10 +42,37 @@ export function AsociarOrdenCopiadoModal({
   // Inicializar con datos de edición si existen
   useEffect(() => {
     if (ordenEditando) {
-      setItems(ordenEditando.items);
+      // Si la orden viene de DB, los items pueden no tener 'config' (estructura plana)
+      // Necesitamos hidratar la config desde las propiedades planas
+      const itemsHydrated: ItemCopiadoWithId[] = ordenEditando.items.map((item: any) => {
+        if (item.config) return item; // Ya tiene formato correcto
+
+        // Hidratar desde DB flat structure
+        return {
+          id: item.id,
+          precio: item.precio || item.subtotal || 0,
+          descripcion: item.descripcion,
+          config: {
+            tamanio_papel_id: item.tamanio_papel_id,
+            papel_id: item.papel_id,
+            tipo_tinta: item.tipo_tinta,
+            cara_impresa: item.cara_impresa,
+            cantidad_hojas: item.cantidad_hojas,
+            cantidad_copias: item.cantidad_unidades || item.config?.cantidad_copias, // Fallback
+            anillado: item.tipo_anillado ? { tipo: item.tipo_anillado } : undefined,
+            plastificado: item.tipo_plastificado ? {
+              tipo: item.tipo_plastificado,
+              todas_hojas: true // Asunción por defecto si viene de DB antiguo
+            } : undefined,
+            guillotinado: item.con_guillotinado ? { cantidad_hojas: item.cantidad_hojas } : undefined
+          }
+        };
+      });
+
+      setItems(itemsHydrated);
       // Colapsar todos los items al cargar orden existente
       const collapsed: Record<string, boolean> = {};
-      ordenEditando.items.forEach(item => {
+      itemsHydrated.forEach(item => {
         collapsed[item.id] = true;
       });
       setItemsCollapsed(collapsed);
@@ -173,29 +196,46 @@ export function AsociarOrdenCopiadoModal({
     return items.reduce((sum, item) => sum + (item.precio || 0), 0);
   };
 
+  const footerContent = (
+    <div className="space-y-4">
+      {/* Error de validación */}
+      {errorValidacion && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+          <p className="text-sm text-red-700">{errorValidacion}</p>
+        </div>
+      )}
+
+      {/* Resumen de totales y Acciones */}
+      <div className="flex items-center justify-between pt-2">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-gray-700">Total:</span>
+          <span className="text-xl font-bold text-green-600">
+            ${calcularTotal().toFixed(2)}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <Button variant="secondary" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button variant="primary" onClick={validarYGuardar}>
+            <FileText className="w-4 h-4" />
+            {ordenEditando ? 'Actualizar Orden' : 'Asociar Orden'}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
+      footer={footerContent}
       title={ordenEditando ? 'Editar Orden de Copiado Asociada' : 'Asociar Orden de Copiado'}
       size="xl"
     >
       <div className="space-y-6">
-        {/* Info del cliente */}
-        <Card className="bg-blue-50 border-blue-200">
-          <div className="p-4">
-            <div className="flex items-center gap-2 mb-1">
-              <FileText className="w-5 h-5 text-blue-600" />
-              <span className="text-sm font-medium text-blue-900">
-                Cliente de la Orden de Trabajo
-              </span>
-            </div>
-            <p className="text-lg font-bold text-blue-900 ml-7">{clienteNombre}</p>
-            <p className="text-xs text-blue-700 ml-7 mt-1">
-              La orden de copiado se creará para este cliente y se asociará automáticamente
-            </p>
-          </div>
-        </Card>
 
         {/* Información general */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -210,19 +250,6 @@ export function AsociarOrdenCopiadoModal({
           </div>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Observaciones (Opcional)
-          </label>
-          <textarea
-            value={observaciones}
-            onChange={(e) => setObservaciones(e.target.value)}
-            rows={2}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="Notas específicas para esta orden de copiado..."
-          />
-        </div>
-
         {/* Items de copiado */}
         <div>
           <div className="flex items-center justify-between mb-4">
@@ -233,7 +260,7 @@ export function AsociarOrdenCopiadoModal({
             </Button>
           </div>
 
-          <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+          <div className="space-y-3">
             {items.map((item, index) => (
               <CentroCopiadoItemForm
                 key={item.id}
@@ -251,39 +278,8 @@ export function AsociarOrdenCopiadoModal({
           </div>
         </div>
 
-        {/* Error de validación */}
-        {errorValidacion && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-sm text-red-700">{errorValidacion}</p>
-          </div>
-        )}
-
-        {/* Resumen de totales */}
-        <Card className="bg-gray-50">
-          <div className="p-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-700">Total Orden de Copiado:</span>
-              <span className="text-2xl font-bold text-green-600">
-                ${calcularTotal().toFixed(2)}
-              </span>
-            </div>
-            <p className="text-xs text-gray-600 mt-2">
-              Este total se sumará al total de la Orden de Trabajo
-            </p>
-          </div>
-        </Card>
-
-        {/* Acciones */}
-        <div className="flex items-center justify-end gap-3 pt-4 border-t">
-          <Button variant="secondary" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button variant="primary" onClick={validarYGuardar}>
-            <FileText className="w-4 h-4" />
-            {ordenEditando ? 'Actualizar Orden' : 'Asociar Orden de Copiado'}
-          </Button>
-        </div>
       </div>
     </Modal>
   );
+
 }

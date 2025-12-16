@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { Trash2, ChevronDown, ChevronUp, DollarSign, File, FileText, CheckCircle2 } from 'lucide-react';
+import { Trash2, DollarSign, File, FileText, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
 import { Card } from '../ui/Card';
 import { Badge } from '../ui/Badge';
 import { Input } from '../ui/Input';
@@ -60,7 +60,7 @@ export function CentroCopiadoItemForm({
   isCollapsed = false,
   onToggleCollapse,
 }: CentroCopiadoItemFormProps) {
-  const [showTerminaciones, setShowTerminaciones] = useState(false);
+
   const [precioCalculado, setPrecioCalculado] = useState<number | null>(null);
   const [errorCalculo, setErrorCalculo] = useState<string | null>(null);
 
@@ -251,10 +251,19 @@ export function CentroCopiadoItemForm({
           </div>
         </button>
         <div className="flex items-center gap-2 ml-4">
-          {!isCollapsed && precioCalculado !== null && (
-            <Badge variant="success" className="text-lg font-bold">
-              <DollarSign className="w-4 h-4" />
-              ${precioCalculado.toFixed(2)}
+          {!isCollapsed && (calculating || precioCalculado !== null) && (
+            <Badge variant={calculating ? "warning" : "success"} className="text-lg font-bold min-w-[100px] justify-center">
+              {calculating ? (
+                <div className="flex items-center gap-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-yellow-700"></div>
+                  <span className="text-sm">...</span>
+                </div>
+              ) : (
+                <>
+                  <DollarSign className="w-4 h-4" />
+                  ${precioCalculado?.toFixed(2)}
+                </>
+              )}
             </Badge>
           )}
           <button
@@ -442,39 +451,20 @@ export function CentroCopiadoItemForm({
               </div>
             )}
 
-            {calculating && (
-              <div className="flex items-center justify-center py-2">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                <span className="ml-2 text-xs text-gray-600">Calculando precio...</span>
-              </div>
-            )}
 
-            <div className="border-t pt-3">
-              <button
-                type="button"
-                onClick={() => setShowTerminaciones(!showTerminaciones)}
-                className="flex items-center justify-between w-full p-2 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <span className="font-medium text-sm text-gray-900">Terminaciones</span>
-                {showTerminaciones ? (
-                  <ChevronUp className="w-4 h-4 text-gray-500" />
-                ) : (
-                  <ChevronDown className="w-4 h-4 text-gray-500" />
-                )}
-              </button>
+            <div className="pt-3">
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 pl-1">
+                4. Terminaciones
+              </label>
 
-              {showTerminaciones && (
-                <div className="mt-3">
-                  <CentroCopiadoItemTerminaciones
-                    cantidadHojas={value.cantidad_hojas || 0}
-                    cantidadCopias={value.cantidad_copias || 1}
-                    anillado={value.anillado}
-                    plastificado={value.plastificado}
-                    guillotinado={value.guillotinado}
-                    onChange={handleTerminacionesChange}
-                  />
-                </div>
-              )}
+              <CentroCopiadoItemTerminaciones
+                cantidadHojas={value.cantidad_hojas || 0}
+                cantidadCopias={value.cantidad_copias || 1}
+                anillado={value.anillado}
+                plastificado={value.plastificado}
+                guillotinado={value.guillotinado}
+                onChange={handleTerminacionesChange}
+              />
             </div>
           </div>
         </div>

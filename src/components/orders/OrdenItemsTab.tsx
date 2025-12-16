@@ -740,25 +740,33 @@ export function OrdenItemsTab({
 
                       {ordenesExpanded[oc.id] && (
                         <div className="mt-3 pl-8 space-y-2">
-                          {oc.items.map((item: any, idx: number) => (
-                            <div
-                              key={item.id}
-                              className="text-sm text-gray-700 flex items-center gap-2"
-                            >
-                              <Badge variant="default" size="sm">
-                                {idx + 1}
-                              </Badge>
-                              <span>
-                                {item.config.cantidad_copias} copias •{' '}
-                                {item.config.cantidad_hojas} hojas •{' '}
-                                {item.config.tipo_tinta === 'CMYK' ? 'Color' : 'B/N'}
-                                {item.descripcion && ` • ${item.descripcion}`}
-                              </span>
-                              <span className="ml-auto font-medium text-green-600">
-                                ${(item.precio || 0).toFixed(2)}
-                              </span>
-                            </div>
-                          ))}
+                          {oc.items.map((item: any, idx: number) => {
+                            // Handle both hydrated config and direct DB item structure
+                            const copies = item.config?.cantidad_copias || item.cantidad_unidades || 1;
+                            const sheets = item.config?.cantidad_hojas || item.cantidad_hojas || 0;
+                            const inkType = item.config?.tipo_tinta || item.tipo_tinta;
+                            const price = item.precio || item.subtotal || 0;
+
+                            return (
+                              <div
+                                key={item.id}
+                                className="text-sm text-gray-700 flex items-center gap-2"
+                              >
+                                <Badge variant="default" size="sm">
+                                  {idx + 1}
+                                </Badge>
+                                <span>
+                                  {copies} copias •{' '}
+                                  {sheets} hojas •{' '}
+                                  {inkType === 'CMYK' ? 'Color' : 'B/N'}
+                                  {item.descripcion && ` • ${item.descripcion}`}
+                                </span>
+                                <span className="ml-auto font-medium text-green-600">
+                                  ${(price).toFixed(2)}
+                                </span>
+                              </div>
+                            )
+                          })}
                           {oc.observaciones && (
                             <div className="mt-2 p-2 bg-white rounded text-sm text-gray-600">
                               <strong>Observaciones:</strong> {oc.observaciones}
@@ -884,7 +892,6 @@ export function OrdenItemsTab({
               }
               setOrdenCopiadoEditando(undefined);
             }}
-            clienteNombre={clienteNombre}
             ordenEditando={ordenCopiadoEditando}
           />
         )

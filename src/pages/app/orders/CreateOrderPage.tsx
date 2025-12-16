@@ -243,10 +243,10 @@ export function CreateOrderPage() {
         })));
       }
 
-      // TODO: Cargar órdenes de copiado asociadas si aplica
-      // Actualmente getOrdenById trae 'ordenCopiado' pero solo una vinculada directamente por campo?
-      // La estructura actual parece soportar múltiples en UI, pero la DB usa tabla intermedia o FK.
-      // Asumiremos que por ahora no se editan las asociaciones de copiado en este flujo complejo.
+      // Cargar órdenes de copiado asociadas si aplica
+      if (orden.ordenCopiado) {
+        setOrdenesCopiadoAsociadas([orden.ordenCopiado]);
+      }
 
     } catch (err) {
       console.error('Error loading order:', err);
@@ -474,6 +474,7 @@ export function CreateOrderPage() {
 
       if (result) {
         showSuccess('Orden actualizada exitosamente');
+        setOrdenCreada(true); // Evitar prompt de cambios sin guardar
         // Navegar
         setTimeout(() => {
           navigate('/app/orders/ordenes');
