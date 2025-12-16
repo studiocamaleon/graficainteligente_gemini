@@ -430,7 +430,6 @@ export function CrearOrdenCopiado() {
         'Error',
         error instanceof Error ? error.message : 'Ocurrió un error al guardar la orden'
       );
-    } finally {
       setGuardando(false);
     }
   };

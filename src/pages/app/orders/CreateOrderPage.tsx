@@ -412,6 +412,7 @@ export function CreateOrderPage() {
 
     // Marcar que estamos creando orden para prevenir cleanup
     isCreatingOrderRef.current = true;
+    setIsLoading(true);
     console.log('[CreateOrderPage] Iniciando proceso (cleanup deshabilitado)');
 
     const totales = calcularTotales();
@@ -480,6 +481,7 @@ export function CreateOrderPage() {
       } else {
         showError(`Error al actualizar la orden: ${error}`);
         isCreatingOrderRef.current = false;
+        setIsLoading(false);
       }
     } else {
       // MODO CREACIÓN
@@ -629,10 +631,12 @@ export function CreateOrderPage() {
           console.error('[CreateOrderPage] Error post-creación:', err);
           showError(`Orden creada pero con advertencias: ${err.message}`);
           isCreatingOrderRef.current = false;
+          setIsLoading(false);
         }
       } else {
         showError(`Error al crear la orden: ${error || 'Error desconocido'}`);
         isCreatingOrderRef.current = false;
+        setIsLoading(false);
       }
     }
   };
