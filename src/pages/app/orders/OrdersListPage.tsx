@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search } from 'lucide-react';
+import { Plus, Search, List, LayoutGrid, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
 import { usePageHeader } from '../../../hooks/usePageHeader';
 import { useOrdenesTrabajo } from '../../../hooks/useOrdenesTrabajo';
 import { KanbanBoard } from '../../../components/orders/KanbanBoard';
+import { OrdenesTable } from '../../../components/orders/OrdenesTable';
 import { usePermissions } from '../../../hooks/usePermissions';
 import { useAuth } from '../../../hooks/useAuth';
 
@@ -18,11 +19,22 @@ export function OrdersListPage() {
   const canCreate = hasPermission('orders', 'create');
   const canViewFinancials = profile?.role !== 'operador_taller';
 
-  const { ordenes, metrics, loading } = useOrdenesTrabajo({
+  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
+  const [page, setPage] = useState(1);
+  const itemsPerPage = 50;
+
+  const { ordenes, metrics, loading, totalCount } = useOrdenesTrabajo({
     searchTerm,
-    page: 1,
-    itemsPerPage: 1000,
+    page,
+    itemsPerPage,
   });
+
+  // Reset page when search changes
+  useMemo(() => {
+    setPage(1);
+  }, [searchTerm]);
+
+  const totalPages = Math.ceil(totalCount / itemsPerPage);
 
   const headerAction = useMemo(
     () => canCreate ? (
@@ -81,19 +93,44 @@ export function OrdersListPage() {
 
       <Card>
         <div className="p-6">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="flex-1 relative">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+            <div className="flex-1 relative max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
-                placeholder="Buscar por número de orden..."
+                placeholder="Buscar por cliente o número..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-            <div className="text-sm text-gray-600">
-              <span className="font-semibold">{ordenes.length}</span> órdenes
+
+            <div className="flex items-center gap-4">
+              <div className="flex bg-gray-100 p-1 rounded-lg">
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`p-2 rounded-md transition-all ${viewMode === 'list'
+                    ? 'bg-white shadow text-blue-600'
+                    : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                  title="Vista Lista"
+                >
+                  <List className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={() => setViewMode('kanban')}
+                  className={`p-2 rounded-md transition-all ${viewMode === 'kanban'
+                    ? 'bg-white shadow text-blue-600'
+                    : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                  title="Vista Tablero"
+                >
+                  <LayoutGrid className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="text-sm text-gray-600">
+                <span className="font-semibold">{totalCount}</span> órdenes
+              </div>
             </div>
           </div>
 
@@ -117,8 +154,44 @@ export function OrdersListPage() {
               )}
             </div>
           ) : (
-            <KanbanBoard ordenes={ordenes} />
+            <>
+              {viewMode === 'list' ? (
+                <OrdenesTable ordenes={ordenes} />
+              ) : (
+                <div className="grid grid-cols-1 w-full">
+                  <KanbanBoard ordenes={ordenes} />
+                </div>
+              )}
+
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="flex justify-center items-center gap-4 mt-6">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                  >
+                    <ChevronLeft className="w-4 h-4 mr-1" />
+                    Anterior
+                  </Button>
+                  <span className="text-sm text-gray-600">
+                    Página {page} de {totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages}
+                  >
+                    Siguiente
+                    <ChevronRight className="w-4 h-4 ml-1" />
+                  </Button>
+                </div>
+              )}
+            </>
           )}
+
         </div>
       </Card>
     </div>

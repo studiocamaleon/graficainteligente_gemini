@@ -31,7 +31,7 @@ export function TintasPasosConfigEditor({
   const { pasos } = usePasos({
     searchTerm: pasoSearchTerm,
     isActive: true,
-    itemsPerPage: 100,
+    itemsPerPage: 10000,
   });
 
   useEffect(() => {
@@ -141,11 +141,10 @@ export function TintasPasosConfigEditor({
           return (
             <div
               key={tinta}
-              className={`p-4 border-2 rounded-lg ${
-                isComplete
+              className={`p-4 border-2 rounded-lg ${isComplete
                   ? 'border-green-200 bg-green-50'
                   : 'border-orange-200 bg-orange-50'
-              }`}
+                }`}
             >
               <div className="flex items-start gap-3">
                 <div className="flex items-center justify-center flex-shrink-0 pt-1">

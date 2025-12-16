@@ -79,7 +79,7 @@ export function AcabadoForm({ acabado, onSubmit, onCancel }: AcabadoFormProps) {
   const { pasos } = usePasos({
     searchTerm: pasoSearchTerm,
     isActive: true,
-    itemsPerPage: 100,
+    itemsPerPage: 10000,
   });
 
   const initialPasoRelacionado = acabado?.pasos?.[0];
@@ -316,10 +316,10 @@ export function AcabadoForm({ acabado, onSubmit, onCancel }: AcabadoFormProps) {
                         formData.tipo_impacto === 'fijo_porcentual'
                           ? 'Porcentaje (%)'
                           : formData.tipo_impacto === 'fijo_mt2'
-                          ? 'Valor por m² ($)'
-                          : formData.tipo_impacto === 'fijo_mt_lineal'
-                          ? 'Valor por metro lineal ($)'
-                          : 'Valor por minuto ($)'
+                            ? 'Valor por m² ($)'
+                            : formData.tipo_impacto === 'fijo_mt_lineal'
+                              ? 'Valor por metro lineal ($)'
+                              : 'Valor por minuto ($)'
                       }
                       type="number"
                       value={formData.valor_impacto_secundario ?? ''}

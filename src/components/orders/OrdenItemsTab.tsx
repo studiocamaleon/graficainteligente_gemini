@@ -638,7 +638,7 @@ export function OrdenItemsTab({
               setShowAddModal(true);
             }}>
               <Plus className="w-4 h-4" />
-              Item de Catálogo
+              Catálogo
             </Button>
             <Button
               onClick={() => {
@@ -650,7 +650,7 @@ export function OrdenItemsTab({
               className="border-dashed"
             >
               <Plus className="w-4 h-4" />
-              Item Personalizado
+              Personalizado
             </Button>
           </div>
           {clienteNombre && onOrdenesCopiadoAsociadasChange && (

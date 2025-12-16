@@ -35,7 +35,7 @@ export function ItemRouteEditor({
     getRutasPorEtapa,
   } = useOrdenItemRutas({ ordenItemId });
 
-  const { pasos, loading: loadingPasos } = usePasos({ isActive: true, itemsPerPage: 1000 });
+  const { pasos, loading: loadingPasos } = usePasos({ isActive: true, itemsPerPage: 10000 });
   const {
     dialogState,
     isLoading: isConfirmLoading,
@@ -182,7 +182,19 @@ export function ItemRouteEditor({
           <div className="flex gap-2">
             <div className="flex-1">
               <SearchableSelect
-                options={(pasos || []).map(p => ({ value: p.id, label: p.nombre }))}
+                options={(pasos || [])
+                  .filter(p => {
+                    const etapaMap: Record<string, string> = {
+                      'pre_prensa': 'Pre-prensa',
+                      'principal': 'Produccion',
+                      'post_prensa': 'Terminacion',
+                      'instalacion': 'Instalacion'
+                    };
+                    const dbEtapa = etapaMap[etapa] || etapa;
+                    return p.etapa === dbEtapa;
+                  })
+                  .map(p => ({ value: p.id, label: p.nombre }))
+                }
                 value=""
                 onChange={(value) => handleAgregarPaso(etapa, value)}
                 placeholder="Selecciona paso..."

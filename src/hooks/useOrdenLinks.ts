@@ -98,12 +98,21 @@ export function useOrdenLinks(ordenId: string) {
     }
 
     try {
+      // Si parece una ruta de windows o unix, es valida
+      if (
+        urlToValidate.startsWith('\\\\') ||
+        urlToValidate.startsWith('/') ||
+        /^[a-zA-Z]:\\/.test(urlToValidate)
+      ) {
+        return { valid: true };
+      }
+
       const urlObj = new URL(urlToValidate);
 
-      if (!urlObj.hostname) {
+      if (!urlObj.hostname && !urlObj.protocol.includes('file')) {
         return {
           valid: false,
-          error: 'URL inválida. Debe incluir un dominio.'
+          error: 'URL inválida. Debe incluir un dominio o ser una ruta de red válida.'
         };
       }
 
@@ -134,9 +143,10 @@ export function useOrdenLinks(ordenId: string) {
 
     // Normalizar URL: agregar https:// si no tiene protocolo
     let normalizedUrl = linkData.url.trim();
-    if (!normalizedUrl.includes('://')) {
-      normalizedUrl = 'https://' + normalizedUrl;
-    }
+    // Previamente se forzaba https:// aqui, pero ahora se maneja en el UI para permitir links internos
+    // if (!normalizedUrl.includes('://')) {
+    //   normalizedUrl = 'https://' + normalizedUrl;
+    // }
 
     try {
       setError(null);
@@ -184,9 +194,7 @@ export function useOrdenLinks(ordenId: string) {
       if (updates.titulo !== undefined) updateData.titulo = updates.titulo.trim();
       if (updates.url !== undefined) {
         let normalizedUrl = updates.url.trim();
-        if (!normalizedUrl.includes('://')) {
-          normalizedUrl = 'https://' + normalizedUrl;
-        }
+        // Previamente se forzaba https:// aqui, pero ahora se maneja en el UI
         updateData.url = normalizedUrl;
       }
       if (updates.descripcion !== undefined) {

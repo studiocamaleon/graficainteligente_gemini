@@ -23,7 +23,7 @@ interface RutaPasoModalProps {
 }
 
 export function RutaPasoModal({ rutaId, etapa, paso, onClose, onSuccess }: RutaPasoModalProps) {
-  const { pasos: pasosDisponibles, loading: loadingPasos } = usePasos({ itemsPerPage: 1000 });
+  const { pasos: pasosDisponibles, loading: loadingPasos } = usePasos({ itemsPerPage: 10000 });
   const { addPaso, updatePaso, pasos: pasosRuta } = useRutaPasos({ rutaId, etapa: null });
 
   const [tipoPaso, setTipoPaso] = useState<'obligatorio' | 'condicional'>('obligatorio');
@@ -184,10 +184,12 @@ export function RutaPasoModal({ rutaId, etapa, paso, onClose, onSuccess }: RutaP
     }
   };
 
-  const pasosOptions = pasosDisponibles.map((p) => ({
-    value: p.id,
-    label: `${p.nombre} ${p.codigo ? `(${p.codigo})` : ''}`,
-  }));
+  const pasosOptions = pasosDisponibles
+    .filter((p) => p.etapa === etapa)
+    .map((p) => ({
+      value: p.id,
+      label: `${p.nombre} ${p.codigo ? `(${p.codigo})` : ''}`,
+    }));
 
   return (
     <Modal
@@ -243,37 +245,37 @@ export function RutaPasoModal({ rutaId, etapa, paso, onClose, onSuccess }: RutaP
         {(tipoPaso === 'obligatorio' ||
           tipoCondicion === 'servicio_sin_nivel' ||
           tipoCondicion === 'acabado_sin_nivel') && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              {tipoPaso === 'condicional' ? '3. Seleccionar Paso *' : '2. Seleccionar Paso *'}
-            </label>
-            <SearchableSelect
-              options={pasosOptions}
-              value={pasoId}
-              onChange={setPasoId}
-              placeholder={loadingPasos ? 'Cargando pasos...' : 'Seleccionar paso...'}
-              disabled={loadingPasos || isSubmitting}
-              loading={loadingPasos}
-            />
-            <p className="mt-2 text-xs text-gray-500">
-              Selecciona el paso específico que se ejecutará {tipoPaso === 'condicional' ? 'cuando se cumpla la condición' : 'en esta etapa'}
-            </p>
-          </div>
-        )}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                {tipoPaso === 'condicional' ? '3. Seleccionar Paso *' : '2. Seleccionar Paso *'}
+              </label>
+              <SearchableSelect
+                options={pasosOptions}
+                value={pasoId}
+                onChange={setPasoId}
+                placeholder={loadingPasos ? 'Cargando pasos...' : 'Seleccionar paso...'}
+                disabled={loadingPasos || isSubmitting}
+                loading={loadingPasos}
+              />
+              <p className="mt-2 text-xs text-gray-500">
+                Selecciona el paso específico que se ejecutará {tipoPaso === 'condicional' ? 'cuando se cumpla la condición' : 'en esta etapa'}
+              </p>
+            </div>
+          )}
 
         {tipoPaso === 'condicional' && (
           tipoCondicion === 'servicio_con_nivel' ||
           tipoCondicion === 'acabado_con_nivel' ||
           tipoCondicion === 'tecnologia_tinta'
         ) && (
-          <div className="p-4 bg-blue-50 border-2 border-blue-200 rounded-lg">
-            <p className="text-sm text-blue-800">
-              <strong>No se requiere seleccionar un paso.</strong>
-              <br />
-              Los pasos se ejecutarán automáticamente según la configuración previamente definida en ABM Core.
-            </p>
-          </div>
-        )}
+            <div className="p-4 bg-blue-50 border-2 border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-800">
+                <strong>No se requiere seleccionar un paso.</strong>
+                <br />
+                Los pasos se ejecutarán automáticamente según la configuración previamente definida en ABM Core.
+              </p>
+            </div>
+          )}
 
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-3">

@@ -63,7 +63,7 @@ export function NivelesPrecionEditor({ niveles, onChange, errors = {} }: Niveles
   const { pasos } = usePasos({
     searchTerm: pasoSearchTerm,
     isActive: true,
-    itemsPerPage: 100,
+    itemsPerPage: 10000,
   });
 
   const handleAddNivel = () => {
@@ -169,11 +169,10 @@ export function NivelesPrecionEditor({ niveles, onChange, errors = {} }: Niveles
                     type="button"
                     onClick={() => handleMoveUp(index)}
                     disabled={index === 0}
-                    className={`p-1 rounded transition-colors ${
-                      index === 0
+                    className={`p-1 rounded transition-colors ${index === 0
                         ? 'text-gray-300 cursor-not-allowed'
                         : 'text-gray-600 hover:bg-gray-200'
-                    }`}
+                      }`}
                     title="Mover arriba"
                   >
                     <ChevronUp className="w-4 h-4" />
@@ -182,11 +181,10 @@ export function NivelesPrecionEditor({ niveles, onChange, errors = {} }: Niveles
                     type="button"
                     onClick={() => handleMoveDown(index)}
                     disabled={index === niveles.length - 1}
-                    className={`p-1 rounded transition-colors ${
-                      index === niveles.length - 1
+                    className={`p-1 rounded transition-colors ${index === niveles.length - 1
                         ? 'text-gray-300 cursor-not-allowed'
                         : 'text-gray-600 hover:bg-gray-200'
-                    }`}
+                      }`}
                     title="Mover abajo"
                   >
                     <ChevronDown className="w-4 h-4" />

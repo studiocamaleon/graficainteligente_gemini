@@ -26,7 +26,7 @@ export function AddPasoManualModal({
   itemNombre,
   currentStepsCount,
 }: AddPasoManualModalProps) {
-  const { pasos, loading: loadingPasos } = usePasos({ page: 1, itemsPerPage: 1000 });
+  const { pasos, loading: loadingPasos } = usePasos({ page: 1, itemsPerPage: 10000 });
 
   const [formData, setFormData] = useState({
     etapa: 'principal',

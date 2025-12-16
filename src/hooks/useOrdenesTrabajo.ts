@@ -15,7 +15,7 @@ interface UseOrdenesTrabajoParams {
   itemsPerPage?: number;
 }
 
-interface OrdenTrabajoWithRelations extends OrdenTrabajo {
+export interface OrdenTrabajoWithRelations extends OrdenTrabajo {
   cliente?: {
     id: string;
     nombre_fantasia: string;
@@ -111,84 +111,132 @@ export function useOrdenesTrabajo(params: UseOrdenesTrabajoParams = {}) {
       setLoading(true);
       setError(null);
 
-      // Nota: Usamos profiles!ordenes_trabajo_created_by_fkey para especificar explícitamente la relación
-      // ya que ordenes_trabajo tiene múltiples FKs a profiles (vendedor_id, created_by, updated_by)
-      let query = supabase
-        .from('ordenes_trabajo')
-        .select(
-          `
-          *,
-          cliente:clients(id, nombre_fantasia, numero_documento),
-          created_by_profile:profiles!ordenes_trabajo_created_by_fkey(id, full_name, avatar_url)
-        `,
-          { count: 'exact' }
-        )
-        .eq('company_id', profile.company_id);
+      let data: any[] | null = null;
+      let count: number | null = 0;
 
-      if (estado) {
-        query = query.eq('estado', estado);
+      // START OF SEARCH LOGIC
+      if (searchTerm && searchTerm.length > 0) {
+        // Use RPC for search
+        const { data: searchData, error: searchError } = await supabase
+          .rpc('fn_search_ordenes_trabajo', {
+            p_search_term: searchTerm,
+            p_company_id: profile.company_id,
+            p_limit: itemsPerPage,
+            p_offset: (page - 1) * itemsPerPage
+          });
+
+        if (searchError) throw searchError;
+
+        data = searchData;
+        // RPC now returns full_count in each row (window function)
+        // If data exists, take the count from the first row. If no data, count is 0.
+        if (searchData && searchData.length > 0) {
+          count = searchData[0].full_count;
+        } else {
+          count = 0;
+        }
+
+      } else {
+        // Standard Fetch Logic
+        let query = supabase
+          .from('ordenes_trabajo')
+          .select(
+            `
+            *,
+            cliente:clients(id, nombre_fantasia, numero_documento),
+            created_by_profile:profiles!ordenes_trabajo_created_by_fkey(id, full_name, avatar_url)
+          `,
+            { count: 'exact' }
+          )
+          .eq('company_id', profile.company_id);
+
+        if (estado) {
+          query = query.eq('estado', estado);
+        }
+
+        if (canalVenta) {
+          query = query.eq('canal_venta', canalVenta);
+        }
+
+        if (clienteId) {
+          query = query.eq('cliente_id', clienteId);
+        }
+
+        if (vendedorId) {
+          // Nota: Por ahora filtramos por created_by ya que vendedor_id está reservado para futura funcionalidad
+          query = query.eq('created_by', vendedorId);
+        }
+
+        if (fechaDesde) {
+          query = query.gte('fecha_creacion', fechaDesde);
+        }
+
+        if (fechaHasta) {
+          query = query.lte('fecha_creacion', fechaHasta);
+        }
+
+        const from = (page - 1) * itemsPerPage;
+        const to = from + itemsPerPage - 1;
+
+        query = query.order('fecha_creacion', { ascending: false }).range(from, to);
+
+        const { data: standardData, error: standardError, count: standardCount } = await query;
+        if (standardError) throw standardError;
+
+        data = standardData;
+        count = standardCount;
       }
-
-      if (canalVenta) {
-        query = query.eq('canal_venta', canalVenta);
-      }
-
-      if (clienteId) {
-        query = query.eq('cliente_id', clienteId);
-      }
-
-      if (vendedorId) {
-        // Nota: Por ahora filtramos por created_by ya que vendedor_id está reservado para futura funcionalidad
-        query = query.eq('created_by', vendedorId);
-      }
-
-      if (fechaDesde) {
-        query = query.gte('fecha_creacion', fechaDesde);
-      }
-
-      if (fechaHasta) {
-        query = query.lte('fecha_creacion', fechaHasta);
-      }
-
-      if (searchTerm) {
-        query = query.or(
-          `numero_orden.ilike.%${searchTerm}%,notas_internas.ilike.%${searchTerm}%`
-        );
-      }
-
-      const from = (page - 1) * itemsPerPage;
-      const to = from + itemsPerPage - 1;
-
-      query = query.order('fecha_creacion', { ascending: false }).range(from, to);
-
-      const { data, error: fetchError, count } = await query;
-
-      if (fetchError) throw fetchError;
 
       if (data) {
-        const ordenesWithCounts = await Promise.all(
-          data.map(async (orden) => {
+        // If it came from RPC, the structure is flat (except for what we defined)
+        // RPC returns: id, numero_orden, cliente_nombre, etc.
+        // We need to map it to OrdenTrabajoWithRelations interface mostly for the UI to work.
+
+        const mappedData = await Promise.all(data.map(async (item: any) => {
+          // If RPC source, we have flat fields. If Standard source, we have nested objects.
+          const isRpc = !!item.cliente_nombre; // Detection
+
+          if (isRpc) {
+            return {
+              id: item.id,
+              numero_orden: item.numero_orden,
+              fecha_creacion: item.fecha_creacion,
+              estado: item.estado,
+              total: item.total,
+              company_id: profile.company_id, // Implied
+              // Reconstruct relationships
+              cliente: {
+                id: item.cliente_id,
+                nombre_fantasia: item.cliente_nombre,
+                numero_documento: item.cliente_documento
+              },
+              items_count: item.items_count,
+              total_pagado: item.total_pagado,
+              // Some fields might be missing in RPC return, fill defaults or fetch if critical
+            } as OrdenTrabajoWithRelations;
+          } else {
+            // Standard Logic: fetch counts manually as before
             const { count: itemsCount } = await supabase
               .from('ordenes_trabajo_items')
               .select('*', { count: 'exact', head: true })
-              .eq('orden_id', orden.id);
+              .eq('orden_id', item.id);
 
             const { data: pagosData } = await supabase
               .from('ordenes_trabajo_pagos')
               .select('monto')
-              .eq('orden_id', orden.id);
+              .eq('orden_id', item.id);
 
             const totalPagado = pagosData?.reduce((sum, p) => sum + Number(p.monto), 0) || 0;
 
             return {
-              ...orden,
+              ...item,
               items_count: itemsCount || 0,
-              total_pagado: totalPagado,
-            };
-          })
-        );
+              total_pagado: totalPagado
+            } as OrdenTrabajoWithRelations;
+          }
+        }));
 
-        setOrdenes(ordenesWithCounts as OrdenTrabajoWithRelations[]);
+        setOrdenes(mappedData);
         setTotalCount(count || 0);
       }
     } catch (err) {

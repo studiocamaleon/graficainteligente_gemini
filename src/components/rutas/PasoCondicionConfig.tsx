@@ -44,7 +44,7 @@ export function PasoCondicionConfig({
   const { servicios } = useServicios({ itemsPerPage: 1000 });
   const { acabados } = useAcabados({ itemsPerPage: 1000 });
   const { tecnologias } = useTecnologias({ itemsPerPage: 1000 });
-  const { pasos } = usePasos({ itemsPerPage: 1000 });
+  const { pasos } = usePasos({ itemsPerPage: 10000 });
 
   const servicioIdConNivel = tipoCondicion === 'servicio_con_nivel' && 'servicio_id' in configuracion ? configuracion.servicio_id : null;
   const acabadoIdConNivel = tipoCondicion === 'acabado_con_nivel' && 'acabado_id' in configuracion ? configuracion.acabado_id : null;

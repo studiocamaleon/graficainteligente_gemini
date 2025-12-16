@@ -1,6 +1,18 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Save, Loader2, AlertTriangle, Link as LinkIcon } from 'lucide-react';
+import {
+  ArrowLeft, Save, Loader2, AlertTriangle, Link as LinkIcon,
+  Settings,
+  Share2,
+  Copy,
+  Check,
+  Download,
+  Server,
+  Plus,
+  Trash2,
+  ExternalLink,
+  Pencil,
+} from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
@@ -24,6 +36,26 @@ import { PagoFormModal } from '../../../components/orders/PagoFormModal';
 import { useOrdenLinks } from '../../../hooks/useOrdenLinks';
 import { useCentroCopiadoOrdenes } from '../../../hooks/useCentroCopiadoOrdenes';
 import type { CanalVenta } from '../../../types/database';
+import { Input } from '../../../components/ui/Input';
+import { Badge } from '../../../components/ui/Badge';
+import { Modal } from '../../../components/ui/Modal';
+import { useClientes } from '../../../hooks/useClientes';
+import { useProfile } from '../../../hooks/useProfile';
+import { usePresupuestos } from '../../../hooks/usePresupuestos';
+import { OrdenProductionRouteTab } from '../../../components/orders/OrdenProductionRouteTab';
+import { ClientesSelector } from '../../../components/orders/ClientesSelector';
+import { OrdenCopiadoAsociadaCard } from '../../../components/orders/OrdenCopiadoAsociadaCard';
+import { calcularTotalesConsolidados } from '../../../utils/ordenesConsolidadas';
+
+// Tipos
+import type {
+  Departamento,
+  Prioridad,
+  EstadoOrdenTrabajo,
+  ItemOrdenTrabajo,
+  OrdenTrabajoPago,
+} from '../../../types/database';
+import { crearOrdenCopiado } from '../../../utils/ordenesCopiado';
 
 interface PagoTemporal {
   id: string;
@@ -34,20 +66,61 @@ interface PagoTemporal {
   notas?: string;
 }
 
+interface CreateOrderPageProps {
+  initialData?: any; // Para modo edición
+}
+
+type LinkType = 'download' | 'internal';
+
 export function CreateOrderPage() {
   const navigate = useNavigate();
-  const { id } = useParams(); // ID de orden para editar
+  const { id } = useParams<{ id: string }>(); // ID de orden para editar
   const isEditing = Boolean(id);
 
   const { profile } = useAuth();
-  const { createOrdenConItems, updateOrdenCompleta, getOrdenById, addPago, loading, error } = useOrdenTrabajo();
+  const { createOrdenConItems, updateOrdenCompleta, getOrdenById } = useOrdenTrabajo();
   const { showSuccess, showError } = useToast();
   const { createOrden: createOrdenCopiado } = useCentroCopiadoOrdenes({});
+  const { getPresupuestoById } = usePresupuestos();
 
   usePageHeader(isEditing ? 'Editar Orden de Trabajo' : 'Crear nueva orden de trabajo');
 
 
   const [activeTab, setActiveTab] = useState('items');
+  const [isLoading, setIsLoading] = useState(false);
+
+
+  // Estados para Links
+  const [links, setLinks] = useState<{ titulo: string; url: string; descripcion: string }[]>([]);
+  const [linkModalOpen, setLinkModalOpen] = useState(false);
+  const [newLink, setNewLink] = useState({ titulo: '', url: '', descripcion: '' });
+  const [linkType, setLinkType] = useState<LinkType>('download');
+  const [editingLinkIndex, setEditingLinkIndex] = useState<number | null>(null);
+
+  const formatUrl = (url: string, type: LinkType): string => {
+    const trimmedUrl = url.trim();
+    if (type === 'download') {
+      if (!/^https?:\/\//i.test(trimmedUrl)) {
+        return `https://${trimmedUrl}`;
+      }
+    }
+    return trimmedUrl;
+  };
+
+  const handleCopyLink = async (url: string) => {
+    try {
+      await navigator.clipboard.writeText(url);
+      showSuccess('Link copiado al portapapeles');
+    } catch (err) {
+      console.error('Error copying link:', err);
+      showError('No se pudo copiar el link');
+    }
+  };
+
+  const openLink = (url: string) => {
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
   const [clienteId, setClienteId] = useState('');
   const [canalVenta, setCanalVenta] = useState<CanalVenta>('Mostrador');
   const [fechaEntrega, setFechaEntrega] = useState('');
@@ -421,7 +494,6 @@ export function CreateOrderPage() {
           // Insertar pagos si existen
           if (pagos.length > 0) {
             console.log('[CreateOrderPage] Insertando pagos:', pagos.length);
-
             const pagosInserts = pagos.map(pago => ({
               orden_id: result.id,
               fecha_pago: pago.fecha_pago,
@@ -438,9 +510,28 @@ export function CreateOrderPage() {
 
             if (pagosError) {
               console.error('[CreateOrderPage] Error insertando pagos:', pagosError);
-              showError('Orden creada pero hubo un error al registrar los pagos');
-            } else {
-              console.log('[CreateOrderPage] Pagos insertados exitosamente');
+            }
+          }
+
+          // Insertar links si existen
+          if (links.length > 0) {
+            console.log('[CreateOrderPage] Insertando links:', links.length);
+            const linksInserts = links.map(link => ({
+              orden_id: result.id,
+              company_id: profile.company_id,
+              titulo: link.titulo,
+              url: link.url,
+              descripcion: link.descripcion || null,
+              created_by: profile.id
+            }));
+
+            const { error: linksError } = await supabase
+              .from('ordenes_trabajo_links')
+              .insert(linksInserts);
+
+            if (linksError) {
+              console.error('[CreateOrderPage] Error insertando links:', linksError);
+              showError('Error al guardar algunos links');
             }
           }
 
@@ -569,7 +660,7 @@ export function CreateOrderPage() {
     },
     {
       id: 'adjuntos',
-      label: 'Adjuntos',
+      label: 'Links',
       disabled: false,
     },
     {
@@ -607,10 +698,10 @@ export function CreateOrderPage() {
 
           <Button
             onClick={handleCrearOrden}
-            disabled={loading || items.length === 0 || !clienteId}
+            disabled={isLoading || items.length === 0 || !clienteId}
             className="bg-blue-600 hover:bg-blue-700"
           >
-            {loading ? (
+            {isLoading ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
                 {isEditing ? 'Guardando...' : 'Creando...'}
@@ -682,18 +773,222 @@ export function CreateOrderPage() {
               />
             </div>
 
+
             <div className={activeTab === 'adjuntos' ? 'block' : 'hidden'}>
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
-                <LinkIcon className="w-12 h-12 text-blue-400 mx-auto mb-3" />
-                <h3 className="text-lg font-semibold text-blue-900 mb-2">
-                  {isEditing ? 'Links disponibles en detalle' : 'Links no disponibles en creación'}
-                </h3>
-                <p className="text-blue-700 text-sm">
-                  {isEditing
-                    ? 'Para gestionar links adjuntos, ve al detalle de la orden.'
-                    : 'Los links externos se pueden agregar después de crear la orden.'}
-                </p>
+              <div className="space-y-6">
+                {/* Acciones */}
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-700 font-medium">
+                    Links externos y rutas de archivos
+                  </span>
+
+                  <Button onClick={() => {
+                    setLinkType('download');
+                    setEditingLinkIndex(null);
+                    setNewLink({ titulo: '', url: '', descripcion: '' });
+                    setLinkModalOpen(true);
+                  }}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Agregar Link
+                  </Button>
+                </div>
+
+                {/* Lista de links locales */}
+                {links.length === 0 ? (
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
+                    <LinkIcon className="w-8 h-8 text-gray-400 mx-auto mb-3" />
+                    <p className="text-sm text-gray-500">
+                      No hay links agregados. Agrega archivos de WeTransfer, Drive o rutas de red interna.
+                    </p>
+                  </div>
+                ) : (
+                  <Card>
+                    <div className="divide-y divide-gray-200">
+                      {links.map((link, index) => {
+                        const isInternal = !/^https?:\/\//i.test(link.url);
+                        return (
+                          <div key={index} className="p-4 hover:bg-gray-50 transition-colors">
+                            <div className="flex items-center gap-4">
+                              <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${isInternal ? 'bg-amber-100' : 'bg-blue-100'}`}>
+                                {isInternal ? (
+                                  <Server className="w-6 h-6 text-amber-600" />
+                                ) : (
+                                  <Download className="w-6 h-6 text-blue-600" />
+                                )}
+                              </div>
+
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <h4 className="text-sm font-medium text-gray-900 truncate">
+                                    {link.titulo}
+                                  </h4>
+                                  <span className={`px-2 py-0.5 rounded text-xs font-medium ${isInternal ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800'}`}>
+                                    {isInternal ? 'Interno / Red' : 'Descarga'}
+                                  </span>
+                                </div>
+
+                                {/* URL Display */}
+                                <div className="flex items-center gap-2 mb-1">
+                                  {isInternal ? (
+                                    <span className="text-xs text-gray-600 font-mono bg-gray-100 px-2 py-0.5 rounded truncate select-all">
+                                      {link.url}
+                                    </span>
+                                  ) : (
+                                    <a
+                                      href={link.url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-xs text-blue-600 hover:underline truncate"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      {link.url}
+                                    </a>
+                                  )}
+                                </div>
+
+                                {link.descripcion && (
+                                  <p className="text-xs text-gray-600 mt-1 italic truncate">
+                                    {link.descripcion}
+                                  </p>
+                                )}
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                {!isInternal && (
+                                  <Button size="sm" variant="outline" onClick={() => openLink(link.url)} title="Abrir Link">
+                                    <ExternalLink className="w-4 h-4" />
+                                  </Button>
+                                )}
+                                <Button size="sm" variant="outline" onClick={() => handleCopyLink(link.url)} title="Copiar Link">
+                                  <Copy className="w-4 h-4" />
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={() => {
+                                  setEditingLinkIndex(index);
+                                  setNewLink(link);
+                                  setLinkType(isInternal ? 'internal' : 'download');
+                                  setLinkModalOpen(true);
+                                }} title="Editar Link">
+                                  <Pencil className="w-4 h-4 text-blue-600" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    const newLinks = [...links];
+                                    newLinks.splice(index, 1);
+                                    setLinks(newLinks);
+                                  }}
+                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                  title="Eliminar Link"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </Card>
+                )}
               </div>
+
+              {/* Modal Agregar Link Local */}
+              <Modal
+                isOpen={linkModalOpen}
+                onClose={() => {
+                  setLinkModalOpen(false);
+                  setNewLink({ titulo: '', url: '', descripcion: '' });
+                }}
+                title={editingLinkIndex !== null ? "Editar Link" : "Agregar Link"}
+              >
+                <div className="space-y-4">
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de Link</label>
+                    <div className="flex gap-4">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="linkType"
+                          checked={linkType === 'download'}
+                          onChange={() => setLinkType('download')}
+                          className="text-blue-600 focus:ring-blue-500"
+                        />
+                        <div className="flex items-center gap-1.5 text-sm text-gray-700">
+                          <Download className="w-4 h-4" />
+                          <span>Link de descarga (Web)</span>
+                        </div>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="linkType"
+                          checked={linkType === 'internal'}
+                          onChange={() => setLinkType('internal')}
+                          className="text-blue-600 focus:ring-blue-500"
+                        />
+                        <div className="flex items-center gap-1.5 text-sm text-gray-700">
+                          <Server className="w-4 h-4" />
+                          <span>Link interno (Red Local)</span>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+
+                  <Input
+                    label="Título"
+                    value={newLink.titulo}
+                    onChange={(e) => setNewLink({ ...newLink, titulo: e.target.value })}
+                    placeholder={linkType === 'download' ? "Ej: Archivos en WeTransfer" : "Ej: Carpeta de Producción"}
+                    required
+                  />
+                  <Input
+                    label={linkType === 'download' ? "URL de Descarga" : "Ruta de Carpeta/Archivo"}
+                    value={newLink.url}
+                    onChange={(e) => setNewLink({ ...newLink, url: e.target.value })}
+                    placeholder={linkType === 'download' ? "ejemplo.com" : "\\\\servidor\\carpeta"}
+                    required
+                  />
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Descripción (opcional)
+                    </label>
+                    <textarea
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500"
+                      rows={3}
+                      value={newLink.descripcion}
+                      onChange={(e) => setNewLink({ ...newLink, descripcion: e.target.value })}
+                    />
+                  </div>
+                  <div className="flex justify-end gap-3 mt-6">
+                    <Button variant="outline" onClick={() => {
+                      setLinkModalOpen(false);
+                      setEditingLinkIndex(null);
+                      setNewLink({ titulo: '', url: '', descripcion: '' });
+                    }}>Cancelar</Button>
+                    <Button onClick={() => {
+                      if (!newLink.titulo.trim() || !newLink.url.trim()) return;
+
+                      const formattedUrl = formatUrl(newLink.url, linkType);
+                      const linkData = { ...newLink, url: formattedUrl };
+
+                      if (editingLinkIndex !== null) {
+                        const updatedLinks = [...links];
+                        updatedLinks[editingLinkIndex] = linkData;
+                        setLinks(updatedLinks);
+                      } else {
+                        setLinks([...links, linkData]);
+                      }
+
+                      setLinkModalOpen(false);
+                      setEditingLinkIndex(null);
+                      setNewLink({ titulo: '', url: '', descripcion: '' });
+                    }}>
+                      {editingLinkIndex !== null ? 'Guardar Cambios' : 'Agregar'}
+                    </Button>
+                  </div>
+                </div>
+              </Modal>
             </div>
 
             <div className={activeTab === 'historial' ? 'block' : 'hidden'}>

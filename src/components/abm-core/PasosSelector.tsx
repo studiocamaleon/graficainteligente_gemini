@@ -23,7 +23,7 @@ export function PasosSelector({ selectedPasos, onChange }: PasosSelectorProps) {
   const { pasos, loading } = usePasos({
     searchTerm,
     isActive: true,
-    itemsPerPage: 100,
+    itemsPerPage: 10000,
   });
 
   const availablePasos = pasos.filter(
@@ -170,11 +170,10 @@ export function PasosSelector({ selectedPasos, onChange }: PasosSelectorProps) {
                   type="button"
                   onClick={() => handleMoveUp(index)}
                   disabled={index === 0}
-                  className={`p-1 rounded transition-colors ${
-                    index === 0
+                  className={`p-1 rounded transition-colors ${index === 0
                       ? 'text-gray-300 cursor-not-allowed'
                       : 'text-gray-600 hover:bg-gray-100'
-                  }`}
+                    }`}
                   title="Mover arriba"
                 >
                   <ChevronUp className="w-4 h-4" />
@@ -183,11 +182,10 @@ export function PasosSelector({ selectedPasos, onChange }: PasosSelectorProps) {
                   type="button"
                   onClick={() => handleMoveDown(index)}
                   disabled={index === selectedPasos.length - 1}
-                  className={`p-1 rounded transition-colors ${
-                    index === selectedPasos.length - 1
+                  className={`p-1 rounded transition-colors ${index === selectedPasos.length - 1
                       ? 'text-gray-300 cursor-not-allowed'
                       : 'text-gray-600 hover:bg-gray-100'
-                  }`}
+                    }`}
                   title="Mover abajo"
                 >
                   <ChevronDown className="w-4 h-4" />

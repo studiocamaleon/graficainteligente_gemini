@@ -600,7 +600,7 @@ export function OrderDetailPage() {
           {[
             { key: 'items' as const, label: 'Items', icon: Package, count: orden.items?.length || 0 },
             { key: 'ruta' as const, label: 'Ruta de Producción', icon: Route },
-            { key: 'adjuntos' as const, label: 'Adjuntos', icon: FileText },
+            { key: 'adjuntos' as const, label: 'Links', icon: LinkIcon },
             ...(canViewPrices ? [{ key: 'pagos' as const, label: 'Pagos', icon: CreditCard, count: orden.pagos?.length || 0 }] : []),
             { key: 'historial' as const, label: 'Historial', icon: History },
           ].map((tab) => {
