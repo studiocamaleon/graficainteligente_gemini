@@ -160,7 +160,12 @@ export function PresupuestoResumenSection({
               )}
               <div className="pt-3 border-t border-gray-200 flex justify-between items-end">
                 <span className="font-bold text-xl text-gray-900">Total Final</span>
-                <span className="font-bold text-3xl text-gray-900">{formatCurrency(totales.total)}</span>
+                <div className="text-right">
+                  <span className="font-bold text-3xl text-gray-900 block">{formatCurrency(totales.total)}</span>
+                  <span className="text-sm text-gray-600 font-medium block mt-1">
+                    {formatCurrency(totales.total * 1.21)} <span className="text-xs text-gray-500">(c/IVA)</span>
+                  </span>
+                </div>
               </div>
             </div>
           </div>

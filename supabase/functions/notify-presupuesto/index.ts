@@ -19,7 +19,8 @@ function generatePresupuestoListoMessage(
   cliente: any,
   items: any[],
   company: any,
-  origin: string
+  origin: string,
+  totalCalculado: number
 ): string {
   const trackingUrl = `${origin}/tracking/presupuesto/${presupuesto.tracking_token}`;
   const empresa = company.name || 'Nuestra empresa';
@@ -28,7 +29,8 @@ function generatePresupuestoListoMessage(
   mensaje += `Tu presupuesto ${presupuesto.numero_presupuesto} ya está listo. 📋\n\n`;
 
   mensaje += `*Resumen:*\n`;
-  mensaje += `Total: $${presupuesto.total?.toLocaleString('es-UY') || '0'}\n`;
+  mensaje += `Total: $${totalCalculado.toLocaleString('es-UY')}\n`;
+  mensaje += `Total c/IVA: $${(totalCalculado * 1.21).toLocaleString('es-UY')}\n`;
   mensaje += `Cantidad de ítems: ${items.length}\n\n`;
 
   if (presupuesto.fecha_validez) {
@@ -221,12 +223,16 @@ Deno.serve(async (req: Request) => {
         .select('*')
         .eq('presupuesto_id', presupuesto_id);
 
+      const itemsList = items || [];
+      const totalCalculado = itemsList.reduce((sum: number, item: any) => sum + (Number(item.precio_total) || 0), 0);
+
       mensaje = generatePresupuestoListoMessage(
         presupuesto,
         presupuesto.cliente,
-        items || [],
+        itemsList,
         company,
-        origin
+        origin,
+        totalCalculado
       );
     } else if (tipo_notificacion === 'presupuesto_aprobado') {
       mensaje = generatePresupuestoAprobadoMessage(

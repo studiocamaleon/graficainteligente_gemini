@@ -292,11 +292,21 @@ export async function generarPresupuestoPDF(
   doc.text('Total', totalsX, yPosition + 2); // adjustment
   doc.text(formatCurrency(totales.total), pageWidth - margin, yPosition + 2, { align: 'right' });
 
-  // (+ IVA) Legend
-  doc.setFont('helvetica', 'bold');
+  // (+ IVA) Legend for Net Total
+  doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   doc.setTextColor(...COLORS.secondaryText);
-  doc.text('(+ IVA)', pageWidth - margin, yPosition + 7, { align: 'right' });
+  // doc.text('(+ IVA)', pageWidth - margin, yPosition + 7, { align: 'right' }); // Removed based on new requirement
+
+  yPosition += 10;
+
+  // Total c/IVA
+  const totalConIva = totales.total * 1.21;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.setTextColor(...COLORS.text);
+  doc.text('Total c/IVA', totalsX, yPosition + 2);
+  doc.text(formatCurrency(totalConIva), pageWidth - margin, yPosition + 2, { align: 'right' });
 
   yPosition += 20;
 
