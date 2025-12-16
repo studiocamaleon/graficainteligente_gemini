@@ -34,7 +34,57 @@ export function usePresupuestos(
       setLoading(true);
       setError(null);
 
-      // Query base
+      // --- LOGICA DE BUSQUEDA (RPC) ---
+      if (filters?.search && filters.search.length > 0) {
+        if (!profile?.company_id) return;
+
+        const { data: searchData, error: searchError } = await supabase
+          .rpc('fn_search_presupuestos', {
+            p_search_term: filters.search,
+            p_company_id: profile.company_id,
+            p_limit: pagination?.limit || 20,
+            p_offset: ((pagination?.page || 1) - 1) * (pagination?.limit || 20)
+          });
+
+        if (searchError) throw searchError;
+
+        const mappedData: PresupuestoConRelaciones[] = (searchData || []).map((item: any) => ({
+          id: item.id,
+          numero_presupuesto: item.numero_presupuesto,
+          fecha_creacion: item.fecha_creacion,
+          fecha_validez: item.fecha_validez,
+          cliente_id: item.cliente_id,
+          vendedor_id: item.vendedor_id,
+          estado: item.estado,
+          total: Number(item.total),
+          company_id: item.company_id,
+          cliente: {
+            id: item.cliente_id,
+            razon_social: item.cliente_razon_social,
+            nombre_fantasia: item.cliente_nombre_fantasia,
+            email: item.cliente_email,
+            // whatsapp no viene en RPC por defecto, agregarlo si critico
+          },
+          vendedor: {
+            id: item.vendedor_id,
+            full_name: item.vendedor_full_name,
+            // email no viene
+          },
+          orden_trabajo: item.orden_trabajo_id ? {
+            id: item.orden_trabajo_id,
+            numero_orden: item.orden_trabajo_numero,
+            estado: 'pendiente' // Placeholder, no critico para lista
+          } : undefined,
+          items_count: Number(item.items_count),
+          presupuestos_items: [{ count: Number(item.items_count) }] // Para compatibilidad
+        }));
+
+        setPresupuestos(mappedData);
+        setTotal(searchData && searchData.length > 0 ? Number(searchData[0].full_count) : 0);
+        return;
+      }
+
+      // --- LOGICA ESTANDAR (Query Builder) ---
       let query = supabase
         .from('presupuestos')
         .select(
@@ -63,11 +113,7 @@ export function usePresupuestos(
         );
 
       // Filtros
-      if (filters?.search) {
-        query = query.or(
-          `numero_presupuesto.ilike.%${filters.search}%,cliente.razon_social.ilike.%${filters.search}%`
-        );
-      }
+      // Note: Search filter handled above via RPC
 
       if (filters?.estado) {
         if (Array.isArray(filters.estado)) {
@@ -132,6 +178,7 @@ export function usePresupuestos(
 
       setPresupuestos((presupuestosConCount as PresupuestoConRelaciones[]) || []);
       setTotal(count || 0);
+
     } catch (err: any) {
       console.error('Error fetching presupuestos:', err);
       setError(err.message);
