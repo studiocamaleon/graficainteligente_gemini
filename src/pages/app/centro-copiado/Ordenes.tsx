@@ -1,11 +1,10 @@
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, FileText, Eye, Calendar, DollarSign, CheckCircle, AlertCircle, Clock } from 'lucide-react';
 import { Switch } from '../../../components/ui/Switch';
 import { supabase } from '../../../lib/supabase';
 import { Card } from '../../../components/ui/Card';
 import { Button } from '../../../components/ui/Button';
-import { Table } from '../../../components/ui/Table';
 import { Badge } from '../../../components/ui/Badge';
 import { SearchInput } from '../../../components/ui/SearchInput';
 import { Select } from '../../../components/ui/Select';
@@ -200,96 +199,100 @@ export function Ordenes() {
 
     return (
       <>
-        <Card>
-          <div className="p-6">
-            <Table
-              columns={[
-                {
-                  key: 'numero_orden',
-                  header: 'Número de Orden',
-                  render: (orden) => (
-                    <span className="font-semibold text-blue-600">{orden.numero_orden}</span>
-                  ),
-                },
-                {
-                  key: 'cliente',
-                  header: 'Cliente',
-                  render: (orden) => (
-                    <div>
-                      <div className="font-medium">{orden.cliente?.nombre_fantasia || 'N/A'}</div>
-                      <div className="text-xs text-gray-500">{orden.cliente?.numero_documento}</div>
-                    </div>
-                  ),
-                },
-                {
-                  key: 'items',
-                  header: 'Items',
-                  render: (orden) => (
-                    <Badge variant="secondary">{orden.items_count || 0}</Badge>
-                  ),
-                },
-                {
-                  key: 'estado',
-                  header: 'Estado',
-                  render: (orden) => getEstadoBadge(orden.estado),
-                },
-                {
-                  key: 'fecha_solicitud',
-                  header: 'Fecha Solicitud',
-                  render: (orden) => (
-                    <div className="flex items-center gap-1 text-sm text-gray-600">
-                      <Calendar className="w-4 h-4" />
-                      {formatearFecha(orden.fecha_solicitud)}
-                    </div>
-                  ),
-                },
-                {
-                  key: 'fecha_entrega',
-                  header: 'Fecha Entrega',
-                  render: (orden) => (
-                    <div className="text-sm text-gray-600">
-                      {orden.fecha_entrega_estimada
-                        ? formatearFecha(orden.fecha_entrega_estimada)
-                        : '-'}
-                    </div>
-                  ),
-                },
-                {
-                  key: 'total',
-                  header: 'Total',
-                  render: (orden) => (
-                    <div className="flex items-center gap-1 font-semibold text-green-600">
-                      <DollarSign className="w-4 h-4" />
-                      {Number(orden.total).toFixed(2)}
-                    </div>
-                  ),
-                },
-                {
-                  key: 'estado_pago',
-                  header: 'Estado Pago',
-                  render: (orden) => getEstadoPagoBadge(orden),
-                },
-                {
-                  key: 'acciones',
-                  header: 'Acciones',
-                  render: (orden) => (
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        onClick={() => navigate(`/app/centro-copiado/ordenes/${orden.id}`)}
-                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                        title="Ver detalle"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ),
-                },
-              ]}
-              data={ordenes}
-              keyExtractor={(orden) => orden.id}
-            />
+        <div className="grid grid-cols-1 w-full">
+          <div className="w-full bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="w-full overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th scope="col" className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Número de Orden
+                    </th>
+                    <th scope="col" className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Cliente
+                    </th>
+                    <th scope="col" className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Items
+                    </th>
+                    <th scope="col" className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Estado
+                    </th>
+                    <th scope="col" className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Fecha Solicitud
+                    </th>
+                    <th scope="col" className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Fecha Entrega
+                    </th>
+                    <th scope="col" className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Total
+                    </th>
+                    <th scope="col" className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Estado Pago
+                    </th>
+                    <th scope="col" className="relative px-3 py-2">
+                      <span className="sr-only">Acciones</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {ordenes.map((orden) => (
+                    <tr key={orden.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-3 py-2 whitespace-nowrap">
+                        <span className="font-semibold text-blue-600 text-xs">{orden.numero_orden}</span>
+                      </td>
+                      <td className="px-3 py-2">
+                        <div className="max-w-[150px] truncate">
+                          <div className="font-medium truncate text-sm" title={orden.cliente?.nombre_fantasia}>{orden.cliente?.nombre_fantasia || 'N/A'}</div>
+                          <div className="text-xs text-gray-500">{orden.cliente?.numero_documento}</div>
+                        </div>
+                      </td>
+                      <td className="px-3 py-2 whitespace-nowrap">
+                        <Badge variant="secondary">{orden.items_count || 0}</Badge>
+                      </td>
+                      <td className="px-3 py-2 whitespace-nowrap">
+                        {getEstadoBadge(orden.estado)}
+                      </td>
+                      <td className="px-3 py-2 whitespace-nowrap">
+                        <div className="flex items-center gap-1 text-xs text-gray-600">
+                          <Calendar className="w-3 h-3" />
+                          {formatearFecha(orden.fecha_solicitud)}
+                        </div>
+                      </td>
+                      <td className="px-3 py-2 whitespace-nowrap">
+                        <div className="text-xs text-gray-600">
+                          {orden.fecha_entrega_estimada
+                            ? formatearFecha(orden.fecha_entrega_estimada)
+                            : '-'}
+                        </div>
+                      </td>
+                      <td className="px-3 py-2 whitespace-nowrap">
+                        <div className="flex items-center gap-1 font-semibold text-green-600 text-sm">
+                          <DollarSign className="w-3 h-3" />
+                          {Number(orden.total).toFixed(2)}
+                        </div>
+                      </td>
+                      <td className="px-3 py-2 whitespace-nowrap">
+                        {getEstadoPagoBadge(orden)}
+                      </td>
+                      <td className="px-3 py-2 whitespace-nowrap text-right text-xs font-medium">
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => navigate(`/app/centro-copiado/ordenes/${orden.id}`)}
+                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Ver detalle"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </Card>
+        </div>
+
 
         {totalCount > itemsPerPage && (
           <Pagination
@@ -299,7 +302,8 @@ export function Ordenes() {
             totalItems={totalCount}
             itemsPerPage={itemsPerPage}
           />
-        )}
+        )
+        }
       </>
     );
   };
@@ -307,9 +311,9 @@ export function Ordenes() {
   return (
     <div className="space-y-6">
       <Card>
-        <div className="p-4 space-y-4">
-          <div className="flex flex-col sm:flex-row gap-4 mb-6 justify-between items-end sm:items-center">
-            <div className="flex flex-col sm:flex-row gap-4 flex-1 w-full sm:w-auto">
+        <div className="px-3 py-2">
+          <div className="flex flex-col sm:flex-row gap-3 justify-between items-center">
+            <div className="flex flex-col sm:flex-row gap-3 flex-1 w-full sm:w-auto items-center">
               <div className="w-full sm:w-64">
                 <SearchInput
                   value={searchTerm}
@@ -331,7 +335,7 @@ export function Ordenes() {
                 </Select>
               </div>
 
-              <div className="flex items-center pt-2 sm:pt-0">
+              <div className="flex items-center">
                 <Switch
                   checked={mostrarSoloActivas}
                   onChange={setMostrarSoloActivas}
