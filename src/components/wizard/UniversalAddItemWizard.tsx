@@ -584,6 +584,7 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar, initialData
           // Construir configuraci\u00f3n JSONB para esta l\u00ednea
           const configuracionLinea = {
             categoria: selectedProduct.categoria,
+            unidad_medida: selectedProduct.unidad_medida || null,
             medida_ancho: linea.ancho || linea.ancho_seleccionado || null,
             medida_alto: linea.alto || null,
             mt2_total: linea.mt2_calculado,
@@ -646,6 +647,7 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar, initialData
 
         const configuracionItem = {
           categoria: selectedProduct.categoria,
+          unidad_medida: selectedProduct.unidad_medida || null,
           medida_ancho: selectedConfig.medida_ancho,
           medida_alto: selectedConfig.medida_alto,
           material_id: selectedConfig.material_id,

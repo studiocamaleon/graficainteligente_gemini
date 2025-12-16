@@ -497,7 +497,7 @@ export function CreateOrderPage() {
           if (result) {
             setOrdenCreada(true);
             setOrdenCreadaId(result.id); // Save ID
-            setShowPagoModal(true); // Open payment modal
+            // setShowPagoModal(true); // Removed to prevent flash before redirect
           }
           isCreatingOrderRef.current = false;
           console.log('[CreateOrderPage] Orden creada exitosamente, cleanup permanentemente deshabilitado');

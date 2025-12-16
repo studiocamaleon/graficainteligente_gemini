@@ -114,7 +114,82 @@ export function PresupuestoPDFTemplate({
               <tr key={index} className="border-b border-gray-50 last:border-0">
                 <td className="py-4 pr-4">
                   <p className="font-semibold text-gray-900">{item.producto_nombre}</p>
-                  <p className="text-gray-500 text-xs mt-0.5">{item.descripcion || '-'}</p>
+                  <p className="text-gray-500 text-xs mt-0.5">
+                    {(() => {
+                      if (item.tipo_item === 'item_personalizado') {
+                        return item.descripcion || '-';
+                      }
+
+                      // Helper logic for formating configuration (Inline to avoid external dep complications in templates)
+                      const config = item.configuracion || {};
+                      const parts: string[] = [];
+
+                      // 1. Medidas con Unidad Correcta
+                      if (config.medida_ancho || config.medida_alto) {
+                        const unidad = config.unidad_medida || ((config.categoria === 'Impresion Laser' || config.tecnologia_nombre === 'Impresion Laser') ? 'mm' : 'cm');
+                        if (config.medida_ancho && config.medida_alto) {
+                          parts.push(`${config.medida_ancho}x${config.medida_alto} ${unidad}`);
+                        } else {
+                          parts.push(`${config.medida_ancho || config.medida_alto} ${unidad}`);
+                        }
+                      }
+
+                      // 2. Material
+                      if (config.material_nombre) {
+                        let mat = config.material_nombre;
+                        if (config.variante_nombre) mat += ` - ${config.variante_nombre}`;
+                        parts.push(mat);
+                      }
+
+                      // 3. Espesor/Gramaje
+                      if (config.espesor) {
+                        const unidadEspesor = config.unidad_espesor || 'mm';
+                        if (unidadEspesor === 'gr' || unidadEspesor === 'g') {
+                          parts.push(`${config.espesor} ${unidadEspesor}`);
+                        } else {
+                          parts.push(`${config.espesor}${unidadEspesor}`);
+                        }
+                      } else if (config.gramaje) {
+                        parts.push(`${config.gramaje} g`);
+                      }
+
+                      // 4. Tecnología/Tinta/Cara/Color
+                      if (config.tecnologia_nombre) parts.push(config.tecnologia_nombre);
+                      if (config.tinta_nombre) parts.push(config.tinta_nombre);
+
+                      if (config.cara_impresa) {
+                        const mapCara: Record<string, string> = {
+                          '1/0': 'Frente',
+                          '1/1': 'Frente y Dorso',
+                          'frente_y_dorso': 'Frente y Dorso',
+                          'solo_frente': 'Frente'
+                        };
+                        parts.push(mapCara[config.cara_impresa] || config.cara_impresa);
+                      }
+
+                      if (config.color) parts.push(config.color);
+                      if (config.marca) parts.push(config.marca);
+
+                      // 5. Servicios y Acabados
+                      if (config.servicios_seleccionados?.length > 0) {
+                        const servs = config.servicios_seleccionados.map((s: any) => s.nombre).join(', ');
+                        parts.push(`Servicios: ${servs}`);
+                      }
+                      if (config.acabados_seleccionados?.length > 0) {
+                        const acabs = config.acabados_seleccionados.map((a: any) => a.nombre).join(', ');
+                        parts.push(`Acabados: ${acabs}`);
+                      }
+
+                      const generatedDesc = parts.join(' | ');
+
+                      // Si hay descripción manual adicional (y no es igual a lo generado), la agregamos
+                      if (item.descripcion && item.descripcion !== '-' && !generatedDesc.includes(item.descripcion)) {
+                        return generatedDesc ? `${generatedDesc}\n${item.descripcion}` : item.descripcion;
+                      }
+
+                      return generatedDesc || item.descripcion || '-';
+                    })()}
+                  </p>
                 </td>
                 <td className="py-4 text-right whitespace-nowrap">{item.cantidad}</td>
                 <td className="py-4 text-right whitespace-nowrap">{formatCurrency(item.precio_unitario_final || 0)}</td>

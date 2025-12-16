@@ -294,7 +294,7 @@ export function UniversalSummaryStep({
               <div className="flex justify-between mt-2">
                 <span className="text-gray-600">Medidas:</span>
                 <span className="font-medium">
-                  {selectedConfig.medida_ancho} x {selectedConfig.medida_alto} cm
+                  {selectedConfig.medida_ancho} x {selectedConfig.medida_alto} {config.unidad_medida || ((config.categoria === 'Impresion Laser') ? 'mm' : 'cm')}
                 </span>
               </div>
             )}

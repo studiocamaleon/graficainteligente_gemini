@@ -97,10 +97,11 @@ export function MeasurementLinesTable({
 
   // Formatear medidas
   const formatMedidas = (line: MeasurementLine): string => {
+    const unidad = config.unidad_medida || 'cm';
     if (config.tipo_venta_real === 'mt2') {
-      return `${line.ancho}x${line.alto} cm`;
+      return `${line.ancho}x${line.alto} ${unidad}`;
     } else {
-      return `${line.metros_lineales} mts × ${line.ancho_seleccionado} cm`;
+      return `${line.metros_lineales} mts × ${line.ancho_seleccionado} ${unidad}`;
     }
   };
 

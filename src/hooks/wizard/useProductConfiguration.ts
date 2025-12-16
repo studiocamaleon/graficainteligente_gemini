@@ -7,6 +7,7 @@ export interface ProductConfiguration {
   id: string;
   nombre: string;
   categoria: ProductCategory;
+  unidad_medida?: string;
 
   // Medidas disponibles
   medidas?: { ancho: number; alto: number }[];
@@ -157,7 +158,7 @@ async function loadImpresionLaserConfig(productId: string): Promise<ProductConfi
   // Cargar datos básicos
   const { data: producto, error: prodError } = await supabase
     .from('productos_impresion_laser')
-    .select('id, nombre, tipo_venta, cantidades_fijas, caras_impresas, medidas_disponibles, impuesto_iva')
+    .select('id, nombre, tipo_venta, cantidades_fijas, caras_impresas, medidas_disponibles, impuesto_iva, rango_precio:rangos_precio(unidad_medida)')
     .eq('id', productId)
     .single();
 
@@ -212,6 +213,7 @@ async function loadImpresionLaserConfig(productId: string): Promise<ProductConfi
     nombre: producto.nombre,
     categoria: 'Impresion Laser',
     medidas,
+    unidad_medida: producto.rango_precio?.unidad_medida,
     tipo_venta: producto.tipo_venta as 'unidad' | 'cantidades_fijas',
     cantidades_fijas: producto.cantidades_fijas || [],
     caras_impresas: producto.caras_impresas || [],

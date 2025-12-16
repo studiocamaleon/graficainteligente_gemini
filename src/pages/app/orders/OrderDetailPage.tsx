@@ -752,7 +752,8 @@ export function OrderDetailPage() {
                                     {config.medida_seleccionada
                                       ? `${config.medida_seleccionada.ancho} x ${config.medida_seleccionada.alto}`
                                       : `${config.medida_ancho || '?'} x ${config.medida_alto || '?'}`
-                                    } cm
+                                    } {config.unidad_medida || ((item.producto_categoria === 'Impresion Laser' || config.categoria === 'Impresion Laser' || config.tecnologia_nombre === 'Impresion Laser') ? 'mm' : 'cm')}
+
                                   </span>
                                   {(config.mt2_total || config.mt_lineal_total) && (
                                     <Badge variant="secondary" className="text-[10px] h-5">

@@ -361,7 +361,7 @@ export function ConfigurationStep({
           {config.medidas.length === 1 ? (
             <div className="bg-blue-50 p-4 rounded-lg">
               <p className="text-sm text-gray-700">
-                Medida: <span className="font-semibold">{config.medidas[0].ancho} x {config.medidas[0].alto} cm</span>
+                Medida: <span className="font-semibold">{config.medidas[0].ancho} x {config.medidas[0].alto} {config.unidad_medida || ((config.categoria === 'Impresion Laser') ? 'mm' : 'cm')}</span>
               </p>
             </div>
           ) : (
@@ -384,7 +384,7 @@ export function ConfigurationStep({
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="font-semibold text-gray-900">{medida.ancho} x {medida.alto}</div>
-                          <div className="text-sm text-gray-500">centímetros</div>
+                          <div className="text-sm text-gray-500">{config.unidad_medida || ((config.categoria === 'Impresion Laser') ? 'mm' : 'centro')}</div>
                         </div>
                         {isSelected && (
                           <Check className="w-5 h-5 text-blue-600" />

@@ -34,41 +34,45 @@ interface GenerateRoutesParams {
  * 'post_prensa' contiene 'pre', por lo que debemos verificar 'post' ANTES de 'pre'
  * 'Instalacion' contiene 'ion' que NO debe ser mapeado a 'Produccion'
  */
-function normalizarEtapa(etapa: string): TipoEtapaRuta {
-  const etapaLower = etapa.toLowerCase().replace(/[-\s]/g, '_');
+export function normalizarEtapa(etapa: string): TipoEtapaRuta {
+  // 1. Normalizar string: minúsculas, reemplazo de guiones/espacios, eliminar acentos
+  const etapaLower = etapa.toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Eliminar acentos
+    .replace(/[-\s]/g, '_');
 
-  // 1. Si ya está normalizado, devolver sin cambios
+  // 2. Si ya está normalizado, devolver sin cambios
   if (etapaLower === 'pre_prensa' || etapaLower === 'principal' || etapaLower === 'post_prensa') {
     return etapaLower as TipoEtapaRuta;
   }
 
-  // 2. Instalacion (verificar ANTES de otros checks para evitar conversión errónea)
+  // 3. Instalacion (verificar ANTES de otros checks para evitar conversión errónea)
   if (etapaLower.includes('instalacion')) {
     // TipoEtapaRuta solo tiene 3 valores: 'pre_prensa' | 'principal' | 'post_prensa'
-    // Instalacion debe mapearse según el contexto
-    // Como no hay etapa específica, lo dejamos pasar sin cambios
-    return etapa as TipoEtapaRuta;
+    // ERROR: La DB no acepta 'instalacion'. Debemos mapearlo a 'post_prensa' o 'principal'.
+    // Asumiendo que instalación es un proceso posterior o de campo:
+    return 'post_prensa';
   }
 
-  // 3. Post-prensa (verificar ANTES que pre para evitar que "post_prensa" sea capturado por "pre")
+  // 4. Post-prensa (verificar ANTES que pre para evitar que "post_prensa" sea capturado por "pre")
   if (etapaLower.includes('post') ||
     etapaLower.includes('terminacion') ||
     etapaLower.includes('acabado')) {
     return 'post_prensa';
   }
 
-  // 4. Pre-prensa (condición más estricta: startsWith 'pre' pero NO incluye 'post')
+  // 5. Pre-prensa (condición más estricta: startsWith 'pre' pero NO incluye 'post')
   if (etapaLower.startsWith('pre') && !etapaLower.includes('post')) {
     return 'pre_prensa';
   }
 
-  // 5. Produccion/Principal
+  // 6. Produccion/Principal
   if (etapaLower.includes('produccion') || etapaLower.includes('principal')) {
     return 'principal';
   }
 
-  // 6. Fallback: devolver sin cambios (puede ser Instalacion u otra etapa)
-  return etapa as TipoEtapaRuta;
+  // 7. Fallback: Si no coincide con nada, forzamos 'principal' para cumplir constraint DB
+  // Esto evita el error 23514 si viene algo raro como "Diseño" o "Logística"
+  return 'principal';
 }
 
 /**

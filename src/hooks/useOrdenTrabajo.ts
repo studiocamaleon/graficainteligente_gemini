@@ -15,6 +15,7 @@ import type {
   EstadoOrdenCopiado,
 } from '../types/database';
 import { getArgentinaDateString } from '../utils/dates';
+import { normalizarEtapa } from '../utils/generateProductionRoutes';
 
 export interface OrdenTrabajoServicio {
   id: string;
@@ -703,10 +704,7 @@ export function useOrdenTrabajo() {
         requiere_factura: data.ordenData.requiere_factura || false,
         subtotal_iva: data.ordenData.subtotal_iva || 0,
         requiere_despacho: data.ordenData.requiere_despacho || false, // Nuevo campo
-        direccion_despacho: data.ordenData.direccion_despacho || null, // Nuevo campo
-        comuna_despacho: data.ordenData.comuna_despacho || null, // Nuevo campo
-        region_despacho: data.ordenData.region_despacho || null, // Nuevo campo
-        costo_despacho: data.ordenData.costo_despacho || 0, // Nuevo campo
+
         updated_at: new Date().toISOString(),
         updated_by: profile.id
       };
@@ -819,7 +817,7 @@ export function useOrdenTrabajo() {
             const rutasToInsert = item.rutas_generadas.map((ruta: any) => ({
               company_id: profile.company_id,
               orden_item_id: item.id,
-              tipo_etapa: ruta.tipo_etapa || 'principal',
+              tipo_etapa: normalizarEtapa(ruta.etapa || ruta.tipo_etapa || 'principal'),
               paso_id: ruta.paso_id,
               paso_nombre: ruta.paso_nombre,
               orden: ruta.orden,
@@ -882,7 +880,7 @@ export function useOrdenTrabajo() {
             const rutasToInsert = itemOriginal.rutas_generadas.map((ruta: any) => ({
               company_id: profile.company_id,
               orden_item_id: itemDb.id,
-              tipo_etapa: ruta.tipo_etapa || 'principal',
+              tipo_etapa: normalizarEtapa(ruta.etapa || ruta.tipo_etapa || 'principal'),
               paso_id: ruta.paso_id,
               paso_nombre: ruta.paso_nombre,
               orden: ruta.orden,
@@ -1021,7 +1019,7 @@ export function useOrdenTrabajo() {
                 return {
                   company_id: profile.company_id,
                   orden_item_id: item.id,
-                  tipo_etapa: ruta.tipo_etapa || 'principal', // Corregido: Usar el valor técnico, no el display
+                  tipo_etapa: normalizarEtapa(ruta.etapa || ruta.tipo_etapa || 'principal'),
                   paso_id: ruta.paso_id,
                   paso_nombre: ruta.paso_nombre,
                   orden: ruta.orden,

@@ -20,6 +20,7 @@ export interface UniversalProductSearchResult {
   descripcion: string | null;
   precio_desde: number | null;
   tiene_precios: boolean;
+  unidad_medida?: string;
   config_disponible: ProductConfig;
 }
 
@@ -142,7 +143,7 @@ async function searchImpresionLaser(
 ): Promise<UniversalProductSearchResult[]> {
   const { data, error } = await supabase
     .from('productos_impresion_laser')
-    .select('id, nombre')
+    .select('id, nombre, rango_precio:rangos_precio(unidad_medida)')
     .eq('company_id', companyId)
     .eq('is_active', true)
     .ilike('nombre', `%${searchTerm}%`)
@@ -168,6 +169,7 @@ async function searchImpresionLaser(
     descripcion: null,
     precio_desde: null,
     tiene_precios: false,
+    unidad_medida: p.rango_precio?.unidad_medida,
     config_disponible: {
       tiene_medidas: true,
       tiene_cantidad: true,

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { normalizarEtapa } from '../utils/generateProductionRoutes';
 
 export interface GeneratedStep {
   id: string;
@@ -373,7 +374,7 @@ export function useGenerateProductionRoute({
 
           return {
             id: step.id,
-            etapa: step.etapa,
+            etapa: normalizarEtapa(step.etapa),
             paso_id: step.paso_id_especifico,
             paso_nombre: nombreFinal,
             orden: step.orden,
