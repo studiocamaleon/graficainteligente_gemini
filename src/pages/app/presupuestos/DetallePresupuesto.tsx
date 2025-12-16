@@ -114,18 +114,6 @@ export default function DetallePresupuesto() {
     }
   };
 
-  const handleGenerarPDF = async () => {
-    if (!presupuesto) return;
-
-    try {
-      await descargarPresupuestoPDF(presupuesto, company);
-      showSuccess('PDF descargado correctamente');
-    } catch (error) {
-      showError('Error al generar PDF');
-      console.error('Error generando PDF:', error);
-    }
-  };
-
   const handleConvertir = async (params: {
     fechaEntrega: string;
     notasAdicionales?: string;
@@ -153,6 +141,39 @@ export default function DetallePresupuesto() {
       }
     } else {
       showError('Error al convertir presupuesto');
+    }
+  };
+
+  const handleGenerarPDF = async () => {
+    if (!presupuesto) return;
+
+    try {
+      await descargarPresupuestoPDF(presupuesto, company);
+      showSuccess('PDF descargado correctamente');
+    } catch (error) {
+      showError('Error al generar PDF');
+      console.error('Error generando PDF:', error);
+    }
+  };
+
+  const handleReenviar = async () => {
+    if (!presupuesto) return;
+
+    const confirmed = await showConfirm({
+      title: 'Reenviar notificación',
+      message: `¿Deseas reenviar la notificación por WhatsApp para el presupuesto "${presupuesto.numero_presupuesto}"?`,
+      confirmText: 'Reenviar',
+      cancelText: 'Cancelar',
+    });
+
+    if (confirmed) {
+      // Usamos enviarNotificacionPresupuesto directamente
+      const success = await enviarNotificacionPresupuesto(presupuesto.id, 'presupuesto_listo');
+      if (success) {
+        showSuccess('Notificación reenviada correctamente.');
+      } else {
+        // El error ya se muestra en el hook con toast
+      }
     }
   };
 
@@ -217,6 +238,7 @@ export default function DetallePresupuesto() {
         onDelete={handleDelete}
         onDuplicate={handleDuplicate}
         onEnviar={handleEnviar}
+        onReenviar={handleReenviar}
         onGenerarPDF={handleGenerarPDF}
         onConvertir={() => setShowConvertirModal(true)}
       />
@@ -232,9 +254,9 @@ export default function DetallePresupuesto() {
         <div className="p-6">
           {activeTab === 'items' && (
             <PresupuestoItemsTab
-              items={presupuesto.items || []}
-              presupuestoId={presupuesto.id}
-              esEditable={presupuesto.estado === 'borrador'}
+              items={presupuesto?.items || []}
+              presupuestoId={presupuesto?.id || ''}
+              esEditable={presupuesto?.estado === 'borrador'}
             />
           )}
 

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
+import { useToast } from '../contexts/ToastContext';
 import type {
   Presupuesto,
   PresupuestoConRelaciones,
@@ -16,6 +17,7 @@ export function usePresupuestos(
   pagination?: PresupuestosPaginacion
 ) {
   const { user, profile } = useAuth();
+  const { toast } = useToast();
   const [presupuestos, setPresupuestos] = useState<PresupuestoConRelaciones[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -319,7 +321,7 @@ export function usePresupuestos(
     const resultado = await cambiarEstado(id, 'enviado');
 
     // Como respaldo, llamar directamente a enviarNotificacionPresupuesto
-    // por si el trigger falla
+    // por si el trigger falla (especialmente en local/dev)
     if (resultado) {
       try {
         await enviarNotificacionPresupuesto(id, 'presupuesto_listo');
@@ -418,10 +420,14 @@ export function usePresupuestos(
 
       if (functionError) throw functionError;
 
-      return data?.success || false;
+      if (!data?.success) {
+        throw new Error(data?.error || data?.message || 'Error desconocido al enviar notificación');
+      }
+
+      return true;
     } catch (err: any) {
       console.error('Error enviando notificación:', err);
-      setError(err.message);
+      toast.error(`Error de notificación: ${err.message}`);
       return false;
     }
   };

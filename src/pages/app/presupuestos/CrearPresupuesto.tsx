@@ -22,7 +22,7 @@ type TabId = 'general' | 'items' | 'condiciones' | 'resumen';
 export default function CrearPresupuesto() {
   const navigate = useNavigate();
   const { user, profile } = useAuth();
-  const { createPresupuesto } = usePresupuestos();
+  const { createPresupuesto, enviarNotificacionPresupuesto } = usePresupuestos();
   const { clients } = useClients();
 
   const [activeTab, setActiveTab] = useState<TabId>('general');
@@ -267,9 +267,15 @@ export default function CrearPresupuesto() {
           : 'Presupuesto guardado como borrador'
       );
 
-      // Nota: La notificación de WhatsApp se envía automáticamente
-      // mediante el trigger on_presupuesto_creado_enviado cuando
-      // el estado es 'enviado'
+      // Intentar enviar notificación manual (respaldo para local/dev donde el trigger falla)
+      if (enviar) {
+        try {
+          await enviarNotificacionPresupuesto(presupuesto.id, 'presupuesto_listo');
+        } catch (error) {
+          console.warn('Error en notificación manual:', error);
+          // No bloqueamos el flujo, es un enhancement
+        }
+      }
 
       setTimeout(() => {
         navigate(`/app/presupuestos/${presupuesto.id}`);
