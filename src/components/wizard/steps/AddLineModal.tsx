@@ -443,14 +443,34 @@ export function AddLineModal({
             {/* Servicios Column */}
             {config.servicios.length > 0 && (
               <div className="space-y-3">
+                {/* Alert Info Global Services */}
+                <div className="bg-blue-50 border border-blue-200 rounded-md p-2 flex items-start gap-2 text-xs text-blue-800 mb-2">
+                  <div className="mt-0.5"><Wrench className="w-3 h-3" /></div>
+                  <div>
+                    <p className="font-semibold">¿Servicio Global?</p>
+                    <p className="text-blue-700 leading-tight">
+                      Los servicios "Fijo + Variable" (ej. Instalación) se aplican desde el menú principal "Aplicar Servicio".
+                    </p>
+                  </div>
+                </div>
+
                 <div className="flex items-center gap-2 text-gray-900 border-b pb-2">
                   <Wrench className="w-4 h-4 text-blue-600" />
                   <h4 className="font-semibold text-sm uppercase tracking-wide text-gray-500">Servicios</h4>
                 </div>
                 <div className="space-y-2">
-                  {config.servicios.map((servicio) => {
+                  {config.servicios.filter(servicio => {
+                    const hiddenTypes = ['fijo_mt2', 'fijo_mt_lineal', 'fijo_porcentual', 'fijo_minuto', 'fijo_por_minuto'];
+                    if (servicio.tiene_niveles && servicio.niveles) {
+                      const validLevels = servicio.niveles.filter(n => !hiddenTypes.includes(n.tipo_impacto));
+                      return validLevels.length > 0;
+                    }
+                    return true;
+                  }).map((servicio) => {
                     const isSelected = serviciosSeleccionados.some(s => s.servicio_id === servicio.servicio_id);
                     const selectedData = serviciosSeleccionados.find(s => s.servicio_id === servicio.servicio_id);
+                    const hiddenTypes = ['fijo_mt2', 'fijo_mt_lineal', 'fijo_porcentual', 'fijo_minuto', 'fijo_por_minuto'];
+                    const validLevels = servicio.niveles?.filter(n => !hiddenTypes.includes(n.tipo_impacto)) || [];
 
                     return (
                       <div
@@ -475,7 +495,7 @@ export function AddLineModal({
                             </div>
 
                             {/* Niveles Selector (Dropdown) */}
-                            {servicio.tiene_niveles && servicio.niveles && servicio.niveles.length > 1 && isSelected && (
+                            {servicio.tiene_niveles && validLevels.length > 0 && isSelected && (
                               <div className="mt-2" onClick={(e) => e.stopPropagation()}>
                                 <Select
                                   value={selectedData?.nivel_id || ''}
@@ -483,11 +503,14 @@ export function AddLineModal({
                                   placeholder="Seleccionar nivel..."
                                   className="w-full text-sm"
                                 >
-                                  {servicio.niveles.map(nivel => (
-                                    <option key={nivel.id} value={nivel.id}>
-                                      {nivel.nombre} ({formatImpacto(nivel)})
-                                    </option>
-                                  ))}
+                                  {validLevels.map((nivel) => {
+                                    const impactoText = formatImpacto(nivel);
+                                    return (
+                                      <option key={nivel.id} value={nivel.id}>
+                                        {nivel.nombre} {impactoText && `(${impactoText})`}
+                                      </option>
+                                    );
+                                  })}
                                 </Select>
                               </div>
                             )}

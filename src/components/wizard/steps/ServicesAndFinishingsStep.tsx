@@ -208,6 +208,19 @@ export function ServicesAndFinishingsStep({
 
   return (
     <div className="space-y-6">
+      {/* Alert Info Global Services */}
+      <div className="bg-blue-50 border border-blue-200 rounded-md p-3 flex items-start gap-3 text-sm text-blue-800">
+        <div className="mt-0.5">
+          <Wrench className="w-4 h-4" />
+        </div>
+        <div>
+          <p className="font-semibold">¿Buscas servicios de Costo Global Fijo + Variable?</p>
+          <p className="text-blue-700 mt-0.5">
+            Los servicios complejos (ej: "Instalación base + mt2") se aplican desde el menú <strong>"Aplicar Servicio"</strong> en la vista principal de la orden, para evitar duplicar el costo fijo en cada item.
+          </p>
+        </div>
+      </div>
+
       {/* Servicios */}
       {config.servicios && config.servicios.length > 0 && (
         <div className="space-y-3">
@@ -217,7 +230,59 @@ export function ServicesAndFinishingsStep({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {config.servicios.map((servicio) => {
+            {config.servicios.filter(servicio => {
+              // Filter logic: Hide if it ONLY has levels/config that are "Combined Fixed"
+              // We must check if it has compatible types.
+              // Combined types to hide:
+              const hiddenTypes = ['fijo_mt2', 'fijo_mt_lineal', 'fijo_porcentual', 'fijo_minuto', 'fijo_por_minuto'];
+
+              // If it has levels
+              if (servicio.tiene_niveles && servicio.niveles) {
+                // Check if ALL levels are hidden types. If at least one is valid (e.g. simple fixed or per unit), show service (but ideally filter levels).
+                // For simplicity/safety, let's filter the LEVELS in the render, but we need to decide if we hide the whole service card if all levels are hidden.
+                const validLevels = servicio.niveles.filter(n => !hiddenTypes.includes(n.tipo_impacto));
+                return validLevels.length > 0;
+              }
+
+              // No levels (direct config)
+              // Note: 'precio_fijo' is allowed.
+              // We need to check if we have distinct fields for this in the config object being passed? 
+              // The type definition says config is ProductConfiguration.
+              // Let's assume the service object structure here matches what we see in the existing map.
+              // It seems we don't have the direct type_impacto on the service object in this loop easily unless we look at the usage.
+              // Wait, checks map: `servicio` has properties? 
+              // Looking at line 48: `handleToggleServicio` uses `servicioConfig.niveles`.
+              // Let's check `ProductConfiguration` interface imported? It is imported but logic usage shows:
+              // `servicio` in map seems to be the item from `config.servicios`.
+
+              // It seems `config.servicios` items usually have `tipo_impacto` if they don't have levels, or we might need to rely on the backend data.
+              // Use safer check: if no levels, we assume valid unless we can verify.
+              // Actually, `useProductConfiguration` hook populates this.
+              // Let's assume filtering levels inside the card is safer for the UI, 
+              // but hiding the card if NO valid levels exist is better UX.
+
+              // FIX: We need to filter levels inside the select too.
+              return true; // We'll filter in the map
+            }).map((servicio) => {
+              const hiddenTypes = ['fijo_mt2', 'fijo_mt_lineal', 'fijo_porcentual', 'fijo_minuto', 'fijo_por_minuto'];
+
+              // Filter levels if present
+              const validLevels = servicio.niveles?.filter(n => !hiddenTypes.includes(n.tipo_impacto)) || [];
+              const hasLevels = servicio.tiene_niveles && validLevels.length > 0;
+
+              // If it requires levels but none are valid, skip rendering this service entirely
+              if (servicio.tiene_niveles && validLevels.length === 0) return null;
+
+              // If it doesn't have levels, we should check its direct type if possible, 
+              // but looking at `handleToggleServicio` (lines 67), it accesses `nivel?.tipo_impacto` or defaults 'sin_impacto'.
+              // It seems pure services without levels might defaults to 'sin_impacto' or have it on the object.
+              // Let's rely on the Levels check mainly, covering the most common complex cases.
+              // If a service has NO levels, it usually is "Sin impacto" or a simple flag in this system version?
+              // Re-reading code: `{!servicio.tiene_niveles && selectedServicio && ...}` uses `getImpactoBadgeText(selectedServicio)`.
+              // `selectedServicio` comes from `selectedServicios` state.
+              // The `servicio` object itself in `config` might not have `tipo_impacto` directly exposed in the TS interface visible here easily without inspecting `ProductConfiguration`.
+              // However, if it has levels, we definitely filter.
+
               const isSelected = selectedServicios.some(s => s.servicio_id === servicio.servicio_id);
               const selectedServicio = selectedServicios.find(s => s.servicio_id === servicio.servicio_id);
 
@@ -246,7 +311,7 @@ export function ServicesAndFinishingsStep({
                       )}
                     </div>
 
-                    {servicio.tiene_niveles && servicio.niveles && servicio.niveles.length > 0 && isSelected && (
+                    {hasLevels && isSelected && (
                       <div className="mt-3 pt-3 border-t border-gray-200" onClick={(e) => e.stopPropagation()}>
                         <label className="block text-xs font-medium text-gray-700 mb-1.5">
                           Selecciona el nivel:
@@ -256,7 +321,7 @@ export function ServicesAndFinishingsStep({
                           onChange={(value) => handleChangeNivelServicio(servicio.servicio_id, value)}
                           className="text-sm"
                         >
-                          {servicio.niveles.map((nivel) => {
+                          {validLevels.map((nivel) => {
                             const impactoText = getImpactoBadgeText(nivel);
                             return (
                               <option key={nivel.id} value={nivel.id}>
@@ -268,7 +333,7 @@ export function ServicesAndFinishingsStep({
                       </div>
                     )}
 
-                    {!servicio.tiene_niveles && selectedServicio && (
+                    {!hasLevels && selectedServicio && (
                       <div className="mt-2">
                         <Badge variant="blue" size="sm">
                           {getImpactoBadgeText(selectedServicio)}

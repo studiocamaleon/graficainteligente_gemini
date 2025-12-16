@@ -143,6 +143,13 @@ export function AplicarServicioMasivoModal({
                 detalleCalculo = `Fijo: $${valorImpacto} + Var: ${(valorImpactoSecundario || 0)}% de $${totalPrecioBase}`;
                 break;
 
+            case 'por_mt2':
+                esGlobal = true; // Se calcula sobre el total de mt2
+                precioTotal = valorImpacto * totalMt2;
+                precioPorItem = precioTotal / selectedItemsCount;
+                detalleCalculo = `$${valorImpacto} x ${totalMt2.toFixed(2)}m² (Total)`;
+                break;
+
             case 'por_unidad':
                 // Multiplica el valor por la cantidad total de items físicos (unidades reales, no filas)
                 // OJO: Si la logica anterior era "valor unitario por fila", debemos decidir.
