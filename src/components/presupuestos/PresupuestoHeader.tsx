@@ -11,6 +11,7 @@ import {
   User,
   Calendar,
   Package,
+  MessageSquare
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../contexts/ToastContext';
@@ -229,6 +230,18 @@ export function PresupuestoHeader({
               >
                 Copiar Link
               </button>
+            </div>
+          )}
+
+          {presupuesto.observaciones_cliente && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+              <h4 className="text-sm font-semibold text-amber-800 mb-1 flex items-center gap-2">
+                <MessageSquare className="w-4 h-4" />
+                Observaciones del Cliente (Al responder)
+              </h4>
+              <p className="text-sm text-amber-700 whitespace-pre-wrap">
+                {presupuesto.observaciones_cliente}
+              </p>
             </div>
           )}
         </div>

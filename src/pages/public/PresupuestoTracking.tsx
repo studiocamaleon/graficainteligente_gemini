@@ -96,54 +96,59 @@ export default function PresupuestoTracking() {
     }
   };
 
-  const handleAprobar = async () => {
+  const handleAprobar = async (e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent accidental form submission
     if (!presupuesto) return;
 
     try {
       setSubmitting(true);
 
-      const { error: updateError } = await (supabase
-        .from('presupuestos') as any)
-        .update({
-          estado: 'aprobado',
-          fecha_respuesta: new Date().toISOString(),
-          observaciones_cliente: observaciones || null,
-        })
-        .eq('id', presupuesto.id);
+      const { data, error: rpcError } = await (supabase.rpc as any)(
+        'fn_aprobar_presupuesto_public',
+        {
+          p_tracking_token: token,
+          p_observaciones: observaciones || null
+        }
+      );
 
-      if (updateError) throw updateError;
+      if (rpcError) throw rpcError;
+
+      if (!data?.success) {
+        throw new Error(data?.message || 'Error al aprobar el presupuesto');
+      }
 
       await fetchPresupuesto();
       setShowAprobarModal(false);
       setObservaciones('');
     } catch (err: any) {
       console.error('Error aprobando:', err);
-      alert('Error al aprobar el presupuesto');
+      alert(err.message || 'Error al aprobar el presupuesto');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleRechazar = async () => {
+  const handleRechazar = async (e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent accidental form submission
     if (!presupuesto || !motivoRechazo.trim()) return;
 
     try {
       setSubmitting(true);
 
-      const observacionesCompletas = observaciones
-        ? `MOTIVO: ${motivoRechazo}\n\n${observaciones}`
-        : `MOTIVO: ${motivoRechazo}`;
+      const { data, error: rpcError } = await (supabase.rpc as any)(
+        'fn_rechazar_presupuesto_public',
+        {
+          p_tracking_token: token,
+          p_motivo: motivoRechazo,
+          p_observaciones: observaciones || null
+        }
+      );
 
-      const { error: updateError } = await (supabase
-        .from('presupuestos') as any)
-        .update({
-          estado: 'rechazado',
-          fecha_respuesta: new Date().toISOString(),
-          observaciones_cliente: observacionesCompletas,
-        })
-        .eq('id', presupuesto.id);
+      if (rpcError) throw rpcError;
 
-      if (updateError) throw updateError;
+      if (!data?.success) {
+        throw new Error(data?.message || 'Error al rechazar el presupuesto');
+      }
 
       await fetchPresupuesto();
       setShowRechazarModal(false);
@@ -151,7 +156,7 @@ export default function PresupuestoTracking() {
       setObservaciones('');
     } catch (err: any) {
       console.error('Error rechazando:', err);
-      alert('Error al rechazar el presupuesto');
+      alert(err.message || 'Error al rechazar el presupuesto');
     } finally {
       setSubmitting(false);
     }
