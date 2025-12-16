@@ -7,23 +7,7 @@ import {
   ArrowLeft,
   Edit2,
   Ban,
-  Trash2,
-  Calendar,
-  User,
-  DollarSign,
-  Package,
-  Route,
-  CreditCard,
-  History,
-  Clock,
-  FileText,
-  Link as LinkIcon,
-  Settings,
-  Share2,
-  Copy,
-  Check,
-  Download,
-  Wrench
+
 } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
@@ -61,7 +45,6 @@ export function OrderDetailPage() {
     isLoading: isConfirmLoading,
     closeDialog,
     handleConfirm,
-    confirmDelete,
     confirmAction,
   } = useConfirmDialog();
 
@@ -179,11 +162,7 @@ export function OrderDetailPage() {
     return false;
   }, [orden, isAdmin]);
 
-  const canChangeState = useMemo(() => {
-    if (!orden) return false;
-    if (orden.estado === 'finalizada' || orden.estado === 'cancelada') return false;
-    return true;
-  }, [orden]);
+
 
   const handleCopyTrackingLink = async () => {
     if (!orden?.tracking_token) return;
@@ -308,49 +287,7 @@ export function OrderDetailPage() {
     }
   };
 
-  const handleChangeEstado = async (nuevoEstado: EstadoOrdenTrabajo) => {
-    if (!id || orden?.estado === nuevoEstado) return;
 
-    const estadoLabels: Record<EstadoOrdenTrabajo, string> = {
-      pendiente: 'Pendiente',
-      en_proceso: 'En Proceso',
-      finalizada: 'Finalizada',
-      entregada: 'Entregada',
-      cancelada: 'Cancelada',
-    };
-
-    confirmAction({
-      title: 'Cambiar estado',
-      message: `¿Deseas cambiar el estado de la orden a "${estadoLabels[nuevoEstado]}"?`,
-      confirmText: 'Cambiar Estado',
-      variant: 'info',
-      onConfirm: async () => {
-        const success = await changeEstado(id, nuevoEstado);
-        if (success) {
-          await loadOrden();
-
-          // Enviar notificación si cambia a finalizada
-          if (nuevoEstado === 'finalizada' && profile?.company_id && orden?.cliente_id) {
-            const saldoPendiente = totalesConsolidados.total - totalPagado;
-
-            enviarNotificacion({
-              companyId: profile.company_id,
-              clienteId: orden.cliente_id,
-              ordenId: id,
-              tipo: 'orden_finalizada',
-              ordenTipo: 'trabajo'
-            }).then((resultado) => {
-              if (resultado.success) {
-                showSuccess('Notificación de WhatsApp enviada al cliente');
-              }
-            }).catch((err) => {
-              console.error('Error al enviar notificación:', err);
-            });
-          }
-        }
-      },
-    });
-  };
 
 
   const handleDesvincularOrdenCopiado = async () => {
@@ -480,25 +417,8 @@ export function OrderDetailPage() {
                   Eliminar
                 </Button>
               )}
-              {/* Botón Entregar Orden (Solo si está Finalizada) */}
-              {orden.estado === 'finalizada' && (
-                <Button
-                  variant="success" // O 'primary' si prefieres azul, pero verde indica completitud
-                  size="sm"
-                  onClick={() => {
-                    confirmAction({
-                      title: 'Marcar como Entregada',
-                      message: '¿Confirmas que la orden ha sido entregada al cliente? Esta acción moverá la orden a la columna "Entregada".',
-                      confirmText: 'Marcar Entregada',
-                      variant: 'success', // Coincide con el estilo del botón
-                      onConfirm: () => handleChangeEstado('entregada')
-                    });
-                  }}
-                >
-                  <Check className="w-4 h-4 mr-2" />
-                  Entregar Orden
-                </Button>
-              )}
+
+
             </div>
           </div>
 
