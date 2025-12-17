@@ -1,4 +1,5 @@
 import { Package, AlertTriangle } from 'lucide-react';
+import { Badge } from '../ui/Badge';
 import { EmptyState } from '../ui/EmptyState';
 import type { PresupuestoItem } from '../../types/presupuestos';
 
@@ -41,6 +42,102 @@ export function PresupuestoItemsTab({ items, presupuestoId, esEditable = false }
   const tienePendientes = itemsPendientes.length > 0;
   const esPendiente = (item: PresupuestoItem) =>
     item.precio_unitario_final === null || item.precio_total === null;
+
+  // Helper to render config details
+  const renderConfiguracion = (config: any, tipoItem?: string) => {
+    if (!config) return null;
+
+    // Lógica específica para Centro de Copiado
+    if (tipoItem === 'centro_copiado') {
+      return (
+        <div className="space-y-1 text-xs text-gray-600 mt-1">
+          {/* Info Copias/Hojas */}
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-gray-900">{config.cantidad_copias} juegos</span>
+            <span className="text-gray-300">|</span>
+            <span>{config.cantidad_hojas} hojas orig.</span>
+          </div>
+
+          {/* Info Papel/Tinta */}
+          <div className="flex flex-wrap gap-1.5 mt-1">
+            {config.tamanio_nombre && <Badge variant="outline" className="text-[10px] h-5">{config.tamanio_nombre}</Badge>}
+            {config.papel_detalle && <Badge variant="outline" className="text-[10px] h-5">{config.papel_detalle}</Badge>}
+            <Badge variant={config.tipo_tinta === 'CMYK' || config.tipo_tinta === 'color' ? 'purple' : 'gray'} className="text-[10px] h-5">
+              {config.tipo_tinta === 'CMYK' || config.tipo_tinta === 'color' ? 'Color' : 'B/N'}
+            </Badge>
+            <Badge variant="outline" className="text-[10px] h-5">
+              {config.cara_impresa === 'frente_y_dorso' || config.cara_impresa === 'doble' || config.cara_impresa === '1/1' ? 'Doble Faz' : 'Simple Faz'}
+            </Badge>
+          </div>
+
+          {/* Terminaciones (Anillado, Plastificado, Guillotinado) */}
+          {(config.anillado || config.plastificado || config.guillotinado || config.abrochado || config.corte || config.dobladillo) && (
+            <div className="flex flex-wrap gap-1.5 mt-1">
+              {config.anillado && (
+                <Badge variant="warning" size="sm" className="text-[10px] h-5 px-1.5">Anillado {config.anillado.tipo}</Badge>
+              )}
+              {config.plastificado && (
+                <Badge variant="warning" size="sm" className="text-[10px] h-5 px-1.5">Plastificado {config.plastificado.tipo}</Badge>
+              )}
+              {config.guillotinado && (
+                <Badge variant="warning" size="sm" className="text-[10px] h-5 px-1.5">Guillotinado</Badge>
+              )}
+              {config.abrochado && (
+                <Badge variant="warning" size="sm" className="text-[10px] h-5 px-1.5">Abrochado</Badge>
+              )}
+              {config.corte && (
+                <Badge variant="warning" size="sm" className="text-[10px] h-5 px-1.5">Corte</Badge>
+              )}
+              {config.dobladillo && (
+                <Badge variant="warning" size="sm" className="text-[10px] h-5 px-1.5">Dobladillo</Badge>
+              )}
+            </div>
+          )}
+
+          {/* Servicios y Acabados Extra */}
+          {((config.servicios_seleccionados && config.servicios_seleccionados.length > 0) ||
+            (config.acabados_seleccionados && config.acabados_seleccionados.length > 0)) && (
+              <div className="flex flex-wrap gap-1 mt-1 pt-1 border-t border-gray-100">
+                {config.servicios_seleccionados?.map((s: any, idx: number) => (
+                  <Badge key={`srv-${idx}`} variant="blue" size="sm" className="text-[10px] px-1.5 h-auto py-0.5">
+                    {s.nivel ? `${s.nombre} (${s.nivel})` : s.nombre}
+                  </Badge>
+                ))}
+                {config.acabados_seleccionados?.map((a: any, idx: number) => (
+                  <Badge key={`acb-${idx}`} variant="purple" size="sm" className="text-[10px] px-1.5 h-auto py-0.5">
+                    {a.nombre}
+                  </Badge>
+                ))}
+              </div>
+            )}
+        </div>
+      );
+    }
+
+    // Standard Render Logic (Existing)
+    const hasServices = (config.servicios_seleccionados && config.servicios_seleccionados.length > 0) ||
+      (config.acabados_seleccionados && config.acabados_seleccionados.length > 0);
+
+    if (!hasServices) return null;
+
+    return (
+      <div className="space-y-1 mt-0.5">
+        {/* Services Badges */}
+        <div className="flex flex-wrap gap-1 mt-1">
+          {config.servicios_seleccionados?.map((s: any, idx: number) => (
+            <Badge key={`srv-${idx}`} variant="blue" size="sm" className="text-[10px] px-1.5 h-auto py-0.5">
+              {s.nivel ? `${s.nombre} (${s.nivel})` : s.nombre}
+            </Badge>
+          ))}
+          {config.acabados_seleccionados?.map((a: any, idx: number) => (
+            <Badge key={`acb-${idx}`} variant="purple" size="sm" className="text-[10px] px-1.5 h-auto py-0.5">
+              {a.nombre}
+            </Badge>
+          ))}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -100,6 +197,8 @@ export function PresupuestoItemsTab({ items, presupuestoId, esEditable = false }
                         </span>
                       )}
                     </div>
+                    {/* Render Configuration Details */}
+                    {renderConfiguracion(item.configuracion, item.tipo_item)}
                   </td>
                   <td className="px-6 py-4 text-right align-top text-gray-600 font-medium pt-5">
                     {item.cantidad} <span className="text-xs font-normal text-gray-400">u.</span>
