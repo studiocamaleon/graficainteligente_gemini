@@ -1,4 +1,4 @@
-import { Search, Package, Tag } from 'lucide-react';
+import { Search, Package, Tag, FileText } from 'lucide-react';
 import { Input } from '../../ui/Input';
 import { Card } from '../../ui/Card';
 import { Badge } from '../../ui/Badge';
@@ -11,17 +11,18 @@ interface UniversalProductSearchStepProps {
   onSelectProduct: (product: UniversalProductSearchResult) => void;
 }
 
-const getCategoryColor = (categoria: string): 'blue' | 'green' | 'purple' | 'orange' | 'gray' => {
-  const colorMap: Record<string, 'blue' | 'green' | 'purple' | 'orange' | 'gray'> = {
+const getCategoryColor = (categoria: string): 'blue' | 'success' | 'purple' | 'warning' | 'default' => {
+  const colorMap: Record<string, 'blue' | 'success' | 'purple' | 'warning' | 'default'> = {
     'Impresion Laser': 'blue',
     'Talonarios': 'blue',
-    'Impresion Gran Formato': 'green',
+    'Impresion Gran Formato': 'success', // green -> success
     'Materiales Rigidos': 'purple',
-    'Plotter de Corte': 'orange',
+    'Plotter de Corte': 'warning', // orange -> warning
     'Portabanners': 'blue',
-    'Sellos': 'gray',
+    'Sellos': 'default', // gray -> default
+    'Centro de Copiado': 'default'
   };
-  return colorMap[categoria] || 'gray';
+  return colorMap[categoria] || 'default';
 };
 
 export function UniversalProductSearchStep({
@@ -43,6 +44,32 @@ export function UniversalProductSearchStep({
           className="pl-10"
           autoFocus
         />
+      </div>
+
+      {/* Quick Access Section */}
+      <div className="grid gap-3 mb-6">
+        <Card
+          className="p-4 hover:shadow-md transition-all cursor-pointer hover:border-blue-300 border-l-4 border-l-teal-500"
+          onClick={() => onSelectProduct({
+            id: 'centro_copiado_module',
+            nombre: 'Impresión Digital / Copiado',
+            categoria: 'Centro de Copiado', // This triggers the special logic
+            categoria_id: 'centro_copiado'
+          } as any)}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-teal-50 rounded-full text-teal-600">
+                <FileText className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900">Centro de Copiado</h3>
+                <p className="text-sm text-gray-500">Impresiones A4/A3, Anillados, Plastificados</p>
+              </div>
+            </div>
+            <span className="text-teal-600 text-sm font-medium">Configurar →</span>
+          </div>
+        </Card>
       </div>
 
       {error && (

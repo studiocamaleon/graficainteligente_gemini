@@ -664,13 +664,63 @@ export function OrderDetailPage() {
                             )}
                           </div>
 
-                          {/* Para items personalizados: mostrar descripción */}
+                          {/* Para items personalizados: mostrar descripción si existe */}
                           {item.tipo_item === 'personalizado' && item.descripcion && (
                             <div className="mb-2 p-3 bg-purple-50 border border-purple-200 rounded-lg">
                               <p className="text-sm font-medium text-purple-900 mb-1">Descripción:</p>
                               <p className="text-sm text-purple-800 whitespace-pre-wrap">
                                 {item.descripcion}
                               </p>
+                            </div>
+                          )}
+
+                          {/* Lógica Específica para Centro de Copiado (Fallback visual si no hay descripción o para complementar) */}
+                          {item.tipo_item === 'centro_copiado' && (
+                            <div className="mt-4 p-4 bg-teal-50 rounded-lg border border-teal-100">
+                              <h5 className="text-xs font-semibold text-teal-800 uppercase tracking-wider mb-2">Detalles de Copiado</h5>
+                              <div className="space-y-2">
+                                {/* Copias y Hojas */}
+                                <div className="flex items-center gap-2 text-sm text-gray-700">
+                                  <span className="font-semibold">{config.cantidad_copias || 1} juegos</span>
+                                  <span className="text-gray-400">x</span>
+                                  <span>{config.cantidad_hojas || 0} hojas</span>
+                                </div>
+
+                                {/* Papel y Tinta */}
+                                <div className="flex flex-wrap gap-2">
+                                  {config.tamanio_nombre && <Badge variant="outline" className="bg-white">{config.tamanio_nombre}</Badge>}
+                                  {config.papel_detalle && <Badge variant="outline" className="bg-white">{config.papel_detalle}</Badge>}
+                                  <Badge variant={config.tipo_tinta === 'CMYK' ? 'purple' : 'gray'}>
+                                    {config.tipo_tinta === 'CMYK' ? 'Color' : 'B/N'}
+                                  </Badge>
+                                  {(config.cara_impresa) && (
+                                    <Badge variant="outline" className="bg-white">
+                                      {config.cara_impresa.includes('doble') || config.cara_impresa === '1/1' ? 'Doble Faz' : 'Simple Faz'}
+                                    </Badge>
+                                  )}
+                                </div>
+
+                                {/* Terminaciones */}
+                                {(config.anillado || config.plastificado || config.guillotinado) && (
+                                  <div className="flex flex-wrap gap-2 mt-2 pt-2 border-t border-teal-200/50">
+                                    {config.anillado && (
+                                      <Badge variant="warning" size="sm" className="bg-yellow-100 text-yellow-800 border-yellow-200">
+                                        Anillado {config.anillado.tipo}
+                                      </Badge>
+                                    )}
+                                    {config.plastificado && (
+                                      <Badge variant="warning" size="sm" className="bg-yellow-100 text-yellow-800 border-yellow-200">
+                                        Plastificado {config.plastificado.tipo}
+                                      </Badge>
+                                    )}
+                                    {config.guillotinado && (
+                                      <Badge variant="warning" size="sm" className="bg-yellow-100 text-yellow-800 border-yellow-200">
+                                        Guillotinado
+                                      </Badge>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           )}
 

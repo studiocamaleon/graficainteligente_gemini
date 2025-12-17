@@ -10,7 +10,8 @@ export type ProductCategory =
   | 'Materiales Rigidos'
   | 'Plotter de Corte'
   | 'Portabanners'
-  | 'Sellos';
+  | 'Sellos'
+  | 'Centro de Copiado';
 
 export interface UniversalProductSearchResult {
   id: string;

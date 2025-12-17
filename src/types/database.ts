@@ -1385,6 +1385,7 @@ export interface OrdenTrabajoItem {
   precio_unitario_final: number;
   precio_total: number;
   estado: EstadoOrdenItem;
+  tipo_item?: 'standard' | 'centro_copiado';
   created_at: string;
   updated_at: string;
 }

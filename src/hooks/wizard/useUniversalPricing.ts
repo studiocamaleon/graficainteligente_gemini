@@ -441,7 +441,7 @@ async function getPrecioTalonarios(
  * @param cantidad - Cantidad del producto
  * @returns El precio TOTAL a sumar por este servicio/acabado (se dividirá por cantidad después)
  */
-function calcularImpacto(
+export function calcularImpacto(
   tipoImpacto: string,
   valorMonto: number | null,
   valorPorcentaje: number | null,

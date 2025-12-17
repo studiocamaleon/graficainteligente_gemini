@@ -23,16 +23,6 @@ interface GenerateRoutesParams {
 /**
  * Normaliza el valor de etapa a uno de los valores válidos del enum TipoEtapaRuta
  * Maneja diferentes variaciones de nombres (con espacios, guiones, mayúsculas, etc.)
- *
- * Casos manejados:
- * - 'Pre-prensa', 'pre-prensa', 'Pre prensa' → 'pre_prensa'
- * - 'Terminacion', 'Post-prensa', 'post-prensa' → 'post_prensa'
- * - 'Produccion', 'Principal' → 'principal'
- * - 'Instalacion' → 'instalacion' (mantiene el valor)
- *
- * IMPORTANTE: El orden de las verificaciones es crítico para evitar falsos positivos
- * 'post_prensa' contiene 'pre', por lo que debemos verificar 'post' ANTES de 'pre'
- * 'Instalacion' contiene 'ion' que NO debe ser mapeado a 'Produccion'
  */
 export function normalizarEtapa(etapa: string): TipoEtapaRuta {
   // 1. Normalizar string: minúsculas, reemplazo de guiones/espacios, eliminar acentos
@@ -48,7 +38,6 @@ export function normalizarEtapa(etapa: string): TipoEtapaRuta {
   // 3. Instalacion (verificar ANTES de otros checks para evitar conversión errónea)
   if (etapaLower.includes('instalacion')) {
     // TipoEtapaRuta solo tiene 3 valores: 'pre_prensa' | 'principal' | 'post_prensa'
-    // ERROR: La DB no acepta 'instalacion'. Debemos mapearlo a 'post_prensa' o 'principal'.
     // Asumiendo que instalación es un proceso posterior o de campo:
     return 'post_prensa';
   }
@@ -71,7 +60,6 @@ export function normalizarEtapa(etapa: string): TipoEtapaRuta {
   }
 
   // 7. Fallback: Si no coincide con nada, forzamos 'principal' para cumplir constraint DB
-  // Esto evita el error 23514 si viene algo raro como "Diseño" o "Logística"
   return 'principal';
 }
 
@@ -152,262 +140,334 @@ export async function generateProductionRoutes({
         rutaId = data?.ruta_produccion_id || null;
         break;
       }
+      case 'centro_copiado': {
+        // Buscar la ruta estándar de copiado por nombre
+        const { data } = await supabase
+          .from('rutas_produccion')
+          .select('id')
+          .eq('nombre', 'Ruta Centro de Copiado')
+          .maybeSingle();
+
+        if (data) {
+          rutaId = data.id;
+        }
+        break;
+      }
     }
 
-    if (!rutaId) {
-      return [];
-    }
+    // 1b. Inyección Dinámica de Terminaciones (Centro de Copiado)
+    let pasosExtra: GeneratedRouteStep[] = [];
+    if (categoria === 'centro_copiado') {
+      const acabadosBuscados: string[] = [];
+      if (configuracion.anillado) acabadosBuscados.push('Anillado');
+      if (configuracion.plastificado) acabadosBuscados.push('Plastificado');
+      if (configuracion.guillotinado) acabadosBuscados.push('Guillotinado');
 
-    // 2. Obtener pasos de la ruta
-    const { data: pasos, error: pasosError } = await supabase
-      .from('rutas_produccion_pasos')
-      .select(`
-        id,
-        etapa,
-        paso_id,
-        orden,
-        es_obligatorio,
-        tipo_condicion,
-        configuracion_condicion,
-        pasos (
-          nombre
-        )
-      `)
-      .eq('ruta_id', rutaId)
-      .order('etapa')
-      .order('orden');
+      if (acabadosBuscados.length > 0) {
+        // Buscar pasos con estos nombres de forma flexible
+        const { data: pasosEncontradosRaw } = await supabase
+          .from('pasos')
+          .select('id, nombre, etapa')
+          .in('nombre', acabadosBuscados)
+          .returns<{ id: string, nombre: string, etapa: string }[]>(); // Use returns for typed response if possible, or cast below
 
-    if (pasosError) throw pasosError;
-    if (!pasos || pasos.length === 0) {
-      return [];
-    }
+        if (pasosEncontradosRaw) {
+          const pasosEncontrados = pasosEncontradosRaw as { id: string, nombre: string, etapa: string }[];
+          pasosEncontrados.forEach((p, idx) => {
+            // Force Type Safety for Etapa
+            const etapaFinal: TipoEtapaRuta = 'post_prensa';
 
-    // 3. Evaluar cada paso según condiciones
-    const generatedSteps: Array<{
-      etapa: string;
-      paso_id_especifico: string | null;
-      orden: number;
-      es_obligatorio: boolean;
-      origen_plantilla_id: string;
-    }> = [];
-
-    // Extraer servicios y acabados con compatibilidad
-    const servicios = configuracion?.servicios_seleccionados || configuracion?.servicios || [];
-    const acabados = configuracion?.acabados_seleccionados || configuracion?.acabados || [];
-
-    for (const paso of pasos) {
-      let incluir = false;
-      let pasoIdEspecifico: string | null = paso.paso_id;
-
-      // Si es obligatorio, siempre incluir
-      if (paso.es_obligatorio) {
-        incluir = true;
-      } else {
-        // Evaluar condición
-        switch (paso.tipo_condicion) {
-          case 'sin_condicion':
-            incluir = true;
-            break;
-
-          case 'servicio_sin_nivel': {
-            const servicio = servicios.find(
-              (s: any) => s.servicio_id === paso.configuracion_condicion?.servicio_id
-            );
-            if (servicio) {
-              incluir = true;
-            }
-            break;
-          }
-
-          case 'servicio_con_nivel': {
-            const servicio = servicios.find((s: any) => {
-              if (s.servicio_id !== paso.configuracion_condicion?.servicio_id) {
-                return false;
-              }
-              const mapeoNiveles = paso.configuracion_condicion?.mapeo_niveles || {};
-              if (Object.keys(mapeoNiveles).length === 0) {
-                return true;
-              }
-              const nivelItem = s.nivel || s.nivel_nombre;
-              return Object.keys(mapeoNiveles).includes(nivelItem);
+            pasosExtra.push({
+              id: `dynamic-${p.id}-${idx}`,
+              etapa: etapaFinal,
+              paso_id: p.id,
+              paso_nombre: p.nombre,
+              orden: 900 + idx, // Orden alto para que vaya al final
+              es_obligatorio: true,
+              origen_plantilla_id: p.id,
+              comentario_vendedor: null
             });
-
-            if (servicio) {
-              incluir = true;
-              const nivelAplicado = servicio.nivel || servicio.nivel_nombre;
-              const mapeoNiveles = paso.configuracion_condicion?.mapeo_niveles || {};
-
-              // Primero intentar con mapeo manual
-              if (nivelAplicado && mapeoNiveles[nivelAplicado]) {
-                pasoIdEspecifico = mapeoNiveles[nivelAplicado];
-              } else {
-                // Consulta dinámica a la BD
-                const { data: nivelData } = await supabase
-                  .from('servicios_niveles_precio')
-                  .select('paso_id')
-                  .eq('servicio_id', servicio.servicio_id)
-                  .eq('nombre', nivelAplicado)
-                  .maybeSingle();
-
-                if (nivelData?.paso_id) {
-                  pasoIdEspecifico = nivelData.paso_id;
-                }
-              }
-            }
-            break;
-          }
-
-          case 'acabado_sin_nivel': {
-            const acabado = acabados.find(
-              (a: any) => a.acabado_id === paso.configuracion_condicion?.acabado_id
-            );
-            if (acabado) {
-              incluir = true;
-            }
-            break;
-          }
-
-          case 'acabado_con_nivel': {
-            const acabado = acabados.find((a: any) => {
-              if (a.acabado_id !== paso.configuracion_condicion?.acabado_id) {
-                return false;
-              }
-              const mapeoNiveles = paso.configuracion_condicion?.mapeo_niveles || {};
-              if (Object.keys(mapeoNiveles).length === 0) {
-                return true;
-              }
-              const nivelItem = a.nivel || a.nivel_nombre;
-              return Object.keys(mapeoNiveles).includes(nivelItem);
-            });
-
-            if (acabado) {
-              incluir = true;
-              const nivelAplicado = acabado.nivel || acabado.nivel_nombre;
-              const mapeoNiveles = paso.configuracion_condicion?.mapeo_niveles || {};
-
-              // Primero intentar con mapeo manual
-              if (nivelAplicado && mapeoNiveles[nivelAplicado]) {
-                pasoIdEspecifico = mapeoNiveles[nivelAplicado];
-              } else {
-                // Consulta dinámica a la BD
-                const { data: nivelData } = await supabase
-                  .from('acabados_niveles_precio')
-                  .select('paso_id')
-                  .eq('acabado_id', acabado.acabado_id)
-                  .eq('nombre', nivelAplicado)
-                  .maybeSingle();
-
-                if (nivelData?.paso_id) {
-                  pasoIdEspecifico = nivelData.paso_id;
-                }
-              }
-            }
-            break;
-          }
-
-          case 'tecnologia_tinta': {
-            const tecnologiaId = configuracion?.tecnologia_id;
-            const tintaCodigo = configuracion?.tipo_tinta || configuracion?.tinta;
-
-            if (tecnologiaId && tintaCodigo) {
-              incluir = true;
-              const mapeoTintas = paso.configuracion_condicion?.mapeo_tintas || {};
-
-              // Primero intentar con mapeo manual
-              if (mapeoTintas[tintaCodigo]) {
-                pasoIdEspecifico = mapeoTintas[tintaCodigo];
-              } else {
-                // Consulta dinámica a la BD
-                const { data: tintaData } = await supabase
-                  .from('tecnologias_tintas_pasos')
-                  .select('paso_id')
-                  .eq('tecnologia_id', tecnologiaId)
-                  .eq('tinta', tintaCodigo)
-                  .maybeSingle();
-
-                if (tintaData?.paso_id) {
-                  pasoIdEspecifico = tintaData.paso_id;
-                }
-              }
-            }
-            break;
-          }
-
-          default:
-            incluir = false;
+          });
         }
       }
+    }
 
-      // Solo incluir si cumple condiciones
-      if (incluir) {
-        let sourceServiceId: string | undefined;
-        let sourceAcabadoId: string | undefined;
+    if (!rutaId && pasosExtra.length === 0) {
+      return [];
+    }
 
-        // Determinar ID del origen
-        if (paso.tipo_condicion === 'servicio_sin_nivel' || paso.tipo_condicion === 'servicio_con_nivel') {
-          sourceServiceId = paso.configuracion_condicion?.servicio_id;
-        } else if (paso.tipo_condicion === 'acabado_sin_nivel' || paso.tipo_condicion === 'acabado_con_nivel') {
-          sourceAcabadoId = paso.configuracion_condicion?.acabado_id;
+    interface RutaPasoRow {
+      id: string;
+      etapa: string;
+      paso_id: string | null;
+      orden: number;
+      es_obligatorio: boolean;
+      tipo_condicion: string;
+      configuracion_condicion: any;
+      pasos: { nombre: string } | null; // Joined table can be single object or array depending on relation, here likely object
+    }
+
+    // 2. Obtener pasos de la ruta principal (si existe)
+    let pasosFinales: GeneratedRouteStep[] = [];
+
+    if (rutaId) {
+      const { data: pasosRaw, error: pasosError } = await supabase
+        .from('rutas_produccion_pasos')
+        .select(`
+            id,
+            etapa,
+            paso_id,
+            orden,
+            es_obligatorio,
+            tipo_condicion,
+            configuracion_condicion,
+            pasos (
+              nombre
+            )
+        `)
+        .eq('ruta_id', rutaId)
+        .order('etapa')
+        .order('orden');
+
+      if (pasosError) throw pasosError;
+
+      // Cast to explicit type to avoid 'never' inference
+      const pasos = pasosRaw as unknown as RutaPasoRow[];
+
+      if (pasos && pasos.length > 0) {
+        // 3. Evaluar cada paso según condiciones
+        const generatedSteps: Array<{
+          etapa: string;
+          paso_id_especifico: string | null;
+          orden: number;
+          es_obligatorio: boolean;
+          origen_plantilla_id: string;
+          source_service_id?: string;
+          source_acabado_id?: string;
+        }> = [];
+
+        // Extraer servicios y acabados con compatibilidad
+        const servicios = configuracion?.servicios_seleccionados || configuracion?.servicios || [];
+        const acabados = configuracion?.acabados_seleccionados || configuracion?.acabados || [];
+
+        for (const paso of pasos) {
+          let incluir = false;
+          let pasoIdEspecifico: string | null = paso.paso_id;
+
+          // Si es obligatorio, siempre incluir
+          if (paso.es_obligatorio) {
+            incluir = true;
+          } else {
+            // Evaluar condición
+            switch (paso.tipo_condicion) {
+              case 'sin_condicion':
+                incluir = true;
+                break;
+
+              case 'servicio_sin_nivel': {
+                const servicio = servicios.find(
+                  (s: any) => s.servicio_id === paso.configuracion_condicion?.servicio_id
+                );
+                if (servicio) {
+                  incluir = true;
+                }
+                break;
+              }
+
+              case 'servicio_con_nivel': {
+                const servicio = servicios.find((s: any) => {
+                  if (s.servicio_id !== paso.configuracion_condicion?.servicio_id) {
+                    return false;
+                  }
+                  const mapeoNiveles = paso.configuracion_condicion?.mapeo_niveles || {};
+                  if (Object.keys(mapeoNiveles).length === 0) {
+                    return true;
+                  }
+                  const nivelItem = s.nivel || s.nivel_nombre;
+                  return Object.keys(mapeoNiveles).includes(nivelItem);
+                });
+
+                if (servicio) {
+                  incluir = true;
+                  const nivelAplicado = servicio.nivel || servicio.nivel_nombre;
+                  const mapeoNiveles = paso.configuracion_condicion?.mapeo_niveles || {};
+
+                  // Primero intentar con mapeo manual
+                  if (nivelAplicado && mapeoNiveles[nivelAplicado]) {
+                    pasoIdEspecifico = mapeoNiveles[nivelAplicado];
+                  } else {
+                    // Consulta dinámica a la BD
+                    const { data: nivelData } = await supabase
+                      .from('servicios_niveles_precio')
+                      .select('paso_id')
+                      .eq('servicio_id', servicio.servicio_id)
+                      .eq('nombre', nivelAplicado)
+                      .maybeSingle();
+
+                    if (nivelData?.paso_id) {
+                      pasoIdEspecifico = nivelData.paso_id;
+                    }
+                  }
+                }
+                break;
+              }
+
+              case 'acabado_sin_nivel': {
+                const acabado = acabados.find(
+                  (a: any) => a.acabado_id === paso.configuracion_condicion?.acabado_id
+                );
+                if (acabado) {
+                  incluir = true;
+                }
+                break;
+              }
+
+              case 'acabado_con_nivel': {
+                const acabado = acabados.find((a: any) => {
+                  if (a.acabado_id !== paso.configuracion_condicion?.acabado_id) {
+                    return false;
+                  }
+                  const mapeoNiveles = paso.configuracion_condicion?.mapeo_niveles || {};
+                  if (Object.keys(mapeoNiveles).length === 0) {
+                    return true;
+                  }
+                  const nivelItem = a.nivel || a.nivel_nombre;
+                  return Object.keys(mapeoNiveles).includes(nivelItem);
+                });
+
+                if (acabado) {
+                  incluir = true;
+                  const nivelAplicado = acabado.nivel || acabado.nivel_nombre;
+                  const mapeoNiveles = paso.configuracion_condicion?.mapeo_niveles || {};
+
+                  // Primero intentar con mapeo manual
+                  if (nivelAplicado && mapeoNiveles[nivelAplicado]) {
+                    pasoIdEspecifico = mapeoNiveles[nivelAplicado];
+                  } else {
+                    // Consulta dinámica a la BD
+                    const { data: nivelData } = await supabase
+                      .from('acabados_niveles_precio')
+                      .select('paso_id')
+                      .eq('acabado_id', acabado.acabado_id)
+                      .eq('nombre', nivelAplicado)
+                      .maybeSingle();
+
+                    if (nivelData?.paso_id) {
+                      pasoIdEspecifico = nivelData.paso_id;
+                    }
+                  }
+                }
+                break;
+              }
+
+              case 'tecnologia_tinta': {
+                const tecnologiaId = configuracion?.tecnologia_id;
+                const tintaCodigo = configuracion?.tipo_tinta || configuracion?.tinta;
+
+                if (tecnologiaId && tintaCodigo) {
+                  incluir = true;
+                  const mapeoTintas = paso.configuracion_condicion?.mapeo_tintas || {};
+
+                  // Primero intentar con mapeo manual
+                  if (mapeoTintas[tintaCodigo]) {
+                    pasoIdEspecifico = mapeoTintas[tintaCodigo];
+                  } else {
+                    // Consulta dinámica a la BD
+                    const { data: tintaData } = await supabase
+                      .from('tecnologias_tintas_pasos')
+                      .select('paso_id')
+                      .eq('tecnologia_id', tecnologiaId)
+                      .eq('tinta', tintaCodigo)
+                      .maybeSingle();
+
+                    if (tintaData?.paso_id) {
+                      pasoIdEspecifico = tintaData.paso_id;
+                    }
+                  }
+                }
+                break;
+              }
+
+              default:
+                incluir = false;
+            }
+          }
+
+          // Solo incluir si cumple condiciones
+          if (incluir) {
+            let sourceServiceId: string | undefined;
+            let sourceAcabadoId: string | undefined;
+
+            // Determinar ID del origen
+            if (paso.tipo_condicion === 'servicio_sin_nivel' || paso.tipo_condicion === 'servicio_con_nivel') {
+              sourceServiceId = paso.configuracion_condicion?.servicio_id;
+            } else if (paso.tipo_condicion === 'acabado_sin_nivel' || paso.tipo_condicion === 'acabado_con_nivel') {
+              sourceAcabadoId = paso.configuracion_condicion?.acabado_id;
+            }
+
+            generatedSteps.push({
+              etapa: paso.etapa,
+              paso_id_especifico: pasoIdEspecifico,
+              orden: paso.orden,
+              es_obligatorio: paso.es_obligatorio,
+              origen_plantilla_id: paso.id,
+              source_service_id: sourceServiceId,
+              source_acabado_id: sourceAcabadoId,
+            });
+          }
         }
 
-        generatedSteps.push({
-          etapa: paso.etapa,
-          paso_id_especifico: pasoIdEspecifico,
-          orden: paso.orden,
-          es_obligatorio: paso.es_obligatorio,
-          origen_plantilla_id: paso.id,
-          source_service_id: sourceServiceId,
-          source_acabado_id: sourceAcabadoId,
+        // 4. Consultar nombres reales de todos los pasos específicos
+        const pasosIdsUnicos = [...new Set(
+          generatedSteps
+            .map(s => s.paso_id_especifico)
+            .filter((id): id is string => id !== null)
+        )];
+
+        let nombresRealesPasos: Record<string, string> = {};
+        if (pasosIdsUnicos.length > 0) {
+          const { data: pasosReales } = await supabase
+            .from('pasos')
+            .select('id, nombre')
+            .in('id', pasosIdsUnicos);
+
+          if (pasosReales) {
+            nombresRealesPasos = pasosReales.reduce((acc, paso) => {
+              acc[paso.id] = paso.nombre;
+              return acc;
+            }, {} as Record<string, string>);
+          }
+        }
+
+        // 5. Construir pasos finales con nombres reales y etapas normalizadas
+        pasosFinales = generatedSteps.map((step, index) => {
+          const nombreReal = step.paso_id_especifico
+            ? nombresRealesPasos[step.paso_id_especifico]
+            : undefined;
+
+          const nombreFinal = nombreReal || 'Paso sin nombre';
+          const etapaNormalizada = normalizarEtapa(step.etapa);
+
+          return {
+            id: `temp-${step.origen_plantilla_id}-${index}`,
+            etapa: etapaNormalizada,
+            paso_id: step.paso_id_especifico,
+            paso_nombre: nombreFinal,
+            orden: step.orden,
+            es_obligatorio: step.es_obligatorio,
+            origen_plantilla_id: step.origen_plantilla_id,
+            comentario_vendedor: null,
+            source_service_id: step.source_service_id,
+            source_acabado_id: step.source_acabado_id,
+          };
         });
       }
     }
 
-    // 4. Consultar nombres reales de todos los pasos específicos
-    const pasosIdsUnicos = [...new Set(
-      generatedSteps
-        .map(s => s.paso_id_especifico)
-        .filter((id): id is string => id !== null)
-    )];
-
-    let nombresRealesPasos: Record<string, string> = {};
-    if (pasosIdsUnicos.length > 0) {
-      const { data: pasosReales } = await supabase
-        .from('pasos')
-        .select('id, nombre')
-        .in('id', pasosIdsUnicos);
-
-      if (pasosReales) {
-        nombresRealesPasos = pasosReales.reduce((acc, paso) => {
-          acc[paso.id] = paso.nombre;
-          return acc;
-        }, {} as Record<string, string>);
-      }
+    // 6. Concatenar pasos dinámicos (terminaciones copiado)
+    if (pasosExtra.length > 0) {
+      pasosFinales = [...pasosFinales, ...pasosExtra];
     }
-
-    // 5. Construir pasos finales con nombres reales y etapas normalizadas
-    const pasosFinales: GeneratedRouteStep[] = generatedSteps.map((step, index) => {
-      const nombreReal = step.paso_id_especifico
-        ? nombresRealesPasos[step.paso_id_especifico]
-        : undefined;
-
-      const nombreFinal = nombreReal || 'Paso sin nombre';
-      const etapaNormalizada = normalizarEtapa(step.etapa);
-
-      console.log('🔄 Normalizando etapa:', { original: step.etapa, normalizada: etapaNormalizada, paso: nombreFinal });
-
-      return {
-        id: `temp-${step.origen_plantilla_id}-${index}`,
-        etapa: etapaNormalizada,
-        paso_id: step.paso_id_especifico,
-        paso_nombre: nombreFinal,
-        orden: step.orden,
-        es_obligatorio: step.es_obligatorio,
-        origen_plantilla_id: step.origen_plantilla_id,
-        comentario_vendedor: null,
-        source_service_id: step.source_service_id,
-        source_acabado_id: step.source_acabado_id,
-      };
-    });
 
     return pasosFinales;
   } catch (err) {

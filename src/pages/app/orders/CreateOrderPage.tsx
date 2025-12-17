@@ -46,6 +46,7 @@ import { OrdenProductionRouteTab } from '../../../components/orders/OrdenProduct
 import { ClientesSelector } from '../../../components/orders/ClientesSelector';
 import { OrdenCopiadoAsociadaCard } from '../../../components/orders/OrdenCopiadoAsociadaCard';
 import { calcularTotalesConsolidados } from '../../../utils/ordenesConsolidadas';
+import { generarDescripcionCopiado } from '../../../utils/ordenesHelpers';
 
 // Tipos
 import type {
@@ -78,7 +79,7 @@ export function CreateOrderPage() {
   const isEditing = Boolean(id);
 
   const { profile } = useAuth();
-  const { createOrdenConItems, updateOrdenCompleta, getOrdenById } = useOrdenTrabajo();
+  const { createOrdenConItems, updateOrdenCompleta, getOrdenById, error: ordenError } = useOrdenTrabajo();
   const { showSuccess, showError } = useToast();
   const { createOrden: createOrdenCopiado } = useCentroCopiadoOrdenes({});
   const { getPresupuestoById } = usePresupuestos();
@@ -445,7 +446,7 @@ export function CreateOrderPage() {
         producto_id: item.producto_id,
         producto_nombre: item.producto_nombre,
         producto_categoria: item.producto_categoria || item.categoria || 'Sin categoría',
-        descripcion: item.descripcion || null,
+        descripcion: item.descripcion || (item.tipo_item === 'centro_copiado' || item.categoria_id === 'centro_copiado' ? generarDescripcionCopiado(item.configuracion) : null),
         tiempo_produccion_dias: item.tiempo_produccion_dias || null,
         cantidad: item.cantidad,
         configuracion: item.configuracion,
@@ -635,7 +636,7 @@ export function CreateOrderPage() {
           setIsLoading(false);
         }
       } else {
-        showError(`Error al crear la orden: ${error || 'Error desconocido'}`);
+        showError(`Error al crear la orden: ${ordenError || 'Error desconocido'}`);
         isCreatingOrderRef.current = false;
         setIsLoading(false);
       }

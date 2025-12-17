@@ -60,6 +60,20 @@ Deno.serve(async (req: Request) => {
     return new Response(null, { status: 200, headers: corsHeaders });
   }
 
+  // VALIDACIÓN DE SEGURIDAD
+  const triggerSecret = Deno.env.get('TRIGGER_SECRET_TOKEN');
+  const providedSecret = req.headers.get('X-Trigger-Secret');
+
+  // Solo validar si la variable de entorno está configurada (para no romper dev local si no se usa)
+  // Pero en producción debería estar seteadas.
+  if (triggerSecret && providedSecret !== triggerSecret) {
+    console.error('[Security] Intento de acceso no autorizado (Secret mismatch)');
+    return new Response(
+      JSON.stringify({ error: 'No autorizado' }),
+      { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -132,6 +146,39 @@ Deno.serve(async (req: Request) => {
               )
             )
           )
+          *,
+          items:ordenes_trabajo_items(
+            *,
+            servicios:ordenes_trabajo_servicios_items(
+              servicio:servicio_id(nombre)
+            ),
+            acabados:ordenes_trabajo_acabados_items(
+              acabado:acabado_id(nombre)
+            )
+          ),
+          pagos:ordenes_trabajo_pagos(monto),
+          ordenesCopiado:centro_copiado_ordenes!orden_trabajo_id(
+            id,
+            numero_orden,
+            total,
+            items:centro_copiado_ordenes_items(
+              cantidad_unidades,
+              cantidad_hojas,
+              subtotal,
+              tipo_tinta,
+              cara_impresa,
+              tipo_anillado,
+              tipo_plastificado,
+              descripcion,
+              tamanio_papel:centro_copiado_tamanios_papel(nombre),
+              papel:centro_copiado_papeles(
+                variante_nombre,
+                espesor,
+                unidad_espesor,
+                material:material_id(nombre)
+              )
+            )
+          )
         `)
         .eq('id', orden_id)
         .single();
@@ -142,6 +189,14 @@ Deno.serve(async (req: Request) => {
 
       orden = ordenData;
       items = ordenData.items || [];
+
+      // Fetch servicios globales separately to avoid 500 errors with embeddings
+      const { data: serviciosData } = await supabase
+        .from('ordenes_trabajo_servicios')
+        .select('descripcion, cantidad, subtotal')
+        .eq('orden_id', orden_id);
+
+      const serviciosGlobales = serviciosData || [];
 
       const { data: clienteData, error: clienteError } = await supabase
         .from('clients')
@@ -194,7 +249,20 @@ Deno.serve(async (req: Request) => {
         }
 
         const origin = frontend_origin || Deno.env.get('FRONTEND_URL') || 'https://www.grafica.ar';
-        mensaje = generateNuevaOrdenTrabajoMessage(orden, cliente, items, company, ordenesCopiado, origin);
+
+        console.log('[Generador] Iniciando generación de mensaje con:', {
+          orden_id: orden.id,
+          items_count: items.length,
+          servicios_globales_count: serviciosGlobales.length,
+          origin
+        });
+
+        try {
+          mensaje = generateNuevaOrdenTrabajoMessage(orden, cliente, items, company, ordenesCopiado, origin, serviciosGlobales);
+        } catch (genError: any) {
+          console.error('[Generador] Error FATAL generando mensaje:', genError);
+          throw new Error(`Error generando mensaje: ${genError.message}`);
+        }
       } else if (tipo === 'orden_finalizada') {
         const saldoPendiente = parseFloat(orden.total || 0) - pagosTotal;
         mensaje = generateOrdenFinalizadaMessage(orden, cliente, company, saldoPendiente);

@@ -41,7 +41,7 @@ export function TamaniosPapelSelector({
 
   return (
     <div className="space-y-2">
-      <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-2">
+      <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
         {sortedTamanios.map((tamanio) => {
           const isSelected = selectedId === tamanio.id;
 
@@ -51,8 +51,9 @@ export function TamaniosPapelSelector({
               type="button"
               onClick={() => onSelect(tamanio.id)}
               className={`
-                relative p-1.5 rounded-lg border-2 transition-all duration-200 text-center
-                hover:shadow-sm flex flex-col items-center justify-center gap-1 h-full
+                relative p-3 rounded-lg border-2 transition-all duration-200 text-center
+                hover:shadow-sm flex flex-col items-center justify-center gap-2 h-full
+                min-h-[80px]
                 ${isSelected
                   ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500'
                   : 'border-gray-200 bg-white hover:border-gray-300'

@@ -4,10 +4,12 @@ import { Button } from '../ui/Button';
 import { ChevronRight, ChevronLeft, Loader } from 'lucide-react';
 import { UniversalProductSearchStep } from './steps/UniversalProductSearchStep';
 import { ConfigurationStep, type SelectedConfiguration } from './steps/ConfigurationStep';
+import { CentroCopiadoStep } from './steps/CentroCopiadoStep';
+import { ItemCopiadoConfig } from '../centro-copiado/CentroCopiadoItemForm';
 import { ServicesAndFinishingsStep, type SelectedService, type SelectedFinishing } from './steps/ServicesAndFinishingsStep';
 import { UniversalSummaryStep } from './steps/UniversalSummaryStep';
 import { useProductConfiguration } from '../../hooks/wizard/useProductConfiguration';
-import { useUniversalPricing } from '../../hooks/wizard/useUniversalPricing';
+import { useUniversalPricing, calcularImpacto } from '../../hooks/wizard/useUniversalPricing';
 import type { UniversalProductSearchResult, ProductCategory } from '../../hooks/wizard/useUniversalProductSearch';
 import { generateProductionRoutes } from '../../utils/generateProductionRoutes';
 
@@ -59,15 +61,73 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar, initialData
   const [selectedServicios, setSelectedServicios] = useState<SelectedService[]>([]);
   const [selectedAcabados, setSelectedAcabados] = useState<SelectedFinishing[]>([]);
 
+  // [NEW] Centro de Copiado State
+  const [centroCopiadoConfig, setCentroCopiadoConfig] = useState<Partial<ItemCopiadoConfig>>({
+    cantidad_copias: 1,
+    cantidad_hojas: 1,
+    tipo_tinta: 'CMYK',
+    cara_impresa: 'frente'
+  });
+  const [centroCopiadoPrice, setCentroCopiadoPrice] = useState<number>(0);
+
+  // Precio
+
   // Precio
   const [precioBase, setPrecioBase] = useState<number | null>(null);
   const [precioServicios, setPrecioServicios] = useState(0);
   const [precioAcabados, setPrecioAcabados] = useState(0);
   const [precioTotal, setPrecioTotal] = useState<number | null>(null);
 
+  // Reset state when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setCurrentStep('search');
+      setSearchTerm('');
+      setSelectedProduct(null);
+      setIsSubmitting(false);
+
+      // Reset standard config
+      setSelectedConfig({
+        lineas_medidas: [],
+        cantidad: 1,
+        medida_ancho: null,
+        medida_alto: null,
+        material_id: null,
+        material_nombre: null,
+        variante_id: null,
+        variante_nombre: null,
+        espesor: null,
+        tecnologia_id: null,
+        tecnologia_nombre: null,
+        tinta: null,
+        tinta_nombre: null,
+        cara_impresa: null,
+        tipo_copia: null,
+        color: null,
+        marca: null,
+        usa_material_catalogo: false
+      });
+      setSelectedServicios([]);
+      setSelectedAcabados([]);
+
+      // Reset Copy Center config
+      setCentroCopiadoConfig({
+        cantidad_copias: 1,
+        cantidad_hojas: 1,
+        tipo_tinta: 'CMYK',
+        cara_impresa: 'frente'
+      });
+      setCentroCopiadoPrice(0);
+    }
+  }, [isOpen]);
+
   /* Removed Debug State */
 
   // Cargar configuración del producto
+  console.log('[UniversalWizard Debug] Calling useProductConfiguration with:', {
+    id: selectedProduct?.id || null,
+    cat: selectedProduct?.categoria || null
+  });
   const { config, isLoading: loadingConfig } = useProductConfiguration(
     selectedProduct?.id || null,
     selectedProduct?.categoria || null
@@ -140,17 +200,17 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar, initialData
         setCurrentStep('configuration');
       }
 
-      // 1. Set Product if different or missing
-      if (!selectedProduct || selectedProduct.id !== initialData.producto_id) {
-        const product = {
-          id: initialData.producto_id,
-          nombre: initialData.producto_nombre,
-          categoria: initialData.categoria || initialData.producto_categoria,
-          categoria_id: initialData.categoria_id
-        } as unknown as UniversalProductSearchResult;
-        console.log('[UniversalWizard] Setting selectedProduct:', product);
-        setSelectedProduct(product);
-      }
+      // Check for Copy Center via categoria_id OR tipo_item
+      const isCopyCenter = initialData.categoria_id === 'centro_copiado' || initialData.tipo_item === 'centro_copiado';
+
+      const product = {
+        id: initialData.producto_id || (isCopyCenter ? 'centro_copiado_module' : null),
+        nombre: initialData.producto_nombre,
+        categoria: initialData.categoria || initialData.producto_categoria,
+        categoria_id: initialData.categoria_id || (isCopyCenter ? 'centro_copiado' : null)
+      } as unknown as UniversalProductSearchResult;
+      console.log('[UniversalWizard] Setting selectedProduct:', product);
+      setSelectedProduct(product);
     }
   }, [initialData, isOpen, isEditing]); // Removed selectedProduct from dependency to avoid loop, logic handles it
 
@@ -189,11 +249,22 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar, initialData
       console.log('[UniversalWizard] Restored base config (Partial):', restoredConfig);
 
       // DIAGNOSTICS
-      if (config.tecnologias) {
-        const foundTec = config.tecnologias.find(t => t.tecnologia_id === restoredConfig.tecnologia_id);
-        console.log('[UniversalWizard] Technologies available:', config.tecnologias);
-        console.log('[UniversalWizard] Resotred Tec ID:', restoredConfig.tecnologia_id);
-        console.log('[UniversalWizard] Found in config?', !!foundTec);
+      if (config.categoria === 'Centro de Copiado') {
+        console.log('[UniversalWizard] Hydrating Centro Copiado Config');
+        // Restore Centro Copiado specific state
+        setCentroCopiadoConfig(savedConfig as unknown as ItemCopiadoConfig);
+        // Ensure price is restored if available (though component might recalculate it)
+        if (initialData.precio_total) {
+          setCentroCopiadoPrice(initialData.precio_total);
+        }
+      } else {
+        // Standard Hydration Logic
+        if (config.tecnologias) {
+          const foundTec = config.tecnologias.find(t => t.tecnologia_id === restoredConfig.tecnologia_id);
+          console.log('[UniversalWizard] Technologies available:', config.tecnologias);
+          console.log('[UniversalWizard] Resotred Tec ID:', restoredConfig.tecnologia_id);
+          console.log('[UniversalWizard] Found in config?', !!foundTec);
+        }
       }
       if (restoredConfig.tecnologia_id && config.tecnologias && !config.tecnologias.some(t => t.tecnologia_id === restoredConfig.tecnologia_id)) {
         console.warn('[UniversalWizard] WARNING: Restored tecnologia_id not found in current config options!');
@@ -489,10 +560,22 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar, initialData
       case 'search':
         return selectedProduct !== null;
       case 'configuration':
+        if (selectedProduct?.categoria_id === 'centro_copiado') {
+          // Validar configuración mínima de copiado
+          return !!(
+            centroCopiadoConfig.cantidad_copias! > 0 &&
+            centroCopiadoPrice > 0
+          );
+        }
         return isConfigurationComplete();
       case 'services':
         return true; // Los servicios son opcionales
       case 'summary':
+        // [NEW] Validar precio copiado
+        if (selectedProduct?.categoria_id === 'centro_copiado') {
+          return centroCopiadoPrice > 0;
+        }
+
         // Para productos con múltiples líneas, verificar que todas tengan precio
         if (config?.permite_multiples_lineas && selectedConfig.lineas_medidas.length > 0) {
           return selectedConfig.lineas_medidas.every(line =>
@@ -641,6 +724,110 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar, initialData
 
           await onAgregar(itemData);
         }
+      } else if (selectedProduct.categoria_id === 'centro_copiado') {
+        const finalConfig = centroCopiadoConfig as ItemCopiadoConfig;
+
+        // Calcular precio unitario (por juego de copias)
+        const quantity = finalConfig.cantidad_copias;
+        const unitPrice = quantity > 0 ? centroCopiadoPrice / quantity : 0;
+
+        // Calcular impacto de servicios extra
+        let precioServiciosExtra = 0;
+        const serviciosItem = selectedServicios.map(s => {
+          const impacto = calcularImpacto(
+            s.tipo_impacto,
+            s.valor_monto,
+            s.valor_porcentaje,
+            centroCopiadoPrice, // Precio Base Total
+            0, // mt2 (n/a para copiado simple)
+            0, // ml
+            quantity,
+            s.cantidad || 1
+          );
+          precioServiciosExtra += impacto;
+
+          return {
+            servicio_id: s.servicio_id,
+            nombre: s.servicio_nombre,
+            nivel: s.nivel_nombre,
+            precio_unitario: quantity > 0 ? impacto / quantity : 0,
+            cantidad: s.cantidad || 1,
+            subtotal: impacto
+          };
+        });
+
+        // Calcular impacto de acabados extra
+        let precioAcabadosExtra = 0;
+        const acabadosItem = selectedAcabados.map(a => {
+          const impacto = calcularImpacto(
+            a.tipo_impacto,
+            a.valor_monto,
+            a.valor_porcentaje,
+            centroCopiadoPrice,
+            0,
+            0,
+            quantity,
+            a.cantidad || 1
+          );
+          precioAcabadosExtra += impacto;
+
+          return {
+            acabado_id: a.acabado_id,
+            nombre: a.acabado_nombre,
+            nivel: a.nivel_nombre,
+            precio_unitario: quantity > 0 ? impacto / quantity : 0,
+            cantidad: a.cantidad || 1,
+            subtotal: impacto
+          };
+        });
+
+        const precioTotalFinal = centroCopiadoPrice + precioServiciosExtra + precioAcabadosExtra;
+
+        // Generar ruta de producción
+        const configuracionRuta = {
+          ...finalConfig,
+          servicios_seleccionados: serviciosItem.map(s => ({
+            servicio_id: s.servicio_id,
+            nombre: s.nombre
+          })),
+          acabados_seleccionados: acabadosItem.map(a => ({
+            acabado_id: a.acabado_id,
+            nombre: a.nombre
+          }))
+        };
+
+        const rutasGeneradas = await generateProductionRoutes({
+          productoId: selectedProduct.id,
+          categoria: 'centro_copiado',
+          configuracion: configuracionRuta
+        });
+
+        const itemData = {
+          producto_id: selectedProduct.id === 'centro_copiado_module' ? null : selectedProduct.id,
+          producto_nombre: selectedProduct.nombre,
+          categoria: 'Centro de Copiado',
+          categoria_id: 'centro_copiado',
+          cantidad: quantity,
+          configuracion: {
+            ...finalConfig,
+            servicios_seleccionados: serviciosItem,
+            acabados_seleccionados: acabadosItem
+          },
+          precio_base: unitPrice,
+          precio_servicios: quantity > 0 ? precioServiciosExtra / quantity : 0,
+          precio_acabados: quantity > 0 ? precioAcabadosExtra / quantity : 0,
+          precio_unitario_final: quantity > 0 ? precioTotalFinal / quantity : 0,
+          precio_total: precioTotalFinal,
+          impuesto_iva: config.impuesto_iva,
+          tipo_item: 'centro_copiado',
+          rutas_generadas: rutasGeneradas,
+          servicios: serviciosItem,
+          acabados: acabadosItem
+        };
+
+        await onAgregar(itemData);
+
+
       } else {
         // L\u00f3gica tradicional para productos sin m\u00faltiples l\u00edneas
         if (precioTotal === null) return;
@@ -810,6 +997,14 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar, initialData
             ) : null
           )}
 
+          {currentStep === 'configuration' && selectedProduct?.categoria_id === 'centro_copiado' && (
+            <CentroCopiadoStep
+              config={centroCopiadoConfig}
+              onChange={(u) => setCentroCopiadoConfig((prev: Partial<ItemCopiadoConfig>) => ({ ...prev, ...u }))}
+              onPriceChange={setCentroCopiadoPrice}
+            />
+          )}
+
           {currentStep === 'services' && config && (
             <ServicesAndFinishingsStep
               config={config}
@@ -831,6 +1026,8 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar, initialData
               precioAcabados={precioAcabados}
               precioTotal={precioTotal}
               isCalculatingPrice={isCalculating}
+              centroCopiadoConfig={centroCopiadoConfig}
+              centroCopiadoPrice={centroCopiadoPrice}
             />
           )}
         </div>

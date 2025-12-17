@@ -1093,7 +1093,7 @@ export function useOrdenTrabajo() {
         // 4. Actualizar totales recalculando items + servicios
         // Nota: Asumimos que 'subtotal' en DB es solo de items físicos, y 'total' es la suma final
         const subtotalItems = data.items.reduce((sum, item) => sum + item.precio_total, 0);
-        const subtotalFinal = subtotalItems; // Mantenemos subtotal como solo items físicos para consistencia con fn SQL
+        const subtotalFinal = subtotalItems + totalServicios; // Fix: Incluir servicios en subtotal para consistencia con fn SQL
 
         const totalDescuentos = newOrden.total_descuentos || 0;
         const subtotalIva = newOrden.subtotal_iva || 0;

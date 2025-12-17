@@ -15,7 +15,7 @@ import { CheckSquare, Square, Wand2, Wrench } from 'lucide-react';
 
 interface OrdenItem {
   id?: string;
-  tipo_item?: 'catalogo' | 'personalizado';
+  tipo_item?: 'catalogo' | 'personalizado' | 'centro_copiado';
   producto_id: string | null;
   producto_nombre: string;
   producto_categoria?: string;
@@ -193,6 +193,7 @@ export function OrdenItemsTab({
   const handleAgregarItem = async (itemData: any) => {
     const nuevoItem: OrdenItem = {
       id: `temp-${Date.now()}-${Math.random()}`,
+      tipo_item: itemData.tipo_item || 'catalogo',
       producto_id: itemData.producto_id,
       producto_nombre: itemData.producto_nombre,
       producto_categoria: itemData.categoria || itemData.producto_categoria,
@@ -329,8 +330,66 @@ export function OrdenItemsTab({
     setItems(itemsCopy);
   };
 
-  const renderConfiguracion = (config: any, rutasGeneradas?: any[]) => {
+  const renderConfiguracion = (config: any, rutasGeneradas?: any[], tipoItem?: string) => {
     if (!config) return null;
+
+    // Lógica específica para Centro de Copiado
+    if (tipoItem === 'centro_copiado') {
+      return (
+        <div className="space-y-1 text-sm text-gray-600">
+          {/* Info Copias/Hojas */}
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-gray-900">{config.cantidad_copias} juegos</span>
+            <span className="text-gray-400">x</span>
+            <span>{config.cantidad_hojas} hojas</span>
+          </div>
+
+          {/* Info Papel/Tinta */}
+          <div className="flex flex-wrap gap-2 text-xs">
+            {config.tamanio_nombre && <Badge variant="outline">{config.tamanio_nombre}</Badge>}
+            {config.papel_detalle && <Badge variant="outline">{config.papel_detalle}</Badge>}
+            <Badge variant={config.tipo_tinta === 'CMYK' || config.tipo_tinta === 'color' ? 'purple' : 'gray'}>
+              {config.tipo_tinta === 'CMYK' || config.tipo_tinta === 'color' ? 'Color' : 'B/N'}
+            </Badge>
+            <Badge variant="outline">
+              {config.cara_impresa === 'frente_y_dorso' || config.cara_impresa === 'doble' || config.cara_impresa === '1/1' ? 'Doble Faz' : 'Simple Faz'}
+            </Badge>
+          </div>
+
+          {/* Terminaciones (Anillado, Plastificado, Guillotinado) */}
+          {(config.anillado || config.plastificado || config.guillotinado) && (
+            <div className="flex gap-2 mt-1">
+              {config.anillado && (
+                <Badge variant="warning" size="sm">Anillado {config.anillado.tipo}</Badge>
+              )}
+              {config.plastificado && (
+                <Badge variant="warning" size="sm">Plastificado {config.plastificado.tipo}</Badge>
+              )}
+              {config.guillotinado && (
+                <Badge variant="warning" size="sm">Guillotinado</Badge>
+              )}
+            </div>
+          )}
+
+          {/* Servicios Extra (Wizard OT) */}
+          {((config.servicios_seleccionados && config.servicios_seleccionados.length > 0) ||
+            (config.acabados_seleccionados && config.acabados_seleccionados.length > 0)) && (
+              <div className="flex flex-wrap gap-1.5 mt-1 border-t border-gray-100 pt-1">
+                {config.servicios_seleccionados?.map((s: any, idx: number) => (
+                  <Badge key={`servicio-${idx}`} variant="blue" size="sm">
+                    {s.nivel ? `${s.nombre} (${s.nivel})` : s.nombre}
+                  </Badge>
+                ))}
+                {config.acabados_seleccionados?.map((a: any, idx: number) => (
+                  <Badge key={`acabado-${idx}`} variant="purple" size="sm">
+                    {a.nivel ? `${a.nombre} (${a.nivel})` : a.nombre}
+                  </Badge>
+                ))}
+              </div>
+            )}
+        </div>
+      );
+    }
 
     const formatCaraImpresa = (cara: string) => {
       if (cara === '1/0') return 'Frente';
@@ -526,13 +585,16 @@ export function OrdenItemsTab({
             {item.tipo_item === 'personalizado' && (
               <Badge variant="purple" size="sm">Personalizado</Badge>
             )}
+            {item.tipo_item === 'centro_copiado' && (
+              <Badge variant="default" className="bg-teal-100 text-teal-800" size="sm">Copiado</Badge>
+            )}
           </div>
           {item.tipo_item === 'personalizado' && item.descripcion ? (
             <div className="text-sm text-gray-600 whitespace-pre-wrap">
               {item.descripcion}
             </div>
           ) : (
-            renderConfiguracion(item.configuracion, item.rutas_generadas)
+            renderConfiguracion(item.configuracion, item.rutas_generadas, item.tipo_item)
           )}
         </div>
       ),

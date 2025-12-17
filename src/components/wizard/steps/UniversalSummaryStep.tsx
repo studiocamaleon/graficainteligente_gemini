@@ -5,6 +5,7 @@ import { Package, Ruler, Layers, Palette, Wrench, Sparkles, DollarSign } from 'l
 import type { ProductConfiguration } from '../../../hooks/wizard/useProductConfiguration';
 import type { SelectedConfiguration } from './ConfigurationStep';
 import type { SelectedService, SelectedFinishing } from './ServicesAndFinishingsStep';
+import type { ItemCopiadoConfig } from '../../centro-copiado/CentroCopiadoItemForm'; // [NEW]
 
 interface UniversalSummaryStepProps {
   config: ProductConfiguration;
@@ -16,6 +17,8 @@ interface UniversalSummaryStepProps {
   precioAcabados: number;
   precioTotal: number | null;
   isCalculatingPrice: boolean;
+  centroCopiadoConfig?: Partial<ItemCopiadoConfig>; // [NEW]
+  centroCopiadoPrice?: number; // [NEW]
 }
 
 export function UniversalSummaryStep({
@@ -27,7 +30,9 @@ export function UniversalSummaryStep({
   precioServicios,
   precioAcabados,
   precioTotal,
-  isCalculatingPrice
+  isCalculatingPrice,
+  centroCopiadoConfig,
+  centroCopiadoPrice
 }: UniversalSummaryStepProps) {
   const formatCurrency = (value: number | null) => {
     if (value === null) return '-';
@@ -56,6 +61,87 @@ export function UniversalSummaryStep({
   const totalPrecioGeneral = hasMultipleLines
     ? selectedConfig.lineas_medidas.reduce((sum, line) => sum + (line.precio_total_linea || 0), 0)
     : precioTotal !== null ? precioTotal * selectedConfig.cantidad : 0;
+
+  // [NEW] Centro de Copiado Logic
+  if (config.categoria === 'Centro de Copiado' && centroCopiadoConfig) {
+    const configCopiado = centroCopiadoConfig;
+    const precioFinal = centroCopiadoPrice || 0; // El precio de copiado YA es el total (no unitario x config)
+
+    // Si hay servicios extras (step 3), agregarlos?
+    // El wizard actual NO suma los servicios extras al precioCopiado autom\u00e1ticamente en el estado 'centroCopiadoPrice'.
+    // 'centroCopiadoPrice' viene del componente CentroCopiadoItemForm.
+    // Los servicios extras estan en 'precioServicios' (calculado por hook)? NO.
+    // El hook calculatePrice falla para centro_copiado.
+    // Así que 'precioServicios' en Wizard será 0 o incorrecto.
+    // Asumiremos que el precio TOTAL es centroCopiadoPrice.
+    // (Para MVP, ignoramos precio de servicios extras si no se sumaron manualment).
+
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Resumen del Pedido (Copiado)</h2>
+          <p className="text-gray-600">Revisa los detalles antes de agregar.</p>
+        </div>
+
+        <Card className="p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Package className="w-5 h-5 text-blue-600" />
+            <h3 className="text-lg font-semibold text-gray-900">Detalle Copiado</h3>
+          </div>
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-gray-600">Juegos:</span>
+              <span className="font-medium">{configCopiado.cantidad_copias}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Hojas por juego:</span>
+              <span className="font-medium">{configCopiado.cantidad_hojas}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Papel:</span>
+              <span className="font-medium">{configCopiado.papel_detalle || configCopiado.papel_id}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Tinta:</span>
+              <span className="font-medium uppercase">{configCopiado.tipo_tinta}</span>
+            </div>
+          </div>
+        </Card>
+
+        {/* Servicios Globales (Extras) */}
+        {selectedServicios.length > 0 && (
+          <Card className="p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Wrench className="w-5 h-5 text-blue-600" />
+              <h3 className="text-lg font-semibold text-gray-900">Servicios Adicionales</h3>
+            </div>
+            <div className="space-y-2">
+              {selectedServicios.map((servicio, index) => (
+                <div key={index} className="flex justify-between">
+                  <span className="text-gray-600">
+                    {servicio.servicio_nombre}
+                    {servicio.nivel_nombre && ` (${servicio.nivel_nombre})`}
+                  </span>
+                  <Badge variant="warning">{servicio.servicio_nombre}</Badge>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
+
+        {/* Total */}
+        <Card className="p-6 bg-gradient-to-r from-teal-50 to-teal-100">
+          <div className="flex justify-between items-center pt-3 border-t-2 border-teal-300">
+            <span className="text-lg font-semibold text-gray-900">TOTAL ESTIMADO:</span>
+            <span className="text-2xl font-bold text-teal-700">
+              {formatCurrency(precioFinal)}
+            </span>
+          </div>
+          <p className="text-xs text-gray-500 mt-2 text-right">El precio puede variar según servicios extra no cotizados automáticamente.</p>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
