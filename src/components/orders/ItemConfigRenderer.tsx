@@ -1,5 +1,6 @@
 import { Badge } from '../ui/Badge';
-import { Wrench } from 'lucide-react';
+import { Wrench, ChevronDown, ChevronRight, Layers } from 'lucide-react';
+import { useState } from 'react';
 
 interface ItemConfigRendererProps {
     config: any;
@@ -7,8 +8,55 @@ interface ItemConfigRendererProps {
     rutasGeneradas?: any[];
 }
 
+function CompositeConfigRenderer({ config }: { config: any }) {
+    const [isExpanded, setIsExpanded] = useState(false);
+
+    return (
+        <div className="space-y-2 mt-1">
+            <button
+                onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIsExpanded(!isExpanded);
+                }}
+                className="flex items-center gap-2 text-xs font-medium text-blue-600 hover:text-blue-700 transition-colors bg-blue-50/50 px-2 py-1 rounded border border-blue-100/50"
+            >
+                <Layers className="w-3.5 h-3.5" />
+                <span>Ver {config.componentes.length} componentes</span>
+                {isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+            </button>
+
+            {isExpanded && (
+                <div className="space-y-2 mt-2 pl-2 border-l-2 border-blue-100">
+                    {config.componentes.map((comp: any, idx: number) => (
+                        <div key={idx} className="bg-gray-50 rounded p-2 border border-gray-100">
+                            <div className="flex items-center justify-between mb-1">
+                                <span className="font-semibold text-gray-900 text-[11px] text-blue-800">
+                                    {comp.nombre || 'Componente'}
+                                </span>
+                                <span className="text-[10px] text-gray-500 bg-white px-1.5 py-0.5 rounded border">
+                                    x {comp.cantidad}
+                                </span>
+                            </div>
+                            <ItemConfigRenderer
+                                config={comp.config}
+                                tipoItem={comp.tipo || (comp.config?.cantidad_copias ? 'centro_copiado' : 'catalogo')}
+                            />
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
 export function ItemConfigRenderer({ config, tipoItem, rutasGeneradas }: ItemConfigRendererProps) {
     if (!config) return null;
+
+    // --- Lógica de Producto Compuesto (Constructor) ---
+    if (config.es_compuesto && config.componentes) {
+        return <CompositeConfigRenderer config={config} />;
+    }
 
     // --- Helpers ---
     const formatCaraImpresa = (cara: string) => {
@@ -122,6 +170,8 @@ export function ItemConfigRenderer({ config, tipoItem, rutasGeneradas }: ItemCon
         );
     }
 
+    // --- Lógica de Producto Compuesto (Constructor) ---
+
     // --- Lógica General (Producto o Gran Formato) ---
     const linkedServices = getLinkedServices(rutasGeneradas || []);
     const espesorFormateado = formatEspesorOGramaje();
@@ -220,3 +270,4 @@ export function ItemConfigRenderer({ config, tipoItem, rutasGeneradas }: ItemCon
         </div>
     );
 }
+

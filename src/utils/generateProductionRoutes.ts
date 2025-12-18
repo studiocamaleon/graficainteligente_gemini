@@ -73,85 +73,104 @@ export async function generateProductionRoutes({
   configuracion,
 }: GenerateRoutesParams): Promise<GeneratedRouteStep[]> {
   try {
-    // 1. Obtener ruta_produccion_id del producto según categoría
-    let rutaId: string | null = null;
+    // 1. Obtener ruta_produccion_id de la configuración o del producto según categoría
+    let rutaId: string | null = configuracion?.ruta_produccion_id || null;
 
-    switch (categoria) {
-      case 'Impresion Laser': {
-        const { data } = await supabase
-          .from('productos_impresion_laser')
-          .select('ruta_produccion_id')
-          .eq('id', productoId)
-          .maybeSingle();
-        rutaId = data?.ruta_produccion_id || null;
-        break;
-      }
-      case 'Impresion Gran Formato': {
-        const { data } = await supabase
-          .from('productos_gran_formato')
-          .select('ruta_produccion_id')
-          .eq('id', productoId)
-          .maybeSingle();
-        rutaId = data?.ruta_produccion_id || null;
-        break;
-      }
-      case 'Materiales Rigidos': {
-        const { data } = await supabase
-          .from('productos_materiales_rigidos')
-          .select('ruta_produccion_id')
-          .eq('id', productoId)
-          .maybeSingle();
-        rutaId = data?.ruta_produccion_id || null;
-        break;
-      }
-      case 'Plotter de Corte': {
-        const { data } = await supabase
-          .from('productos_plotter_corte')
-          .select('ruta_produccion_id')
-          .eq('id', productoId)
-          .maybeSingle();
-        rutaId = data?.ruta_produccion_id || null;
-        break;
-      }
-      case 'Portabanners': {
-        const { data } = await supabase
-          .from('productos_portabanners')
-          .select('ruta_produccion_id')
-          .eq('id', productoId)
-          .maybeSingle();
-        rutaId = data?.ruta_produccion_id || null;
-        break;
-      }
-      case 'Sellos': {
-        const { data } = await supabase
-          .from('productos_sellos')
-          .select('ruta_produccion_id')
-          .eq('id', productoId)
-          .maybeSingle();
-        rutaId = data?.ruta_produccion_id || null;
-        break;
-      }
-      case 'Talonarios': {
-        const { data } = await supabase
-          .from('productos_talonarios')
-          .select('ruta_produccion_id')
-          .eq('id', productoId)
-          .maybeSingle();
-        rutaId = data?.ruta_produccion_id || null;
-        break;
-      }
-      case 'centro_copiado': {
-        // Buscar la ruta estándar de copiado por nombre
-        const { data } = await supabase
-          .from('rutas_produccion')
-          .select('id')
-          .eq('nombre', 'Ruta Centro de Copiado')
-          .maybeSingle();
+    if (!rutaId) {
 
-        if (data) {
-          rutaId = data.id;
+      switch (categoria) {
+        case 'Impresion Laser': {
+          const { data } = await supabase
+            .from('productos_impresion_laser')
+            .select('ruta_produccion_id')
+            .eq('id', productoId)
+            .maybeSingle();
+          rutaId = data?.ruta_produccion_id || null;
+          break;
         }
-        break;
+        case 'Impresion Gran Formato': {
+          const { data } = await supabase
+            .from('productos_gran_formato')
+            .select('ruta_produccion_id')
+            .eq('id', productoId)
+            .maybeSingle();
+          rutaId = data?.ruta_produccion_id || null;
+          break;
+        }
+        case 'Materiales Rigidos': {
+          const { data } = await supabase
+            .from('productos_materiales_rigidos')
+            .select('ruta_produccion_id')
+            .eq('id', productoId)
+            .maybeSingle();
+          rutaId = data?.ruta_produccion_id || null;
+          break;
+        }
+        case 'Plotter de Corte': {
+          const { data } = await supabase
+            .from('productos_plotter_corte')
+            .select('ruta_produccion_id')
+            .eq('id', productoId)
+            .maybeSingle();
+          rutaId = data?.ruta_produccion_id || null;
+          break;
+        }
+        case 'Portabanners': {
+          const { data } = await supabase
+            .from('productos_portabanners')
+            .select('ruta_produccion_id')
+            .eq('id', productoId)
+            .maybeSingle();
+          rutaId = data?.ruta_produccion_id || null;
+          break;
+        }
+        case 'Sellos': {
+          const { data } = await supabase
+            .from('productos_sellos')
+            .select('ruta_produccion_id')
+            .eq('id', productoId)
+            .maybeSingle();
+          rutaId = data?.ruta_produccion_id || null;
+          break;
+        }
+        case 'Talonarios': {
+          const { data } = await supabase
+            .from('productos_talonarios')
+            .select('ruta_produccion_id')
+            .eq('id', productoId)
+            .maybeSingle();
+          rutaId = data?.ruta_produccion_id || null;
+          break;
+        }
+        case 'centro_copiado': {
+          // Buscar la ruta estándar de copiado por nombre
+          const { data } = await supabase
+            .from('rutas_produccion')
+            .select('id')
+            .eq('nombre', 'Ruta Centro de Copiado')
+            .maybeSingle();
+
+          if (data) {
+            rutaId = data.id;
+          }
+          break;
+        }
+        case 'personalizado': {
+          // Primero intentar usar la ruta definida en la configuración (para productos ad-hoc)
+          if (configuracion?.ruta_produccion_id) {
+            rutaId = configuracion.ruta_produccion_id;
+            break;
+          }
+
+          // Si no hay en config, buscar en la tabla (para plantillas guardadas)
+          const { data } = await (supabase as any)
+            .from('productos_personalizados')
+            .select('ruta_produccion_id')
+            .eq('id', productoId)
+            .maybeSingle();
+          rutaId = data?.ruta_produccion_id || null;
+          break;
+        }
       }
     }
 
@@ -193,6 +212,18 @@ export async function generateProductionRoutes({
     }
 
     if (!rutaId && pasosExtra.length === 0) {
+      if (categoria === 'centro_copiado') {
+        // Por lo menos agregar un paso de impresión básico si no hay nada
+        return [{
+          id: 'dynamic-print-basic',
+          etapa: 'principal' as TipoEtapaRuta,
+          paso_id: null,
+          paso_nombre: 'Impresión / Copiado',
+          orden: 1,
+          es_obligatorio: true,
+          origen_plantilla_id: 'centro_copiado_default'
+        }];
+      }
       return [];
     }
 
@@ -247,8 +278,8 @@ export async function generateProductionRoutes({
         }> = [];
 
         // Extraer servicios y acabados con compatibilidad
-        const servicios = configuracion?.servicios_seleccionados || configuracion?.servicios || [];
-        const acabados = configuracion?.acabados_seleccionados || configuracion?.acabados || [];
+        let servicios = configuracion?.servicios_seleccionados || configuracion?.servicios || [];
+        let acabados = configuracion?.acabados_seleccionados || configuracion?.acabados || [];
 
         for (const paso of pasos) {
           let incluir = false;

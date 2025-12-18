@@ -30,10 +30,6 @@ import { useLocation } from 'react-router-dom';
 import { usePageHeader } from '../../../hooks/usePageHeader';
 
 // Tipos
-import type {
-  EstadoOrdenTrabajo,
-  OrdenTrabajoPago,
-} from '../../../types/database';
 
 interface PagoTemporal {
   id: string;
@@ -102,6 +98,8 @@ export function CreateOrderPage() {
 
   // Estados OCs asociadas
   const [ordenesCopiadoAsociadas, setOrdenesCopiadoAsociadas] = useState<any[]>([]);
+  const [hasChanges, setHasChanges] = useState(false);
+  const isInitialLoad = useRef(true);
 
   // Estados Presupuesto
   const [mode, setMode] = useState<'orden' | 'presupuesto'>('orden');
@@ -142,6 +140,25 @@ export function CreateOrderPage() {
     }
   };
 
+  // Tracking de cambios para avisar al salir
+  useEffect(() => {
+    if (isLoadingData || isInitialLoad.current) return;
+    setHasChanges(true);
+  }, [clienteId, items, canalVenta, fechaEntrega, notasInternas, requiereFactura, requiereDespacho, descuentoTotal, pagos, ordenesCopiadoAsociadas, presupuestoValidez, presupuestoCondiciones]);
+
+  // Estabilización tras carga
+  useEffect(() => {
+    if (!isLoadingData) {
+      // Pequeño delay para permitir que todos los estados se asienten antes de habilitar el tracking
+      const timer = setTimeout(() => {
+        isInitialLoad.current = false;
+      }, 500);
+      return () => clearTimeout(timer);
+    } else {
+      isInitialLoad.current = true;
+    }
+  }, [isLoadingData]);
+
   const { updateStepComment, countAllComments } = useItemRoutesComments({
     items,
     setItems,
@@ -150,16 +167,6 @@ export function CreateOrderPage() {
   const { clients } = useClients({ page: 1, itemsPerPage: 1000 });
   const clienteSeleccionado = clients.find((c) => c.id === clienteId);
 
-  // --- Helpers Links ---
-  const formatUrl = (url: string, type: LinkType): string => {
-    const trimmedUrl = url.trim();
-    if (type === 'download') {
-      if (!/^https?:\/\//i.test(trimmedUrl)) {
-        return `https://${trimmedUrl}`;
-      }
-    }
-    return trimmedUrl;
-  };
 
   // --- Reset & Load ---
 
@@ -230,6 +237,8 @@ export function CreateOrderPage() {
       showError('Error al cargar presupuesto');
     } finally {
       setIsLoadingData(false);
+      isInitialLoad.current = true;
+      setHasChanges(false);
     }
   };
 
@@ -284,7 +293,7 @@ export function CreateOrderPage() {
           id: p.id,
           fecha_pago: p.fecha_pago,
           monto: p.monto,
-          medio_cobro_id: p.medio_cobro_id || '',
+          medio_cobro_id: (p as any).medio_cobro_id || '',
           referencia_pago: p.referencia_pago || '',
           notas: p.notas || ''
         })));
@@ -299,27 +308,25 @@ export function CreateOrderPage() {
       showError('Error al cargar la orden');
     } finally {
       setIsLoadingData(false);
+      isInitialLoad.current = true;
+      setHasChanges(false);
     }
   };
 
   // --- Prompt Changes ---
-  const formularioTieneDatos = () => {
+  const formularioTieneCambios = () => {
+    if (ordenCreada) return false;
+    if (isEditing) return hasChanges;
     return clienteId !== '' || items.length > 0 || notasInternas !== '' || fechaEntrega !== '' || ordenesCopiadoAsociadas.length > 0;
   };
 
-  const { showPrompt, isPromptOpen, closePrompt, confirmPrompt } = usePrompt(
+  const { isPromptOpen, closePrompt, confirmPrompt } = usePrompt(
     '¿Estás seguro de que deseas salir? Se perderán los cambios no guardados.',
-    !ordenCreada && formularioTieneDatos()
+    formularioTieneCambios()
   );
 
-  const handleVolver = async () => {
+  const handleVolver = () => {
     const target = mode === 'presupuesto' ? '/app/presupuestos/lista' : '/app/orders/ordenes';
-    if (formularioTieneDatos() && !ordenCreada) {
-      showPrompt(async () => {
-        navigate(target);
-      });
-      return;
-    }
     navigate(target);
   };
 
@@ -718,7 +725,14 @@ export function CreateOrderPage() {
 
   // --- Render ---
   const totales = calcularTotales();
-  const totalRutas = items.filter(item => Array.isArray((item as any).rutas_generadas) && (item as any).rutas_generadas.length > 0).length;
+  const totalRutas = items.filter(item =>
+    !item.es_servicio_cobro &&
+    (
+      (Array.isArray((item as any).rutas_generadas) && (item as any).rutas_generadas.length > 0) ||
+      (item.configuracion?.ruta_produccion_id) ||
+      (item.tipo_item === 'centro_copiado' || item.categoria_id === 'centro_copiado')
+    )
+  ).length;
   const totalComentarios = countAllComments();
 
   const tabsDefinition = [
@@ -875,6 +889,19 @@ export function CreateOrderPage() {
           clientName={clienteSeleccionado?.nombre_fantasia || ''}
         />
       )}
+
+      {/* Modal para pagos antes de crear la orden */}
+      <PagoFormModal
+        isOpen={showPagoForm}
+        onClose={() => {
+          setShowPagoForm(false);
+          setEditingPago(undefined);
+        }}
+        onSubmit={handleGuardarPago}
+        pago={editingPago as any}
+        saldoPendiente={calcularSaldoPendiente()}
+        clientName={clienteSeleccionado?.nombre_fantasia || ''}
+      />
 
       <ConfirmDialog
         isOpen={isPromptOpen}

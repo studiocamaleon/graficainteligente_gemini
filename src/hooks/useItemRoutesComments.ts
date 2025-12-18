@@ -7,10 +7,16 @@ export function useItemRoutesComments({ items, setItems }: UseItemRoutesComments
   const updateStepComment = (
     itemIndex: number,
     stepId: string,
-    comentario: string | null
+    comentario: string | null,
+    inferredSteps?: any[]
   ) => {
     const newItems = [...items];
     const item = newItems[itemIndex];
+
+    // Si no tiene rutas pero tenemos los pasos del hook, hidratamos
+    if ((!item.rutas_generadas || item.rutas_generadas.length === 0) && inferredSteps && inferredSteps.length > 0) {
+      item.rutas_generadas = inferredSteps.map(s => ({ ...s }));
+    }
 
     if (item.rutas_generadas) {
       item.rutas_generadas = item.rutas_generadas.map((ruta: any) => {

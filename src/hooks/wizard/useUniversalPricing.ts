@@ -53,6 +53,9 @@ export function useUniversalPricing() {
         case 'Talonarios':
           precioBase = await getPrecioTalonarios(productId, config);
           break;
+        case 'personalizado':
+          precioBase = await getPrecioPersonalizado(productId, config);
+          break;
       }
 
       if (precioBase === null) {
@@ -176,7 +179,7 @@ async function getPrecioImpresionLaser(
   }
 
   // Primero consultar el producto para verificar si usa rangos
-  const { data: producto, error: productoError } = await supabase
+  const { data: producto, error: productoError } = await (supabase as any)
     .from('productos_impresion_laser')
     .select('rango_precio_id')
     .eq('id', productId)
@@ -191,7 +194,7 @@ async function getPrecioImpresionLaser(
 
   if (usaRangos) {
     // Buscar precios con rangos
-    const { data: precios, error } = await supabase
+    const { data: precios, error } = await (supabase as any)
       .from('productos_impresion_laser_precios')
       .select('precio, rango_precio_min, rango_precio_max')
       .eq('producto_laser_id', productId)
@@ -218,7 +221,7 @@ async function getPrecioImpresionLaser(
     return precioEnRango?.precio || null;
   } else {
     // Buscar precio por cantidad exacta (comportamiento original)
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('productos_impresion_laser_precios')
       .select('precio')
       .eq('producto_laser_id', productId)
@@ -247,7 +250,7 @@ async function getPrecioGranFormato(
   }
 
   // Para gran formato, buscar en rangos de precio
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('productos_gran_formato_precios')
     .select('precio, rango_precio_min, rango_precio_max')
     .eq('producto_gran_formato_id', productId)
@@ -354,7 +357,7 @@ async function getPrecioPortabanners(
     return null;
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('productos_portabanners_precios')
     .select('precio, cantidad_desde, cantidad_hasta')
     .eq('producto_id', productId)
@@ -382,7 +385,7 @@ async function getPrecioSellos(
   productId: string,
   config: SelectedConfiguration
 ): Promise<number | null> {
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('productos_sellos_precios')
     .select('precio_unitario')
     .eq('producto_id', productId)
@@ -406,7 +409,7 @@ async function getPrecioTalonarios(
     return null;
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('productos_talonarios_precios')
     .select('precio')
     .eq('producto_talonario_id', productId)
@@ -423,6 +426,32 @@ async function getPrecioTalonarios(
   }
 
   return data?.precio || null;
+}
+
+async function getPrecioPersonalizado(
+  productId: string,
+  config: SelectedConfiguration
+): Promise<number | null> {
+  // Para productos personalizados (compuestos), el precio base es la suma de sus componentes
+  // Si tiene componentes guardados en la configuración, usamos esos.
+  if (config.es_compuesto && config.componentes) {
+    return config.componentes.reduce((sum: number, comp: any) => sum + (comp.precio || 0), 0);
+  }
+
+  // Si no vienen en el config, los buscamos en la DB (para plantillas del catálogo)
+  const { data: componentes, error } = await (supabase as any)
+    .from('producto_personalizado_componentes')
+    .select('configuracion, cantidad_por_unidad')
+    .eq('producto_personalizado_id', productId);
+
+  if (error || !componentes || componentes.length === 0) return null;
+
+  // NOTA: Aquí idealmente recalcularíamos el precio de cada componente basándose en su config actual
+  // Por ahora, usamos el precio que venga en la configuración guardada del componente
+  return componentes.reduce((sum: number, comp: any) => {
+    const precio = comp.configuracion?.precio_total || 0;
+    return sum + (precio * comp.cantidad_por_unidad);
+  }, 0);
 }
 
 

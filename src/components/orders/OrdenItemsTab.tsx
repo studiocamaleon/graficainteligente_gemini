@@ -1,5 +1,5 @@
 import { useState, Dispatch, SetStateAction } from 'react';
-import { Trash2, Plus, PenSquare, Calendar, Wallet, Link, Square, CheckSquare, ChevronUp, ChevronDown, Wrench, Wand2, Edit2, Package, Printer } from 'lucide-react';
+import { Trash2, Plus, Calendar, Square, CheckSquare, ChevronUp, ChevronDown, Wand2, Edit2, Package, Printer, Hammer } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Switch } from '../ui/Switch';
@@ -12,6 +12,8 @@ import { AsociarOrdenCopiadoModal } from './AsociarOrdenCopiadoModal';
 import { AddItemPersonalizadoOrdenModal } from './AddItemPersonalizadoOrdenModal';
 import { AplicarServicioMasivoModal } from './AplicarServicioMasivoModal';
 import { ItemConfigRenderer } from './ItemConfigRenderer';
+import { ConstructorConfigurator } from './ConstructorConfigurator';
+import { generateProductionRoutes } from '../../utils/generateProductionRoutes';
 
 interface OrdenItem {
   id?: string;
@@ -19,6 +21,7 @@ interface OrdenItem {
   producto_id: string | null;
   producto_nombre: string;
   producto_categoria?: string;
+  categoria_id?: string;
   descripcion?: string;
   tiempo_produccion_dias?: number;
   cantidad: number;
@@ -59,13 +62,13 @@ export function OrdenItemsTab({
 }: OrdenItemsTabProps) {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showAddPersonalizadoModal, setShowAddPersonalizadoModal] = useState(false);
+  const [showConstructor, setShowConstructor] = useState(false);
   const [showAsociarOCModal, setShowAsociarOCModal] = useState(false);
   const [ordenCopiadoEditando, setOrdenCopiadoEditando] = useState<any>(undefined);
   const [ordenesExpanded, setOrdenesExpanded] = useState<Record<string, boolean>>({});
 
   // Edit State
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
-  const [editingItemType, setEditingItemType] = useState<'catalogo' | 'personalizado'>('catalogo');
   const [itemToEdit, setItemToEdit] = useState<any>(null);
 
   // Selección Múltiple
@@ -120,11 +123,31 @@ export function OrdenItemsTab({
     if (itemsAfectados.length === 0) return;
 
     // Paso 3: Modificar los items FÍSICOS (Inyectar Rutas de Producción)
-    const newItems = items.map(item => {
+    const newItems = await Promise.all(items.map(async (item) => {
       if (!selectedItemIds.has(item?.id || '')) return item;
 
       // Inyectar la ruta del servicio en el item físico
       let nuevasRutas = [...(item.rutas_generadas || [])];
+
+      // Si no tiene rutas guardadas pero es un item que debería tenerlas (personalizado o con config)
+      // las generamos ahora para "congelarlas" y añadirles el servicio masivo encima
+      if (nuevasRutas.length === 0) {
+        try {
+          const generatedSteps = await generateProductionRoutes({
+            productoId: item.producto_id || '',
+            categoria: item.configuracion?.categoria || item.producto_categoria || 'Impresion Laser',
+            configuracion: item.configuracion || {}
+          });
+          if (generatedSteps && generatedSteps.length > 0) {
+            nuevasRutas = generatedSteps.map((s: any) => ({
+              ...s,
+              id: s.id || `gen-${Math.random()}`
+            }));
+          }
+        } catch (err) {
+          console.error('Error hydrating routes for mass service:', err);
+        }
+      }
 
       if (pasoId) {
         // Construir objeto ruta completo
@@ -155,7 +178,7 @@ export function OrdenItemsTab({
           tiene_servicios_externos: true
         }
       };
-    });
+    }));
 
     // Paso 4: Crear el Item de COBRO (Servicio) con descripción detallada
     // Generar descripción
@@ -193,12 +216,16 @@ export function OrdenItemsTab({
   };
 
   const handleAgregarItem = async (itemData: any) => {
-    const nuevoItem: OrdenItem = {
-      id: `temp-${Date.now()}-${Math.random()}`,
+
+    const nuevoItem = {
+      id: itemData.id || `temp-${Date.now()}-${Math.random()}`,
       tipo_item: itemData.tipo_item || 'catalogo',
       producto_id: itemData.producto_id,
       producto_nombre: itemData.producto_nombre,
-      producto_categoria: itemData.categoria || itemData.producto_categoria,
+      producto_categoria: itemData.producto_categoria,
+      categoria_id: itemData.categoria_id,
+      descripcion: itemData.descripcion,
+      tiempo_produccion_dias: itemData.tiempo_produccion_dias,
       cantidad: itemData.cantidad,
       configuracion: itemData.configuracion,
       precio_base: itemData.precio_base,
@@ -212,9 +239,9 @@ export function OrdenItemsTab({
 
 
 
+
     if (editingIndex !== null) {
       // Update existing
-      const newItems = [...items];
       // Preserve ID if it wasn't temp, or use new temp. Ideally preserve ID.
       // Actually, for consistency if we regenerate everything we might lose ID but it's likely better to keep the old ID if it exists?
       // But the Wizard generates new routes causing ID mismatches if we are not careful?
@@ -297,7 +324,9 @@ export function OrdenItemsTab({
     setEditingIndex(index);
     setItemToEdit(item);
 
-    if (item.tipo_item === 'personalizado') {
+    if (item.configuracion?.es_compuesto) {
+      setShowConstructor(true);
+    } else if (item.tipo_item === 'personalizado') {
       setEditingItemType('personalizado');
       setShowAddPersonalizadoModal(true);
     } else {
@@ -380,6 +409,7 @@ export function OrdenItemsTab({
           className="w-20"
         />
       ),
+      width: '100px'
     },
     {
       key: 'producto',
@@ -388,14 +418,19 @@ export function OrdenItemsTab({
         <div>
           <div className="flex items-center gap-2 mb-1">
             <div className="font-medium text-gray-900">{item.producto_nombre}</div>
-            {item.tipo_item === 'personalizado' && (
+            {item.tipo_item === 'personalizado' && !item.configuracion?.es_compuesto && (
               <Badge variant="purple" size="sm">Personalizado</Badge>
+            )}
+            {item.configuracion?.es_compuesto && (
+              <Badge variant="blue" className="bg-blue-100 text-blue-800" size="sm">
+                {item.producto_categoria || 'Compuesto'}
+              </Badge>
             )}
             {item.tipo_item === 'centro_copiado' && (
               <Badge variant="default" className="bg-teal-100 text-teal-800" size="sm">Copiado</Badge>
             )}
           </div>
-          {item.tipo_item === 'personalizado' && item.descripcion ? (
+          {item.tipo_item === 'personalizado' && !item.configuracion?.es_compuesto && item.descripcion ? (
             <div className="text-sm text-gray-600 whitespace-pre-wrap">
               {item.descripcion}
             </div>
@@ -440,6 +475,7 @@ export function OrdenItemsTab({
           <span className="text-sm text-gray-500">%</span>
         </div>
       ),
+      width: '120px'
     },
     {
       key: 'iva',
@@ -510,6 +546,10 @@ export function OrdenItemsTab({
             </div>
           )}
           <div className="flex items-center gap-2">
+            <Button onClick={() => setShowConstructor(true)} variant="outline" className="border-blue-200 text-blue-600 hover:bg-blue-50">
+              <Hammer className="w-4 h-4 mr-2" />
+              Construir
+            </Button>
             <Button onClick={() => {
               setEditingIndex(null);
               setItemToEdit(null);
@@ -727,6 +767,17 @@ export function OrdenItemsTab({
         initialData={itemToEdit}
         isEditing={!!itemToEdit}
         mode={mode}
+      />
+
+      <ConstructorConfigurator
+        isOpen={showConstructor}
+        onClose={() => {
+          setShowConstructor(false);
+          setEditingIndex(null);
+          setItemToEdit(null);
+        }}
+        onSave={handleAgregarItem}
+        initialData={itemToEdit}
       />
 
       {

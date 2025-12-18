@@ -91,6 +91,7 @@ export function usePrompt(message: string, when: boolean = true): UsePromptRetur
 
   const confirmPrompt = () => {
     if (pendingNavigationRef.current) {
+      blockedRef.current = true;
       pendingNavigationRef.current();
     }
     closePrompt();

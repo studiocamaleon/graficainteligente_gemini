@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Route, AlertCircle, Loader2, Package, CheckCircle, MessageSquare, Plus, AlertTriangle, Trash2 } from 'lucide-react';
+import { AlertCircle, Loader2, Package, CheckCircle, MessageSquare, Plus, AlertTriangle, Trash2 } from 'lucide-react';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import { useGenerateProductionRoute } from '../../hooks/useGenerateProductionRoute';
@@ -12,7 +12,7 @@ interface ItemRoutePreviewProps {
   index: number;
   items?: any[];
   setItems?: (items: any[]) => void;
-  onUpdateStepComment?: (itemIndex: number, stepId: string, comment: string | null) => void;
+  onUpdateStepComment?: (itemIndex: number, stepId: string, comment: string | null, manualSteps?: any[]) => void;
   readOnly?: boolean;
   allowManualSteps?: boolean;
 }
@@ -58,16 +58,18 @@ export function ItemRoutePreview({
 }: ItemRoutePreviewProps) {
   const [showAddPasoModal, setShowAddPasoModal] = useState(false);
   // Soportar ambos formatos: 'personalizado' (órdenes) e 'item_personalizado' (presupuestos)
-  const isPersonalizado = item.tipo_item === 'personalizado' || item.tipo_item === 'item_personalizado';
-  const shouldGenerate = !item.rutas_generadas || item.rutas_generadas.length === 0;
+  const isPersonalizado = item.tipo_item === 'personalizado';
+  const shouldGenerate = isPersonalizado || item.rutas_generadas?.length === 0;
+
 
   const { steps, loading, error } = useGenerateProductionRoute({
     productoId: shouldGenerate ? item.producto_id : '',
-    categoria: shouldGenerate ? (item.configuracion?.categoria || item.categoria || 'Impresion Laser') : '',
+    categoria: shouldGenerate ? (item.configuracion?.categoria || item.categoria || item.producto_categoria || 'Impresion Laser') : '',
     configuracion: shouldGenerate ? (item.configuracion || {}) : {},
   });
 
-  const stepsWithComments = item.rutas_generadas || steps;
+  const stepsWithComments = (item.rutas_generadas && item.rutas_generadas.length > 0) ? item.rutas_generadas : steps;
+
 
   const handleAddPasoManual = (paso: { etapa: string; paso_id: string; paso_nombre: string; orden: number }) => {
     if (!items || !setItems) return;
@@ -85,9 +87,16 @@ export function ItemRoutePreview({
 
     const updatedItems = items.map((it, idx) => {
       if (idx === index) {
+        let currentRutas = [...(it.rutas_generadas || [])];
+
+        // Si no tiene rutas guardadas pero el hook ya generó pasos, los usamos como base
+        if (currentRutas.length === 0 && steps.length > 0) {
+          currentRutas = steps.map(s => ({ ...s }));
+        }
+
         return {
           ...it,
-          rutas_generadas: [...(it.rutas_generadas || []), newStep],
+          rutas_generadas: [...currentRutas, newStep],
         };
       }
       return it;
@@ -143,9 +152,14 @@ export function ItemRoutePreview({
               <div className="flex items-center gap-2">
                 <Package className="w-4 h-4 text-gray-400" />
                 <p className="font-medium text-gray-900">{item.producto_nombre}</p>
-                {isPersonalizado && (
+                {isPersonalizado && !item.configuracion?.es_compuesto && (
                   <Badge variant="warning" className="text-xs">
                     Personalizado
+                  </Badge>
+                )}
+                {item.configuracion?.es_compuesto && (
+                  <Badge variant="blue" className="bg-blue-100 text-blue-800 border-blue-200 text-xs">
+                    Construido
                   </Badge>
                 )}
               </div>
@@ -256,7 +270,7 @@ export function ItemRoutePreview({
                   </div>
 
                   <div className="space-y-2 ml-4">
-                    {pasosEtapa.map((paso, pasoIndex) => {
+                    {pasosEtapa.map((paso: any, pasoIndex: number) => {
                       const pasoConComentario = stepsWithComments.find((s: any) => s.id === paso.id) || paso;
                       const tieneComentario = pasoConComentario.comentario_vendedor && pasoConComentario.comentario_vendedor.trim().length > 0;
                       const isManualStep = paso.id && paso.id.toString().startsWith('temp-manual-');
@@ -312,7 +326,7 @@ export function ItemRoutePreview({
                               <StepCommentEditor
                                 comentario={pasoConComentario.comentario_vendedor || null}
                                 onSave={async (comentario) => {
-                                  onUpdateStepComment(index, paso.id, comentario);
+                                  onUpdateStepComment(index, paso.id, comentario, steps);
                                 }}
                                 disabled={false}
                               />

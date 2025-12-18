@@ -106,6 +106,15 @@ export interface SelectedConfiguration {
 
   // Metadata para visualización
   es_metro_lineal?: boolean;
+
+  // Campos para productos compuestos (Product Constructor)
+  es_compuesto?: boolean;
+  componentes?: {
+    nombre: string;
+    cantidad: number;
+    config: any;
+    precio: number;
+  }[];
 }
 
 // ===============================================
@@ -305,8 +314,8 @@ export function ConfigurationStep({
 
   return (
     <div className="space-y-6">
-      {/* Cantidad - Solo para productos sin múltiples líneas */}
-      {!config.permite_multiples_lineas && (
+      {/* Cantidad - Solo para productos sin múltiples líneas (y que no sean del centro de copiado) */}
+      {!config.permite_multiples_lineas && config.categoria !== 'Centro de Copiado' && (
         <Card className="p-6">
           <div className="flex items-center gap-2 mb-4">
             <Package className="w-5 h-5 text-blue-600" />

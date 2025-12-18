@@ -14,7 +14,7 @@ import type {
   CentroCopiadoOrdenItem,
 } from '../types/database';
 import { getArgentinaDateString } from '../utils/dates';
-import { normalizarEtapa } from '../utils/generateProductionRoutes';
+import { generateProductionRoutes, normalizarEtapa } from '../utils/generateProductionRoutes';
 import { distribuirPagosProporcional, validarDesvinculacion } from '../utils/ordenesConsolidadas';
 
 export interface OrdenTrabajoServicio {
@@ -90,6 +90,7 @@ interface AddItemData {
   producto_id?: string | null;
   producto_nombre: string;
   producto_categoria?: string | null;
+  categoria_id?: string | null;
   descripcion?: string | null;
   tiempo_produccion_dias?: number | null;
   cantidad: number;
@@ -866,18 +867,30 @@ export function useOrdenTrabajo() {
       if (itemsToInsert.length > 0) {
         const { data: insertedItems, error: insertItemsError } = await supabase
           .from('ordenes_trabajo_items')
-          .insert(itemsToInsert)
+          .insert(itemsToInsert as any)
           .select();
 
         if (insertItemsError) throw insertItemsError;
+        if (!insertedItems) throw new Error('Error al insertar items nuevos');
 
         // Insertar rutas para los NUEVOS items
         for (let i = 0; i < insertedItems.length; i++) {
           const itemDb = insertedItems[i];
           const itemOriginal = newItems[i]; // Coinciden en índice
 
-          if (itemOriginal.rutas_generadas && itemOriginal.rutas_generadas.length > 0) {
-            const rutasToInsert = itemOriginal.rutas_generadas.map((ruta: any) => ({
+          let rutasPregeneradas = itemOriginal.rutas_generadas || [];
+
+          // MEJORA: Generar rutas automáticamente si se omitieron
+          if (rutasPregeneradas.length === 0 && (itemOriginal.producto_id || (itemOriginal.configuracion as any)?.ruta_produccion_id)) {
+            rutasPregeneradas = await generateProductionRoutes({
+              productoId: (itemOriginal as any).producto_id || '',
+              categoria: (itemOriginal as any).producto_categoria || '',
+              configuracion: itemOriginal.configuracion || {}
+            });
+          }
+
+          if (rutasPregeneradas && rutasPregeneradas.length > 0) {
+            const rutasToInsert = rutasPregeneradas.map((ruta: any) => ({
               company_id: profile.company_id,
               orden_item_id: itemDb.id,
               tipo_etapa: normalizarEtapa(ruta.etapa || ruta.tipo_etapa || 'principal'),
@@ -994,10 +1007,11 @@ export function useOrdenTrabajo() {
           };
         });
 
-        const { data: insertedItems, error: itemsError } = await supabase
+        const { data: insertedItemsRaw, error: itemsError } = await supabase
           .from('ordenes_trabajo_items')
-          .insert(itemsToInsert)
+          .insert(itemsToInsert as any)
           .select();
+        const insertedItems = insertedItemsRaw as any[];
 
         if (itemsError) throw itemsError;
 
@@ -1006,10 +1020,22 @@ export function useOrdenTrabajo() {
           const item = insertedItems[i];
           const itemOriginal = data.items[i];
 
-          // Si el item tiene rutas pregeneradas, insertarlas
-          if (itemOriginal.rutas_generadas && itemOriginal.rutas_generadas.length > 0) {
+          let rutasPregeneradas = itemOriginal.rutas_generadas || [];
+
+          // MEJORA: Si no hay rutas pero hay config con ruta, intentar generarlas dinámicamente
+          if (rutasPregeneradas.length === 0 && (itemOriginal.producto_id || (itemOriginal.configuracion as any)?.ruta_produccion_id)) {
+            console.log(`🔍 Intentando generar rutas automáticas para item ${(item as any).id}...`);
+            rutasPregeneradas = await generateProductionRoutes({
+              productoId: (itemOriginal as any).producto_id || '',
+              categoria: (itemOriginal as any).producto_categoria || '',
+              configuracion: itemOriginal.configuracion || {}
+            });
+          }
+
+          // Si el item tiene rutas (pregeneradas o recién calculadas), insertarlas
+          if (rutasPregeneradas && rutasPregeneradas.length > 0) {
             try {
-              const rutasToInsert = itemOriginal.rutas_generadas.map((ruta: any) => {
+              const rutasToInsert = rutasPregeneradas.map((ruta: any) => {
                 console.log('🔍 Ruta a insertar:', {
                   tipo_etapa: ruta.etapa,
                   paso_nombre: ruta.paso_nombre,

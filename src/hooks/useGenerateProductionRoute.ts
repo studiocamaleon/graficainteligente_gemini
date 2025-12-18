@@ -34,8 +34,9 @@ export function useGenerateProductionRoute({
 
   useEffect(() => {
     async function generateRoute() {
-      // Si no hay productoId o categoria, no hacer nada (optimización)
-      if (!productoId || !categoria) {
+
+      // Si no hay productoId o categoria, y tampoco hay una ruta manual en la config, no hacer nada
+      if ((!productoId || !categoria) && !configuracion?.ruta_produccion_id) {
         setSteps([]);
         setLoading(false);
         return;
@@ -45,65 +46,68 @@ export function useGenerateProductionRoute({
         setLoading(true);
         setError(null);
 
-        // 1. Obtener ruta_produccion_id del producto según categoría
-        let rutaId: string | null = null;
+        // 1. Obtener ruta_produccion_id del producto según configuración o categoría
+        let rutaId: string | null = configuracion?.ruta_produccion_id || null;
 
-        switch (categoria) {
-          case 'Impresion Laser': {
-            const { data } = await supabase
-              .from('productos_impresion_laser')
-              .select('ruta_produccion_id')
-              .eq('id', productoId)
-              .maybeSingle();
-            rutaId = data?.ruta_produccion_id || null;
-            break;
-          }
-          case 'Gran Formato': {
-            const { data } = await supabase
-              .from('productos_gran_formato')
-              .select('ruta_produccion_id')
-              .eq('id', productoId)
-              .maybeSingle();
-            rutaId = data?.ruta_produccion_id || null;
-            break;
-          }
-          case 'Materiales Rigidos': {
-            const { data } = await supabase
-              .from('productos_materiales_rigidos')
-              .select('ruta_produccion_id')
-              .eq('id', productoId)
-              .maybeSingle();
-            rutaId = data?.ruta_produccion_id || null;
-            break;
-          }
-          case 'Plotter de Corte': {
-            const { data } = await supabase
-              .from('productos_plotter_corte')
-              .select('ruta_produccion_id')
-              .eq('id', productoId)
-              .maybeSingle();
-            rutaId = data?.ruta_produccion_id || null;
-            break;
-          }
-          case 'Portabanners': {
-            const { data } = await supabase
-              .from('productos_portabanners')
-              .select('ruta_produccion_id')
-              .eq('id', productoId)
-              .maybeSingle();
-            rutaId = data?.ruta_produccion_id || null;
-            break;
-          }
-          case 'Sellos': {
-            const { data } = await supabase
-              .from('productos_sellos')
-              .select('ruta_produccion_id')
-              .eq('id', productoId)
-              .maybeSingle();
-            rutaId = data?.ruta_produccion_id || null;
-            break;
+        if (!rutaId) {
+          switch (categoria) {
+            case 'Impresion Laser': {
+              const { data } = await supabase
+                .from('productos_impresion_laser')
+                .select('ruta_produccion_id')
+                .eq('id', productoId)
+                .maybeSingle();
+              rutaId = (data as any)?.ruta_produccion_id || null;
+              break;
+            }
+            case 'Gran Formato': {
+              const { data } = await supabase
+                .from('productos_gran_formato')
+                .select('ruta_produccion_id')
+                .eq('id', productoId)
+                .maybeSingle();
+              rutaId = (data as any)?.ruta_produccion_id || null;
+              break;
+            }
+            case 'Materiales Rigidos': {
+              const { data } = await supabase
+                .from('productos_materiales_rigidos')
+                .select('ruta_produccion_id')
+                .eq('id', productoId)
+                .maybeSingle();
+              rutaId = (data as any)?.ruta_produccion_id || null;
+              break;
+            }
+            case 'Plotter de Corte': {
+              const { data } = await supabase
+                .from('productos_plotter_corte')
+                .select('ruta_produccion_id')
+                .eq('id', productoId)
+                .maybeSingle();
+              rutaId = (data as any)?.ruta_produccion_id || null;
+              break;
+            }
+            case 'Portabanners': {
+              const { data } = await supabase
+                .from('productos_portabanners')
+                .select('ruta_produccion_id')
+                .eq('id', productoId)
+                .maybeSingle();
+              rutaId = (data as any)?.ruta_produccion_id || null;
+              break;
+            }
+            case 'Sellos': {
+              const { data } = await supabase
+                .from('productos_sellos')
+                .select('ruta_produccion_id')
+                .eq('id', productoId)
+                .maybeSingle();
+              rutaId = (data as any)?.ruta_produccion_id || null;
+              break;
+            }
           }
         }
+
 
         if (!rutaId) {
           setSteps([]);
@@ -112,7 +116,7 @@ export function useGenerateProductionRoute({
         }
 
         // 2. Obtener pasos de la ruta
-        const { data: pasos, error: pasosError } = await supabase
+        const { data: pasosRaw, error: pasosError } = await supabase
           .from('rutas_produccion_pasos')
           .select(`
             id,
@@ -130,7 +134,13 @@ export function useGenerateProductionRoute({
           .order('etapa')
           .order('orden');
 
-        if (pasosError) throw pasosError;
+        const pasos = (pasosRaw || []) as any[];
+
+        if (pasosError) {
+          console.error('❌ useGenerateProductionRoute: Error al obtener pasos:', pasosError);
+          throw pasosError;
+        }
+
         if (!pasos || pasos.length === 0) {
           setSteps([]);
           setLoading(false);
@@ -151,8 +161,8 @@ export function useGenerateProductionRoute({
         }> = [];
 
         // Extraer servicios y acabados con compatibilidad
-        const servicios = configuracion?.servicios_seleccionados || configuracion?.servicios || [];
-        const acabados = configuracion?.acabados_seleccionados || configuracion?.acabados || [];
+        let servicios = configuracion?.servicios_seleccionados || configuracion?.servicios || [];
+        let acabados = configuracion?.acabados_seleccionados || configuracion?.acabados || [];
 
         for (const paso of pasos) {
           let incluir = false;
@@ -163,12 +173,12 @@ export function useGenerateProductionRoute({
           let acabadoNombre: string | undefined;
 
           // Si es obligatorio, siempre incluir
-          if (paso.es_obligatorio) {
+          if ((paso as any).es_obligatorio) {
             incluir = true;
             razon = 'Paso obligatorio';
           } else {
             // Evaluar condición
-            switch (paso.tipo_condicion) {
+            switch ((paso as any).tipo_condicion) {
               case 'sin_condicion':
                 incluir = true;
                 razon = 'Sin condición';
@@ -176,7 +186,7 @@ export function useGenerateProductionRoute({
 
               case 'servicio_sin_nivel': {
                 const servicio = servicios.find(
-                  (s: any) => s.servicio_id === paso.configuracion_condicion?.servicio_id
+                  (s: any) => s.servicio_id === (paso as any).configuracion_condicion?.servicio_id
                 );
                 if (servicio) {
                   incluir = true;
@@ -188,15 +198,15 @@ export function useGenerateProductionRoute({
 
               case 'servicio_con_nivel': {
                 const servicio = servicios.find((s: any) => {
-                  if (s.servicio_id !== paso.configuracion_condicion?.servicio_id) {
+                  if (s.servicio_id !== (paso as any).configuracion_condicion?.servicio_id) {
                     return false;
                   }
-                  const mapeoNiveles = paso.configuracion_condicion?.mapeo_niveles || {};
+                  const mapeoNiveles = ((paso as any).configuracion_condicion?.mapeo_niveles || {}) as Record<string, any>;
                   if (Object.keys(mapeoNiveles).length === 0) {
                     return true;
                   }
                   const nivelItem = s.nivel || s.nivel_nombre;
-                  return Object.keys(mapeoNiveles).includes(nivelItem);
+                  return nivelItem ? Object.keys(mapeoNiveles).includes(nivelItem) : false;
                 });
 
                 if (servicio) {
@@ -205,7 +215,7 @@ export function useGenerateProductionRoute({
                   nivelAplicado = servicio.nivel || servicio.nivel_nombre;
 
                   // SOLUCION: Consultar directamente en servicios_niveles_precio
-                  const mapeoNiveles = paso.configuracion_condicion?.mapeo_niveles || {};
+                  const mapeoNiveles = ((paso as any).configuracion_condicion?.mapeo_niveles || {}) as Record<string, any>;
 
                   // Primero intentar con mapeo manual
                   if (nivelAplicado && mapeoNiveles[nivelAplicado]) {
@@ -215,12 +225,12 @@ export function useGenerateProductionRoute({
                     const { data: nivelData } = await supabase
                       .from('servicios_niveles_precio')
                       .select('paso_id')
-                      .eq('servicio_id', servicio.servicio_id)
-                      .eq('nombre', nivelAplicado)
+                      .eq('servicio_id', (servicio as any).servicio_id)
+                      .eq('nombre', nivelAplicado as any)
                       .maybeSingle();
 
-                    if (nivelData?.paso_id) {
-                      pasoIdEspecifico = nivelData.paso_id;
+                    if ((nivelData as any)?.paso_id) {
+                      pasoIdEspecifico = (nivelData as any).paso_id;
                     }
                   }
 
@@ -231,7 +241,7 @@ export function useGenerateProductionRoute({
 
               case 'acabado_sin_nivel': {
                 const acabado = acabados.find(
-                  (a: any) => a.acabado_id === paso.configuracion_condicion?.acabado_id
+                  (a: any) => a.acabado_id === (paso as any).configuracion_condicion?.acabado_id
                 );
                 if (acabado) {
                   incluir = true;
@@ -243,15 +253,15 @@ export function useGenerateProductionRoute({
 
               case 'acabado_con_nivel': {
                 const acabado = acabados.find((a: any) => {
-                  if (a.acabado_id !== paso.configuracion_condicion?.acabado_id) {
+                  if (a.acabado_id !== (paso as any).configuracion_condicion?.acabado_id) {
                     return false;
                   }
-                  const mapeoNiveles = paso.configuracion_condicion?.mapeo_niveles || {};
+                  const mapeoNiveles = ((paso as any).configuracion_condicion?.mapeo_niveles || {}) as Record<string, any>;
                   if (Object.keys(mapeoNiveles).length === 0) {
                     return true;
                   }
                   const nivelItem = a.nivel || a.nivel_nombre;
-                  return Object.keys(mapeoNiveles).includes(nivelItem);
+                  return nivelItem ? Object.keys(mapeoNiveles).includes(nivelItem) : false;
                 });
 
                 if (acabado) {
@@ -260,7 +270,7 @@ export function useGenerateProductionRoute({
                   nivelAplicado = acabado.nivel || acabado.nivel_nombre;
 
                   // SOLUCION: Consultar directamente en acabados_niveles_precio
-                  const mapeoNiveles = paso.configuracion_condicion?.mapeo_niveles || {};
+                  const mapeoNiveles = ((paso as any).configuracion_condicion?.mapeo_niveles || {}) as Record<string, any>;
 
                   // Primero intentar con mapeo manual
                   if (nivelAplicado && mapeoNiveles[nivelAplicado]) {
@@ -270,12 +280,12 @@ export function useGenerateProductionRoute({
                     const { data: nivelData } = await supabase
                       .from('acabados_niveles_precio')
                       .select('paso_id')
-                      .eq('acabado_id', acabado.acabado_id)
-                      .eq('nombre', nivelAplicado)
+                      .eq('acabado_id', (acabado as any).acabado_id)
+                      .eq('nombre', nivelAplicado as any)
                       .maybeSingle();
 
-                    if (nivelData?.paso_id) {
-                      pasoIdEspecifico = nivelData.paso_id;
+                    if ((nivelData as any)?.paso_id) {
+                      pasoIdEspecifico = (nivelData as any).paso_id;
                     }
                   }
 
@@ -296,13 +306,13 @@ export function useGenerateProductionRoute({
                   incluir = true;
 
                   // SOLUCION: Consultar directamente en tecnologias_tintas_pasos
-                  const mapeoTintas = paso.configuracion_condicion?.mapeo_tintas || {};
+                  const mapeoTintas = ((paso as any).configuracion_condicion?.mapeo_tintas || {}) as Record<string, any>;
 
                   // Primero intentar con mapeo manual (usa código de tinta)
                   if (mapeoTintas[tintaCodigo]) {
                     pasoIdEspecifico = mapeoTintas[tintaCodigo];
                   } else {
-                    // Consulta dinámica a la BD usando código de tinta
+                    // Consulta dinámica a la BD
                     const { data: tintaData } = await supabase
                       .from('tecnologias_tintas_pasos')
                       .select('paso_id')
@@ -310,8 +320,8 @@ export function useGenerateProductionRoute({
                       .eq('tinta', tintaCodigo)
                       .maybeSingle();
 
-                    if (tintaData?.paso_id) {
-                      pasoIdEspecifico = tintaData.paso_id;
+                    if ((tintaData as any)?.paso_id) {
+                      pasoIdEspecifico = (tintaData as any).paso_id;
                     }
                   }
 
@@ -329,11 +339,11 @@ export function useGenerateProductionRoute({
           // Solo incluir si cumple condiciones
           if (incluir) {
             generatedSteps.push({
-              id: `temp-${paso.id}`,
-              etapa: paso.etapa,
+              id: (paso as any).id,
+              etapa: (paso as any).etapa,
               paso_id_especifico: pasoIdEspecifico,
-              orden: paso.orden,
-              es_obligatorio: paso.es_obligatorio,
+              orden: (paso as any).orden,
+              es_obligatorio: (paso as any).es_obligatorio,
               razon_inclusion: razon,
               nivel_aplicado: nivelAplicado,
               servicio_nombre: servicioNombre,
@@ -349,18 +359,21 @@ export function useGenerateProductionRoute({
             .filter((id): id is string => id !== null)
         )];
 
+
         let nombresRealesPasos: Record<string, string> = {};
         if (pasosIdsUnicos.length > 0) {
-          const { data: pasosReales } = await supabase
+          const { data: pasosRealesRaw } = await supabase
             .from('pasos')
             .select('id, nombre')
             .in('id', pasosIdsUnicos);
 
+          const pasosReales = (pasosRealesRaw || []) as any[];
+
           if (pasosReales) {
-            nombresRealesPasos = pasosReales.reduce((acc, paso) => {
+            nombresRealesPasos = pasosReales.reduce((acc: any, paso: any) => {
               acc[paso.id] = paso.nombre;
               return acc;
-            }, {} as Record<string, string>);
+            }, {});
           }
         }
 
@@ -398,7 +411,7 @@ export function useGenerateProductionRoute({
       }
     }
 
-    if (productoId && categoria) {
+    if ((productoId && categoria) || configuracion?.ruta_produccion_id) {
       generateRoute();
     } else {
       setSteps([]);
