@@ -49,15 +49,16 @@ export function useConvertirPresupuesto() {
       const { data, error: rpcError } = await supabase.rpc(
         'fn_convertir_presupuesto_a_orden',
         {
-          p_presupuesto_id: params.presupuesto_id,
+          p_copiar_archivos: true,
           p_fecha_entrega_estimada: params.fecha_entrega_estimada || null,
-          p_notas_adicionales: params.notas_adicionales || null,
-          p_monto_pago: params.monto_pago || null,
           p_medio_cobro_id: params.medio_cobro_id || null,
+          p_monto_pago: params.monto_pago || null,
+          p_notas_adicionales: params.notas_adicionales || null,
+          p_presupuesto_id: params.presupuesto_id,
           p_referencia_pago: params.referencia_pago || null,
-          p_rutas_personalizadas: params.rutas_personalizadas || null,
           p_requiere_factura: params.requiere_factura || false,
-        }
+          p_rutas_personalizadas: params.rutas_personalizadas || null,
+        } as any
       );
 
       if (rpcError) {

@@ -16,6 +16,28 @@ export function usePresupuesto(id: string | undefined) {
   useEffect(() => {
     if (id) {
       fetchPresupuesto();
+
+      // Configurar suscripción Realtime para actualizaciones externas
+      const channel = supabase
+        .channel(`presupuesto_detail_${id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'presupuestos',
+            filter: `id=eq.${id}`,
+          },
+          (payload) => {
+            console.log('Presupuesto actualizado en Realtime:', payload);
+            fetchPresupuesto();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     } else {
       setPresupuesto(null);
       setLoading(false);
@@ -75,15 +97,43 @@ export function usePresupuesto(id: string | undefined) {
         console.error('Error fetching items:', itemsError);
       }
 
+      // Obtener rutas de los items
+      const { data: routes, error: routesError } = await supabase
+        .from('presupuestos_items_rutas')
+        .select('*')
+        .in('presupuesto_item_id', (items as any[])?.map(i => i.id) || [])
+        .order('orden', { ascending: true });
+
+      if (routesError) {
+        console.error('Error fetching items routes:', routesError);
+      }
+
       // Obtener conteo de archivos
       const { count: archivosCount } = await supabase
         .from('presupuestos_archivos')
         .select('*', { count: 'exact', head: true })
         .eq('presupuesto_id', id);
 
+      // Mapear rutas a los items
+      const itemsWithRoutes = ((items as any[]) || []).map(item => ({
+        ...item,
+        rutas_generadas: ((routes as any[]) || [])
+          .filter(r => r.presupuesto_item_id === item.id)
+          .map(r => ({
+            id: r.id,
+            etapa: r.tipo_etapa,
+            paso_id: r.paso_id,
+            paso_nombre: r.paso_nombre,
+            orden: r.orden,
+            es_obligatorio: true,
+            comentario_vendedor: r.comentario_vendedor,
+            _db_id: r.id
+          }))
+      }));
+
       setPresupuesto({
-        ...(data as PresupuestoConRelaciones),
-        items: items || [],
+        ...(data as any),
+        items: itemsWithRoutes,
         items_count: items?.length || 0,
         archivos_count: archivosCount || 0,
       });
@@ -104,7 +154,7 @@ export function usePresupuesto(id: string | undefined) {
 
       const { error: updateError } = await supabase
         .from('presupuestos')
-        .update(data)
+        .update(data as any)
         .eq('id', id);
 
       if (updateError) throw updateError;
@@ -133,7 +183,7 @@ export function usePresupuesto(id: string | undefined) {
         updateData.fecha_respuesta = new Date().toISOString();
       }
 
-      return await updatePresupuesto(updateData);
+      return await updatePresupuesto(updateData as any);
     } catch (err: any) {
       console.error('Error cambiando estado:', err);
       setError(err.message);

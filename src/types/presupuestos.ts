@@ -135,6 +135,7 @@ export interface PresupuestoItem {
   // Adicionales
   descripcion?: string;
   tiempo_produccion_dias?: number;
+  rutas_generadas?: any[]; // Opcional, cargado bajo demanda
 
   created_at: string;
   updated_at: string;
@@ -234,7 +235,12 @@ export interface CreatePresupuestoData {
 }
 
 export interface UpdatePresupuestoData {
+  cliente_id?: string;
+  vendedor_id?: string;
+  canal_venta?: CanalVenta;
   fecha_validez?: string;
+  fecha_enviado?: string;
+  fecha_respuesta?: string;
   condiciones_comerciales?: string;
   notas_internas?: string;
   observaciones_cliente?: string;
@@ -242,6 +248,7 @@ export interface UpdatePresupuestoData {
   pdf_path?: string;
   pdf_url?: string;
   total_descuentos?: number;
+  orden_trabajo_id?: string;
 }
 
 export interface CreatePresupuestoItemData {

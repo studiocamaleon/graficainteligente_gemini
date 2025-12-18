@@ -1,9 +1,14 @@
-import { useState } from 'react';
-import { MessageSquare, Globe, Store, User, Smartphone, Truck, Plus } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { MessageSquare, Globe, Store, User, Smartphone, Truck, Plus, Calendar, FileText } from 'lucide-react';
 import { SearchableSelect } from '../ui/SearchableSelect';
 import { DatePicker } from '../ui/DatePicker';
 import { Tooltip } from '../ui/Tooltip';
 import { Button } from '../ui/Button';
+import { Label } from '../ui/Label';
+import { Textarea } from '../ui/Textarea';
+import { Select } from '../ui/Select';
+import { Input } from '../ui/Input';
+import { supabase } from '../../lib/supabase';
 
 import { useClients } from '../../hooks/useClients';
 import type { CanalVenta, Client } from '../../types/database';
@@ -25,6 +30,15 @@ interface OrdenGeneralSectionProps {
   setRequiereFactura: (requiere: boolean) => void;
   usuarioLogueado: string;
   errors?: Record<string, string>;
+
+  // New props for Budget Mode
+  mode: 'orden' | 'presupuesto'; // "orden" | "presupuesto"
+  onModeChange: (mode: 'orden' | 'presupuesto') => void;
+  presupuestoValidez: string;
+  setPresupuestoValidez: (date: string) => void;
+  presupuestoCondiciones: string;
+  setPresupuestoCondiciones: (text: string) => void;
+  isEditing?: boolean;
 }
 
 export function OrdenGeneralSection({
@@ -43,6 +57,13 @@ export function OrdenGeneralSection({
   setRequiereFactura,
   usuarioLogueado,
   errors = {},
+  mode,
+  onModeChange,
+  presupuestoValidez,
+  setPresupuestoValidez,
+  presupuestoCondiciones,
+  setPresupuestoCondiciones,
+  isEditing = false
 }: OrdenGeneralSectionProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const { clients, loading, refetch } = useClients({ searchTerm, itemsPerPage: 50 });
@@ -50,12 +71,59 @@ export function OrdenGeneralSection({
   const [showQuickClientModal, setShowQuickClientModal] = useState(false);
   const [newlyCreatedClients, setNewlyCreatedClients] = useState<Client[]>([]);
 
+  // Estado para plantillas de condiciones
+  const [plantillasCondiciones, setPlantillasCondiciones] = useState<{ id: string, nombre: string, contenido: string }[]>([]);
+  const [selectedPlantilla, setSelectedPlantilla] = useState('');
+  const [loadingPlantillas, setLoadingPlantillas] = useState(false);
+
   const canalesVenta: { value: CanalVenta; label: string; icon: any }[] = [
     { value: 'WhatsApp', label: 'WhatsApp', icon: MessageSquare },
     { value: 'Web', label: 'Web', icon: Globe },
     { value: 'Mostrador', label: 'Mostrador', icon: Store },
     { value: 'App Mobile', label: 'App Mobile', icon: Smartphone },
   ];
+
+  useEffect(() => {
+    if (mode === 'presupuesto') {
+      loadCondiciones();
+    }
+  }, [mode]);
+
+  const loadCondiciones = async () => {
+    try {
+      setLoadingPlantillas(true);
+      const { data, error } = await supabase
+        .from('presupuestos_condiciones_comerciales')
+        .select('*')
+        .eq('is_active', true)
+        .order('orden', { ascending: true });
+
+      if (error) throw error;
+
+      setPlantillasCondiciones(data || []);
+
+      // Seleccionar default si existe y no hay texto seteado
+      if (!presupuestoCondiciones) {
+        const defaultCond = data?.find((c: any) => c.es_default);
+        if (defaultCond) {
+          setSelectedPlantilla(defaultCond.id);
+          setPresupuestoCondiciones(defaultCond.contenido);
+        }
+      }
+    } catch (err) {
+      console.error('Error cargando condiciones:', err);
+    } finally {
+      setLoadingPlantillas(false);
+    }
+  };
+
+  const handlePlantillaChange = (id: string) => {
+    setSelectedPlantilla(id);
+    const plantilla = plantillasCondiciones.find(p => p.id === id);
+    if (plantilla) {
+      setPresupuestoCondiciones(plantilla.contenido);
+    }
+  };
 
   // Merge backend clients with locally created ones to ensure they appear even before refetch finishes
   const allClients = [...newlyCreatedClients, ...clients];
@@ -86,8 +154,41 @@ export function OrdenGeneralSection({
 
   return (
     <div className="p-6 space-y-6">
+
+      {/* Mode Switcher */}
+      {!isEditing && (
+        <div className="flex justify-center mb-6">
+          <div className="bg-gray-100 p-1 rounded-lg inline-flex shadow-inner">
+            <button
+              type="button"
+              onClick={() => onModeChange('orden')}
+              className={`px-6 py-2 rounded-md font-medium text-sm transition-all duration-200 ${mode === 'orden'
+                ? 'bg-white text-blue-600 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+                }`}
+            >
+              Orden de Trabajo
+            </button>
+            <button
+              type="button"
+              onClick={() => onModeChange('presupuesto')}
+              className={`px-6 py-2 rounded-md font-medium text-sm transition-all duration-200 ${mode === 'presupuesto'
+                ? 'bg-green-600 text-white shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+                }`}
+            >
+              Presupuesto
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="border-b border-gray-200 pb-4">
-        <h3 className="text-lg font-semibold text-gray-900">Datos Generales</h3>
+        <h3 className="text-lg font-semibold text-gray-900">
+          {mode === 'orden'
+            ? (isEditing ? 'Editar Orden de Trabajo' : 'Orden de Trabajo')
+            : (isEditing ? 'Editar Presupuesto' : 'Nuevo Presupuesto')}
+        </h3>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -161,54 +262,104 @@ export function OrdenGeneralSection({
           </div>
         </div>
 
-        <DatePicker
-          label="Fecha Estimada de Entrega"
-          value={fechaEntrega}
-          onChange={(date) => setFechaEntrega(date || '')}
-          minDate={new Date()}
-          error={errors.fechaEntrega}
-          placeholder="Seleccionar fecha de entrega"
-          required
-        />
+        {/* Conditional Fields based on Mode */}
+        {mode === 'orden' ? (
+          <>
+            <DatePicker
+              label="Fecha Estimada de Entrega"
+              value={fechaEntrega}
+              onChange={(date) => setFechaEntrega(date || '')}
+              minDate={new Date()}
+              error={errors.fechaEntrega}
+              placeholder="Seleccionar fecha de entrega"
+              required
+            />
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Tipo de Entrega
-          </label>
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setRequiereDespacho && setRequiereDespacho(false)}
-              className={`
-                flex-1 flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-all gap-2
-                ${!requiereDespacho
-                  ? 'border-blue-500 bg-blue-50 text-blue-700'
-                  : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
-                }
-              `}
-            >
-              <Store className="w-5 h-5" />
-              <span className="text-sm font-medium">Retiro en Local</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setRequiereDespacho && setRequiereDespacho(true)}
-              className={`
-                flex-1 flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-all gap-2
-                ${requiereDespacho
-                  ? 'border-blue-500 bg-blue-50 text-blue-700'
-                  : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
-                }
-              `}
-            >
-              <Truck className="w-5 h-5" />
-              <span className="text-sm font-medium">Envío a Domicilio</span>
-            </button>
-          </div>
-        </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Tipo de Entrega
+              </label>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setRequiereDespacho && setRequiereDespacho(false)}
+                  className={`
+                        flex-1 flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-all gap-2
+                        ${!requiereDespacho
+                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                    }
+                      `}
+                >
+                  <Store className="w-5 h-5" />
+                  <span className="text-sm font-medium">Retiro en Local</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRequiereDespacho && setRequiereDespacho(true)}
+                  className={`
+                        flex-1 flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-all gap-2
+                        ${requiereDespacho
+                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                    }
+                      `}
+                >
+                  <Truck className="w-5 h-5" />
+                  <span className="text-sm font-medium">Envío a Domicilio</span>
+                </button>
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            <div>
+              <Label htmlFor="fechaValidez">Válido hasta</Label>
+              <div className="relative mt-1">
+                <Calendar className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
+                <Input
+                  id="fechaValidez"
+                  type="date"
+                  required
+                  className="pl-9"
+                  value={presupuestoValidez}
+                  onChange={(e) => setPresupuestoValidez(e.target.value)}
+                  min={new Date().toISOString().split('T')[0]}
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="plantilla">Plantilla de Condiciones</Label>
+              <Select
+                id="plantilla"
+                value={selectedPlantilla}
+                onChange={handlePlantillaChange}
+                disabled={loadingPlantillas}
+              >
+                <option value="">Seleccionar plantilla...</option>
+                {plantillasCondiciones.map(p => (
+                  <option key={p.id} value={p.id}>{p.nombre}</option>
+                ))}
+              </Select>
+            </div>
+          </>
+        )}
       </div>
 
-
+      {mode === 'presupuesto' && (
+        <div>
+          <Label htmlFor="condiciones">Detalle de Condiciones</Label>
+          <Textarea
+            id="condiciones"
+            value={presupuestoCondiciones}
+            onChange={(e) => setPresupuestoCondiciones(e.target.value)}
+            rows={4}
+            placeholder="Escriba las condiciones comerciales..."
+            className="font-mono text-sm"
+          />
+        </div>
+      )}
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">

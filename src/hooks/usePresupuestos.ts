@@ -488,6 +488,7 @@ export function usePresupuestos(
       medioCobroId?: string;
       referenciaPago?: string;
       rutasPersonalizadas?: Record<string, any[]>;
+      requiereFactura?: boolean;
     }
   ): Promise<string | null> => {
     try {
@@ -496,14 +497,16 @@ export function usePresupuestos(
       const { data, error: rpcError } = await supabase.rpc(
         'fn_convertir_presupuesto_a_orden',
         {
-          p_presupuesto_id: presupuestoId,
+          p_copiar_archivos: true,
           p_fecha_entrega_estimada: params.fechaEntrega,
-          p_notas_adicionales: params.notasAdicionales || null,
-          p_monto_pago: params.montoPago || null,
           p_medio_cobro_id: params.medioCobroId || null,
+          p_monto_pago: params.montoPago || null,
+          p_notas_adicionales: params.notasAdicionales || null,
+          p_presupuesto_id: presupuestoId,
           p_referencia_pago: params.referenciaPago || null,
+          p_requiere_factura: params.requiereFactura || false,
           p_rutas_personalizadas: params.rutasPersonalizadas || null,
-        }
+        } as any
       );
 
       if (rpcError) throw rpcError;

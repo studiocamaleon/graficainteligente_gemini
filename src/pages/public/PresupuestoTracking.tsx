@@ -4,8 +4,7 @@ import { CheckCircle, XCircle, Clock, AlertCircle, MessageCircle } from 'lucide-
 import { supabase } from '../../lib/supabase';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
-import { Badge } from '../../components/ui/Badge';
-import { formatConfiguracionProducto } from '../../utils/formatPresupuestoConfig';
+import { ItemConfigRenderer } from '../../components/orders/ItemConfigRenderer';
 
 interface PresupuestoTracking {
   id: string;
@@ -209,101 +208,7 @@ export default function PresupuestoTracking() {
     );
   };
 
-  // Helper to render config details
-  const renderConfiguracion = (config: any, tipoItem?: string) => {
-    if (!config) return null;
 
-    // Lógica específica para Centro de Copiado
-    if (tipoItem === 'centro_copiado') {
-      return (
-        <div className="space-y-1 text-xs text-gray-600 mt-2">
-          {/* Info Copias/Hojas */}
-          <div className="flex items-center gap-2">
-            <span className="font-medium text-gray-900">{config.cantidad_copias} juegos</span>
-            <span className="text-gray-300">|</span>
-            <span>{config.cantidad_hojas} hojas orig.</span>
-          </div>
-
-          {/* Info Papel/Tinta */}
-          <div className="flex flex-wrap gap-1.5 mt-1">
-            {config.tamanio_nombre && <Badge variant="outline" className="text-[10px] h-5">{config.tamanio_nombre}</Badge>}
-            {config.papel_detalle && <Badge variant="outline" className="text-[10px] h-5">{config.papel_detalle}</Badge>}
-            <Badge variant={config.tipo_tinta === 'CMYK' || config.tipo_tinta === 'color' ? 'purple' : 'gray'} className="text-[10px] h-5">
-              {config.tipo_tinta === 'CMYK' || config.tipo_tinta === 'color' ? 'Color' : 'B/N'}
-            </Badge>
-            <Badge variant="outline" className="text-[10px] h-5">
-              {config.cara_impresa === 'frente_y_dorso' || config.cara_impresa === 'doble' || config.cara_impresa === '1/1' ? 'Doble Faz' : 'Simple Faz'}
-            </Badge>
-          </div>
-
-          {/* Terminaciones (Anillado, Plastificado, Guillotinado) */}
-          {(config.anillado || config.plastificado || config.guillotinado || config.abrochado || config.corte || config.dobladillo) && (
-            <div className="flex flex-wrap gap-1.5 mt-1">
-              {config.anillado && (
-                <Badge variant="warning" size="sm" className="text-[10px] h-5 px-1.5">Anillado {config.anillado.tipo}</Badge>
-              )}
-              {config.plastificado && (
-                <Badge variant="warning" size="sm" className="text-[10px] h-5 px-1.5">Plastificado {config.plastificado.tipo}</Badge>
-              )}
-              {config.guillotinado && (
-                <Badge variant="warning" size="sm" className="text-[10px] h-5 px-1.5">Guillotinado</Badge>
-              )}
-              {config.abrochado && (
-                <Badge variant="warning" size="sm" className="text-[10px] h-5 px-1.5">Abrochado</Badge>
-              )}
-              {config.corte && (
-                <Badge variant="warning" size="sm" className="text-[10px] h-5 px-1.5">Corte</Badge>
-              )}
-              {config.dobladillo && (
-                <Badge variant="warning" size="sm" className="text-[10px] h-5 px-1.5">Dobladillo</Badge>
-              )}
-            </div>
-          )}
-
-          {/* Servicios y Acabados Extra */}
-          {((config.servicios_seleccionados && config.servicios_seleccionados.length > 0) ||
-            (config.acabados_seleccionados && config.acabados_seleccionados.length > 0)) && (
-              <div className="flex flex-wrap gap-1 mt-1 pt-1 border-t border-gray-100">
-                {config.servicios_seleccionados?.map((s: any, idx: number) => (
-                  <Badge key={`srv-${idx}`} variant="blue" size="sm" className="text-[10px] px-1.5 h-auto py-0.5">
-                    {s.nivel ? `${s.nombre} (${s.nivel})` : s.nombre}
-                  </Badge>
-                ))}
-                {config.acabados_seleccionados?.map((a: any, idx: number) => (
-                  <Badge key={`acb-${idx}`} variant="purple" size="sm" className="text-[10px] px-1.5 h-auto py-0.5">
-                    {a.nombre}
-                  </Badge>
-                ))}
-              </div>
-            )}
-        </div>
-      );
-    }
-
-    // Standard Render Logic (Existing)
-    const hasServices = (config.servicios_seleccionados && config.servicios_seleccionados.length > 0) ||
-      (config.acabados_seleccionados && config.acabados_seleccionados.length > 0);
-
-    if (!hasServices) return null;
-
-    return (
-      <div className="space-y-1 mt-2">
-        {/* Services Badges */}
-        <div className="flex flex-wrap gap-1 mt-1">
-          {config.servicios_seleccionados?.map((s: any, idx: number) => (
-            <Badge key={`srv-${idx}`} variant="blue" size="sm" className="text-[10px] px-1.5 h-auto py-0.5">
-              {s.nivel ? `${s.nombre} (${s.nivel})` : s.nombre}
-            </Badge>
-          ))}
-          {config.acabados_seleccionados?.map((a: any, idx: number) => (
-            <Badge key={`acb-${idx}`} variant="purple" size="sm" className="text-[10px] px-1.5 h-auto py-0.5">
-              {a.nombre}
-            </Badge>
-          ))}
-        </div>
-      </div>
-    );
-  };
 
   if (loading) {
     return (
@@ -404,20 +309,29 @@ export default function PresupuestoTracking() {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-100">
                   {(presupuesto.items || []).map((item) => {
-                    const configuracionFormateada = formatConfiguracionProducto(
-                      item.configuracion,
-                      item.producto_categoria
-                    );
-                    const descripcionFinal = item.descripcion || configuracionFormateada;
-
                     return (
                       <tr key={item.id}>
                         <td className="px-6 py-4">
                           <div className="text-sm font-medium text-gray-900">{item.producto_nombre}</div>
-                          {descripcionFinal && item.tipo_item !== 'centro_copiado' && (
-                            <div className="text-sm text-gray-500 mt-0.5 max-w-md">{descripcionFinal}</div>
+                          {item.descripcion && item.tipo_item !== 'centro_copiado' && (
+                            <div className="text-sm text-gray-500 mt-0.5 max-w-md">{item.descripcion}</div>
                           )}
-                          {renderConfiguracion(item.configuracion, item.tipo_item)}
+                          {item.tipo_item !== 'centro_copiado' &&
+                            <ItemConfigRenderer
+                              config={item.configuracion}
+                              tipoItem={item.tipo_item}
+                            />
+                          }
+                          {/* Para centro de copiado ya renderizamos arriba o donde corresponda, 
+                               pero ItemConfigRenderer maneja ambos. Dejamos que ItemConfigRenderer decida si mostrar
+                               o si hay duplicación. Nota: En la tabla original se renderizaba condicionalmente.
+                               
+                               El codigo original llamaba a renderConfiguracion(item.configuracion, item.tipo_item)
+                               sin condición previa de tipo_item en linea 420.
+                               Pero linea 417 ocultaba descripción si era copiado.
+                               Vamos a poner ItemConfigRenderer directo.
+                            */}
+                          {item.tipo_item === 'centro_copiado' && <ItemConfigRenderer config={item.configuracion} tipoItem={item.tipo_item} />}
                           {item.tiempo_produccion_dias && (
                             <div className="text-xs text-blue-600 mt-1 flex items-center gap-1">
                               <Clock className="w-3 h-3" /> {item.tiempo_produccion_dias} días de producción
@@ -443,12 +357,6 @@ export default function PresupuestoTracking() {
             {/* Mobile Card View */}
             <div className="md:hidden space-y-4">
               {(presupuesto.items || []).map((item) => {
-                const configuracionFormateada = formatConfiguracionProducto(
-                  item.configuracion,
-                  item.producto_categoria
-                );
-                const descripcionFinal = item.descripcion || configuracionFormateada;
-
                 return (
                   <div key={item.id} className="bg-gray-50 rounded-lg p-4 border border-gray-100">
                     <div className="flex justify-between items-start mb-2">
@@ -458,10 +366,10 @@ export default function PresupuestoTracking() {
                       </div>
                     </div>
 
-                    {descripcionFinal && item.tipo_item !== 'centro_copiado' && (
-                      <div className="text-sm text-gray-500 mb-3">{descripcionFinal}</div>
+                    {item.descripcion && item.tipo_item !== 'centro_copiado' && (
+                      <div className="text-sm text-gray-500 mb-3">{item.descripcion}</div>
                     )}
-                    {renderConfiguracion(item.configuracion, item.tipo_item)}
+                    <ItemConfigRenderer config={item.configuracion} tipoItem={item.tipo_item} />
 
                     {item.tiempo_produccion_dias && (
                       <div className="text-xs text-blue-600 mb-3 flex items-center gap-1 bg-blue-50 w-fit px-2 py-0.5 rounded">

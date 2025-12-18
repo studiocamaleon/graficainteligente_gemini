@@ -123,10 +123,22 @@ export function PresupuestoHeader({
             )}
 
             {canEnviar && (
-              <Button size="sm" onClick={onEnviar} className="bg-indigo-600 hover:bg-indigo-700 text-white border-transparent">
-                <Send className="w-4 h-4 mr-2" />
-                Enviar
-              </Button>
+              <div className="relative group">
+                <Button
+                  size="sm"
+                  onClick={onEnviar}
+                  disabled={presupuesto.items?.some(i => i.precio_unitario_final === null)}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Send className="w-4 h-4 mr-2" />
+                  Enviar
+                </Button>
+                {presupuesto.items?.some(i => i.precio_unitario_final === null) && (
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                    Cotizar todos los items antes de enviar
+                  </div>
+                )}
+              </div>
             )}
 
             {presupuesto.estado === 'enviado' && onReenviar && (

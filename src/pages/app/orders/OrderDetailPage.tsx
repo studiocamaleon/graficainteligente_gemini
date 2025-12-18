@@ -45,6 +45,7 @@ import { calcularTotalesConsolidados } from '../../../utils/ordenesConsolidadas'
 import type { EstadoOrdenTrabajo } from '../../../types/database';
 import { enviarNotificacion } from '../../../lib/whatsappNotifications';
 import { descargarFactura } from '../../../utils/facturaHelpers';
+import { ItemConfigRenderer } from '../../../components/orders/ItemConfigRenderer';
 
 type TabKey = 'items' | 'ruta' | 'adjuntos' | 'pagos' | 'historial';
 
@@ -581,52 +582,6 @@ export function OrderDetailPage() {
                     {orden.items.map((item: any, index: number) => {
                       const config = item.configuracion || {};
 
-                      // Construir string de material
-                      let materialStr = '';
-                      if (config.material_nombre) {
-                        materialStr = config.material_nombre;
-                        if (config.variante_nombre) {
-                          materialStr += ` - ${config.variante_nombre}`;
-                        }
-                        if (config.espesor && config.unidad_espesor) {
-                          materialStr += ` (${config.espesor} ${config.unidad_espesor})`;
-                        }
-                      }
-
-                      // Extraer servicios seleccionados (con nivel si existe)
-                      const servicios = config.servicios_seleccionados && Array.isArray(config.servicios_seleccionados)
-                        ? config.servicios_seleccionados.map((s: any) => {
-                          if (s.nivel) {
-                            return `${s.nombre} (${s.nivel})`;
-                          }
-                          return s.nombre;
-                        }).join(', ')
-                        : null;
-
-                      // Extraer acabados seleccionados (con nivel si existe)
-                      const acabados = config.acabados_seleccionados && Array.isArray(config.acabados_seleccionados)
-                        ? config.acabados_seleccionados.map((a: any) => {
-                          if (a.nivel) {
-                            return `${a.nombre} (${a.nivel})`;
-                          }
-                          return a.nombre;
-                        }).join(', ')
-                        : null;
-
-                      // Helper para servicios vinculados (externos)
-                      const getLinkedServices = (rutas: any[]) => {
-                        if (!rutas || rutas.length === 0) return [];
-                        const linked = new Set<string>();
-                        rutas.forEach(ruta => {
-                          if (ruta.source_service_id && ruta.paso_nombre) {
-                            const cleanName = ruta.paso_nombre.replace('[Servicio] ', '');
-                            linked.add(cleanName);
-                          }
-                        });
-                        return Array.from(linked);
-                      };
-                      const linkedServices = getLinkedServices(item.rutas_generadas || []);
-
                       return (
                         <motion.div
                           key={item.id}
@@ -635,198 +590,54 @@ export function OrderDetailPage() {
                           transition={{ delay: index * 0.05 }}
                           className="p-4 bg-white rounded-lg border border-gray-200"
                         >
-                          {/* Línea 1: Número + Nombre + Categoría */}
+                          {/* Línea 1: Número + Nombre + Categorías */}
                           <div className="flex items-center gap-2 mb-2">
                             <span className="text-xs font-semibold text-gray-500">#{index + 1}</span>
                             <h4 className="font-semibold text-gray-900">
                               {item.producto_nombre || 'Producto'}
                             </h4>
-                            {/* Badges de Servicios Vinculados (Display Compacto junto al título o abajo) */}
-                            {linkedServices.length > 0 && (
-                              <div className="flex gap-1">
-                                {linkedServices.map((serviceName, idx) => (
-                                  <Badge key={`linked-${idx}`} variant="info" size="sm" className="border-cyan-400 bg-cyan-50 text-cyan-700 text-xs">
-                                    <Wrench className="w-3 h-3 mr-1 inline-block" />
-                                    {serviceName}
-                                  </Badge>
-                                ))}
-                              </div>
-                            )}
                             {item.producto_categoria && (
                               <Badge variant="secondary" className="text-xs">
                                 {item.producto_categoria}
                               </Badge>
                             )}
-                            {item.tipo_item === 'personalizado' && (
+
+                            {/* Clasificación de Tipo Item */}
+                            {(item.tipo_item === 'centro_copiado' || (item.tipo_item === 'personalizado' && item.producto_categoria === 'Centro de Copiado')) ? (
+                              <Badge variant="blue" className="text-xs">
+                                Centro de Copiado
+                              </Badge>
+                            ) : item.tipo_item === 'personalizado' && (
                               <Badge variant="purple" className="text-xs">
                                 Personalizado
                               </Badge>
                             )}
                           </div>
 
-                          {/* Para items personalizados: mostrar descripción si existe */}
-                          {item.tipo_item === 'personalizado' && item.descripcion && (
-                            <div className="mb-2 p-3 bg-purple-50 border border-purple-200 rounded-lg">
-                              <p className="text-sm font-medium text-purple-900 mb-1">Descripción:</p>
-                              <p className="text-sm text-purple-800 whitespace-pre-wrap">
-                                {item.descripcion}
-                              </p>
-                            </div>
-                          )}
-
-                          {/* Lógica Específica para Centro de Copiado (Fallback visual si no hay descripción o para complementar) */}
-                          {item.tipo_item === 'centro_copiado' && (
-                            <div className="mt-4 p-4 bg-teal-50 rounded-lg border border-teal-100">
-                              <h5 className="text-xs font-semibold text-teal-800 uppercase tracking-wider mb-2">Detalles de Copiado</h5>
-                              <div className="space-y-2">
-                                {/* Copias y Hojas */}
-                                <div className="flex items-center gap-2 text-sm text-gray-700">
-                                  <span className="font-semibold">{config.cantidad_copias || 1} juegos</span>
-                                  <span className="text-gray-400">x</span>
-                                  <span>{config.cantidad_hojas || 0} hojas</span>
-                                </div>
-
-                                {/* Papel y Tinta */}
-                                <div className="flex flex-wrap gap-2">
-                                  {config.tamanio_nombre && <Badge variant="outline" className="bg-white">{config.tamanio_nombre}</Badge>}
-                                  {config.papel_detalle && <Badge variant="outline" className="bg-white">{config.papel_detalle}</Badge>}
-                                  <Badge variant={config.tipo_tinta === 'CMYK' ? 'purple' : 'gray'}>
-                                    {config.tipo_tinta === 'CMYK' ? 'Color' : 'B/N'}
-                                  </Badge>
-                                  {(config.cara_impresa) && (
-                                    <Badge variant="outline" className="bg-white">
-                                      {config.cara_impresa.includes('doble') || config.cara_impresa === '1/1' ? 'Doble Faz' : 'Simple Faz'}
-                                    </Badge>
-                                  )}
-                                </div>
-
-                                {/* Terminaciones */}
-                                {(config.anillado || config.plastificado || config.guillotinado) && (
-                                  <div className="flex flex-wrap gap-2 mt-2 pt-2 border-t border-teal-200/50">
-                                    {config.anillado && (
-                                      <Badge variant="warning" size="sm" className="bg-yellow-100 text-yellow-800 border-yellow-200">
-                                        Anillado {config.anillado.tipo}
-                                      </Badge>
-                                    )}
-                                    {config.plastificado && (
-                                      <Badge variant="warning" size="sm" className="bg-yellow-100 text-yellow-800 border-yellow-200">
-                                        Plastificado {config.plastificado.tipo}
-                                      </Badge>
-                                    )}
-                                    {config.guillotinado && (
-                                      <Badge variant="warning" size="sm" className="bg-yellow-100 text-yellow-800 border-yellow-200">
-                                        Guillotinado
-                                      </Badge>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Detalles de Configuración del Producto - Diseño Mejorado */}
-                          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm bg-gray-50 p-4 rounded-lg border border-gray-100">
-
-                            {/* Medidas (Destacado) - Soporte para múltiples estructuras */}
-                            {(config.medida_seleccionada || config.medida_ancho || config.medida_alto) && (
-                              <div className="flex flex-col">
-                                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Medidas</span>
-                                <div className="font-medium text-gray-900 bg-white border border-gray-200 rounded px-2 py-1 inline-flex items-center gap-2 w-fit">
-                                  <span>
-                                    {config.medida_seleccionada
-                                      ? `${config.medida_seleccionada.ancho} x ${config.medida_seleccionada.alto}`
-                                      : `${config.medida_ancho || '?'} x ${config.medida_alto || '?'}`
-                                    } {config.unidad_medida || ((item.producto_categoria === 'Impresion Laser' || config.categoria === 'Impresion Laser' || config.tecnologia_nombre === 'Impresion Laser') ? 'mm' : 'cm')}
-
-                                  </span>
-                                  {(config.mt2_total || config.mt_lineal_total) && (
-                                    <Badge variant="secondary" className="text-[10px] h-5">
-                                      {config.mt2_total ? `${config.mt2_total} m²` : `${config.mt_lineal_total} ml`}
-                                    </Badge>
-                                  )}
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Material */}
-                            {materialStr && (
-                              <div className="flex flex-col sm:col-span-2 lg:col-span-1">
-                                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Material</span>
-                                <span className="font-medium text-gray-900">{materialStr}</span>
-                              </div>
-                            )}
-
-                            {/* Tecnología de Impresión */}
-                            {(config.tecnologia_nombre || config.tecnologia) && (
-                              <div className="flex flex-col">
-                                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Tecnología</span>
-                                <span className="font-medium text-gray-900">{config.tecnologia_nombre || config.tecnologia}</span>
-                              </div>
-                            )}
-
-                            {/* Tipo de Tinta */}
-                            {(config.tipo_tinta || config.tinta_nombre) && (
-                              <div className="flex flex-col">
-                                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Tinta</span>
-                                <Badge variant="purple" className="w-fit">{config.tipo_tinta || config.tinta_nombre}</Badge>
-                              </div>
-                            )}
-
-                            {/* Cara Impresión */}
-                            {config.cara_impresion && (
-                              <div className="flex flex-col">
-                                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Lados</span>
-                                <span className="text-gray-700 capitalize">{config.cara_impresion.replace(/_/g, ' ')}</span>
-                              </div>
-                            )}
-
-                            {/* Servicios Seleccionados */}
-                            {servicios && (
-                              <div className="flex flex-col sm:col-span-2 lg:col-span-3">
-                                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Servicios</span>
-                                <div className="flex flex-wrap gap-2">
-                                  {config.servicios_seleccionados?.map((s: any, idx: number) => (
-                                    <Badge key={idx} variant="blue" className="font-normal">
-                                      {s.nombre} {s.nivel ? `(${s.nivel})` : ''}
-                                    </Badge>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Acabados Seleccionados */}
-                            {acabados && (
-                              <div className="flex flex-col sm:col-span-2 lg:col-span-3">
-                                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Acabados</span>
-                                <div className="flex flex-wrap gap-2">
-                                  {config.acabados_seleccionados?.map((a: any, idx: number) => (
-                                    <Badge key={idx} variant="orange" className="font-normal">
-                                      {a.nombre} {a.nivel ? `(${a.nivel})` : ''}
-                                    </Badge>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Observaciones del cliente */}
-                            {config.observaciones_cliente && (
-                              <div className="flex flex-col sm:col-span-2 lg:col-span-3 mt-2 pt-2 border-t border-gray-200">
-                                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Nota del Cliente</span>
-                                <p className="text-sm italic text-gray-600 bg-white p-2 rounded border border-gray-200">
-                                  "{config.observaciones_cliente}"
-                                </p>
-                              </div>
-                            )}
+                          {/* Renderizado Unificado de Configuración */}
+                          <div className="py-2">
+                            <ItemConfigRenderer
+                              config={item.configuracion}
+                              tipoItem={item.tipo_item}
+                              rutasGeneradas={item.rutas}
+                            />
                           </div>
 
-                          {/* Línea 4: Cantidad y Total */}
-                          <div className="flex items-center justify-between pt-2 border-t border-gray-200">
+                          {/* Descripción para Personalizados (si no está contenida en config) */}
+                          {item.tipo_item === 'personalizado' && item.descripcion && !item.configuracion?.descripcion && (
+                            <div className="mt-2 text-sm text-gray-600 bg-gray-50 p-3 rounded border border-gray-100 italic">
+                              {item.descripcion}
+                            </div>
+                          )}
+
+                          {/* Línea final: Cantidad y Total */}
+                          <div className="flex items-center justify-between pt-4 mt-2 border-t border-gray-100">
                             <span className="text-sm text-gray-600">
                               Cantidad: <span className="font-semibold text-gray-900">{item.cantidad} unidades</span>
                             </span>
                             {canViewPrices && (
                               <span className="text-lg font-bold text-blue-600">
-                                ${Number(item.precio_total).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                                ${Number(item.precio_total).toLocaleString('es-AR', { minimumFractionDigits: 0 })}
                               </span>
                             )}
                           </div>

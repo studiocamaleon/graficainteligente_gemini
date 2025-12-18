@@ -1,19 +1,11 @@
-import { useState, useEffect } from 'react';
-import { AlertTriangle, Calendar, FileText, DollarSign } from 'lucide-react';
+import { useState } from 'react';
+import { Calendar, DollarSign, Receipt, Info } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { MedioCobroSelector } from '../medios-cobro/MedioCobroSelector';
-import { ConfigurarRutasPresupuestoModalV2 } from './ConfigurarRutasPresupuestoModalV2';
 import { useMediosCobro } from '../../hooks/useMediosCobro';
 import type { PresupuestoConRelaciones } from '../../types/presupuestos';
-
-interface RutaStep {
-  etapa: string;
-  paso_id: string;
-  paso_nombre: string;
-  orden: number;
-}
 
 interface ConvertirPresupuestoModalProps {
   isOpen: boolean;
@@ -25,8 +17,7 @@ interface ConvertirPresupuestoModalProps {
     montoPago?: number;
     medioCobroId?: string;
     referenciaPago?: string;
-
-    rutasPersonalizadas?: Record<string, RutaStep[]>;
+    rutasPersonalizadas?: Record<string, any[]>;
     requiereFactura?: boolean;
   }) => Promise<void>;
 }
@@ -45,45 +36,19 @@ export function ConvertirPresupuestoModal({
   const [registrarPago, setRegistrarPago] = useState(false);
   const [montoPago, setMontoPago] = useState<string>('');
   const [medioCobroId, setMedioCobroId] = useState<string>('');
-
   const [referenciaPago, setReferenciaPago] = useState('');
   const [requiereFactura, setRequiereFactura] = useState(true);
 
-  // Cargar medios de cobro
   const { mediosCobro } = useMediosCobro();
 
-  // Estados para configurar rutas de items personalizados
-  const [showConfigurarRutas, setShowConfigurarRutas] = useState(false);
-  const [rutasPersonalizadas, setRutasPersonalizadas] = useState<Record<string, RutaStep[]>>({});
-
-  // Contar items personalizados
-  const itemsPersonalizadosArray = presupuesto.items?.filter(
-    (item) => item.tipo_item === 'item_personalizado' && !item.configuracion?.es_servicio_global
-  ) || [];
-
-  const itemsPersonalizados = itemsPersonalizadosArray.length;
-
-  const itemsSistema = presupuesto.items?.filter(
-    (item) => item.tipo_item === 'producto_sistema'
-  ).length || 0;
-
-  const itemsCopiado = presupuesto.items?.filter(
-    (item) => item.tipo_item === 'centro_copiado'
-  ).length || 0;
+  // Verificar si hay items que NO tienen rutas guardadas
+  const itemsSinRutas = (presupuesto.items || []).filter(item =>
+    (!item.rutas_generadas || item.rutas_generadas.length === 0)
+  );
 
   const handleSubmit = async () => {
-    // Validar que haya fecha antes de continuar
-    if (!fechaEntrega) {
-      return;
-    }
+    if (!fechaEntrega) return;
 
-    // Si hay items personalizados y no tienen rutas configuradas, mostrar modal
-    if (itemsPersonalizados > 0 && Object.keys(rutasPersonalizadas).length === 0) {
-      setShowConfigurarRutas(true);
-      return;
-    }
-
-    // Proceder con la conversión
     try {
       setSubmitting(true);
       await onConvertir({
@@ -92,40 +57,9 @@ export function ConvertirPresupuestoModal({
         montoPago: registrarPago && montoPago ? parseFloat(montoPago) : undefined,
         medioCobroId: registrarPago && medioCobroId ? medioCobroId : undefined,
         referenciaPago: registrarPago && referenciaPago ? referenciaPago : undefined,
-        rutasPersonalizadas: Object.keys(rutasPersonalizadas).length > 0 ? rutasPersonalizadas : undefined,
         requiereFactura,
       });
-      onClose();
-    } catch (error) {
-      console.error('Error convirtiendo:', error);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleRutasConfiguradas = async (rutas: Record<string, RutaStep[]>) => {
-    // Validar que haya fecha antes de continuar
-    if (!fechaEntrega) {
-      return;
-    }
-
-    setRutasPersonalizadas(rutas);
-    setShowConfigurarRutas(false);
-
-    // Proceder con la conversión
-    try {
-      setSubmitting(true);
-      await onConvertir({
-        fechaEntrega,
-        notasAdicionales: notasAdicionales || undefined,
-        montoPago: registrarPago && montoPago ? parseFloat(montoPago) : undefined,
-        medioCobroId: registrarPago && medioCobroId ? medioCobroId : undefined,
-        referenciaPago: registrarPago && referenciaPago ? referenciaPago : undefined,
-
-        rutasPersonalizadas: rutas,
-        requiereFactura,
-      });
-      onClose();
+      handleClose();
     } catch (error) {
       console.error('Error convirtiendo:', error);
     } finally {
@@ -140,7 +74,6 @@ export function ConvertirPresupuestoModal({
       setRegistrarPago(false);
       setMontoPago('');
       setMedioCobroId('');
-
       setReferenciaPago('');
       setRequiereFactura(true);
       onClose();
@@ -153,232 +86,141 @@ export function ConvertirPresupuestoModal({
   const formularioValido = fechaEntrega && pagoValido;
 
   return (
-    <>
-      <Modal
-        isOpen={isOpen}
-        onClose={handleClose}
-        title="Convertir a Orden de Trabajo"
-        maxWidth="max-w-2xl"
-      >
-        <div className="space-y-6">
-          {/* Información del presupuesto */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <div className="flex items-start gap-3">
-              <FileText className="w-5 h-5 text-blue-600 mt-0.5" />
-              <div>
-                <p className="font-semibold text-blue-900">
-                  {presupuesto.numero_presupuesto}
-                </p>
-                <p className="text-sm text-blue-700">
-                  {presupuesto.cliente?.razon_social || 'Cliente'}
-                </p>
-                <p className="text-sm text-blue-600 mt-1">
-                  {itemsSistema} item(s) del sistema serán copiados automáticamente
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Advertencia de items personalizados */}
-          {itemsPersonalizados > 0 && (
-            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-              <div className="flex items-start gap-3">
-                <AlertTriangle className="w-5 h-5 text-orange-600 mt-0.5" />
-                <div>
-                  <p className="font-semibold text-orange-900">Items Personalizados</p>
-                  <p className="text-sm text-orange-700 mt-1">
-                    Este presupuesto tiene {itemsPersonalizados} item(s) personalizado(s) que serán
-                    copiados a la orden. Deberás configurar las rutas de producción manualmente para
-                    estos items. El sistema te guiará a un modal de configuración antes de completar la conversión.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Fecha de entrega */}
+    <Modal
+      isOpen={isOpen}
+      onClose={handleClose}
+      title="Convertir a Orden de Trabajo"
+      size="sm"
+    >
+      <div className="space-y-6">
+        {/* Header resumen muy breve */}
+        <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg border border-gray-100">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Fecha de Entrega Estimada *
-            </label>
-            <div className="relative">
-              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <Input
-                type="date"
-                value={fechaEntrega}
-                onChange={(e) => setFechaEntrega(e.target.value)}
-                className="pl-10"
-                min={new Date().toISOString().split('T')[0]}
-                required
-              />
+            <p className="text-xs text-gray-500 uppercase font-semibold">Presupuesto</p>
+            <p className="font-bold text-gray-900">{presupuesto.numero_presupuesto}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-xs text-gray-500 uppercase font-semibold">Total</p>
+            <p className="font-bold text-blue-600">
+              ${presupuesto.total.toLocaleString('es-AR', { minimumFractionDigits: 0 })}
+            </p>
+          </div>
+        </div>
+
+        {/* Fecha de entrega - Campo principal */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-gray-400" />
+            Fecha de Entrega Estimada *
+          </label>
+          <Input
+            type="date"
+            value={fechaEntrega}
+            onChange={(e) => setFechaEntrega(e.target.value)}
+            min={new Date().toISOString().split('T')[0]}
+            required
+          />
+        </div>
+
+        {/* Requiere Factura */}
+        <div className="p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => setRequiereFactura(!requiereFactura)}>
+          <div className="flex items-center gap-3">
+            <div className={`w-10 h-6 flex items-center rounded-full p-1 transition-colors ${requiereFactura ? 'bg-blue-600' : 'bg-gray-300'}`}>
+              <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${requiereFactura ? 'translate-x-4' : ''}`} />
             </div>
-            {!fechaEntrega && (
-              <p className="text-xs text-red-600 mt-1">
-                Este campo es obligatorio
-              </p>
-            )}
+            <div className="flex items-center gap-2">
+              <Receipt className="w-4 h-4 text-gray-400" />
+              <span className="text-sm font-medium text-gray-700">Requiere Factura (+21% IVA)</span>
+            </div>
           </div>
+        </div>
 
-          {/* Notas adicionales */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Notas Adicionales (opcional)
-            </label>
-            <textarea
-              value={notasAdicionales}
-              onChange={(e) => setNotasAdicionales(e.target.value)}
-              rows={4}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Agregar notas internas para la orden..."
-            />
-          </div>
-
-          {/* Switch Requiere Factura */}
-          <div className="flex items-center gap-3 bg-gray-50 p-3 rounded-lg border border-gray-200">
+        {/* Sección de Pago Inicial */}
+        <div className={`p-4 rounded-xl border-2 transition-all ${registrarPago ? 'border-blue-100 bg-blue-50/30' : 'border-gray-100 bg-gray-50/30'}`}>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <DollarSign className="w-4 h-4 text-blue-600" />
+              <span className="text-sm font-bold text-gray-800">Seña o Pago Inicial</span>
+            </div>
             <input
               type="checkbox"
-              id="requiere-factura"
-              checked={requiereFactura}
-              onChange={(e) => setRequiereFactura(e.target.checked)}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              checked={registrarPago}
+              onChange={(e) => setRegistrarPago(e.target.checked)}
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
             />
-            <label htmlFor="requiere-factura" className="text-sm font-medium text-gray-700 cursor-pointer select-none">
-              Requiere Factura (+21% IVA)
-            </label>
           </div>
 
-          {/* Sección de Pago Inicial */}
-          <div className="border-t border-gray-200 pt-4">
-            <div className="flex items-start gap-3 mb-4">
-              <input
-                type="checkbox"
-                id="registrar-pago"
-                checked={registrarPago}
-                onChange={(e) => setRegistrarPago(e.target.checked)}
-                className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <label htmlFor="registrar-pago" className="text-sm font-medium text-gray-700 cursor-pointer">
-                Registrar seña o pago inicial
-              </label>
-            </div>
-
-            {registrarPago && (
-              <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
-                {/* Total del presupuesto */}
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Total del presupuesto:</span>
-                  <span className="font-semibold text-gray-900">
-                    ${presupuesto.total.toLocaleString('es-AR', { minimumFractionDigits: 0 })}
-                  </span>
-                </div>
-
-                {/* Monto del pago */}
+          {registrarPago && (
+            <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Monto de la Seña *
-                  </label>
-                  <div className="relative">
-                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    <Input
-                      type="number"
-                      value={montoPago}
-                      onChange={(e) => setMontoPago(e.target.value)}
-                      className="pl-10"
-                      placeholder="0.00"
-                      min="0"
-                      max={presupuesto.total}
-                      step="0.01"
-                    />
-                  </div>
-                  {montoPago && montoNumerico > presupuesto.total && (
-                    <p className="text-xs text-red-600 mt-1">
-                      El monto no puede ser mayor al total
-                    </p>
-                  )}
+                  <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Monto *</label>
+                  <Input
+                    type="number"
+                    value={montoPago}
+                    onChange={(e) => setMontoPago(e.target.value)}
+                    placeholder="0.00"
+                    max={presupuesto.total}
+                  />
                 </div>
-
-                {/* Medio de cobro */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Medio de Cobro *
-                  </label>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Medio *</label>
                   <MedioCobroSelector
                     value={medioCobroId}
                     onChange={setMedioCobroId}
                     medios={mediosCobro}
-                    required
                   />
                 </div>
-
-                {/* Referencia */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Referencia / Nº Transacción (opcional)
-                  </label>
-                  <Input
-                    type="text"
-                    value={referenciaPago}
-                    onChange={(e) => setReferenciaPago(e.target.value)}
-                    placeholder="Ej: Transferencia #12345"
-                  />
-                </div>
-
-                {/* Saldo pendiente */}
-                {montoPago && montoNumerico > 0 && montoNumerico <= presupuesto.total && (
-                  <div className="flex justify-between text-sm pt-3 border-t border-gray-200">
-                    <span className="text-gray-600">Saldo pendiente:</span>
-                    <span className="font-semibold text-orange-600">
-                      ${saldoPendiente.toLocaleString('es-AR', { minimumFractionDigits: 0 })}
-                    </span>
-                  </div>
-                )}
               </div>
-            )}
-          </div>
 
-          {/* Resumen */}
-          <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-            <p className="font-semibold text-gray-900">Se creará una orden con:</p>
-            <ul className="text-sm text-gray-600 space-y-1">
-              <li>• {itemsSistema} item(s) del sistema con rutas de producción</li>
-              <li>• {itemsCopiado} item(s) de centro de copiado</li>
-              <li>• Estado inicial: Pendiente</li>
-              <li>• Referencia al presupuesto original</li>
-            </ul>
-            {itemsPersonalizados > 0 && (
-              <p className="text-sm text-blue-600 font-medium mt-2">
-                ✓ Se configurarán rutas de producción para {itemsPersonalizados} item(s) personalizado(s)
-              </p>
-            )}
-          </div>
+              <Input
+                type="text"
+                value={referenciaPago}
+                onChange={(e) => setReferenciaPago(e.target.value)}
+                placeholder="Nº de comprobante / Referencia"
+                className="text-sm"
+              />
 
-          {/* Botones */}
-          <div className="flex gap-3">
-            <Button
-              onClick={handleSubmit}
-              disabled={submitting || !formularioValido}
-              className="flex-1"
-            >
-              {submitting ? 'Convirtiendo...' : 'Convertir a Orden'}
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={handleClose}
-              disabled={submitting}
-            >
-              Cancelar
-            </Button>
-          </div>
+              {montoNumerico > 0 && montoNumerico <= presupuesto.total && (
+                <div className="flex justify-between items-center text-xs p-2 bg-blue-100/50 rounded text-blue-800">
+                  <span>SALDO RESTANTE:</span>
+                  <span className="font-bold">${saldoPendiente.toLocaleString('es-AR')}</span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
-      </Modal>
 
-      {/* Modal para configurar rutas de items personalizados */}
-      <ConfigurarRutasPresupuestoModalV2
-        isOpen={showConfigurarRutas}
-        onClose={() => setShowConfigurarRutas(false)}
-        items={presupuesto.items || []}
-        onConfirm={handleRutasConfiguradas}
-      />
-    </>
+        {/* Aviso de rutas si algún item no las tiene */}
+        {itemsSinRutas.length > 0 && (
+          <div className="flex items-start gap-2 p-3 bg-orange-50 rounded-lg border border-orange-100 text-[11px] text-orange-700">
+            <Info className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+            <p>
+              Existen {itemsSinRutas.length} items sin ruta de producción definida.
+              El sistema generará rutas automáticas para ellos basándose en su configuración.
+            </p>
+          </div>
+        )}
+
+        {/* Botones de acción */}
+        <div className="pt-2 flex flex-col gap-2">
+          <Button
+            onClick={handleSubmit}
+            disabled={submitting || !formularioValido}
+            className="w-full h-11"
+          >
+            {submitting ? 'Abriendo Orden...' : 'Generar Orden de Trabajo'}
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={handleClose}
+            disabled={submitting}
+            className="w-full text-gray-500 hover:text-gray-700"
+          >
+            Mantener como Presupuesto
+          </Button>
+        </div>
+      </div>
+    </Modal>
   );
 }

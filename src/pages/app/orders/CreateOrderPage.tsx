@@ -1,24 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-  ArrowLeft, Save, Loader2, AlertTriangle, Link as LinkIcon,
-  Settings,
-  Share2,
-  Copy,
-  Check,
-  Download,
-  Server,
-  Plus,
-  Trash2,
-  ExternalLink,
-  Pencil,
+  ArrowLeft, Save, Loader2
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
 import { Tabs } from '../../../components/ui/Tabs';
 import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
-import { usePageHeader } from '../../../hooks/usePageHeader';
 import { useAuth } from '../../../hooks/useAuth';
 import { useOrdenTrabajo } from '../../../hooks/useOrdenTrabajo';
 import { usePrompt } from '../../../hooks/usePrompt';
@@ -33,30 +22,20 @@ import { OrdenHistorialTab } from '../../../components/orders/OrdenHistorialTab'
 import { OrdenAdjuntosTab } from '../../../components/orders/OrdenAdjuntosTab';
 import { OrdenFooterTotales } from '../../../components/orders/OrdenFooterTotales';
 import { PagoFormModal } from '../../../components/orders/PagoFormModal';
-import { useOrdenLinks } from '../../../hooks/useOrdenLinks';
-import { useCentroCopiadoOrdenes } from '../../../hooks/useCentroCopiadoOrdenes';
+
 import type { CanalVenta } from '../../../types/database';
 import { Input } from '../../../components/ui/Input';
-import { Badge } from '../../../components/ui/Badge';
 import { Modal } from '../../../components/ui/Modal';
-import { useClientes } from '../../../hooks/useClientes';
-import { useProfile } from '../../../hooks/useProfile';
 import { usePresupuestos } from '../../../hooks/usePresupuestos';
-import { OrdenProductionRouteTab } from '../../../components/orders/OrdenProductionRouteTab';
-import { ClientesSelector } from '../../../components/orders/ClientesSelector';
-import { OrdenCopiadoAsociadaCard } from '../../../components/orders/OrdenCopiadoAsociadaCard';
-import { calcularTotalesConsolidados } from '../../../utils/ordenesConsolidadas';
 import { generarDescripcionCopiado } from '../../../utils/ordenesHelpers';
+import { useLocation } from 'react-router-dom';
+import { usePageHeader } from '../../../hooks/usePageHeader';
 
 // Tipos
 import type {
-  Departamento,
-  Prioridad,
   EstadoOrdenTrabajo,
-  ItemOrdenTrabajo,
   OrdenTrabajoPago,
 } from '../../../types/database';
-import { crearOrdenCopiado } from '../../../utils/ordenesCopiado';
 
 interface PagoTemporal {
   id: string;
@@ -67,29 +46,32 @@ interface PagoTemporal {
   notas?: string;
 }
 
-interface CreateOrderPageProps {
-  initialData?: any; // Para modo edición
-}
-
 type LinkType = 'download' | 'internal';
 
 export function CreateOrderPage() {
   const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>(); // ID de orden para editar
+  const { id } = useParams<{ id: string }>();
   const isEditing = Boolean(id);
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
 
   const { profile } = useAuth();
   const { createOrdenConItems, updateOrdenCompleta, getOrdenById, error: ordenError } = useOrdenTrabajo();
-  const { showSuccess, showError } = useToast();
-  const { createOrden: createOrdenCopiado } = useCentroCopiadoOrdenes({});
-  const { getPresupuestoById } = usePresupuestos();
 
-  usePageHeader(isEditing ? 'Editar Orden de Trabajo' : 'Crear nueva orden de trabajo');
+  const isBudget = location.pathname.includes('/presupuestos/');
+  const pageTitle = isEditing
+    ? (isBudget ? 'Editar Presupuesto' : 'Editar Orden')
+    : (isBudget ? 'Nuevo Presupuesto' : 'Nueva Orden');
+
+  usePageHeader(pageTitle);
+  const { showSuccess, showError } = useToast();
+  const { createPresupuesto, updatePresupuesto, enviarPresupuesto } = usePresupuestos();
+
 
 
   const [activeTab, setActiveTab] = useState('items');
   const [isLoading, setIsLoading] = useState(false);
-
+  const [isLoadingData, setIsLoadingData] = useState(false);
 
   // Estados para Links
   const [links, setLinks] = useState<{ titulo: string; url: string; descripcion: string }[]>([]);
@@ -98,30 +80,7 @@ export function CreateOrderPage() {
   const [linkType, setLinkType] = useState<LinkType>('download');
   const [editingLinkIndex, setEditingLinkIndex] = useState<number | null>(null);
 
-  const formatUrl = (url: string, type: LinkType): string => {
-    const trimmedUrl = url.trim();
-    if (type === 'download') {
-      if (!/^https?:\/\//i.test(trimmedUrl)) {
-        return `https://${trimmedUrl}`;
-      }
-    }
-    return trimmedUrl;
-  };
-
-  const handleCopyLink = async (url: string) => {
-    try {
-      await navigator.clipboard.writeText(url);
-      showSuccess('Link copiado al portapapeles');
-    } catch (err) {
-      console.error('Error copying link:', err);
-      showError('No se pudo copiar el link');
-    }
-  };
-
-  const openLink = (url: string) => {
-    window.open(url, '_blank', 'noopener,noreferrer');
-  };
-
+  // Estados del Formulario
   const [clienteId, setClienteId] = useState('');
   const [canalVenta, setCanalVenta] = useState<CanalVenta>('Mostrador');
   const [fechaEntrega, setFechaEntrega] = useState('');
@@ -132,57 +91,150 @@ export function CreateOrderPage() {
   const [items, setItems] = useState<any[]>([]);
   const [descuentoTotal, setDescuentoTotal] = useState(0);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-  const [ordenCreada, setOrdenCreada] = useState(false);
-  const [ordenCreadaId, setOrdenCreadaId] = useState<string | null>(null); // State for ID
-  const [showPagoModal, setShowPagoModal] = useState(false); // Helper for post-creation payment
-  const [isLoadingData, setIsLoadingData] = useState(false);
 
-  // Estado para pagos
+  // Estados post-creación
+  const [ordenCreada, setOrdenCreada] = useState(false);
+  const [ordenCreadaId, setOrdenCreadaId] = useState<string | null>(null);
+  const isCreatingOrderRef = useRef(false);
+
+  // Estados Pagos
   const [pagos, setPagos] = useState<PagoTemporal[]>([]);
   const [showPagoForm, setShowPagoForm] = useState(false);
+  const [showPagoModal, setShowPagoModal] = useState(false); // Modal post-creación
   const [editingPago, setEditingPago] = useState<PagoTemporal | undefined>();
 
-  // Estado para órdenes de copiado asociadas
+  // Estados OCs asociadas
   const [ordenesCopiadoAsociadas, setOrdenesCopiadoAsociadas] = useState<any[]>([]);
+
+  // Estados Presupuesto
+  const [mode, setMode] = useState<'orden' | 'presupuesto'>('orden');
+  const [presupuestoValidez, setPresupuestoValidez] = useState('');
+  const [presupuestoCondiciones, setPresupuestoCondiciones] = useState('');
+
+  // Inicialización de modo presupuesto si viene por URL
+  useEffect(() => {
+    if (searchParams.get('mode') === 'presupuesto' || location.pathname.includes('/presupuestos/')) {
+      setMode('presupuesto');
+      // Set default validez (7 días)
+      const fecha = new Date();
+      fecha.setDate(fecha.getDate() + 7);
+      if (!isEditing) { // Only set default if creating
+        setPresupuestoValidez(fecha.toISOString().split('T')[0]);
+      }
+      setRequiereFactura(false); // Forzar false en presupuesto
+    }
+  }, [location.pathname]);
+
+  // Efecto para manejar cambios de modo
+  const handleModeChange = (newMode: 'orden' | 'presupuesto') => {
+    setMode(newMode);
+    if (newMode === 'presupuesto') {
+      setRequiereFactura(false);
+      if (activeTab === 'pagos') {
+        setActiveTab('items');
+      }
+      // Init dates if empty
+      if (!presupuestoValidez) {
+        const fecha = new Date();
+        fecha.setDate(fecha.getDate() + 7);
+        setPresupuestoValidez(fecha.toISOString().split('T')[0]);
+      }
+    } else {
+      // Restore default behavior for Order if needed, or leave as is
+      setRequiereFactura(true);
+    }
+  };
 
   const { updateStepComment, countAllComments } = useItemRoutesComments({
     items,
     setItems,
   });
 
-
-  // Hook para obtener clientes
   const { clients } = useClients({ page: 1, itemsPerPage: 1000 });
-  // En modo edición, si el cliente no está en la lista inicial, deberíamos asegurarnos de cargarlo
-  // o confiar en que la lista es suficiente. Por simplicidad asumimos que está en los top 1000.
   const clienteSeleccionado = clients.find((c) => c.id === clienteId);
 
-  const resetFormulario = () => {
-    setActiveTab('items');
-    setClienteId('');
-    setCanalVenta('Mostrador');
-    setFechaEntrega('');
-    setNotasInternas('');
-    setRequiereFactura(true);
-    setRequiereDespacho(false);
-    setItems([]);
-    setDescuentoTotal(0);
-    setFormErrors({});
-    setOrdenCreada(false);
-    setPagos([]);
-    setShowPagoForm(false);
-    setEditingPago(undefined);
-    setOrdenesCopiadoAsociadas([]);
+  // --- Helpers Links ---
+  const formatUrl = (url: string, type: LinkType): string => {
+    const trimmedUrl = url.trim();
+    if (type === 'download') {
+      if (!/^https?:\/\//i.test(trimmedUrl)) {
+        return `https://${trimmedUrl}`;
+      }
+    }
+    return trimmedUrl;
   };
 
-  // Carga inicial (Nuevo o Edición)
+  // --- Reset & Load ---
+
+
   useEffect(() => {
     if (isEditing && id) {
-      loadOrderData(id);
+      if (location.pathname.includes('/presupuestos/')) {
+        loadPresupuestoData(id);
+      } else {
+        loadOrderData(id);
+      }
     } else {
-      resetFormulario();
+      // Initial reset if create mode
+      // resetFormulario(); // Comentado para no pisar el effect de inicializacion de modo
     }
   }, [id, isEditing]);
+
+  const loadPresupuestoData = async (presupuestoId: string) => {
+    setIsLoadingData(true);
+    try {
+      const { data: presupuesto, error } = await (supabase as any)
+        .from('presupuestos')
+        .select(`
+          *,
+          items:presupuestos_items(*)
+        `)
+        .eq('id', presupuestoId)
+        .single();
+
+      if (error || !presupuesto) {
+        showError('No se encontró el presupuesto');
+        navigate('/app/presupuestos/lista');
+        return;
+      }
+
+      setMode('presupuesto');
+      setClienteId(presupuesto.cliente_id);
+      setCanalVenta(presupuesto.canal_venta || 'Mostrador');
+      setPresupuestoValidez(presupuesto.fecha_validez ? presupuesto.fecha_validez.split('T')[0] : '');
+      setPresupuestoCondiciones(presupuesto.condiciones_comerciales || '');
+      setNotasInternas(presupuesto.notas_internas || '');
+      setRequiereFactura(false);
+
+      const mappedItems = (presupuesto.items || []).map((item: any) => ({
+        id: item.id,
+        tipo_item: (item.configuracion?.cantidad_copias && item.configuracion?.cantidad_hojas) ? 'centro_copiado' :
+          (item.tipo_item === 'item_personalizado' ? 'personalizado' :
+            (item.tipo_item === 'producto_sistema' && !item.producto_id ? 'personalizado' : (item.tipo_item === 'producto_sistema' ? 'catalogo' : item.tipo_item))),
+        producto_id: item.producto_id,
+        producto_nombre: item.producto_nombre,
+        producto_categoria: item.producto_categoria,
+        cantidad: Number(item.cantidad),
+        configuracion: item.configuracion || {},
+        precio_base: Number(item.precio_base || 0),
+        precio_servicios: Number(item.precio_servicios || 0),
+        precio_acabados: Number(item.precio_acabados || 0),
+        precio_unitario_final: item.precio_unitario_final !== null ? Number(item.precio_unitario_final) : null,
+        precio_total: item.precio_total !== null ? Number(item.precio_total) : null,
+        descripcion: item.descripcion,
+        tiempo_produccion_dias: item.tiempo_produccion_dias,
+        rutas_generadas: item.configuracion?._rutas_snapshot || []
+      }));
+
+      setItems(mappedItems);
+
+    } catch (err) {
+      console.error('Error loading presupuesto:', err);
+      showError('Error al cargar presupuesto');
+    } finally {
+      setIsLoadingData(false);
+    }
+  };
 
   const loadOrderData = async (orderId: string) => {
     setIsLoadingData(true);
@@ -201,38 +253,35 @@ export function CreateOrderPage() {
       setRequiereFactura(orden.requiere_factura || false);
       setRequiereDespacho(orden.requiere_despacho || false);
 
-      // Calcular descuento % basado en total y descuentos $
-      const totalSinDescuento = (orden.subtotal || 0); // Aproximación básica
+      // If editing an order, force mode to order
+      setMode('orden');
+
+      const totalSinDescuento = (orden.subtotal || 0);
       const descuentoPorcentaje = totalSinDescuento > 0 ? ((orden.total_descuentos || 0) / totalSinDescuento) * 100 : 0;
       setDescuentoTotal(Math.round(descuentoPorcentaje * 100) / 100);
 
-      // Mapear Items
       const mappedItems = (orden.items || []).map(item => ({
         ...item,
-        id: item.id, // Importante para updates
-        // Aseguramos que la config esté presente
         configuracion: item.configuracion || {},
-        rutas_generadas: (item as any).rutas || [] // Cargar rutas para visualizar en edición
+        rutas_generadas: (item as any).rutas || []
       }));
 
-      // Mapear Servicios Adicionales como Items de Cobro
       const mappedServices = (orden.servicios || []).map(servicio => ({
-        id: servicio.id, // Importante
+        id: servicio.id,
         es_servicio_cobro: true,
         tipo_item: 'personalizado',
         producto_nombre: servicio.descripcion,
         cantidad: servicio.cantidad,
         precio_unitario_final: servicio.precio_unitario,
         precio_total: servicio.subtotal,
-        precio_base: servicio.precio_unitario, // Asumido
+        precio_base: servicio.precio_unitario,
         precio_servicios: 0,
         precio_acabados: 0,
-        servicio_id: servicio.servicio_id // Para mantener referencia original
+        servicio_id: servicio.servicio_id
       }));
 
       setItems([...mappedItems, ...mappedServices]);
 
-      // Mapear Pagos
       if (orden.pagos) {
         setPagos(orden.pagos.map(p => ({
           id: p.id,
@@ -244,7 +293,6 @@ export function CreateOrderPage() {
         })));
       }
 
-      // Cargar órdenes de copiado asociadas si aplica
       if (orden.ordenCopiado) {
         setOrdenesCopiadoAsociadas([orden.ordenCopiado]);
       }
@@ -257,26 +305,7 @@ export function CreateOrderPage() {
     }
   };
 
-  // Cleanup al cerrar pestaña o refrescar página
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      // Si hay cambios sin guardar y orden no creada
-      if (!ordenCreada && formularioTieneDatos()) {
-        // Mostrar prompt nativo del navegador
-        e.preventDefault();
-        e.returnValue = '';
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
-  }, [ordenCreada]);
-
-  const isCreatingOrderRef = useRef(false);
-
+  // --- Prompt Changes ---
   const formularioTieneDatos = () => {
     return clienteId !== '' || items.length > 0 || notasInternas !== '' || fechaEntrega !== '' || ordenesCopiadoAsociadas.length > 0;
   };
@@ -287,22 +316,26 @@ export function CreateOrderPage() {
   );
 
   const handleVolver = async () => {
+    const target = mode === 'presupuesto' ? '/app/presupuestos/lista' : '/app/orders/ordenes';
     if (formularioTieneDatos() && !ordenCreada) {
       showPrompt(async () => {
-        navigate('/app/orders/ordenes');
+        navigate(target);
       });
       return;
     }
-    navigate('/app/orders/ordenes');
+    navigate(target);
   };
 
+  // --- Cálculos ---
   const calcularTotales = () => {
     const subtotalItems = items.reduce((sum, item) => sum + item.precio_total, 0);
     const subtotalOrdenesCopiad = ordenesCopiadoAsociadas.reduce((sum, oc) => sum + oc.total, 0);
     const subtotal = subtotalItems + subtotalOrdenesCopiad;
     const descuentoAplicado = subtotal * (descuentoTotal / 100);
     const subtotalConDescuento = subtotal - descuentoAplicado;
-    const iva = requiereFactura ? subtotalConDescuento * 0.21 : 0;
+    // Si es presupuesto, forzamos requiereFactura false para visualización interna,
+    // pero el total NO lleva IVA agregado extra.
+    const iva = (requiereFactura && mode === 'orden') ? subtotalConDescuento * 0.21 : 0;
     const total = subtotalConDescuento + iva;
 
     return {
@@ -320,7 +353,7 @@ export function CreateOrderPage() {
     return totales.total - totalPagado;
   };
 
-  // Funciones para gestión de pagos
+  // --- Pagos ---
   const handleAgregarPago = () => {
     setEditingPago(undefined);
     setShowPagoForm(true);
@@ -328,19 +361,10 @@ export function CreateOrderPage() {
 
   const handleGuardarPago = (data: Omit<PagoTemporal, 'id'>) => {
     if (editingPago) {
-      // Editar pago existente
-      setPagos(prev => prev.map(p =>
-        p.id === editingPago.id
-          ? { ...data, id: editingPago.id }
-          : p
-      ));
+      setPagos(prev => prev.map(p => p.id === editingPago.id ? { ...data, id: editingPago.id } : p));
       showSuccess('Pago actualizado correctamente');
     } else {
-      // Agregar nuevo pago
-      const nuevoPago: PagoTemporal = {
-        ...data,
-        id: crypto.randomUUID(),
-      };
+      const nuevoPago: PagoTemporal = { ...data, id: crypto.randomUUID() };
       setPagos(prev => [...prev, nuevoPago]);
       showSuccess('Pago registrado correctamente');
     }
@@ -358,28 +382,47 @@ export function CreateOrderPage() {
     showSuccess('Pago eliminado correctamente');
   };
 
+  // --- Gestión Principal (Crear Orden) ---
+  const addPago = async (ordenId: string, pagoData: any) => {
+    try {
+      const { error } = await supabase.from('ordenes_trabajo_pagos').insert({
+        orden_id: ordenId,
+        fecha_pago: pagoData.fecha_pago,
+        monto: pagoData.monto,
+        medio_cobro_id: pagoData.medio_cobro_id,
+        referencia_pago: pagoData.referencia_pago,
+        notas: pagoData.notas,
+        created_by: profile?.id
+      });
+      if (error) throw error;
+      return true;
+    } catch (err: any) {
+      console.error("Error adding payment:", err);
+      // Fallback para errores comunes, si es necesario
+      return false;
+    }
+  };
+
   const validarFormulario = (): boolean => {
     const errores: Record<string, string> = {};
-
-    if (!clienteId) {
-      errores.cliente = 'Debe seleccionar un cliente';
-    }
-
+    if (!clienteId) errores.cliente = 'Debe seleccionar un cliente';
     if (items.length === 0 && ordenesCopiadoAsociadas.length === 0) {
-      errores.items = 'Debe agregar al menos un item o una orden de copiado a la orden';
+      errores.items = 'Debe agregar al menos un item o una orden de copiado';
     }
 
-    if (!fechaEntrega) {
-      errores.fechaEntrega = 'La fecha de entrega es obligatoria';
+    if (mode === 'orden') {
+      if (!fechaEntrega) {
+        errores.fechaEntrega = 'La fecha de entrega es obligatoria';
+      } else {
+        const hoy = new Date().toISOString().split('T')[0];
+        if (!isEditing && fechaEntrega < hoy) {
+          errores.fechaEntrega = 'La fecha de entrega no puede ser anterior a hoy';
+        }
+      }
     } else {
-      // Comparar fechas como strings en formato YYYY-MM-DD
-      // Esto evita problemas de zona horaria y es lexicográficamente correcto
-      const hoy = new Date();
-      const hoyStr = hoy.toISOString().split('T')[0];
-
-      // En edición permitimos fechas anteriores si la orden ya existe
-      if (!isEditing && fechaEntrega < hoyStr) {
-        errores.fechaEntrega = 'La fecha de entrega no puede ser anterior a hoy';
+      // Validaciones Presupuesto
+      if (!presupuestoValidez) {
+        errores.fechaEntrega = 'Indique la validez del presupuesto'; // Reusamos el key para mostrar error visual si es necesario
       }
     }
 
@@ -387,61 +430,190 @@ export function CreateOrderPage() {
     return Object.keys(errores).length === 0;
   };
 
-  const handlePagoSubmit = async (data: any) => {
-    if (!ordenCreadaId) return;
 
-    const success = await addPago(ordenCreadaId, data);
-    if (success) {
-      showSuccess('Pago registrado correctamente');
-      navigate('/app/orders/ordenes');
-    } else {
-      showError('Error al registrar el pago');
+
+  const handleGuardarPresupuestoInterno = async () => {
+    setIsLoading(true);
+    try {
+      let presupuestoId = ordenCreadaId;
+
+      // Determinar si todos los items tienen precio para marcar como enviado
+      const todosConPrecio = items.every(item => item.precio_unitario_final !== null && item.precio_unitario_final !== undefined);
+      const estadoFinal = todosConPrecio ? 'enviado' : 'borrador';
+
+      if (isEditing && id) {
+        presupuestoId = id;
+        // UPDATE MODE
+        const updated = await updatePresupuesto(presupuestoId, {
+          cliente_id: clienteId,
+          vendedor_id: profile?.id || '',
+          canal_venta: canalVenta,
+          fecha_validez: presupuestoValidez,
+          condiciones_comerciales: presupuestoCondiciones,
+          notas_internas: notasInternas,
+          // No cambiamos el estado aquí para evitar que el trigger salte antes de actualizar los items
+        });
+        if (!updated) throw new Error('Error actualizando presupuesto');
+
+        // Limpiar items anteriores para re-insertar (Estrategia Full Replace)
+        await (supabase as any).from('presupuestos_items').delete().eq('presupuesto_id', presupuestoId);
+
+      } else {
+        // CREATE MODE
+        const nuevo = await createPresupuesto({
+          cliente_id: clienteId,
+          vendedor_id: profile?.id || '',
+          canal_venta: canalVenta,
+          fecha_validez: presupuestoValidez,
+          condiciones_comerciales: presupuestoCondiciones,
+          notas_internas: notasInternas,
+          estado: 'borrador' // Siempre empezamos en borrador para insertar items tranquilo
+        });
+        if (!nuevo) throw new Error('Error creando header de presupuesto');
+        presupuestoId = nuevo.id;
+      }
+
+      if (!presupuestoId) throw new Error('No se pudo determinar ID del presupuesto');
+
+      // Items
+      const itemsFisicos = items.filter(i => !i.es_servicio_cobro);
+
+      for (const item of itemsFisicos) {
+        // Guardamos rutas snapshot en config por compatibilidad, pero agregamos tabla relacional
+        const configRutas = { ...item.configuracion, _rutas_snapshot: (item as any).rutas_generadas || [] };
+
+        let tipoItemDb = 'producto_sistema';
+        let productoIdDb = item.producto_id;
+
+        if (item.tipo_item === 'centro_copiado') {
+          tipoItemDb = 'centro_copiado';
+          productoIdDb = item.producto_id;
+        } else if (item.tipo_item === 'personalizado' || item.tipo_item === 'item_personalizado' || !item.producto_id) {
+          tipoItemDb = 'item_personalizado';
+          productoIdDb = null;
+        }
+        // Si tiene ID y no cayó en el if anterior, se mantiene como producto_sistema (incluye catalogo y centro_copiado)
+
+        const { data: itemInserted, error: itemError } = await (supabase as any).from('presupuestos_items').insert({
+          presupuesto_id: presupuestoId,
+          tipo_item: tipoItemDb,
+          producto_id: productoIdDb,
+          producto_nombre: item.producto_nombre,
+          producto_categoria: item.producto_categoria,
+          configuracion: configRutas,
+          cantidad: item.cantidad,
+          precio_base: item.precio_base || 0,
+          precio_servicios: item.precio_servicios || 0,
+          precio_acabados: item.precio_acabados || 0,
+          precio_unitario_final: item.precio_unitario_final,
+          precio_total: item.precio_total,
+          descripcion: item.descripcion || ((item.tipo_item === 'centro_copiado' || item.categoria_id === 'centro_copiado' || item.tipo_item === 'producto_sistema') ? generarDescripcionCopiado(item.configuracion) : null),
+          tiempo_produccion_dias: item.tiempo_produccion_dias
+        }).select().single();
+
+        if (itemError) throw itemError;
+
+        // Insertar Rutas Relacionales
+        const rutas = (item as any).rutas_generadas || [];
+        if (rutas.length > 0 && itemInserted) {
+          const rutasToInsert = rutas.map((r: any, idx: number) => ({
+            company_id: profile?.company_id,
+            presupuesto_item_id: itemInserted.id,
+            tipo_etapa: r.etapa || r.tipo_etapa || 'principal',
+            paso_id: r.paso_id,
+            paso_nombre: r.paso_nombre,
+            orden: idx,
+            es_modificado: r.es_modificado || false,
+            origen_plantilla_id: r.origen_plantilla_id,
+            comentario_vendedor: r.comentario_vendedor,
+            source_service_id: r.source_service_id,
+            global_task_id: r.global_task_id
+          }));
+
+          const { error: rutasError } = await (supabase as any).from('presupuestos_items_rutas').insert(rutasToInsert);
+          if (rutasError) console.error('Error insertando rutas de presupuesto:', rutasError);
+        }
+      }
+      // Servicios extra
+      const servicios = items.filter(i => i.es_servicio_cobro);
+      for (const s of servicios) {
+        await (supabase as any).from('presupuestos_items').insert({
+          presupuesto_id: presupuestoId,
+          tipo_item: 'item_personalizado',
+          producto_nombre: s.producto_nombre,
+          producto_categoria: 'Servicio Adicional',
+          configuracion: {},
+          cantidad: s.cantidad,
+          precio_unitario_final: s.precio_unitario_final,
+          precio_total: s.precio_total,
+          descripcion: s.descripcion || 'Servicio'
+        });
+      }
+
+      // Update totales
+      const totales = calcularTotales();
+      await (supabase as any).from('presupuestos').update({
+        subtotal: totales.subtotal,
+        total: totales.total,
+        // Si ya estan todos con precio, ahorasí actualizamos el estado
+        estado: estadoFinal,
+        fecha_enviado: estadoFinal === 'enviado' ? new Date().toISOString() : undefined
+      }).eq('id', presupuestoId);
+
+      // Si el estado es enviado, disparar el proceso de envío (notificaciones, etc)
+      if (estadoFinal === 'enviado') {
+        console.log('[CreateOrderPage] Automatizando envío de presupuesto:', presupuestoId);
+        await enviarPresupuesto(presupuestoId);
+      }
+
+      showSuccess(isEditing ? 'Presupuesto actualizado OK' : 'Presupuesto creado OK');
+      setOrdenCreada(true);
+      setTimeout(() => navigate(`/app/presupuestos/${presupuestoId}`), 500);
+
+    } catch (err: any) {
+      showError(err.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleCrearOrden = async () => {
-    if (!validarFormulario()) {
-      alert('Por favor, complete todos los campos requeridos');
-      return;
-    }
-
+    if (!validarFormulario()) return;
     if (!profile?.company_id) {
-      showError('Error: No se pudo obtener la información del usuario. Por favor, recarga la página.');
-      console.error('[CreateOrderPage] profile no disponible:', { profile });
+      showError('Error de perfil. Recarga la página.');
       return;
     }
 
-    // Marcar que estamos creando orden para prevenir cleanup
+    // DESVIAR LOGICA A PRESUPUESTO SI EL MODO ES PRESUPUESTO
+    if (mode === 'presupuesto') {
+      await handleGuardarPresupuestoInterno();
+      return;
+    }
+
     isCreatingOrderRef.current = true;
     setIsLoading(true);
-    console.log('[CreateOrderPage] Iniciando proceso (cleanup deshabilitado)');
 
     const totales = calcularTotales();
-
     const ordenData = {
       cliente_id: clienteId,
       canal_venta: canalVenta,
       fecha_estimada_entrega: fechaEntrega ? `${fechaEntrega}T12:00:00` : null,
       notas_internas: notasInternas || undefined,
-      // Totales calculados
       subtotal: totales.subtotal,
       total_descuentos: totales.descuentoAplicado,
       total: totales.total,
-      // Facturación
       requiere_factura: requiereFactura,
       subtotal_iva: totales.iva,
       requiere_despacho: requiereDespacho,
     };
 
-    // Separar items físicos de servicios adicionales
     const itemsFisicos = items.filter(i => !i.es_servicio_cobro);
     const serviciosAdicionales = items.filter(i => i.es_servicio_cobro);
 
-    // Preparar el payload unificado
     const payload = {
       ordenData,
       items: itemsFisicos.map(item => ({
-        id: item.id, // Importante para updates
+        id: item.id,
         tipo_item: item.tipo_item || 'catalogo',
         producto_id: item.producto_id,
         producto_nombre: item.producto_nombre,
@@ -455,270 +627,142 @@ export function CreateOrderPage() {
         precio_acabados: item.precio_acabados,
         precio_unitario_final: item.precio_unitario_final,
         precio_total: item.precio_total,
-        rutas_generadas: (item as any).rutas_generadas || [], // Incluir rutas pregeneradas
+        rutas_generadas: (item as any).rutas_generadas || [],
       })),
       servicios: serviciosAdicionales.map(s => ({
         descripcion: s.producto_nombre,
         cantidad: s.cantidad,
         precio_unitario: s.precio_unitario_final,
         subtotal: s.precio_total,
-        servicio_id: null // No tenemos el ID del servicio original mapeado en este nivel por ahora
+        servicio_id: null
       })),
-      estadoInicial: 'pendiente' as any,
+      estadoInicial: 'pendiente' as const,
     };
 
-    let result;
-
-    if (isEditing && id) {
-      // MODO EDICIÓN
-      result = await updateOrdenCompleta(id, payload);
-
-      if (result) {
-        showSuccess('Orden actualizada exitosamente');
-        setOrdenCreada(true); // Evitar prompt de cambios sin guardar
-        // Navegar
-        setTimeout(() => {
-          navigate('/app/orders/ordenes');
-        }, 500);
-      } else {
-        showError(`Error al actualizar la orden: ${error}`);
-        isCreatingOrderRef.current = false;
-        setIsLoading(false);
-      }
-    } else {
-      // MODO CREACIÓN
-      result = await createOrdenConItems(payload);
-
-      if (result) {
-        console.log('[CreateOrderPage] Orden creada exitosamente:', result.id);
-
-        try {
-          console.log('[CreateOrderPage] Orden creada, ahora se pueden agregar links desde el detalle de la orden');
-
-          // Insertar pagos si existen
-          if (pagos.length > 0) {
-            console.log('[CreateOrderPage] Insertando pagos:', pagos.length);
-            const pagosInserts = pagos.map(pago => ({
-              orden_id: result.id,
-              fecha_pago: pago.fecha_pago,
-              monto: pago.monto,
-              medio_cobro_id: pago.medio_cobro_id,
-              referencia_pago: pago.referencia_pago || null,
-              notas: pago.notas || null,
-              created_by: profile.id,
-            }));
-
-            const { error: pagosError } = await supabase
-              .from('ordenes_trabajo_pagos')
-              .insert(pagosInserts);
-
-            if (pagosError) {
-              console.error('[CreateOrderPage] Error insertando pagos:', pagosError);
-            }
-          }
-
-          // Insertar links si existen
-          if (links.length > 0) {
-            console.log('[CreateOrderPage] Insertando links:', links.length);
-            const linksInserts = links.map(link => ({
-              orden_id: result.id,
-              company_id: profile.company_id,
-              titulo: link.titulo,
-              url: link.url,
-              descripcion: link.descripcion || null,
-              created_by: profile.id
-            }));
-
-            const { error: linksError } = await supabase
-              .from('ordenes_trabajo_links')
-              .insert(linksInserts);
-
-            if (linksError) {
-              console.error('[CreateOrderPage] Error insertando links:', linksError);
-              showError('Error al guardar algunos links');
-            }
-          }
-
-          // Crear órdenes de copiado asociadas logic... (Mismo código anterior)
-          if (ordenesCopiadoAsociadas.length > 0) {
-            // ... (Lógica de OCs existente)
-            // Por brevedad mantengo la lógica pero simplificada en este bloque
-            // En un refactor real debería extraerse a una función separada
-            for (const oc of ordenesCopiadoAsociadas) {
-              try {
-                const nuevaOrdenCopiado = await createOrdenCopiado({
-                  cliente_id: clienteId,
-                  origen: canalVenta, // Heredar canal de venta de la OT
-                  orden_trabajo_id: result.id,
-                  fecha_entrega_estimada: oc.fecha_entrega_estimada ? `${oc.fecha_entrega_estimada}T12:00:00` : undefined,
-                  observaciones: oc.observaciones || undefined,
-                  requiere_factura: requiereFactura, // Propagar estado de facturación de la OT
-                });
-
-                if (nuevaOrdenCopiado) {
-                  // Calcular total con IVA si aplica
-                  const totalItems = oc.total || 0; // Este es el neto sumado de items
-                  const totalConIva = requiereFactura ? totalItems * 1.21 : totalItems;
-
-                  await supabase.from('centro_copiado_ordenes').update({ total: totalConIva }).eq('id', nuevaOrdenCopiado.id);
-
-                  for (const item of oc.items) {
-                    await supabase.from('centro_copiado_ordenes_items').insert({
-                      orden_copiado_id: nuevaOrdenCopiado.id,
-                      // ... mapeo de campos ...
-                      tipo_item: 'impresion',
-                      tamanio_papel_id: item.config.tamanio_papel_id,
-                      papel_id: item.config.papel_id,
-                      tipo_tinta: item.config.tipo_tinta,
-                      cara_impresa: item.config.cara_impresa,
-                      cantidad_hojas: item.config.cantidad_hojas,
-                      cantidad_unidades: item.config.cantidad_copias,
-                      precio_unitario: item.precio || 0,
-                      subtotal: item.precio || 0,
-                      descripcion: item.descripcion || null
-                    });
-                  }
-                }
-              } catch (err) { console.error(err); }
-            }
-            // Recalculo final
-            await supabase.rpc('fn_recalcular_total_orden_trabajo', { p_orden_trabajo_id: result.id });
-          }
-
-          // Limpiar sessionStorage
-          sessionStorage.removeItem('ordenTemporalCreacion');
-
-          // Marcar orden como creada ANTES de navegar
-          if (result) {
-            setOrdenCreada(true);
-            setOrdenCreadaId(result.id); // Save ID
-            // setShowPagoModal(true); // Removed to prevent flash before redirect
-          }
-          isCreatingOrderRef.current = false;
-          console.log('[CreateOrderPage] Orden creada exitosamente, cleanup permanentemente deshabilitado');
-
-          // Mostrar mensaje de éxito
-          const saldoPendiente = calcularSaldoPendiente();
-          let mensajeExito = 'Orden creada exitosamente';
-
-          if (pagos.length > 0) {
-            mensajeExito += ` con ${pagos.length} pago(s) registrado(s)`;
-            if (saldoPendiente > 0) {
-              mensajeExito += ` (Saldo pendiente: $${saldoPendiente.toFixed(2)})`;
-            }
-          }
-
-          showSuccess(mensajeExito);
-
-          // Enviar notificación de WhatsApp vía Edge Function (no bloqueante)
-          if (profile?.company_id && result.id) {
-            supabase.functions.invoke('enviar-notificacion-orden', {
-              body: {
-                orden_id: result.id,
-                company_id: profile.company_id,
-                tipo: 'nueva_orden_trabajo',
-                orden_tipo: 'trabajo',
-                frontend_origin: window.location.origin
-              }
-            }).catch((err) => {
-              console.error('[CreateOrderPage] Error al invocar Edge Function:', err);
-            });
-          }
-
-          // Navegar
-          setTimeout(() => {
-            navigate('/app/orders/ordenes');
-          }, 500);
-        } catch (err: any) {
-          console.error('[CreateOrderPage] Error post-creación:', err);
-          showError(`Orden creada pero con advertencias: ${err.message}`);
-          isCreatingOrderRef.current = false;
-          setIsLoading(false);
+    try {
+      let result;
+      if (isEditing && id) {
+        result = await updateOrdenCompleta(id, payload);
+        if (result) {
+          showSuccess('Orden actualizada exitosamente');
+          setOrdenCreada(true);
+          setTimeout(() => navigate('/app/orders/ordenes'), 500);
+        } else {
+          throw new Error(ordenError || 'Error actualizando');
         }
       } else {
-        showError(`Error al crear la orden: ${ordenError || 'Error desconocido'}`);
-        isCreatingOrderRef.current = false;
-        setIsLoading(false);
+        // CREACION
+        result = await createOrdenConItems(payload);
+        if (result && result.id) {
+          // Insertar pagos
+          if (pagos.length > 0) {
+            await Promise.all(pagos.map(p => addPago(result.id, {
+              fecha_pago: p.fecha_pago,
+              monto: p.monto,
+              medio_cobro_id: p.medio_cobro_id,
+              referencia_pago: p.referencia_pago,
+              notas: p.notas
+            })));
+          }
+          // Insertar links
+          if (links.length > 0) {
+            await supabase.from('ordenes_trabajo_links').insert(links.map(l => ({
+              orden_id: result.id,
+              company_id: profile.company_id,
+              titulo: l.titulo,
+              url: l.url,
+              descripcion: l.descripcion,
+              created_by: profile.id
+            })));
+          }
+
+          setOrdenCreada(true);
+          setOrdenCreadaId(result.id);
+          showSuccess('Orden creada exitosamente');
+
+          // Notificacion WhatsApp
+          supabase.functions.invoke('enviar-notificacion-orden', {
+            body: { orden_id: result.id, company_id: profile.company_id, tipo: 'nueva_orden_trabajo', orden_tipo: 'trabajo' }
+          }).catch(console.error);
+
+          setTimeout(() => navigate('/app/orders/ordenes'), 500);
+        } else {
+          throw new Error(ordenError || 'Error creando orden');
+        }
       }
+    } catch (err: any) {
+      console.error(err);
+      showError(err.message);
+    } finally {
+      setIsLoading(false);
+      isCreatingOrderRef.current = false;
     }
   };
 
+  const handlePagoSubmit = async (data: any) => {
+    if (!ordenCreadaId) return;
+    setIsLoading(true);
+    const success = await addPago(ordenCreadaId, data);
+    if (success) {
+      showSuccess('Pago registrado');
+      setShowPagoModal(false);
+      setTimeout(() => navigate('/app/orders/ordenes'), 500);
+    } else {
+      showError('Error al registrar pago');
+    }
+    setIsLoading(false);
+  };
+
+  // --- Render ---
+  const totales = calcularTotales();
+  const totalRutas = items.filter(item => Array.isArray((item as any).rutas_generadas) && (item as any).rutas_generadas.length > 0).length;
   const totalComentarios = countAllComments();
 
-  // Calcular total de rutas de producción
-  // Una ruta = un item (cada item tiene una ruta que incluye múltiples etapas/pasos)
-  const totalRutas = items.filter(item =>
-    Array.isArray(item.rutas_generadas) && item.rutas_generadas.length > 0
-  ).length;
-
-  const tabs = [
-    {
-      id: 'items',
-      label: 'Items',
-      count: items.length,
-    },
-    {
-      id: 'rutas',
-      label: 'Rutas de Producción',
-      count: totalRutas,
-      disabled: items.length === 0,
-      badge: totalComentarios > 0 ? totalComentarios : undefined,
-    },
-    {
-      id: 'adjuntos',
-      label: 'Links',
-      disabled: false,
-    },
-    {
-      id: 'pagos',
-      label: 'Pagos',
-      count: pagos.length,
-      disabled: false,
-    },
-    {
-      id: 'historial',
-      label: 'Historial',
-      disabled: true,
-    },
+  const tabsDefinition = [
+    { id: 'items', label: 'Items', count: items.length },
+    { id: 'rutas', label: 'Rutas de Producción', count: totalRutas, disabled: items.length === 0, badge: totalComentarios > 0 ? totalComentarios : undefined },
+    { id: 'adjuntos', label: 'Links', disabled: false },
+    ...(mode !== 'presupuesto' ? [{ id: 'pagos', label: 'Pagos', count: pagos.length, disabled: false }] : []),
+    { id: 'historial', label: 'Historial', disabled: true },
   ];
-
-  const totales = calcularTotales();
 
   if (isLoadingData) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-        <span className="ml-2 text-gray-600">Cargando datos de la orden...</span>
+      <div className="flex h-screen w-full items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+        <span className="ml-2">Cargando...</span>
       </div>
     );
   }
 
   return (
     <>
-      <div className="space-y-6 pb-32">
+      <div className="space-y-6 pb-32 container mx-auto px-4 py-8">
         <div className="flex items-center justify-between">
           <Button variant="secondary" onClick={handleVolver}>
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="w-4 h-4 mr-2" />
             Volver a órdenes
           </Button>
 
-          <Button
-            onClick={handleCrearOrden}
-            disabled={isLoading || items.length === 0 || !clienteId}
-            className="bg-blue-600 hover:bg-blue-700"
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                {isEditing ? 'Guardando...' : 'Creando...'}
-              </>
-            ) : (
-              <>
-                <Save className="w-4 h-4" />
-                {isEditing ? 'Guardar Cambios' : 'Crear Orden'}
-              </>
-            )}
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={handleCrearOrden}
+              disabled={isLoading || items.length === 0 || !clienteId}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  {isEditing ? 'Guardando...' : 'Procesando...'}
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 mr-2" />
+                  {isEditing ? 'Guardar Cambios' : (mode === 'presupuesto' ? 'Crear Presupuesto' : 'Crear Orden')}
+                </>
+              )}
+            </Button>
+          </div>
         </div>
 
         <Card>
@@ -738,11 +782,19 @@ export function CreateOrderPage() {
             setRequiereFactura={setRequiereFactura}
             usuarioLogueado={profile?.full_name || 'Usuario'}
             errors={formErrors}
+            // New props
+            mode={mode}
+            onModeChange={handleModeChange}
+            presupuestoValidez={presupuestoValidez}
+            setPresupuestoValidez={setPresupuestoValidez}
+            presupuestoCondiciones={presupuestoCondiciones}
+            setPresupuestoCondiciones={setPresupuestoCondiciones}
+            isEditing={isEditing}
           />
         </Card>
 
         <Card>
-          <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
+          <Tabs tabs={tabsDefinition} activeTab={activeTab} onChange={setActiveTab} />
 
           <div className="p-6">
             <div className={activeTab === 'items' ? 'block' : 'hidden'}>
@@ -752,10 +804,11 @@ export function CreateOrderPage() {
                 descuentoTotal={descuentoTotal}
                 setDescuentoTotal={setDescuentoTotal}
                 requiereFactura={requiereFactura}
-                setRequiereFactura={setRequiereFactura}
+                setRequiereFactura={mode === 'presupuesto' ? undefined : setRequiereFactura}
                 clienteNombre={clienteSeleccionado?.nombre_fantasia || ''}
                 ordenesCopiadoAsociadas={ordenesCopiadoAsociadas}
                 onOrdenesCopiadoAsociadasChange={setOrdenesCopiadoAsociadas}
+                mode={mode}
               />
             </div>
 
@@ -779,222 +832,27 @@ export function CreateOrderPage() {
               />
             </div>
 
-
             <div className={activeTab === 'adjuntos' ? 'block' : 'hidden'}>
-              <div className="space-y-6">
-                {/* Acciones */}
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-700 font-medium">
-                    Links externos y rutas de archivos
-                  </span>
-
-                  <Button onClick={() => {
-                    setLinkType('download');
-                    setEditingLinkIndex(null);
-                    setNewLink({ titulo: '', url: '', descripcion: '' });
-                    setLinkModalOpen(true);
-                  }}>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Agregar Link
-                  </Button>
-                </div>
-
-                {/* Lista de links locales */}
-                {links.length === 0 ? (
-                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
-                    <LinkIcon className="w-8 h-8 text-gray-400 mx-auto mb-3" />
-                    <p className="text-sm text-gray-500">
-                      No hay links agregados. Agrega archivos de WeTransfer, Drive o rutas de red interna.
-                    </p>
-                  </div>
-                ) : (
-                  <Card>
-                    <div className="divide-y divide-gray-200">
-                      {links.map((link, index) => {
-                        const isInternal = !/^https?:\/\//i.test(link.url);
-                        return (
-                          <div key={index} className="p-4 hover:bg-gray-50 transition-colors">
-                            <div className="flex items-center gap-4">
-                              <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${isInternal ? 'bg-amber-100' : 'bg-blue-100'}`}>
-                                {isInternal ? (
-                                  <Server className="w-6 h-6 text-amber-600" />
-                                ) : (
-                                  <Download className="w-6 h-6 text-blue-600" />
-                                )}
-                              </div>
-
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <h4 className="text-sm font-medium text-gray-900 truncate">
-                                    {link.titulo}
-                                  </h4>
-                                  <span className={`px-2 py-0.5 rounded text-xs font-medium ${isInternal ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800'}`}>
-                                    {isInternal ? 'Interno / Red' : 'Descarga'}
-                                  </span>
-                                </div>
-
-                                {/* URL Display */}
-                                <div className="flex items-center gap-2 mb-1">
-                                  {isInternal ? (
-                                    <span className="text-xs text-gray-600 font-mono bg-gray-100 px-2 py-0.5 rounded truncate select-all">
-                                      {link.url}
-                                    </span>
-                                  ) : (
-                                    <a
-                                      href={link.url}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="text-xs text-blue-600 hover:underline truncate"
-                                      onClick={(e) => e.stopPropagation()}
-                                    >
-                                      {link.url}
-                                    </a>
-                                  )}
-                                </div>
-
-                                {link.descripcion && (
-                                  <p className="text-xs text-gray-600 mt-1 italic truncate">
-                                    {link.descripcion}
-                                  </p>
-                                )}
-                              </div>
-
-                              <div className="flex items-center gap-2">
-                                {!isInternal && (
-                                  <Button size="sm" variant="outline" onClick={() => openLink(link.url)} title="Abrir Link">
-                                    <ExternalLink className="w-4 h-4" />
-                                  </Button>
-                                )}
-                                <Button size="sm" variant="outline" onClick={() => handleCopyLink(link.url)} title="Copiar Link">
-                                  <Copy className="w-4 h-4" />
-                                </Button>
-                                <Button size="sm" variant="outline" onClick={() => {
-                                  setEditingLinkIndex(index);
-                                  setNewLink(link);
-                                  setLinkType(isInternal ? 'internal' : 'download');
-                                  setLinkModalOpen(true);
-                                }} title="Editar Link">
-                                  <Pencil className="w-4 h-4 text-blue-600" />
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => {
-                                    const newLinks = [...links];
-                                    newLinks.splice(index, 1);
-                                    setLinks(newLinks);
-                                  }}
-                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                  title="Eliminar Link"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </Card>
-                )}
-              </div>
-
-              {/* Modal Agregar Link Local */}
-              <Modal
-                isOpen={linkModalOpen}
-                onClose={() => {
-                  setLinkModalOpen(false);
+              <OrdenAdjuntosTab
+                links={links}
+                onAddLink={() => {
+                  setLinkType('download');
+                  setEditingLinkIndex(null);
                   setNewLink({ titulo: '', url: '', descripcion: '' });
+                  setLinkModalOpen(true);
                 }}
-                title={editingLinkIndex !== null ? "Editar Link" : "Agregar Link"}
-              >
-                <div className="space-y-4">
-                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de Link</label>
-                    <div className="flex gap-4">
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="radio"
-                          name="linkType"
-                          checked={linkType === 'download'}
-                          onChange={() => setLinkType('download')}
-                          className="text-blue-600 focus:ring-blue-500"
-                        />
-                        <div className="flex items-center gap-1.5 text-sm text-gray-700">
-                          <Download className="w-4 h-4" />
-                          <span>Link de descarga (Web)</span>
-                        </div>
-                      </label>
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="radio"
-                          name="linkType"
-                          checked={linkType === 'internal'}
-                          onChange={() => setLinkType('internal')}
-                          className="text-blue-600 focus:ring-blue-500"
-                        />
-                        <div className="flex items-center gap-1.5 text-sm text-gray-700">
-                          <Server className="w-4 h-4" />
-                          <span>Link interno (Red Local)</span>
-                        </div>
-                      </label>
-                    </div>
-                  </div>
-
-                  <Input
-                    label="Título"
-                    value={newLink.titulo}
-                    onChange={(e) => setNewLink({ ...newLink, titulo: e.target.value })}
-                    placeholder={linkType === 'download' ? "Ej: Archivos en WeTransfer" : "Ej: Carpeta de Producción"}
-                    required
-                  />
-                  <Input
-                    label={linkType === 'download' ? "URL de Descarga" : "Ruta de Carpeta/Archivo"}
-                    value={newLink.url}
-                    onChange={(e) => setNewLink({ ...newLink, url: e.target.value })}
-                    placeholder={linkType === 'download' ? "ejemplo.com" : "\\\\servidor\\carpeta"}
-                    required
-                  />
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Descripción (opcional)
-                    </label>
-                    <textarea
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500"
-                      rows={3}
-                      value={newLink.descripcion}
-                      onChange={(e) => setNewLink({ ...newLink, descripcion: e.target.value })}
-                    />
-                  </div>
-                  <div className="flex justify-end gap-3 mt-6">
-                    <Button variant="outline" onClick={() => {
-                      setLinkModalOpen(false);
-                      setEditingLinkIndex(null);
-                      setNewLink({ titulo: '', url: '', descripcion: '' });
-                    }}>Cancelar</Button>
-                    <Button onClick={() => {
-                      if (!newLink.titulo.trim() || !newLink.url.trim()) return;
-
-                      const formattedUrl = formatUrl(newLink.url, linkType);
-                      const linkData = { ...newLink, url: formattedUrl };
-
-                      if (editingLinkIndex !== null) {
-                        const updatedLinks = [...links];
-                        updatedLinks[editingLinkIndex] = linkData;
-                        setLinks(updatedLinks);
-                      } else {
-                        setLinks([...links, linkData]);
-                      }
-
-                      setLinkModalOpen(false);
-                      setEditingLinkIndex(null);
-                      setNewLink({ titulo: '', url: '', descripcion: '' });
-                    }}>
-                      {editingLinkIndex !== null ? 'Guardar Cambios' : 'Agregar'}
-                    </Button>
-                  </div>
-                </div>
-              </Modal>
+                onEditLink={(idx) => {
+                  setEditingLinkIndex(idx);
+                  setNewLink(links[idx]);
+                  setLinkType(/^https?:\/\//i.test(links[idx].url) ? 'download' : 'internal');
+                  setLinkModalOpen(true);
+                }}
+                onDeleteLink={(idx) => {
+                  const newLinks = [...links];
+                  newLinks.splice(idx, 1);
+                  setLinks(newLinks);
+                }}
+              />
             </div>
 
             <div className={activeTab === 'historial' ? 'block' : 'hidden'}>
@@ -1021,17 +879,14 @@ export function CreateOrderPage() {
           isOpen={showPagoModal}
           onClose={() => {
             setShowPagoModal(false);
-            // Si cierra el modal, redirigimos igual
             navigate('/app/orders/ordenes');
           }}
           onSubmit={handlePagoSubmit}
-          saldoPendiente={calcularTotales().total} // Total inicial
-          clientName={(() => {
-            const c = clients.find(cl => cl.id === clienteId);
-            return c?.nombre_fantasia || c?.razon_social || '';
-          })()}
+          saldoPendiente={calcularTotales().total}
+          clientName={clienteSeleccionado?.nombre_fantasia || ''}
         />
       )}
+
       <PagoFormModal
         isOpen={showPagoForm}
         onClose={() => {
@@ -1040,24 +895,53 @@ export function CreateOrderPage() {
         }}
         onSubmit={handleGuardarPago}
         saldoPendiente={calcularSaldoPendiente()}
-        pago={editingPago ? {
-          ...editingPago,
-          referencia_pago: editingPago.referencia_pago || '',
-          notas: editingPago.notas || ''
-        } : undefined}
+        pago={editingPago ? { ...editingPago, referencia_pago: editingPago.referencia_pago || '', notas: editingPago.notas || '' } : undefined}
       />
+
+      <Modal
+        isOpen={linkModalOpen}
+        onClose={() => setLinkModalOpen(false)}
+        title={editingLinkIndex !== null ? "Editar Link" : "Agregar Link"}
+      >
+        <div className="space-y-4">
+          {/* Simplified Link Form - Logic reused from original */}
+          <div className="flex gap-4 mb-4">
+            <label>
+              <input type="radio" checked={linkType === 'download'} onChange={() => setLinkType('download')} /> Web
+            </label>
+            <label>
+              <input type="radio" checked={linkType === 'internal'} onChange={() => setLinkType('internal')} /> Red Local
+            </label>
+          </div>
+          <Input label="Título" value={newLink.titulo} onChange={e => setNewLink({ ...newLink, titulo: e.target.value })} />
+          <Input label="URL/Ruta" value={newLink.url} onChange={e => setNewLink({ ...newLink, url: e.target.value })} />
+          <Button onClick={() => {
+            if (!newLink.titulo || !newLink.url) return;
+            const url = formatUrl(newLink.url, linkType);
+            const l = { ...newLink, url };
+            if (editingLinkIndex !== null) {
+              const copy = [...links];
+              copy[editingLinkIndex] = l;
+              setLinks(copy);
+            } else {
+              setLinks([...links, l]);
+            }
+            setLinkModalOpen(false);
+          }}>Guardar</Button>
+        </div>
+      </Modal>
 
       <ConfirmDialog
         isOpen={isPromptOpen}
         onClose={closePrompt}
         onConfirm={confirmPrompt}
         title="Cambios sin guardar"
-        message="¿Estás seguro de que deseas salir? Se perderán todos los cambios no guardados en esta orden de trabajo."
+        message="¿Estás seguro de que deseas salir?"
         confirmText="Salir sin guardar"
         cancelText="Continuar editando"
         variant="warning"
-        icon={<AlertTriangle className="w-6 h-6" />}
       />
+
     </>
   );
 }

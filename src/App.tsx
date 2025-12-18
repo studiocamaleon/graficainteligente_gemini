@@ -26,8 +26,6 @@ import TiposEgreso from './pages/app/settings/TiposEgreso';
 import TiposIngreso from './pages/app/settings/TiposIngreso';
 import CondicionesComerciales from './pages/app/settings/CondicionesComerciales';
 import PresupuestosListPage from './pages/app/presupuestos/PresupuestosListPage';
-import CrearPresupuesto from './pages/app/presupuestos/CrearPresupuesto';
-import EditarPresupuesto from './pages/app/presupuestos/EditarPresupuesto';
 import DetallePresupuesto from './pages/app/presupuestos/DetallePresupuesto';
 import { Estaciones } from './pages/app/abm-core/Estaciones';
 import { Tecnologias } from './pages/app/abm-core/Tecnologias';
@@ -353,16 +351,16 @@ function AppRoutes() {
                 <Route
                   path="presupuestos/nuevo"
                   element={
-                    <ProtectedModuleRoute moduleId="presupuestos-crear">
-                      <CrearPresupuesto />
+                    <ProtectedModuleRoute moduleId="orders-crear">
+                      <CreateOrderPage />
                     </ProtectedModuleRoute>
                   }
                 />
                 <Route
                   path="presupuestos/:id/editar"
                   element={
-                    <ProtectedModuleRoute moduleId="presupuestos-crear">
-                      <EditarPresupuesto />
+                    <ProtectedModuleRoute moduleId="orders-crear">
+                      <CreateOrderPage />
                     </ProtectedModuleRoute>
                   }
                 />

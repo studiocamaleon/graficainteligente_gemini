@@ -1,7 +1,6 @@
 import { Card } from '../../ui/Card';
 import { Badge } from '../../ui/Badge';
-import { Table } from '../../ui/Table';
-import { Package, Ruler, Layers, Palette, Wrench, Sparkles, DollarSign } from 'lucide-react';
+import { Package, Ruler, Layers, Wrench, Sparkles, DollarSign } from 'lucide-react';
 import type { ProductConfiguration } from '../../../hooks/wizard/useProductConfiguration';
 import type { SelectedConfiguration } from './ConfigurationStep';
 import type { SelectedService, SelectedFinishing } from './ServicesAndFinishingsStep';
@@ -105,6 +104,37 @@ export function UniversalSummaryStep({
               <span className="text-gray-600">Tinta:</span>
               <span className="font-medium uppercase">{configCopiado.tipo_tinta}</span>
             </div>
+            {/* Terminaciones Check */}
+            {(configCopiado.anillado || configCopiado.plastificado || configCopiado.guillotinado) && (
+              <div className="mt-4 pt-4 border-t border-gray-100">
+                <div className="flex items-center gap-2 mb-2 text-blue-600">
+                  <Sparkles className="w-4 h-4" />
+                  <span className="font-semibold text-xs uppercase tracking-wider">Terminaciones</span>
+                </div>
+                <div className="space-y-1">
+                  {configCopiado.anillado && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Anillado:</span>
+                      <span className="font-medium">{configCopiado.anillado.tipo === 'ring_wire' ? 'Ring Wire' : 'Plástico'}</span>
+                    </div>
+                  )}
+                  {configCopiado.plastificado && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Plastificado:</span>
+                      <span className="font-medium">
+                        {configCopiado.plastificado.tipo} ({configCopiado.plastificado.todas_hojas ? 'Todas' : `${configCopiado.plastificado.cantidad_especifica} hojas`})
+                      </span>
+                    </div>
+                  )}
+                  {configCopiado.guillotinado && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Guillotinado:</span>
+                      <span className="font-medium">Sí ({configCopiado.guillotinado.cantidad_hojas} hojas)</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </Card>
 

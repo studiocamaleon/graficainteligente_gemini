@@ -42,15 +42,19 @@ export function usePageHeader(description?: string | null, action?: ReactNode | 
     throw new Error('usePageHeader must be used within a PageHeaderProvider');
   }
 
+  // Update header when content changes
   useEffect(() => {
     if (description !== undefined) {
       context.setPageHeader(description, action ?? null);
     }
+  }, [description, action, context]);
 
+  // Clear header only on unmount
+  useEffect(() => {
     return () => {
       context.clearPageHeader();
     };
-  }, [description, action, context]);
+  }, [context]);
 
   return context;
 }

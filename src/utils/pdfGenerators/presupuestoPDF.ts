@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { PresupuestoConRelaciones } from '../../types/presupuestos';
+import { formatConfiguracionProducto } from '../formatPresupuestoConfig';
 
 interface PDFOptions {
   incluirLogo?: boolean;
@@ -180,7 +181,7 @@ export async function generarPresupuestoPDF(
 
   if (items.length > 0) {
     const tableBody = items.map(item => [
-      item.producto_nombre + (item.descripcion && item.tipo_item !== 'centro_copiado' ? `\n${item.descripcion}` : '') + formatConfiguracionTexto(item.configuracion, item.tipo_item),
+      item.producto_nombre + (item.descripcion ? `\n${item.descripcion}` : '') + '\n' + formatConfiguracionProducto(item.configuracion, item.producto_categoria || item.tipo_item),
       item.cantidad.toString(),
       formatCurrency(item.precio_unitario_final || 0),
       formatCurrency(item.precio_total || 0)
@@ -401,50 +402,7 @@ function calcularTotales(presupuesto: PresupuestoConRelaciones) {
   return { subtotal, descuentos, total };
 }
 
-// Helper to format configuration as text for PDF
-function formatConfiguracionTexto(config: any, tipoItem?: string): string {
-  if (!config || tipoItem !== 'centro_copiado') return '';
 
-  const lines: string[] = [];
-
-  // 1. Copies / Pages
-  if (config.cantidad_copias && config.cantidad_hojas) {
-    lines.push(`${config.cantidad_copias} juegos x ${config.cantidad_hojas} hojas`);
-  }
-
-  // 2. Paper / Ink / Sides
-  const specs: string[] = [];
-  if (config.tamanio_nombre) specs.push(config.tamanio_nombre);
-  if (config.papel_detalle) specs.push(config.papel_detalle);
-  if (config.tipo_tinta) specs.push(config.tipo_tinta === 'CMYK' || config.tipo_tinta === 'color' ? 'Color' : 'B/N');
-  if (config.cara_impresa) specs.push(config.cara_impresa === 'frente_y_dorso' || config.cara_impresa === 'doble' || config.cara_impresa === '1/1' ? 'Doble Faz' : 'Simple Faz');
-
-  if (specs.length > 0) lines.push(specs.join(' | '));
-
-  // 3. Finishes
-  const finishes: string[] = [];
-  if (config.anillado) finishes.push(`Anillado ${config.anillado.tipo}`);
-  if (config.plastificado) finishes.push(`Plastificado ${config.plastificado.tipo}`);
-  if (config.guillotinado) finishes.push('Guillotinado');
-  if (config.abrochado) finishes.push('Abrochado');
-  if (config.corte) finishes.push('Corte');
-  if (config.dobladillo) finishes.push('Dobladillo');
-
-  if (finishes.length > 0) lines.push(finishes.join(', '));
-
-  // 4. Extra Services
-  const extraServices: string[] = [];
-  if (config.servicios_seleccionados) {
-    config.servicios_seleccionados.forEach((s: any) => extraServices.push(s.nombre));
-  }
-  if (config.acabados_seleccionados) {
-    config.acabados_seleccionados.forEach((a: any) => extraServices.push(a.nombre));
-  }
-
-  if (extraServices.length > 0) lines.push(`Servicios: ${extraServices.join(', ')}`);
-
-  return lines.length > 0 ? '\n' + lines.join('\n') : '';
-}
 
 export async function descargarPresupuestoPDF(
   presupuesto: PresupuestoConRelaciones,

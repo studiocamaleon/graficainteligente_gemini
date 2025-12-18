@@ -4,6 +4,7 @@ export type CompanyStatus = 'active' | 'suspended' | 'cancelled';
 
 export type SubscriptionStatus = 'active' | 'cancelled' | 'expired';
 import type { Egreso } from './tesoreria';
+import type { Presupuesto, PresupuestoItem, CondicionComercial, PresupuestoHistorial } from './presupuestos';
 
 
 export type DocumentType = 'DNI' | 'CUIT' | 'CUIL';
@@ -1458,6 +1459,22 @@ export interface OrdenItemRuta {
   tiempo_trabajo_efectivo?: any; // Postgres interval or number
 }
 
+export interface PresupuestoItemRuta {
+  id: string;
+  company_id: string;
+  presupuesto_item_id: string;
+  tipo_etapa: string;
+  paso_id: string | null;
+  paso_nombre: string;
+  orden: number;
+  es_modificado: boolean;
+  origen_plantilla_id: string | null;
+  comentario_vendedor: string | null;
+  source_service_id: string | null;
+  global_task_id: string | null;
+  created_at: string;
+}
+
 // ============================================================================
 // CENTRO DE COPIADO - Types
 // ============================================================================
@@ -1695,6 +1712,31 @@ export interface CentroCopiadoPrecioImpresionFormData {
 export interface Database {
   public: {
     Tables: {
+      presupuestos: {
+        Row: Presupuesto;
+        Insert: Omit<Presupuesto, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<Presupuesto, 'id' | 'created_at'>>;
+      };
+      presupuestos_items: {
+        Row: PresupuestoItem;
+        Insert: Omit<PresupuestoItem, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<PresupuestoItem, 'id' | 'created_at'>>;
+      };
+      presupuestos_items_rutas: {
+        Row: PresupuestoItemRuta;
+        Insert: Omit<PresupuestoItemRuta, 'id' | 'created_at'>;
+        Update: Partial<Omit<PresupuestoItemRuta, 'id' | 'created_at'>>;
+      };
+      presupuestos_historial: {
+        Row: PresupuestoHistorial;
+        Insert: Omit<PresupuestoHistorial, 'id' | 'created_at'>;
+        Update: Partial<Omit<PresupuestoHistorial, 'id' | 'created_at'>>;
+      };
+      presupuestos_condiciones_comerciales: {
+        Row: CondicionComercial;
+        Insert: Omit<CondicionComercial, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<CondicionComercial, 'id' | 'created_at'>>;
+      };
       companies: {
         Row: Company;
         Insert: Omit<Company, 'id' | 'created_at' | 'updated_at'>;

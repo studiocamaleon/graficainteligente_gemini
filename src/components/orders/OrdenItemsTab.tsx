@@ -1,5 +1,5 @@
 import { useState, Dispatch, SetStateAction } from 'react';
-import { Plus, Trash2, Package, FileText, Printer, ChevronDown, ChevronUp, Calendar, Edit2 } from 'lucide-react';
+import { Trash2, Plus, PenSquare, Calendar, Wallet, Link, Square, CheckSquare, ChevronUp, ChevronDown, Wrench, Wand2, Edit2, Package, Printer } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Switch } from '../ui/Switch';
@@ -10,8 +10,8 @@ import { Card } from '../ui/Card';
 import { UniversalAddItemWizard } from '../wizard/UniversalAddItemWizard';
 import { AsociarOrdenCopiadoModal } from './AsociarOrdenCopiadoModal';
 import { AddItemPersonalizadoOrdenModal } from './AddItemPersonalizadoOrdenModal';
-import { AplicarServicioMasivoModal, type ServicioSeleccionado } from './AplicarServicioMasivoModal';
-import { CheckSquare, Square, Wand2, Wrench } from 'lucide-react';
+import { AplicarServicioMasivoModal } from './AplicarServicioMasivoModal';
+import { ItemConfigRenderer } from './ItemConfigRenderer';
 
 interface OrdenItem {
   id?: string;
@@ -26,8 +26,8 @@ interface OrdenItem {
   precio_base: number;
   precio_servicios: number;
   precio_acabados: number;
-  precio_unitario_final: number;
-  precio_total: number;
+  precio_unitario_final: number | null;
+  precio_total: number | null;
   descuento_individual?: number;
   rutas_generadas?: any[];
 }
@@ -42,6 +42,7 @@ interface OrdenItemsTabProps {
   clienteNombre?: string;
   ordenesCopiadoAsociadas?: any[];
   onOrdenesCopiadoAsociadasChange?: (ordenes: any[]) => void;
+  mode?: 'orden' | 'presupuesto';
 }
 
 export function OrdenItemsTab({
@@ -54,6 +55,7 @@ export function OrdenItemsTab({
   clienteNombre = '',
   ordenesCopiadoAsociadas = [],
   onOrdenesCopiadoAsociadasChange,
+  mode = 'orden',
 }: OrdenItemsTabProps) {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showAddPersonalizadoModal, setShowAddPersonalizadoModal] = useState(false);
@@ -245,9 +247,10 @@ export function OrdenItemsTab({
     producto_nombre: string;
     descripcion: string;
     cantidad: number;
-    precio_unitario_final: number;
+    precio_unitario_final: number | null;
     tiempo_produccion_dias?: number;
   }) => {
+    const isPending = itemData.precio_unitario_final === null;
     const nuevoItem: any = {
       id: `temp-${Date.now()}-${Math.random()}`,
       tipo_item: 'personalizado',
@@ -261,7 +264,7 @@ export function OrdenItemsTab({
       precio_servicios: 0,
       precio_acabados: 0,
       precio_unitario_final: itemData.precio_unitario_final,
-      precio_total: itemData.cantidad * itemData.precio_unitario_final,
+      precio_total: isPending ? null : (itemData.cantidad * (itemData.precio_unitario_final || 0)),
       descuento_individual: 0,
       rutas_generadas: [],
       configuracion: {
@@ -314,7 +317,9 @@ export function OrdenItemsTab({
     const itemsCopy = [...items];
     const item = itemsCopy[index];
     item.cantidad = nuevaCantidad;
-    item.precio_total = item.precio_unitario_final * nuevaCantidad;
+    if (item.precio_unitario_final !== null) {
+      item.precio_total = item.precio_unitario_final * nuevaCantidad;
+    }
     setItems(itemsCopy);
   };
 
@@ -323,215 +328,16 @@ export function OrdenItemsTab({
     const item = itemsCopy[index];
     item.descuento_individual = descuento;
 
-    const precioSinDescuento = item.precio_unitario_final * item.cantidad;
+    const precioSinDescuento = (item.precio_unitario_final || 0) * item.cantidad;
     const descuentoAplicado = precioSinDescuento * (descuento / 100);
-    item.precio_total = precioSinDescuento - descuentoAplicado;
+    if (item.precio_total !== null) {
+      item.precio_total = precioSinDescuento - descuentoAplicado;
+    }
 
     setItems(itemsCopy);
   };
 
-  const renderConfiguracion = (config: any, rutasGeneradas?: any[], tipoItem?: string) => {
-    if (!config) return null;
 
-    // Lógica específica para Centro de Copiado
-    if (tipoItem === 'centro_copiado') {
-      return (
-        <div className="space-y-1 text-sm text-gray-600">
-          {/* Info Copias/Hojas */}
-          <div className="flex items-center gap-2">
-            <span className="font-medium text-gray-900">{config.cantidad_copias} juegos</span>
-            <span className="text-gray-400">x</span>
-            <span>{config.cantidad_hojas} hojas</span>
-          </div>
-
-          {/* Info Papel/Tinta */}
-          <div className="flex flex-wrap gap-2 text-xs">
-            {config.tamanio_nombre && <Badge variant="outline">{config.tamanio_nombre}</Badge>}
-            {config.papel_detalle && <Badge variant="outline">{config.papel_detalle}</Badge>}
-            <Badge variant={config.tipo_tinta === 'CMYK' || config.tipo_tinta === 'color' ? 'purple' : 'gray'}>
-              {config.tipo_tinta === 'CMYK' || config.tipo_tinta === 'color' ? 'Color' : 'B/N'}
-            </Badge>
-            <Badge variant="outline">
-              {config.cara_impresa === 'frente_y_dorso' || config.cara_impresa === 'doble' || config.cara_impresa === '1/1' ? 'Doble Faz' : 'Simple Faz'}
-            </Badge>
-          </div>
-
-          {/* Terminaciones (Anillado, Plastificado, Guillotinado) */}
-          {(config.anillado || config.plastificado || config.guillotinado) && (
-            <div className="flex gap-2 mt-1">
-              {config.anillado && (
-                <Badge variant="warning" size="sm">Anillado {config.anillado.tipo}</Badge>
-              )}
-              {config.plastificado && (
-                <Badge variant="warning" size="sm">Plastificado {config.plastificado.tipo}</Badge>
-              )}
-              {config.guillotinado && (
-                <Badge variant="warning" size="sm">Guillotinado</Badge>
-              )}
-            </div>
-          )}
-
-          {/* Servicios Extra (Wizard OT) */}
-          {((config.servicios_seleccionados && config.servicios_seleccionados.length > 0) ||
-            (config.acabados_seleccionados && config.acabados_seleccionados.length > 0)) && (
-              <div className="flex flex-wrap gap-1.5 mt-1 border-t border-gray-100 pt-1">
-                {config.servicios_seleccionados?.map((s: any, idx: number) => (
-                  <Badge key={`servicio-${idx}`} variant="blue" size="sm">
-                    {s.nivel ? `${s.nombre} (${s.nivel})` : s.nombre}
-                  </Badge>
-                ))}
-                {config.acabados_seleccionados?.map((a: any, idx: number) => (
-                  <Badge key={`acabado-${idx}`} variant="purple" size="sm">
-                    {a.nivel ? `${a.nombre} (${a.nivel})` : a.nombre}
-                  </Badge>
-                ))}
-              </div>
-            )}
-        </div>
-      );
-    }
-
-    const formatCaraImpresa = (cara: string) => {
-      if (cara === '1/0') return 'Frente';
-      if (cara === '1/1') return 'Frente y Dorso';
-      if (cara === 'frente_y_dorso' || cara === 'solo_frente') return cara === 'frente_y_dorso' ? 'Frente y Dorso' : 'Frente';
-      return cara;
-    };
-
-    const formatEspesorOGramaje = () => {
-      // Si tiene espesor, usar la unidad del material
-      if (config.espesor && config.unidad_espesor) {
-        // Para gramajes, agregar espacio antes de la unidad
-        if (config.unidad_espesor === 'gr' || config.unidad_espesor === 'g') {
-          return `${config.espesor} ${config.unidad_espesor}`;
-        }
-        // Para otras unidades (mm, cm, etc), no agregar espacio
-        return `${config.espesor}${config.unidad_espesor}`;
-      }
-      // Fallback: si solo tiene espesor sin unidad
-      if (config.espesor) {
-        return `${config.espesor}mm`;
-      }
-      // Fallback legacy: si tiene gramaje (por compatibilidad con datos antiguos)
-      if (config.gramaje) {
-        return `${config.gramaje} g`;
-      }
-      return null;
-    };
-
-    const getLinkedServices = (rutas: any[]) => {
-      if (!rutas || rutas.length === 0) return [];
-
-      const linkedServices = new Set<string>();
-
-      rutas.forEach(ruta => {
-        if (ruta.source_service_id && ruta.paso_nombre) {
-          // Extract cleaner name if it follows the pattern "[Servicio] Name"
-          const cleanName = ruta.paso_nombre.replace('[Servicio] ', '');
-          linkedServices.add(cleanName);
-        }
-      });
-
-      return Array.from(linkedServices);
-    };
-
-    const linkedServices = getLinkedServices(rutasGeneradas || []);
-    const espesorFormateado = formatEspesorOGramaje();
-
-    return (
-      <div className="space-y-2">
-        {/* Línea 0: Badges de Servicios Vinculados (Externos) */}
-        {linkedServices.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mb-1.5">
-            {linkedServices.map((serviceName, idx) => (
-              <Badge key={`linked-${idx}`} variant="info" size="sm" className="border-cyan-400 bg-cyan-50 text-cyan-700">
-                <Wrench className="w-3 h-3 mr-1 inline-block" />
-                {serviceName}
-              </Badge>
-            ))}
-          </div>
-        )}
-
-        {/* Línea 1: Info básica */}
-        <div className="flex flex-wrap gap-1.5 text-sm text-gray-600">
-          {(config.medida_ancho || config.medida_alto) && (
-            <span>
-              {config.medida_ancho && config.medida_alto
-                ? (
-                  config.es_metro_lineal
-                    ? `${config.medida_ancho}x${config.medida_alto} cm (${(config.medida_alto / 100).toLocaleString('es-AR')} ml)`
-                    : `${config.medida_ancho}x${config.medida_alto} ${config.unidad_medida || ((config.categoria === 'Impresion Laser' || config.tecnologia_nombre === 'Impresion Laser') ? 'mm' : 'cm')}`
-                )
-                : `${config.medida_ancho || config.medida_alto} ${config.unidad_medida || ((config.categoria === 'Impresion Laser' || config.tecnologia_nombre === 'Impresion Laser') ? 'mm' : 'cm')}`
-              }
-            </span>
-          )}
-          {config.material_nombre && (
-            <>
-              {(config.medida_ancho || config.medida_alto) && <span className="text-gray-400">|</span>}
-              <span>
-                {config.material_nombre}
-                {config.variante_nombre && ` - ${config.variante_nombre}`}
-              </span>
-            </>
-          )}
-          {espesorFormateado && (
-            <>
-              <span className="text-gray-400">|</span>
-              <span>{espesorFormateado}</span>
-            </>
-          )}
-          {config.tecnologia_nombre && (
-            <>
-              <span className="text-gray-400">|</span>
-              <span>{config.tecnologia_nombre}</span>
-            </>
-          )}
-          {config.tinta_nombre && (
-            <>
-              <span className="text-gray-400">|</span>
-              <span>{config.tinta_nombre}</span>
-            </>
-          )}
-          {config.cara_impresa && (
-            <>
-              <span className="text-gray-400">|</span>
-              <span>{formatCaraImpresa(config.cara_impresa)}</span>
-            </>
-          )}
-          {config.color && (
-            <>
-              <span className="text-gray-400">|</span>
-              <span>{config.color}</span>
-            </>
-          )}
-          {config.marca && (
-            <>
-              <span className="text-gray-400">|</span>
-              <span>{config.marca}</span>
-            </>
-          )}
-        </div>
-
-        {/* Línea 2: Servicios y Acabados con badges */}
-        {((config.servicios_seleccionados && config.servicios_seleccionados.length > 0) ||
-          (config.acabados_seleccionados && config.acabados_seleccionados.length > 0)) && (
-            <div className="flex flex-wrap gap-1.5">
-              {config.servicios_seleccionados?.map((s: any, idx: number) => (
-                <Badge key={`servicio-${idx}`} variant="blue" size="sm">
-                  {s.nivel ? `${s.nombre} (${s.nivel})` : s.nombre}
-                </Badge>
-              ))}
-              {config.acabados_seleccionados?.map((a: any, idx: number) => (
-                <Badge key={`acabado-${idx}`} variant="purple" size="sm">
-                  {a.nivel ? `${a.nombre} (${a.nivel})` : a.nombre}
-                </Badge>
-              ))}
-            </div>
-          )}
-      </div>
-    );
-  };
 
   const columns = [
     {
@@ -594,7 +400,11 @@ export function OrdenItemsTab({
               {item.descripcion}
             </div>
           ) : (
-            renderConfiguracion(item.configuracion, item.rutas_generadas, item.tipo_item)
+            <ItemConfigRenderer
+              config={item.configuracion}
+              rutasGeneradas={item.rutas_generadas}
+              tipoItem={item.tipo_item}
+            />
           )}
         </div>
       ),
@@ -604,7 +414,7 @@ export function OrdenItemsTab({
       header: 'Precio Unitario',
       render: (item: OrdenItem) => (
         <span className="font-medium">
-          ${item.precio_unitario_final.toFixed(2)}
+          {item.precio_unitario_final !== null ? `$${item.precio_unitario_final.toFixed(2)}` : '-'}
         </span>
       ),
     },
@@ -637,7 +447,7 @@ export function OrdenItemsTab({
       hidden: !requiereFactura,
       render: (item: OrdenItem) => (
         <span className="text-gray-500 text-sm">
-          ${(item.precio_total * 0.21).toFixed(2)}
+          ${item.precio_total !== null ? (item.precio_total * 0.21).toFixed(2) : '-'}
         </span>
       ),
     },
@@ -646,7 +456,9 @@ export function OrdenItemsTab({
       header: 'Subtotal',
       render: (item: OrdenItem) => (
         <span className="font-semibold text-blue-600">
-          ${item.precio_total.toFixed(2)}
+          {item.precio_total !== null ? `$${item.precio_total.toFixed(2)}` : (
+            <Badge variant="warning" className="text-xs">Cotizar</Badge>
+          )}
         </span>
       ),
     },
@@ -719,23 +531,6 @@ export function OrdenItemsTab({
               Personalizado
             </Button>
           </div>
-          {clienteNombre && onOrdenesCopiadoAsociadasChange && (
-            <Button
-              onClick={() => {
-                setOrdenCopiadoEditando(undefined);
-                setShowAsociarOCModal(true);
-              }}
-              className="bg-gradient-to-r from-yellow-600 to-amber-700 hover:from-yellow-700 hover:to-amber-800 text-white shadow-md hover:shadow-lg transition-all"
-            >
-              <Printer className="w-4 h-4" />
-              Asociar OC
-              {ordenesCopiadoAsociadas.length > 0 && (
-                <Badge variant="primary" className="ml-2">
-                  {ordenesCopiadoAsociadas.length}
-                </Badge>
-              )}
-            </Button>
-          )}
         </div>
       </div>
 
@@ -930,7 +725,8 @@ export function OrdenItemsTab({
         }}
         onAdd={handleAgregarItemPersonalizado}
         initialData={itemToEdit}
-        isEditing={editingIndex !== null}
+        isEditing={!!itemToEdit}
+        mode={mode}
       />
 
       {

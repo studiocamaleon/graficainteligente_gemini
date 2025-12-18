@@ -226,13 +226,6 @@ export const MODULES: Module[] = [
         icon: FileText,
       },
       {
-        id: 'presupuestos-crear',
-        name: 'Crear Presupuesto',
-        description: 'Nuevo presupuesto',
-        path: '/app/presupuestos/nuevo',
-        icon: FilePlus,
-      },
-      {
         id: 'presupuestos-condiciones',
         name: 'Condiciones Comerciales',
         description: 'Templates de condiciones',

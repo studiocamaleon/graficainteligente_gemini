@@ -425,8 +425,10 @@ function formatCentroCopiado(config: ConfiguracionBase): string {
     partes.push(formatCaraImpresa(config.cara_impresa));
   }
 
-  // Cantidad de páginas/hojas
-  if (config.cantidad_paginas) {
+  // Cantidad de Juegos y Hojas (Formato unificado)
+  if (config.cantidad_copias && config.cantidad_hojas) {
+    partes.push(`${config.cantidad_copias} juegos x ${config.cantidad_hojas} hojas`);
+  } else if (config.cantidad_paginas) {
     partes.push(`${config.cantidad_paginas} páginas`);
   } else if (config.cantidad_hojas) {
     partes.push(`${config.cantidad_hojas} hojas`);

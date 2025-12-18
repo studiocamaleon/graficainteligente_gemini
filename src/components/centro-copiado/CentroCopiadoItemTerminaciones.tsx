@@ -38,6 +38,12 @@ export function CentroCopiadoItemTerminaciones({
   const [plastificadoEnabled, setPlastificadoEnabled] = useState(!!plastificado);
   const [guillotinadoEnabled, setGuillotinadoEnabled] = useState(!!guillotinado);
 
+  useEffect(() => {
+    setAnilladoEnabled(!!anillado);
+    setPlastificadoEnabled(!!plastificado);
+    setGuillotinadoEnabled(!!guillotinado);
+  }, [anillado, plastificado, guillotinado]);
+
   const [precioAnillado, setPrecioAnillado] = useState<number | null>(null);
   const [precioPlastificado, setPrecioPlastificado] = useState<number | null>(null);
   const [precioGuillotinado, setPrecioGuillotinado] = useState<number | null>(null);

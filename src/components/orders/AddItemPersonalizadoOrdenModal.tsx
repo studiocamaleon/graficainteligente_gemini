@@ -11,11 +11,12 @@ interface AddItemPersonalizadoOrdenModalProps {
     producto_nombre: string;
     descripcion: string;
     cantidad: number;
-    precio_unitario_final: number;
+    precio_unitario_final: number | null;
     tiempo_produccion_dias?: number;
   }) => void;
   initialData?: any;
   isEditing?: boolean;
+  mode?: 'orden' | 'presupuesto';
 }
 
 export function AddItemPersonalizadoOrdenModal({
@@ -24,6 +25,7 @@ export function AddItemPersonalizadoOrdenModal({
   onAdd,
   initialData,
   isEditing = false,
+  mode = 'orden',
 }: AddItemPersonalizadoOrdenModalProps) {
   const [formData, setFormData] = useState({
     producto_nombre: '',
@@ -33,6 +35,7 @@ export function AddItemPersonalizadoOrdenModal({
     tiempo_produccion_dias: 0,
   });
 
+  const [cotizarDespues, setCotizarDespues] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -47,6 +50,7 @@ export function AddItemPersonalizadoOrdenModal({
           precio_unitario_final: initialData.precio_unitario_final || 0,
           tiempo_produccion_dias: initialData.tiempo_produccion_dias || 0,
         });
+        setCotizarDespues(initialData.precio_unitario_final === null);
       } else {
         console.log('[PersonalizadoModal] Resetting form');
         setFormData({
@@ -56,6 +60,7 @@ export function AddItemPersonalizadoOrdenModal({
           precio_unitario_final: 0,
           tiempo_produccion_dias: 0,
         });
+        setCotizarDespues(false);
       }
       setErrors({});
     }
@@ -76,7 +81,8 @@ export function AddItemPersonalizadoOrdenModal({
       newErrors.cantidad = 'La cantidad debe ser mayor a 0';
     }
 
-    if (formData.precio_unitario_final <= 0) {
+    // Solo validar precio si NO está marcado "Cotizar después"
+    if (!cotizarDespues && formData.precio_unitario_final <= 0) {
       newErrors.precio_unitario_final = 'El precio debe ser mayor a 0';
     }
 
@@ -91,6 +97,7 @@ export function AddItemPersonalizadoOrdenModal({
 
     onAdd({
       ...formData,
+      precio_unitario_final: cotizarDespues ? null : formData.precio_unitario_final,
       tiempo_produccion_dias:
         formData.tiempo_produccion_dias > 0
           ? formData.tiempo_produccion_dias
@@ -108,6 +115,7 @@ export function AddItemPersonalizadoOrdenModal({
       precio_unitario_final: 0,
       tiempo_produccion_dias: 0,
     });
+    setCotizarDespues(false);
     setErrors({});
     onClose();
   };
@@ -123,7 +131,7 @@ export function AddItemPersonalizadoOrdenModal({
       isOpen={isOpen}
       onClose={handleClose}
       title={isEditing ? "Editar Item Personalizado" : "Agregar Item Personalizado"}
-      maxWidth="2xl"
+      size="md"
     >
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Advertencia importante */}
@@ -213,33 +221,54 @@ export function AddItemPersonalizadoOrdenModal({
             )}
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Precio Unitario *
-            </label>
-            <div className="relative">
-              <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <Input
-                type="number"
-                min="0"
-                step="0.01"
-                value={formData.precio_unitario_final}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    precio_unitario_final: Number(e.target.value),
-                  })
-                }
-                className="pl-10"
-                error={errors.precio_unitario_final}
-              />
+          {/* Opción Cotizar Después (Solo Presupuesto) */}
+          {mode === 'presupuesto' && (
+            <div className="col-span-2 bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={cotizarDespues}
+                  onChange={(e) => setCotizarDespues(e.target.checked)}
+                  className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                  style={{ width: '1.25rem', height: '1.25rem' }}
+                />
+                <div>
+                  <span className="text-sm font-medium text-gray-900">Cotizar después</span>
+                  <p className="text-xs text-gray-600">El precio quedará pendiente de definición.</p>
+                </div>
+              </label>
             </div>
-            {errors.precio_unitario_final && (
-              <p className="mt-1 text-sm text-red-600">
-                {errors.precio_unitario_final}
-              </p>
-            )}
-          </div>
+          )}
+
+          {!cotizarDespues && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Precio Unitario *
+              </label>
+              <div className="relative">
+                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={formData.precio_unitario_final}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      precio_unitario_final: Number(e.target.value),
+                    })
+                  }
+                  className="pl-10"
+                  error={errors.precio_unitario_final}
+                />
+              </div>
+              {errors.precio_unitario_final && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.precio_unitario_final}
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Tiempo de producción */}
@@ -270,7 +299,11 @@ export function AddItemPersonalizadoOrdenModal({
           <div className="flex justify-between items-center">
             <span className="text-sm font-medium text-gray-700">Total:</span>
             <span className="text-xl font-bold text-gray-900">
-              ${calcularTotal().toFixed(2)}
+              {cotizarDespues ? (
+                <span className="text-yellow-600 text-base">Pendiente de Cotización</span>
+              ) : (
+                `$${calcularTotal().toFixed(2)}`
+              )}
             </span>
           </div>
         </div>

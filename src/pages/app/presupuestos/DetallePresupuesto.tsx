@@ -16,15 +16,16 @@ import { PresupuestoItemsTab } from '../../../components/presupuestos/Presupuest
 import { PresupuestoArchivosTab } from '../../../components/presupuestos/PresupuestoArchivosTab';
 import { PresupuestoHistorialTab } from '../../../components/presupuestos/PresupuestoHistorialTab';
 import { ConvertirPresupuestoModal } from '../../../components/presupuestos/ConvertirPresupuestoModal';
+import { PresupuestoRutasTab } from '../../../components/presupuestos/PresupuestoRutasTab';
 
-type TabId = 'items' | 'archivos' | 'historial';
+type TabId = 'items' | 'rutas' | 'archivos' | 'historial';
 
 export default function DetallePresupuesto() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { showConfirm, dialogState, closeDialog } = useConfirmDialog();
 
-  const { presupuesto, loading, error } = usePresupuesto(id || '');
+  const { presupuesto, loading, error, refetch } = usePresupuesto(id || '');
   const { deletePresupuesto, duplicarPresupuesto, enviarPresupuesto, enviarNotificacionPresupuesto, convertirAOrden } = usePresupuestos();
   const { company } = useCompany();
 
@@ -36,9 +37,10 @@ export default function DetallePresupuesto() {
   const [showConvertirModal, setShowConvertirModal] = useState(false);
 
   const tabs = [
-    { id: 'items' as TabId, label: 'Items', icon: null },
-    { id: 'archivos' as TabId, label: 'Archivos', icon: null },
-    { id: 'historial' as TabId, label: 'Historial', icon: null },
+    { id: 'items' as TabId, label: 'Items' },
+    { id: 'rutas' as TabId, label: 'Rutas' },
+    { id: 'archivos' as TabId, label: 'Archivos' },
+    { id: 'historial' as TabId, label: 'Historial' },
   ];
 
   const showSuccess = (message: string) => {
@@ -108,6 +110,7 @@ export default function DetallePresupuesto() {
       const success = await enviarPresupuesto(presupuesto.id);
       if (success) {
         showSuccess('Presupuesto enviado. Notificación WhatsApp programada.');
+        await refetch();
       } else {
         showError('Error al enviar presupuesto');
       }
@@ -121,6 +124,7 @@ export default function DetallePresupuesto() {
     medioCobroId?: string;
     referenciaPago?: string;
     rutasPersonalizadas?: Record<string, any[]>;
+    requiereFactura?: boolean;
   }) => {
     if (!presupuesto) return;
 
@@ -246,6 +250,15 @@ export default function DetallePresupuesto() {
               items={presupuesto?.items || []}
               presupuestoId={presupuesto?.id || ''}
               esEditable={presupuesto?.estado === 'borrador'}
+            />
+          )}
+
+          {activeTab === 'rutas' && (
+            <PresupuestoRutasTab
+              presupuestoId={presupuesto.id}
+              items={presupuesto.items || []}
+              companyId={company?.id || ''}
+              esEditable={presupuesto.estado === 'borrador'}
             />
           )}
 

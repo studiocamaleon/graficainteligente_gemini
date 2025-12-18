@@ -13,7 +13,6 @@ import { PresupuestosStats } from '../../../components/presupuestos/Presupuestos
 import { Button } from '../../../components/ui/Button';
 import { EmptyState } from '../../../components/ui/EmptyState';
 import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
-import { PageHeader } from '../../../components/ui/PageHeader';
 import { Pagination } from '../../../components/ui/Pagination';
 import type { PresupuestosFilters as FiltersType } from '../../../types/presupuestos';
 
@@ -50,7 +49,8 @@ export default function PresupuestosListPage() {
 
   // Handlers
   const handleCreate = () => {
-    navigate('/app/presupuestos/nuevo');
+    // Redirigir al formulario unificado
+    navigate('/app/orders/create-ot?mode=presupuesto');
   };
 
   const handleView = (id: string) => {
@@ -151,16 +151,6 @@ export default function PresupuestosListPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Presupuestos"
-        description="Gestiona tus presupuestos y cotizaciones"
-        action={
-          <Button onClick={handleCreate}>
-            <Plus className="w-5 h-5 mr-2" />
-            Nuevo Presupuesto
-          </Button>
-        }
-      />
 
       {error && (
         <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700">
