@@ -21,6 +21,7 @@ import { useCentroCopiadoArchivos } from '../../../hooks/useCentroCopiadoArchivo
 import { useCentroCopiadoOrdenPagos } from '../../../hooks/useCentroCopiadoOrdenPagos';
 import { useCentroCopiadoOrden } from '../../../hooks/useCentroCopiadoOrden';
 import { useInfoDialog } from '../../../hooks/useInfoDialog';
+import { useWorkload } from '../../../hooks/useWorkload';
 import { InfoDialog } from '../../../components/ui/InfoDialog';
 import { QuickClientModal } from '../../../components/clients/QuickClientModal';
 import { supabase } from '../../../lib/supabase';
@@ -88,6 +89,8 @@ export function CrearOrdenCopiado() {
     itemsPerPage: 1000,
     searchTerm
   });
+
+  const { workloadData } = useWorkload({ type: 'centro_copiado' });
 
   const { createOrden, updateOrdenCompleta } = useCentroCopiadoOrdenes({ enabled: false });
   const { createItemImpresion } = useCentroCopiadoOrdenItems();
@@ -670,6 +673,8 @@ export function CrearOrdenCopiado() {
                       minDate={new Date()}
                       placeholder="Seleccionar fecha"
                       required
+                      workloadData={workloadData}
+                      workloadThresholds={{ low: 3, medium: 7 }}
                     />
                   </div>
                 </div>

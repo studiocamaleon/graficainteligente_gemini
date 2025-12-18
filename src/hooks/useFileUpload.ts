@@ -9,6 +9,8 @@ export interface UploadProgress {
   error?: string;
 }
 
+export type StorageBucket = 'centro-copiado-archivos' | 'ordenes-trabajo-archivos';
+
 export function useFileUpload() {
   const [uploadProgress, setUploadProgress] = useState<Record<string, UploadProgress>>({});
 
@@ -16,7 +18,8 @@ export function useFileUpload() {
     file: File,
     companyId: string,
     ordenId: string,
-    fileId: string
+    fileId: string,
+    bucket: StorageBucket = 'centro-copiado-archivos'
   ): Promise<{ storagePath: string; nombreStorage: string } | null> => {
     const nombreStorage = `${fileId}-${file.name}`;
 
@@ -29,6 +32,7 @@ export function useFileUpload() {
       : `${companyId}/${ordenId}/${nombreStorage}`;
 
     console.log('[useFileUpload] Subiendo archivo:', {
+      bucket,
       isTemporalId,
       ordenId,
       storagePath
@@ -48,7 +52,7 @@ export function useFileUpload() {
     try {
       // Subir archivo a Storage
       const { error: uploadError } = await supabase.storage
-        .from('centro-copiado-archivos')
+        .from(bucket)
         .upload(storagePath, file, {
           cacheControl: '3600',
           upsert: false,
@@ -86,10 +90,10 @@ export function useFileUpload() {
     }
   };
 
-  const deleteFile = async (storagePath: string): Promise<boolean> => {
+  const deleteFile = async (storagePath: string, bucket: StorageBucket = 'centro-copiado-archivos'): Promise<boolean> => {
     try {
       const { error } = await supabase.storage
-        .from('centro-copiado-archivos')
+        .from(bucket)
         .remove([storagePath]);
 
       if (error) {
@@ -103,18 +107,32 @@ export function useFileUpload() {
     }
   };
 
-  const getPublicUrl = (storagePath: string): string => {
+  const getPublicUrl = (storagePath: string, bucket: StorageBucket = 'centro-copiado-archivos'): string => {
     const { data } = supabase.storage
-      .from('centro-copiado-archivos')
+      .from(bucket)
       .getPublicUrl(storagePath);
 
     return data.publicUrl;
   };
 
-  const downloadFile = async (storagePath: string, fileName: string): Promise<boolean> => {
+  const createSignedUrl = async (storagePath: string, bucket: StorageBucket = 'centro-copiado-archivos', expiresIn = 3600): Promise<string | null> => {
     try {
       const { data, error } = await supabase.storage
-        .from('centro-copiado-archivos')
+        .from(bucket)
+        .createSignedUrl(storagePath, expiresIn);
+
+      if (error) throw error;
+      return data.signedUrl;
+    } catch (error) {
+      console.error('Error creating signed URL:', error);
+      return null;
+    }
+  };
+
+  const downloadFile = async (storagePath: string, fileName: string, bucket: StorageBucket = 'centro-copiado-archivos'): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase.storage
+        .from(bucket)
         .download(storagePath);
 
       if (error) {
@@ -154,6 +172,7 @@ export function useFileUpload() {
     uploadFile,
     deleteFile,
     getPublicUrl,
+    createSignedUrl,
     downloadFile,
     uploadProgress,
     clearProgress,

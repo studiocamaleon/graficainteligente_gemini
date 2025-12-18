@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft, Save, Loader2
@@ -19,13 +19,11 @@ import { OrdenItemsTab } from '../../../components/orders/OrdenItemsTab';
 import { OrdenPagosTab } from '../../../components/orders/OrdenPagosTab';
 import { OrdenRutasTab } from '../../../components/orders/OrdenRutasTab';
 import { OrdenHistorialTab } from '../../../components/orders/OrdenHistorialTab';
-import { OrdenAdjuntosTab } from '../../../components/orders/OrdenAdjuntosTab';
+import { OrdenAdjuntosSection } from '../../../components/orders/OrdenAdjuntosSection';
 import { OrdenFooterTotales } from '../../../components/orders/OrdenFooterTotales';
 import { PagoFormModal } from '../../../components/orders/PagoFormModal';
 
 import type { CanalVenta } from '../../../types/database';
-import { Input } from '../../../components/ui/Input';
-import { Modal } from '../../../components/ui/Modal';
 import { usePresupuestos } from '../../../hooks/usePresupuestos';
 import { generarDescripcionCopiado } from '../../../utils/ordenesHelpers';
 import { useLocation } from 'react-router-dom';
@@ -73,12 +71,11 @@ export function CreateOrderPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(false);
 
-  // Estados para Links
+  // ID temporal para adjuntos durante la creación
+  const ordenTemporalId = useMemo(() => crypto.randomUUID(), []);
+
+  // Estados para Adjuntos (Links)
   const [links, setLinks] = useState<{ titulo: string; url: string; descripcion: string }[]>([]);
-  const [linkModalOpen, setLinkModalOpen] = useState(false);
-  const [newLink, setNewLink] = useState({ titulo: '', url: '', descripcion: '' });
-  const [linkType, setLinkType] = useState<LinkType>('download');
-  const [editingLinkIndex, setEditingLinkIndex] = useState<number | null>(null);
 
   // Estados del Formulario
   const [clienteId, setClienteId] = useState('');
@@ -597,7 +594,7 @@ export function CreateOrderPage() {
     const ordenData = {
       cliente_id: clienteId,
       canal_venta: canalVenta,
-      fecha_estimada_entrega: fechaEntrega ? `${fechaEntrega}T12:00:00` : null,
+      fecha_estimada_entrega: fechaEntrega ? `${fechaEntrega}T12:00:00` : undefined,
       notas_internas: notasInternas || undefined,
       subtotal: totales.subtotal,
       total_descuentos: totales.descuentoAplicado,
@@ -640,7 +637,7 @@ export function CreateOrderPage() {
     };
 
     try {
-      let result;
+      let result: any;
       if (isEditing && id) {
         result = await updateOrdenCompleta(id, payload);
         if (result) {
@@ -666,7 +663,7 @@ export function CreateOrderPage() {
           }
           // Insertar links
           if (links.length > 0) {
-            await supabase.from('ordenes_trabajo_links').insert(links.map(l => ({
+            await (supabase.from('ordenes_trabajo_links') as any).insert(links.map(l => ({
               orden_id: result.id,
               company_id: profile.company_id,
               titulo: l.titulo,
@@ -675,6 +672,12 @@ export function CreateOrderPage() {
               created_by: profile.id
             })));
           }
+
+          // Vincular adjuntos temporales a la nueva orden
+          await (supabase
+            .from('ordenes_trabajo_archivos') as any)
+            .update({ orden_id: result.id, orden_temporal_id: null })
+            .eq('orden_temporal_id', ordenTemporalId);
 
           setOrdenCreada(true);
           setOrdenCreadaId(result.id);
@@ -721,7 +724,7 @@ export function CreateOrderPage() {
   const tabsDefinition = [
     { id: 'items', label: 'Items', count: items.length },
     { id: 'rutas', label: 'Rutas de Producción', count: totalRutas, disabled: items.length === 0, badge: totalComentarios > 0 ? totalComentarios : undefined },
-    { id: 'adjuntos', label: 'Links', disabled: false },
+    { id: 'adjuntos', label: 'Adjuntos', disabled: false },
     ...(mode !== 'presupuesto' ? [{ id: 'pagos', label: 'Pagos', count: pagos.length, disabled: false }] : []),
     { id: 'historial', label: 'Historial', disabled: true },
   ];
@@ -833,25 +836,11 @@ export function CreateOrderPage() {
             </div>
 
             <div className={activeTab === 'adjuntos' ? 'block' : 'hidden'}>
-              <OrdenAdjuntosTab
-                links={links}
-                onAddLink={() => {
-                  setLinkType('download');
-                  setEditingLinkIndex(null);
-                  setNewLink({ titulo: '', url: '', descripcion: '' });
-                  setLinkModalOpen(true);
-                }}
-                onEditLink={(idx) => {
-                  setEditingLinkIndex(idx);
-                  setNewLink(links[idx]);
-                  setLinkType(/^https?:\/\//i.test(links[idx].url) ? 'download' : 'internal');
-                  setLinkModalOpen(true);
-                }}
-                onDeleteLink={(idx) => {
-                  const newLinks = [...links];
-                  newLinks.splice(idx, 1);
-                  setLinks(newLinks);
-                }}
+              <OrdenAdjuntosSection
+                ordenId={id}
+                ordenTemporalId={ordenTemporalId}
+                onLinksChange={setLinks}
+                initialLinks={links}
               />
             </div>
 
@@ -886,50 +875,6 @@ export function CreateOrderPage() {
           clientName={clienteSeleccionado?.nombre_fantasia || ''}
         />
       )}
-
-      <PagoFormModal
-        isOpen={showPagoForm}
-        onClose={() => {
-          setShowPagoForm(false);
-          setEditingPago(undefined);
-        }}
-        onSubmit={handleGuardarPago}
-        saldoPendiente={calcularSaldoPendiente()}
-        pago={editingPago ? { ...editingPago, referencia_pago: editingPago.referencia_pago || '', notas: editingPago.notas || '' } : undefined}
-      />
-
-      <Modal
-        isOpen={linkModalOpen}
-        onClose={() => setLinkModalOpen(false)}
-        title={editingLinkIndex !== null ? "Editar Link" : "Agregar Link"}
-      >
-        <div className="space-y-4">
-          {/* Simplified Link Form - Logic reused from original */}
-          <div className="flex gap-4 mb-4">
-            <label>
-              <input type="radio" checked={linkType === 'download'} onChange={() => setLinkType('download')} /> Web
-            </label>
-            <label>
-              <input type="radio" checked={linkType === 'internal'} onChange={() => setLinkType('internal')} /> Red Local
-            </label>
-          </div>
-          <Input label="Título" value={newLink.titulo} onChange={e => setNewLink({ ...newLink, titulo: e.target.value })} />
-          <Input label="URL/Ruta" value={newLink.url} onChange={e => setNewLink({ ...newLink, url: e.target.value })} />
-          <Button onClick={() => {
-            if (!newLink.titulo || !newLink.url) return;
-            const url = formatUrl(newLink.url, linkType);
-            const l = { ...newLink, url };
-            if (editingLinkIndex !== null) {
-              const copy = [...links];
-              copy[editingLinkIndex] = l;
-              setLinks(copy);
-            } else {
-              setLinks([...links, l]);
-            }
-            setLinkModalOpen(false);
-          }}>Guardar</Button>
-        </div>
-      </Modal>
 
       <ConfirmDialog
         isOpen={isPromptOpen}

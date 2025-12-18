@@ -21,7 +21,6 @@ import {
   Link as LinkIcon,
   CreditCard,
   History,
-  Wrench
 } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
@@ -36,14 +35,11 @@ import { useConfirmDialog } from '../../../hooks/useConfirmDialog';
 import { OrderStatusBadge } from '../../../components/orders/OrderStatusBadge';
 import { ChannelBadge } from '../../../components/orders/ChannelBadge';
 import { OrderProductionRouteTab } from '../../../components/orders/OrderProductionRouteTab';
-import { OrdenAdjuntosTab } from '../../../components/orders/OrdenAdjuntosTab';
+import { OrdenAdjuntosSection } from '../../../components/orders/OrdenAdjuntosSection';
 import { OrdenPagosTab } from '../../../components/orders/OrdenPagosTab';
 import { PagoFormModal } from '../../../components/orders/PagoFormModal';
 import { OrdenCopiadoAsociadaCard } from '../../../components/orders/OrdenCopiadoAsociadaCard';
 import { useToast } from '../../../contexts/ToastContext';
-import { calcularTotalesConsolidados } from '../../../utils/ordenesConsolidadas';
-import type { EstadoOrdenTrabajo } from '../../../types/database';
-import { enviarNotificacion } from '../../../lib/whatsappNotifications';
 import { descargarFactura } from '../../../utils/facturaHelpers';
 import { ItemConfigRenderer } from '../../../components/orders/ItemConfigRenderer';
 
@@ -91,8 +87,8 @@ export function OrderDetailPage() {
       newOrdenCopiadoTotal = ocSubtotal + ocIva;
 
       // Update linked OC
-      const { error: ocError } = await supabase
-        .from('centro_copiado_ordenes')
+      const { error: ocError } = await (supabase
+        .from('centro_copiado_ordenes') as any)
         .update({
           requiere_factura: checked,
           total: newOrdenCopiadoTotal
@@ -327,17 +323,6 @@ export function OrderDetailPage() {
     return Number(orden.total) - totalPagado;
   }, [orden, totalPagado]);
 
-  const totalesConsolidados = useMemo(() => {
-    if (!orden) return null;
-    const totalOC = orden.ordenCopiado?.total || 0;
-    return calcularTotalesConsolidados(
-      Number(orden.subtotal),
-      Number(orden.total_descuentos),
-      Number(totalOC),
-      false // IVA se calcula según cliente
-    );
-  }, [orden]);
-
   if (loadingData) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -535,7 +520,7 @@ export function OrderDetailPage() {
           {[
             { key: 'items' as const, label: 'Items', icon: Package, count: orden.items?.length || 0 },
             { key: 'ruta' as const, label: 'Ruta de Producción', icon: Route },
-            { key: 'adjuntos' as const, label: 'Links', icon: LinkIcon },
+            { key: 'adjuntos' as const, label: 'Adjuntos', icon: LinkIcon },
             ...(canViewPrices ? [{ key: 'pagos' as const, label: 'Pagos', icon: CreditCard, count: orden.pagos?.length || 0 }] : []),
             { key: 'historial' as const, label: 'Historial', icon: History },
           ].map((tab) => {
@@ -580,8 +565,6 @@ export function OrderDetailPage() {
 
                   <div className="space-y-3">
                     {orden.items.map((item: any, index: number) => {
-                      const config = item.configuracion || {};
-
                       return (
                         <motion.div
                           key={item.id}
@@ -597,7 +580,7 @@ export function OrderDetailPage() {
                               {item.producto_nombre || 'Producto'}
                             </h4>
                             {item.producto_categoria && (
-                              <Badge variant="secondary" className="text-xs">
+                              <Badge variant="default" className="text-xs">
                                 {item.producto_categoria}
                               </Badge>
                             )}
@@ -693,7 +676,7 @@ export function OrderDetailPage() {
                         onDesvincular={handleDesvincularOrdenCopiado}
                         canDesvincular={isAdmin || profile?.role === 'operador_diseno'}
                         totalOrdenTrabajo={orden.total}
-                        totalPagado={orden.pagos?.reduce((acc, p) => acc + Number(p.monto), 0) || 0}
+                        totalPagado={orden.pagos?.reduce((acc: number, p: any) => acc + Number(p.monto), 0) || 0}
                       />
                     </div>
                   )}
@@ -801,7 +784,7 @@ export function OrderDetailPage() {
                   description="Esta orden no tiene productos con rutas de producción"
                 />
               ) : (
-                <OrderProductionRouteTab ordenId={orden.id} items={orden.items} />
+                <OrderProductionRouteTab items={orden.items} />
               )}
             </div>
           )
@@ -810,10 +793,8 @@ export function OrderDetailPage() {
         {
           activeTab === 'adjuntos' && (
             <div className="p-6">
-              <OrdenAdjuntosTab
+              <OrdenAdjuntosSection
                 ordenId={orden.id}
-                fechaEntregaReal={orden.fecha_entrega_real}
-                estado={orden.estado}
               />
             </div>
           )
@@ -874,7 +855,7 @@ export function OrderDetailPage() {
                         </p>
                       </div>
 
-                      <Badge variant="secondary">{evento.tipo_evento}</Badge>
+                      <Badge variant="default">{evento.tipo_evento}</Badge>
                     </motion.div>
                   ))}
                 </div>

@@ -11,6 +11,7 @@ import { Input } from '../ui/Input';
 import { supabase } from '../../lib/supabase';
 
 import { useClients } from '../../hooks/useClients';
+import { useWorkload } from '../../hooks/useWorkload';
 import type { CanalVenta, Client } from '../../types/database';
 import { QuickClientModal } from '../clients/QuickClientModal';
 
@@ -82,6 +83,8 @@ export function OrdenGeneralSection({
     { value: 'Mostrador', label: 'Mostrador', icon: Store },
     { value: 'App Mobile', label: 'App Mobile', icon: Smartphone },
   ];
+
+  const { workloadData } = useWorkload({ type: 'orden_trabajo' });
 
   useEffect(() => {
     if (mode === 'presupuesto') {
@@ -273,6 +276,8 @@ export function OrdenGeneralSection({
               error={errors.fechaEntrega}
               placeholder="Seleccionar fecha de entrega"
               required
+              workloadData={workloadData}
+              workloadThresholds={{ low: 3, medium: 7 }}
             />
 
             <div>

@@ -23,6 +23,8 @@ interface DatePickerProps {
   required?: boolean;
   disabled?: boolean;
   helperText?: string;
+  workloadData?: Record<string, number>;
+  workloadThresholds?: { low: number; medium: number };
 }
 
 export function DatePicker({
@@ -36,6 +38,8 @@ export function DatePicker({
   required,
   disabled,
   helperText,
+  workloadData = {},
+  workloadThresholds = { low: 2, medium: 5 }
 }: DatePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(
@@ -221,20 +225,34 @@ export function DatePicker({
                 const isSelected = value && day.isSame(dayjs(value).tz(ARGENTINA_TIMEZONE), 'day');
                 const isToday = day.isSame(dayjs().tz(ARGENTINA_TIMEZONE), 'day');
                 const isDisabled = isDateDisabled(day);
+                const dayKey = day.format('YYYY-MM-DD');
+                const count = workloadData[dayKey] || 0;
+
+                let workloadClasses = '';
+                if (count > 0 && !isSelected) {
+                  if (count <= workloadThresholds.low) {
+                    workloadClasses = 'bg-green-100 text-green-900 hover:bg-green-200';
+                  } else if (count <= workloadThresholds.medium) {
+                    workloadClasses = 'bg-yellow-100 text-yellow-900 hover:bg-yellow-200';
+                  } else {
+                    workloadClasses = 'bg-red-100 text-red-900 hover:bg-red-200';
+                  }
+                }
 
                 return (
                   <button
-                    key={day.format('YYYY-MM-DD')}
+                    key={dayKey}
                     type="button"
                     onClick={() => handleDateSelect(day)}
                     disabled={isDisabled}
+                    title={count > 0 ? `${count} trabajos programados` : undefined}
                     className={`
                       aspect-square rounded-lg text-sm font-medium transition-all
                       ${isSelected
                         ? 'bg-blue-500 text-white hover:bg-blue-600'
                         : isToday
-                        ? 'bg-blue-50 text-blue-600 hover:bg-blue-100'
-                        : 'text-slate-700 hover:bg-slate-100'
+                          ? 'bg-blue-50 text-blue-600 hover:bg-blue-100'
+                          : workloadClasses || 'text-slate-700 hover:bg-slate-100'
                       }
                       ${isDisabled
                         ? 'opacity-40 cursor-not-allowed hover:bg-transparent'
@@ -248,18 +266,40 @@ export function DatePicker({
               })}
             </div>
 
-            <div className="flex gap-2 mt-4 pt-4 border-t border-slate-200">
-              {shortcuts.map((shortcut) => (
-                <button
-                  key={shortcut.label}
-                  type="button"
-                  onClick={() => handleShortcut(shortcut.days)}
-                  className="flex-1 px-3 py-2 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
-                >
-                  {shortcut.label}
-                </button>
-              ))}
-            </div>
+            {Object.keys(workloadData).length > 0 ? (
+              <div className="mt-4 pt-4 border-t border-slate-200">
+                <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                  Carga de trabajo (Ordenes)
+                </p>
+                <div className="flex gap-2">
+                  <div className="flex-1 flex items-center gap-1.5 p-1.5 rounded-lg bg-green-50 text-[10px]">
+                    <div className="w-2.5 h-2.5 rounded-sm bg-green-200 border border-green-300" />
+                    <span className="text-green-900 font-medium">Baja (1-{workloadThresholds.low})</span>
+                  </div>
+                  <div className="flex-1 flex items-center gap-1.5 p-1.5 rounded-lg bg-yellow-50 text-[10px]">
+                    <div className="w-2.5 h-2.5 rounded-sm bg-yellow-200 border border-yellow-300" />
+                    <span className="text-yellow-900 font-medium">Media ({workloadThresholds.low + 1}-{workloadThresholds.medium})</span>
+                  </div>
+                  <div className="flex-1 flex items-center gap-1.5 p-1.5 rounded-lg bg-red-50 text-[10px]">
+                    <div className="w-2.5 h-2.5 rounded-sm bg-red-200 border border-red-300" />
+                    <span className="text-red-900 font-medium">Alta ({workloadThresholds.medium + 1}+)</span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex gap-2 mt-4 pt-4 border-t border-slate-200">
+                {shortcuts.map((shortcut) => (
+                  <button
+                    key={shortcut.label}
+                    type="button"
+                    onClick={() => handleShortcut(shortcut.days)}
+                    className="flex-1 px-3 py-2 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+                  >
+                    {shortcut.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
