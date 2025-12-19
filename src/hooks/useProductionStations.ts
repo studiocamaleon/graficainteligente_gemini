@@ -119,9 +119,8 @@ export function useProductionStations(params: UseProductionStationsParams = {}) 
         .neq('orden_item.orden.estado', 'entregada')
         .eq('paso.estacion.is_active', true);
 
-      if (estacionId) {
-        rutasQuery = rutasQuery.eq('paso.estacion_id', estacionId);
-      }
+      // Eliminamos el filtro por estacionId aquí para que isPasoListo tenga el contexto completo de la ruta
+      // El componente StationsView se encarga de mostrar la estación seleccionada del arreglo completo.
 
       const { data: rutasData, error: rutasError } = await rutasQuery;
 
