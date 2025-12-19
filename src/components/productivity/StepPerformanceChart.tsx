@@ -9,9 +9,9 @@ interface StepPerformanceChartProps {
 }
 
 const etapaColors = {
-  pre_prensa: 'blue',
-  principal: 'green',
-  post_prensa: 'orange',
+  pre_prensa: 'info',
+  principal: 'success',
+  post_prensa: 'warning',
 } as const;
 
 export function StepPerformanceChart({ data, loading, limit = 10 }: StepPerformanceChartProps) {
@@ -53,7 +53,7 @@ export function StepPerformanceChart({ data, loading, limit = 10 }: StepPerforma
       <div className="space-y-4">
         {limitedData.map((paso, index) => {
           const porcentaje = (paso.minutos_promedio / maxMinutos) * 100;
-          const etapaColor = etapaColors[paso.tipo_etapa as keyof typeof etapaColors] || 'gray';
+          const etapaColor = etapaColors[paso.etapa_tipo as keyof typeof etapaColors] || 'gray';
 
           return (
             <div key={`${paso.paso_id}-${index}`} className="space-y-2">
@@ -61,7 +61,7 @@ export function StepPerformanceChart({ data, loading, limit = 10 }: StepPerforma
                 <div className="flex items-center gap-2 flex-1 min-w-0">
                   <span className="font-medium text-gray-900 truncate">{paso.paso_nombre}</span>
                   <Badge variant={etapaColor} size="sm">
-                    {paso.tipo_etapa.replace('_', '-')}
+                    {paso.etapa_tipo.replace('_', '-')}
                   </Badge>
                 </div>
                 <span className="text-sm font-semibold text-gray-900 ml-4">

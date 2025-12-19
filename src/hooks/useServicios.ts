@@ -53,7 +53,7 @@ export function useServicios({
         .select(
           `
           *,
-          servicios_categorias(
+          servicios_categorias${categoriaId ? '!inner' : ''}(
             categoria_id,
             categoria:categorias(id, nombre, color)
           ),
@@ -85,7 +85,7 @@ export function useServicios({
       }
 
       if (categoriaId) {
-        query = query.eq('categoria_id', categoriaId);
+        query = query.eq('servicios_categorias.categoria_id', categoriaId);
       }
 
       if (estacionId) {

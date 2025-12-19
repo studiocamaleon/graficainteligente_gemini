@@ -9,48 +9,26 @@ import {
 } from 'lucide-react';
 import { Card } from '../ui/Card';
 import { usePresupuestosStats } from '../../hooks/usePresupuestosStats';
-import type { PresupuestoConRelaciones } from '../../types/presupuestos';
+import type { PresupuestosFilters } from '../../types/presupuestos';
 
 interface PresupuestosStatsProps {
-  presupuestos: PresupuestoConRelaciones[];
+  filters?: PresupuestosFilters;
 }
 
-export function PresupuestosStats({ presupuestos }: PresupuestosStatsProps) {
-  const { stats: dbStats } = usePresupuestosStats();
+export function PresupuestosStats({ filters }: PresupuestosStatsProps) {
+  const { stats, loading } = usePresupuestosStats(filters);
 
-  // Calcular estadísticas
-  const stats = {
-    total: presupuestos.length,
-    borradores: presupuestos.filter((p) => p.estado === 'borrador').length,
-    enviados: presupuestos.filter((p) => p.estado === 'enviado').length,
-    aprobados: presupuestos.filter((p) => p.estado === 'aprobado').length,
-    rechazados: presupuestos.filter((p) => p.estado === 'rechazado').length,
-    convertidos: presupuestos.filter((p) => p.estado === 'convertido').length,
-    vencidos: presupuestos.filter((p) => p.estado === 'vencido').length,
-    porVencer: presupuestos.filter((p) => {
-      if (!p.fecha_validez || p.estado !== 'enviado') return false;
-      const dias = Math.ceil(
-        (new Date(p.fecha_validez).getTime() - new Date().getTime()) /
-          (1000 * 60 * 60 * 24)
-      );
-      return dias > 0 && dias <= 7;
-    }).length,
-  };
-
-  // Valor total
-  const valorTotal = presupuestos.reduce((sum, p) => sum + Number(p.total), 0);
-
-  // Valor en negociación (enviados + pendientes)
-  const valorEnNegociacion = presupuestos
-    .filter((p) => ['enviado', 'pendiente'].includes(p.estado))
-    .reduce((sum, p) => sum + Number(p.total), 0);
-
-  // Tasa de conversión
-  const totalEnviados = presupuestos.filter((p) =>
-    ['enviado', 'aprobado', 'rechazado', 'convertido', 'vencido'].includes(p.estado)
-  ).length;
-  const tasaConversion =
-    totalEnviados > 0 ? (stats.aprobados / totalEnviados) * 100 : 0;
+  if (loading || !stats) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {[...Array(4)].map((_, i) => (
+          <Card key={i} className="p-4 animate-pulse">
+            <div className="h-16 bg-gray-100 rounded"></div>
+          </Card>
+        ))}
+      </div>
+    );
+  }
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('es-AR', {
@@ -61,34 +39,45 @@ export function PresupuestosStats({ presupuestos }: PresupuestosStatsProps) {
     }).format(value);
   };
 
+  const totalEnviados =
+    stats.enviado_count +
+    stats.aprobado_count +
+    stats.rechazado_count +
+    stats.convertido_count +
+    stats.vencido_count;
+
+  const tasaConversion = stats.total_count > 0
+    ? (stats.convertido_count / stats.total_count) * 100
+    : 0;
+
   const statCards = [
     {
       title: 'Total Presupuestos',
-      value: stats.total.toString(),
+      value: stats.total_count.toString(),
       icon: FileText,
       color: 'text-blue-600',
       bgColor: 'bg-blue-50',
     },
     {
       title: 'Pendientes de Cotizar',
-      value: dbStats.presupuestos_pendientes_cotizar.toString(),
+      value: stats.pendientes_cotizar_count.toString(),
       subtitle: 'En borradores',
       icon: Calculator,
-      color: dbStats.presupuestos_pendientes_cotizar > 0 ? 'text-amber-600' : 'text-gray-400',
-      bgColor: dbStats.presupuestos_pendientes_cotizar > 0 ? 'bg-amber-50' : 'bg-gray-50',
+      color: stats.pendientes_cotizar_count > 0 ? 'text-amber-600' : 'text-gray-400',
+      bgColor: stats.pendientes_cotizar_count > 0 ? 'bg-amber-50' : 'bg-gray-50',
     },
     {
       title: 'En Negociación',
-      value: stats.enviados.toString(),
-      subtitle: formatCurrency(valorEnNegociacion),
+      value: stats.enviado_count.toString(),
+      subtitle: formatCurrency(stats.valor_en_negociacion),
       icon: Clock,
       color: 'text-orange-600',
       bgColor: 'bg-orange-50',
     },
     {
       title: 'Aprobados',
-      value: stats.aprobados.toString(),
-      subtitle: `${stats.convertidos} convertidos`,
+      value: stats.aprobado_count.toString(),
+      subtitle: `${stats.convertido_count} convertidos`,
       icon: CheckCircle,
       color: 'text-green-600',
       bgColor: 'bg-green-50',
@@ -96,25 +85,25 @@ export function PresupuestosStats({ presupuestos }: PresupuestosStatsProps) {
     {
       title: 'Tasa Conversión',
       value: `${tasaConversion.toFixed(1)}%`,
-      subtitle: `${stats.aprobados} de ${totalEnviados}`,
+      subtitle: `${stats.convertido_count} de ${stats.total_count}`,
       icon: TrendingUp,
       color: 'text-purple-600',
       bgColor: 'bg-purple-50',
     },
     {
       title: 'Valor Total',
-      value: formatCurrency(valorTotal),
+      value: formatCurrency(stats.valor_total),
       icon: DollarSign,
       color: 'text-emerald-600',
       bgColor: 'bg-emerald-50',
     },
     {
       title: 'Por Vencer (7 días)',
-      value: stats.porVencer.toString(),
-      subtitle: stats.vencidos > 0 ? `${stats.vencidos} vencidos` : undefined,
+      value: stats.por_vencer_count.toString(),
+      subtitle: stats.vencido_count > 0 ? `${stats.vencido_count} vencidos` : undefined,
       icon: AlertCircle,
-      color: stats.porVencer > 0 ? 'text-yellow-600' : 'text-gray-400',
-      bgColor: stats.porVencer > 0 ? 'bg-yellow-50' : 'bg-gray-50',
+      color: stats.por_vencer_count > 0 ? 'text-yellow-600' : 'text-gray-400',
+      bgColor: stats.por_vencer_count > 0 ? 'bg-yellow-50' : 'bg-gray-50',
     },
   ];
 

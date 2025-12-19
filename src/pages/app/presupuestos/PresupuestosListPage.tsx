@@ -175,8 +175,8 @@ export default function PresupuestosListPage() {
       )}
 
       {/* Stats Dashboard */}
-      {!loading && presupuestos.length > 0 && (
-        <PresupuestosStats presupuestos={presupuestos} />
+      {!loading && (
+        <PresupuestosStats filters={filters} />
       )}
 
       {/* Filters */}

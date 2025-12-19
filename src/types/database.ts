@@ -1835,6 +1835,11 @@ export interface Database {
         Insert: Omit<Cheque, 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Omit<Cheque, 'id' | 'created_at' | 'company_id'>>;
       };
+      servicios_categorias: {
+        Row: ServicioCategoria;
+        Insert: Omit<ServicioCategoria, 'id' | 'created_at'>;
+        Update: Partial<Omit<ServicioCategoria, 'id' | 'created_at'>>;
+      };
       servicios_niveles_precio: {
         Row: ServicioNivelPrecio;
         Insert: Omit<ServicioNivelPrecio, 'id' | 'created_at'>;
@@ -1854,6 +1859,11 @@ export interface Database {
         Row: AcabadoNivelPrecio;
         Insert: Omit<AcabadoNivelPrecio, 'id' | 'created_at'>;
         Update: Partial<Omit<AcabadoNivelPrecio, 'id' | 'created_at'>>;
+      };
+      acabados_categorias: {
+        Row: AcabadoCategoria;
+        Insert: Omit<AcabadoCategoria, 'id' | 'created_at'>;
+        Update: Partial<Omit<AcabadoCategoria, 'id' | 'created_at'>>;
       };
       acabados_pasos: {
         Row: AcabadoPaso;

@@ -63,16 +63,16 @@ export function StageDistributionChart({ data, loading }: StageDistributionChart
 
       <div className="space-y-6">
         {data.map((etapa) => {
-          const config = etapaColors[etapa.tipo_etapa as keyof typeof etapaColors] || {
+          const config = etapaColors[etapa.etapa_tipo as keyof typeof etapaColors] || {
             bg: 'bg-gray-500',
             text: 'text-gray-600',
-            label: etapa.tipo_etapa,
+            label: etapa.etapa_tipo,
           };
 
           const porcentaje = (etapa.minutos_totales / totalMinutos) * 100;
 
           return (
-            <div key={etapa.tipo_etapa} className="space-y-2">
+            <div key={etapa.etapa_tipo} className="space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="font-medium text-gray-900">{config.label}</span>
                 <span className="text-gray-600">

@@ -20,7 +20,7 @@ export interface KpiGenerales {
 export interface MetricaPaso {
   paso_id: string;
   paso_nombre: string;
-  tipo_etapa: string;
+  etapa_tipo: string;
   total_ejecuciones: number;
   minutos_promedio: number;
   minutos_minimo: number;
@@ -29,19 +29,9 @@ export interface MetricaPaso {
   total_minutos: number;
 }
 
-export interface MetricaCategoria {
-  categoria_id: string;
-  categoria_nombre: string;
-  total_ordenes: number;
-  total_items: number;
-  minutos_promedio_por_item: number;
-  minutos_minimo: number;
-  minutos_maximo: number;
-  desviacion_estandar: number;
-}
 
 export interface MetricaEtapa {
-  tipo_etapa: string;
+  etapa_tipo: string;
   total_pasos: number;
   minutos_promedio: number;
   minutos_totales: number;
@@ -106,13 +96,11 @@ export function useProductivityMetrics(dateRange?: DateRange) {
 
   // Métricas detalladas
   const [metricasPorPaso, setMetricasPorPaso] = useState<MetricaPaso[]>([]);
-  const [metricasPorCategoria, setMetricasPorCategoria] = useState<MetricaCategoria[]>([]);
   const [metricasPorEtapa, setMetricasPorEtapa] = useState<MetricaEtapa[]>([]);
   const [metricasPorOperario, setMetricasPorOperario] = useState<MetricaOperario[]>([]);
 
   // Análisis adicionales
   const [ordenesCompletadas, setOrdenesCompletadas] = useState<OrdenCompletada[]>([]);
-  const [cuellosBottella, setCuellosBottella] = useState<CuelloBottella[]>([]);
   const [tendencias, setTendencias] = useState<TendenciaTemporal[]>([]);
 
   // Tasa de cumplimiento
@@ -157,11 +145,9 @@ export function useProductivityMetrics(dateRange?: DateRange) {
       const results = await Promise.allSettled([
         loadKpisGenerales(fechaDesde, fechaHasta),
         loadMetricasPorPaso(fechaDesde, fechaHasta),
-        loadMetricasPorCategoria(fechaDesde, fechaHasta),
         loadMetricasPorEtapa(fechaDesde, fechaHasta),
         loadMetricasPorOperario(fechaDesde, fechaHasta),
         loadOrdenesCompletadas(fechaDesde, fechaHasta),
-        loadCuellosBottella(fechaDesde, fechaHasta),
         loadTendencias(fechaDesde, fechaHasta),
         loadTasaCumplimiento(fechaDesde, fechaHasta),
         loadEvolutivoTasa(fechaDesde, fechaHasta),
@@ -227,25 +213,6 @@ export function useProductivityMetrics(dateRange?: DateRange) {
     }
   };
 
-  const loadMetricasPorCategoria = async (fechaDesde: string | null, fechaHasta: string | null) => {
-    try {
-      console.log('[Productivity] Loading metricas por categoria...');
-      const { data, error } = await supabase.rpc('fn_metricas_por_categoria', {
-        p_company_id: companyId,
-        p_fecha_desde: fechaDesde,
-        p_fecha_hasta: fechaHasta,
-      });
-
-      if (error) {
-        console.error('[Productivity] Error loading metricas por categoria:', error);
-        return;
-      }
-      console.log('[Productivity] Metricas por categoria loaded:', data?.length || 0, 'items');
-      setMetricasPorCategoria(data || []);
-    } catch (err) {
-      console.error('[Productivity] Unexpected error in loadMetricasPorCategoria:', err);
-    }
-  };
 
   const loadMetricasPorEtapa = async (fechaDesde: string | null, fechaHasta: string | null) => {
     try {
@@ -308,25 +275,6 @@ export function useProductivityMetrics(dateRange?: DateRange) {
     }
   };
 
-  const loadCuellosBottella = async (fechaDesde: string | null, fechaHasta: string | null) => {
-    try {
-      console.log('[Productivity] Loading cuellos de botella...');
-      const { data, error } = await supabase.rpc('fn_cuellos_botella', {
-        p_company_id: companyId,
-        p_fecha_desde: fechaDesde,
-        p_fecha_hasta: fechaHasta,
-      });
-
-      if (error) {
-        console.error('[Productivity] Error loading cuellos de botella:', error);
-        return;
-      }
-      console.log('[Productivity] Cuellos de botella loaded:', data?.length || 0, 'items');
-      setCuellosBottella(data || []);
-    } catch (err) {
-      console.error('[Productivity] Unexpected error in loadCuellosBottella:', err);
-    }
-  };
 
   const loadTendencias = async (fechaDesde: string | null, fechaHasta: string | null) => {
     try {
@@ -421,11 +369,9 @@ export function useProductivityMetrics(dateRange?: DateRange) {
     error,
     kpisGenerales,
     metricasPorPaso,
-    metricasPorCategoria,
     metricasPorEtapa,
     metricasPorOperario,
     ordenesCompletadas,
-    cuellosBottella,
     tendencias,
     tasaCumplimiento,
     evolutivoTasa,

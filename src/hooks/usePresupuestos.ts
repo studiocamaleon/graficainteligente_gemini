@@ -9,7 +9,6 @@ import type {
   UpdatePresupuestoData,
   PresupuestosFilters,
   PresupuestosPaginacion,
-  PresupuestosResponse,
 } from '../types/presupuestos';
 
 export function usePresupuestos(
@@ -27,157 +26,65 @@ export function usePresupuestos(
     if (user) {
       fetchPresupuestos();
     }
-  }, [user, filters, pagination]);
+  }, [user, JSON.stringify(filters), JSON.stringify(pagination)]);
 
   const fetchPresupuestos = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // --- LOGICA DE BUSQUEDA (RPC) ---
-      if (filters?.search && filters.search.length > 0) {
-        if (!profile?.company_id) return;
+      if (!profile?.company_id) return;
 
-        const { data: searchData, error: searchError } = await supabase
-          .rpc('fn_search_presupuestos', {
-            p_search_term: filters.search,
-            p_company_id: profile.company_id,
-            p_limit: pagination?.limit || 20,
-            p_offset: ((pagination?.page || 1) - 1) * (pagination?.limit || 20)
-          });
+      const { data: searchData, error: searchError } = await supabase
+        .rpc('fn_search_presupuestos_v2', {
+          p_company_id: profile.company_id,
+          p_search_term: filters?.search || null,
+          p_limit: pagination?.limit || 20,
+          p_offset: ((pagination?.page || 1) - 1) * (pagination?.limit || 20),
+          p_estado: Array.isArray(filters?.estado) ? filters.estado[0] : (filters?.estado || null),
+          p_vendedor_id: filters?.vendedor_id || null,
+          p_cliente_id: filters?.cliente_id || null,
+          p_fecha_desde: filters?.fecha_desde || null,
+          p_fecha_hasta: filters?.fecha_hasta || null,
+          p_canal_venta: Array.isArray(filters?.canal_venta) ? filters.canal_venta[0] : (filters?.canal_venta || null),
+          p_solo_vencidos: filters?.solo_vencidos || false,
+          p_solo_pendientes_respuesta: filters?.solo_pendientes_respuesta || false,
+        });
 
-        if (searchError) throw searchError;
+      if (searchError) throw searchError;
 
-        const mappedData: PresupuestoConRelaciones[] = (searchData || []).map((item: any) => ({
-          id: item.id,
-          numero_presupuesto: item.numero_presupuesto,
-          fecha_creacion: item.fecha_creacion,
-          fecha_validez: item.fecha_validez,
-          cliente_id: item.cliente_id,
-          vendedor_id: item.vendedor_id,
-          estado: item.estado,
-          total: Number(item.total),
-          company_id: item.company_id,
-          cliente: {
-            id: item.cliente_id,
-            razon_social: item.cliente_razon_social,
-            nombre_fantasia: item.cliente_nombre_fantasia,
-            email: item.cliente_email,
-            // whatsapp no viene en RPC por defecto, agregarlo si critico
-          },
-          vendedor: {
-            id: item.vendedor_id,
-            full_name: item.vendedor_full_name,
-            // email no viene
-          },
-          orden_trabajo: item.orden_trabajo_id ? {
-            id: item.orden_trabajo_id,
-            numero_orden: item.orden_trabajo_numero,
-            estado: 'pendiente' // Placeholder, no critico para lista
-          } : undefined,
-          items_count: Number(item.items_count),
-          presupuestos_items: [{ count: Number(item.items_count) }] // Para compatibilidad
-        }));
-
-        setPresupuestos(mappedData);
-        setTotal(searchData && searchData.length > 0 ? Number(searchData[0].full_count) : 0);
-        return;
-      }
-
-      // --- LOGICA ESTANDAR (Query Builder) ---
-      let query = supabase
-        .from('presupuestos')
-        .select(
-          `
-          *,
-          cliente:clients!cliente_id (
-            id,
-            razon_social,
-            nombre_fantasia,
-            email,
-            whatsapp
-          ),
-          vendedor:profiles!vendedor_id (
-            id,
-            full_name,
-            email
-          ),
-          orden_trabajo:ordenes_trabajo!orden_trabajo_id (
-            id,
-            numero_orden,
-            estado
-          ),
-          presupuestos_items (count)
-        `,
-          { count: 'exact' }
-        );
-
-      // Filtros
-      // Note: Search filter handled above via RPC
-
-      if (filters?.estado) {
-        if (Array.isArray(filters.estado)) {
-          query = query.in('estado', filters.estado);
-        } else {
-          query = query.eq('estado', filters.estado);
-        }
-      }
-
-      if (filters?.canal_venta) {
-        if (Array.isArray(filters.canal_venta)) {
-          query = query.in('canal_venta', filters.canal_venta);
-        } else {
-          query = query.eq('canal_venta', filters.canal_venta);
-        }
-      }
-
-      if (filters?.vendedor_id) {
-        query = query.eq('vendedor_id', filters.vendedor_id);
-      }
-
-      if (filters?.cliente_id) {
-        query = query.eq('cliente_id', filters.cliente_id);
-      }
-
-      if (filters?.fecha_desde) {
-        query = query.gte('fecha_creacion', filters.fecha_desde);
-      }
-
-      if (filters?.fecha_hasta) {
-        query = query.lte('fecha_creacion', filters.fecha_hasta);
-      }
-
-      if (filters?.solo_vencidos) {
-        query = query.eq('estado', 'vencido');
-      }
-
-      if (filters?.solo_pendientes_respuesta) {
-        query = query.eq('estado', 'enviado');
-      }
-
-      // Ordenamiento
-      const orderBy = pagination?.order_by || 'fecha_creacion';
-      const orderDirection = pagination?.order_direction || 'desc';
-      query = query.order(orderBy, { ascending: orderDirection === 'asc' });
-
-      // Paginación
-      if (pagination?.page && pagination?.limit) {
-        const from = (pagination.page - 1) * pagination.limit;
-        const to = from + pagination.limit - 1;
-        query = query.range(from, to);
-      }
-
-      const { data, error: fetchError, count } = await query;
-
-      if (fetchError) throw fetchError;
-
-      const presupuestosConCount = (data || []).map((p: any) => ({
-        ...p,
-        items_count: p.presupuestos_items?.[0]?.count || 0,
+      const mappedData: PresupuestoConRelaciones[] = (searchData || []).map((item: any) => ({
+        id: item.id,
+        numero_presupuesto: item.numero_presupuesto,
+        fecha_creacion: item.fecha_creacion,
+        fecha_validez: item.fecha_validez,
+        cliente_id: item.cliente_id,
+        vendedor_id: item.vendedor_id,
+        estado: item.estado,
+        canal_venta: item.canal_venta,
+        total: Number(item.total),
+        company_id: item.company_id,
+        cliente: {
+          id: item.cliente_id,
+          razon_social: item.cliente_razon_social,
+          nombre_fantasia: item.cliente_nombre_fantasia,
+          email: item.cliente_email,
+        },
+        vendedor: {
+          id: item.vendedor_id,
+          full_name: item.vendedor_full_name,
+        },
+        orden_trabajo: item.orden_trabajo_id ? {
+          id: item.orden_trabajo_id,
+          numero_orden: item.orden_trabajo_numero,
+          estado: 'pendiente'
+        } : undefined,
+        items_count: Number(item.items_count),
+        presupuestos_items: [{ count: Number(item.items_count) }]
       }));
 
-      setPresupuestos((presupuestosConCount as PresupuestoConRelaciones[]) || []);
-      setTotal(count || 0);
+      setPresupuestos(mappedData);
+      setTotal(searchData && searchData.length > 0 ? Number(searchData[0].full_count) : 0);
 
     } catch (err: any) {
       console.error('Error fetching presupuestos:', err);
@@ -206,9 +113,7 @@ export function usePresupuestos(
 
       if (createError) throw createError;
 
-      // Refrescar lista
       await fetchPresupuestos();
-
       return newPresupuesto as Presupuesto;
     } catch (err: any) {
       console.error('Error creating presupuesto:', err);
@@ -234,9 +139,7 @@ export function usePresupuestos(
 
       if (updateError) throw updateError;
 
-      // Refrescar lista
       await fetchPresupuestos();
-
       return true;
     } catch (err: any) {
       console.error('Error updating presupuesto:', err);
@@ -256,9 +159,7 @@ export function usePresupuestos(
 
       if (deleteError) throw deleteError;
 
-      // Refrescar lista
       await fetchPresupuestos();
-
       return true;
     } catch (err: any) {
       console.error('Error deleting presupuesto:', err);
@@ -271,7 +172,6 @@ export function usePresupuestos(
     try {
       setError(null);
 
-      // Obtener presupuesto original
       const { data: original, error: fetchError } = await supabase
         .from('presupuestos')
         .select('*')
@@ -280,7 +180,6 @@ export function usePresupuestos(
 
       if (fetchError) throw fetchError;
 
-      // Crear copia sin id, numero, tracking_token, fechas específicas
       const { data: duplicado, error: createError } = await supabase
         .from('presupuestos')
         .insert({
@@ -300,7 +199,6 @@ export function usePresupuestos(
 
       if (createError) throw createError;
 
-      // Copiar items
       const { data: items, error: itemsError } = await supabase
         .from('presupuestos_items')
         .select('*')
@@ -329,9 +227,7 @@ export function usePresupuestos(
         await supabase.from('presupuestos_items').insert(itemsCopiados);
       }
 
-      // Refrescar lista
       await fetchPresupuestos();
-
       return duplicado as Presupuesto;
     } catch (err: any) {
       console.error('Error duplicando presupuesto:', err);
@@ -349,7 +245,6 @@ export function usePresupuestos(
 
       const updateData: UpdatePresupuestoData = { estado: nuevoEstado };
 
-      // Agregar timestamps según estado
       if (nuevoEstado === 'enviado') {
         updateData.fecha_enviado = new Date().toISOString();
       } else if (nuevoEstado === 'aprobado' || nuevoEstado === 'rechazado') {
@@ -367,14 +262,11 @@ export function usePresupuestos(
   const enviarPresupuesto = async (id: string): Promise<boolean> => {
     const resultado = await cambiarEstado(id, 'enviado');
 
-    // Como respaldo, llamar directamente a enviarNotificacionPresupuesto
-    // por si el trigger falla (especialmente en local/dev)
     if (resultado) {
       try {
         await enviarNotificacionPresupuesto(id, 'presupuesto_listo');
       } catch (err) {
         console.warn('Error enviando notificación de respaldo:', err);
-        // No fallar si la notificación falla
       }
     }
 

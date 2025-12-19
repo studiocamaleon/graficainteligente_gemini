@@ -48,21 +48,20 @@ export function useAcabados({
     try {
       setLoading(true);
 
-      let query = supabase
-        .from('acabados')
-        .select(
-          `
+      const selectStr = `
           *,
-          acabados_categorias(
+          acabados_categorias${categoriaId ? '!inner' : ''}(
             categoria_id,
             categoria:categorias(id, nombre, color)
           ),
           estacion:estaciones_trabajo(id, nombre),
           niveles_precio:acabados_niveles_precio(*),
           pasos:acabados_pasos(*)
-        `,
-          { count: 'exact' }
-        )
+        `;
+
+      let query = supabase
+        .from('acabados')
+        .select(selectStr, { count: 'exact' })
         .order('nombre', { ascending: true });
 
       if (searchTerm) {
@@ -70,7 +69,7 @@ export function useAcabados({
       }
 
       if (categoriaId) {
-        query = query.eq('categoria_id', categoriaId);
+        query = query.eq('acabados_categorias.categoria_id', categoriaId);
       }
 
       if (estacionId) {

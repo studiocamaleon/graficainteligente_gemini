@@ -2,9 +2,7 @@ import { useState } from 'react';
 import { useProductivityMetrics } from '../../../hooks/useProductivityMetrics';
 import { KpiCard } from '../../../components/productivity/KpiCard';
 import { StageDistributionChart } from '../../../components/productivity/StageDistributionChart';
-import { CategoryPerformanceTable } from '../../../components/productivity/CategoryPerformanceTable';
 import { StepPerformanceChart } from '../../../components/productivity/StepPerformanceChart';
-import { BottleneckAlert } from '../../../components/productivity/BottleneckAlert';
 import { OperatorRanking } from '../../../components/productivity/OperatorRanking';
 import { DateRangeSelector } from '../../../components/productivity/DateRangeSelector';
 import { ComplianceRateCard } from '../../../components/productivity/ComplianceRateCard';
@@ -38,10 +36,8 @@ export function ProductivityView() {
     error,
     kpisGenerales,
     metricasPorPaso,
-    metricasPorCategoria,
     metricasPorEtapa,
     metricasPorOperario,
-    cuellosBottella,
     tasaCumplimiento,
     evolutivoTasa,
     refresh,
@@ -53,7 +49,6 @@ export function ProductivityView() {
     hasKpisGenerales: !!kpisGenerales,
     kpisGenerales,
     metricasPorPasoCount: metricasPorPaso.length,
-    metricasPorCategoriaCount: metricasPorCategoria.length,
     metricasPorEtapaCount: metricasPorEtapa.length,
   });
 
@@ -148,14 +143,23 @@ export function ProductivityView() {
         />
       </div>
 
-      {/* Alertas de Cuellos de Botella */}
-      <BottleneckAlert data={cuellosBottella} loading={loading} />
+      {/* Análisis de Pasos y Tiempos */}
+      <div className="mt-8">
+        <div className="flex items-center gap-2 mb-4">
+          <Timer className="w-5 h-5 text-orange-600" />
+          <h2 className="text-xl font-semibold text-gray-900">Análisis de Tiempos y Pasos</h2>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <StepPerformanceChart data={metricasPorPaso} loading={loading} limit={8} />
+          <StageDistributionChart data={metricasPorEtapa} loading={loading} />
+        </div>
+      </div>
 
-      {/* Sección de Tasa de Cumplimiento */}
-      <div className="mt-6">
+      {/* Sección de Cumplimiento */}
+      <div className="mt-10">
         <div className="flex items-center gap-2 mb-4">
           <Target className="w-5 h-5 text-gray-700" />
-          <h2 className="text-xl font-semibold text-gray-900">Cumplimiento de Plazos</h2>
+          <h2 className="text-xl font-semibold text-gray-900">Cumplimiento de Plazos Prometidos</h2>
         </div>
 
         <div className="space-y-6 mb-6">
@@ -166,18 +170,9 @@ export function ProductivityView() {
         <ComplianceDetailsTable data={tasaCumplimiento} loading={loading} />
       </div>
 
-      {/* Sección de Análisis */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-        <StageDistributionChart data={metricasPorEtapa} loading={loading} />
-        <StepPerformanceChart data={metricasPorPaso} loading={loading} limit={8} />
-      </div>
-
-      {/* Rendimiento por Categoría */}
-      <CategoryPerformanceTable data={metricasPorCategoria} loading={loading} />
-
       {/* Ranking de Operarios */}
       {metricasPorOperario.length > 0 && (
-        <div className="mt-6">
+        <div className="mt-10">
           <div className="flex items-center gap-2 mb-4">
             <Users className="w-5 h-5 text-gray-700" />
             <h2 className="text-xl font-semibold text-gray-900">Rendimiento del Equipo</h2>
@@ -187,16 +182,15 @@ export function ProductivityView() {
       )}
 
       {/* Footer informativo */}
-      <div className="mt-8 p-6 bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-lg">
+      <div className="mt-12 p-6 bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-lg">
         <h3 className="text-lg font-semibold text-gray-900 mb-2">
-          Sobre las Métricas de Productividad
+          Sobre el Tiempo Promedio Productivo
         </h3>
         <p className="text-sm text-gray-700 leading-relaxed">
-          Estas métricas se calculan en base a los tiempos reales de ejecución de cada paso de
-          producción. Los datos incluyen únicamente pasos completados con fecha de inicio y fin
-          registradas. La variabilidad y consistencia se miden usando desviación estándar. Los
-          cuellos de botella se identifican automáticamente cuando un paso supera el doble del
-          tiempo promedio o muestra alta variabilidad (coeficiente &gt; 0.5).
+          Este tablero muestra el **tiempo efectivo de trabajo** por cada orden. El cálculo suma la
+          duración de todos los pasos ejecutados, **restando cualquier periodo en que la orden
+          estuvo pausada** (espera de material, consulta a cliente, etc.).
+          Esto permite medir la eficiencia real de los procesos de producción sin ruidos externos.
         </p>
       </div>
     </div>
