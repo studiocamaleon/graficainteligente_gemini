@@ -1,4 +1,4 @@
-name: Deploy Migrations to Production
+name: Deploy to Production
 
 on:
   push:
@@ -27,3 +27,6 @@ jobs:
 
       - name: Apply Migrations
         run: supabase db push
+
+      - name: Deploy Edge Functions
+        run: supabase functions deploy --no-verify-jwt

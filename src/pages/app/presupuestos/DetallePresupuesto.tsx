@@ -259,6 +259,7 @@ export default function DetallePresupuesto() {
               items={presupuesto.items || []}
               companyId={company?.id || ''}
               esEditable={presupuesto.estado === 'borrador'}
+              onRoutesChange={refetch}
             />
           )}
 

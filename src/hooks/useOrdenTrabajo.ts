@@ -50,6 +50,7 @@ export interface OrdenTrabajoFull extends OrdenTrabajo {
 }
 
 export interface OrdenTrabajoItemFull extends OrdenTrabajoItem {
+  categoria_id?: string | null;
   producto?: {
     id: string;
     nombre: string;
@@ -776,7 +777,7 @@ export function useOrdenTrabajo() {
         const { error: updateItemError } = await supabase
           .from('ordenes_trabajo_items')
           .update({
-            tipo_item: item.tipo_item || 'catalogo',
+            producto_id: item.producto_id || null,
             producto_nombre: item.producto_nombre,
             producto_categoria: item.producto_categoria || null,
             descripcion: item.descripcion || null,
@@ -850,6 +851,7 @@ export function useOrdenTrabajo() {
           orden_id: id,
           tipo_item: item.tipo_item || 'catalogo',
           producto_id: finalProductId,
+          categoria_id: item.categoria_id || null,
           producto_nombre: item.producto_nombre,
           producto_categoria: item.producto_categoria || null,
           descripcion: item.descripcion || null,

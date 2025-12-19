@@ -58,6 +58,11 @@ export interface ProductConfiguration {
   color?: string;
   marca?: string;
 
+  // Para productos compuestos/personalizados
+  es_compuesto?: boolean;
+  componentes?: any[];
+  ruta_produccion_id?: string;
+
   // Servicios disponibles
   servicios: Array<{
     id: string;
@@ -92,7 +97,11 @@ export interface ProductConfiguration {
   impuesto_iva: number;
 }
 
-export function useProductConfiguration(productId: string | null, categoria: ProductCategory | null) {
+export function useProductConfiguration(
+  productId: string | null,
+  categoria: ProductCategory | null,
+  isPersonalized: boolean = false
+) {
   const [config, setConfig] = useState<ProductConfiguration | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -111,35 +120,39 @@ export function useProductConfiguration(productId: string | null, categoria: Pro
         console.log('[useProductConfiguration] Loading for:', { productId, categoria });
         let configuration: ProductConfiguration | null = null;
 
-        switch (categoria) {
-          case 'Impresion Laser':
-            configuration = await loadImpresionLaserConfig(productId);
-            break;
-          case 'Impresion Gran Formato':
-            configuration = await loadGranFormatoConfig(productId);
-            break;
-          case 'Materiales Rigidos':
-            configuration = await loadMaterialesRigidosConfig(productId);
-            break;
-          case 'Plotter de Corte':
-            configuration = await loadPlotterCorteConfig(productId);
-            break;
-          case 'Portabanners':
-            configuration = await loadPortabannersConfig(productId);
-            break;
-          case 'Sellos':
-            configuration = await loadSellosConfig(productId);
-            break;
-          case 'Talonarios':
-            configuration = await loadTalonariosConfig(productId);
-            break;
-          case 'Centro de Copiado':
-            console.log('[useProductConfiguration] Loading Centro Copiado config...');
-            configuration = await loadCentroCopiadoConfig();
-            console.log('[useProductConfiguration] Loaded Copy Center config:', configuration);
-            break;
-          default:
-            console.warn('[useProductConfiguration] Unknown category:', categoria);
+        if (isPersonalized && productId) {
+          configuration = await loadPersonalizadoConfig(productId);
+        } else if (categoria) {
+          switch (categoria) {
+            case 'Impresion Laser':
+              configuration = await loadImpresionLaserConfig(productId);
+              break;
+            case 'Impresion Gran Formato':
+              configuration = await loadGranFormatoConfig(productId);
+              break;
+            case 'Materiales Rigidos':
+              configuration = await loadMaterialesRigidosConfig(productId);
+              break;
+            case 'Plotter de Corte':
+              configuration = await loadPlotterCorteConfig(productId);
+              break;
+            case 'Portabanners':
+              configuration = await loadPortabannersConfig(productId);
+              break;
+            case 'Sellos':
+              configuration = await loadSellosConfig(productId);
+              break;
+            case 'Talonarios':
+              configuration = await loadTalonariosConfig(productId);
+              break;
+            case 'Centro de Copiado':
+              console.log('[useProductConfiguration] Loading Centro Copiado config...');
+              configuration = await loadCentroCopiadoConfig();
+              console.log('[useProductConfiguration] Loaded Copy Center config:', configuration);
+              break;
+            default:
+              console.warn('[useProductConfiguration] Unknown category:', categoria);
+          }
         }
 
         setConfig(configuration);
@@ -153,7 +166,7 @@ export function useProductConfiguration(productId: string | null, categoria: Pro
     };
 
     loadConfiguration();
-  }, [productId, categoria]);
+  }, [productId, categoria, isPersonalized]);
 
   return { config, isLoading, error };
 }
@@ -164,7 +177,7 @@ export function useProductConfiguration(productId: string | null, categoria: Pro
 
 async function loadImpresionLaserConfig(productId: string): Promise<ProductConfiguration> {
   // Cargar datos básicos
-  const { data: producto, error: prodError } = await supabase
+  const { data: producto, error: prodError } = await (supabase as any)
     .from('productos_impresion_laser')
     .select('id, nombre, tipo_venta, cantidades_fijas, caras_impresas, medidas_disponibles, impuesto_iva, rango_precio:rangos_precio(unidad_medida)')
     .eq('id', productId)
@@ -257,7 +270,7 @@ async function loadImpresionLaserConfig(productId: string): Promise<ProductConfi
 }
 
 async function loadGranFormatoConfig(productId: string): Promise<ProductConfiguration> {
-  const { data: producto, error: prodError } = await supabase
+  const { data: producto, error: prodError } = await (supabase as any)
     .from('productos_gran_formato')
     .select('id, nombre, tipo_venta, cantidad_minima, anchos_disponibles, impuesto_iva')
     .eq('id', productId)
@@ -328,7 +341,7 @@ async function loadGranFormatoConfig(productId: string): Promise<ProductConfigur
 }
 
 async function loadMaterialesRigidosConfig(productId: string): Promise<ProductConfiguration> {
-  const { data: producto, error: prodError } = await supabase
+  const { data: producto, error: prodError } = await (supabase as any)
     .from('productos_materiales_rigidos')
     .select('id, nombre, tipo_venta, cantidad_minima, medidas_ancho, medidas_alto, impuesto_iva')
     .eq('id', productId)
@@ -390,7 +403,7 @@ async function loadMaterialesRigidosConfig(productId: string): Promise<ProductCo
 }
 
 async function loadPlotterCorteConfig(productId: string): Promise<ProductConfiguration> {
-  const { data: producto, error: prodError } = await supabase
+  const { data: producto, error: prodError } = await (supabase as any)
     .from('productos_plotter_corte')
     .select('id, nombre, anchos_disponibles, color, marca, cantidad_minima, material_id, variante_nombre, espesor, impuesto_iva')
     .eq('id', productId)
@@ -446,7 +459,7 @@ async function loadPlotterCorteConfig(productId: string): Promise<ProductConfigu
 }
 
 async function loadPortabannersConfig(productId: string): Promise<ProductConfiguration> {
-  const { data: producto, error: prodError } = await supabase
+  const { data: producto, error: prodError } = await (supabase as any)
     .from('productos_portabanners')
     .select('id, nombre, ancho_cm, alto_cm, tintas, impuesto_iva, rango_precio_id')
     .eq('id', productId)
@@ -497,7 +510,7 @@ async function loadPortabannersConfig(productId: string): Promise<ProductConfigu
 }
 
 async function loadSellosConfig(productId: string): Promise<ProductConfiguration> {
-  const { data: producto, error: prodError } = await supabase
+  const { data: producto, error: prodError } = await (supabase as any)
     .from('productos_sellos')
     .select('id, nombre, medida_ancho, medida_alto, marca, impuesto_iva')
     .eq('id', productId)
@@ -518,7 +531,7 @@ async function loadSellosConfig(productId: string): Promise<ProductConfiguration
 }
 
 async function loadTalonariosConfig(productId: string): Promise<ProductConfiguration> {
-  const { data: producto, error: prodError } = await supabase
+  const { data: producto, error: prodError } = await (supabase as any)
     .from('productos_talonarios')
     .select('id, nombre, tipo_venta, cantidades_fijas, tipo_copia, medidas_disponibles, impuesto_iva')
     .eq('id', productId)
@@ -888,5 +901,60 @@ async function loadAcabadosForProduct(
   );
 
   return acabadosWithNiveles;
+}
+
+async function loadPersonalizadoConfig(productId: string): Promise<ProductConfiguration> {
+  console.log('[loadPersonalizadoConfig] Fetching for:', productId);
+
+  const { data: producto, error: prodError } = await (supabase as any)
+    .from('productos_personalizados')
+    .select(`
+      *,
+      categorias(nombre)
+    `)
+    .eq('id', productId)
+    .single();
+
+  if (prodError) {
+    console.error('[loadPersonalizadoConfig] Error fetching product:', prodError);
+    throw prodError;
+  }
+
+  // Fetch components separately to be safe with join semantics
+  const { data: componentes, error: compError } = await (supabase as any)
+    .from('producto_personalizado_componentes')
+    .select('*')
+    .eq('producto_personalizado_id', productId);
+
+  if (compError) {
+    console.warn('[loadPersonalizadoConfig] Error fetching components:', compError);
+  }
+
+  // Normalize components to match expected wizard structure
+  const normalizedComponents = (componentes || []).map(c => ({
+    ...c,
+    nombre: c.nombre_personalizado || c.nombre,
+    cantidad: c.cantidad_por_unidad || c.cantidad,
+    config: c.configuracion || c.config
+  }));
+
+  console.log('[loadPersonalizadoConfig] Result:', {
+    producto: producto.nombre,
+    numComponentes: normalizedComponents.length
+  });
+
+  return {
+    id: producto.id,
+    nombre: producto.nombre,
+    categoria: (producto.categorias as any).nombre as ProductCategory,
+    medidas: [{ ancho: producto.medidas_ancho, alto: producto.medidas_alto }],
+    tipo_venta: 'unidad',
+    es_compuesto: true,
+    componentes: normalizedComponents,
+    ruta_produccion_id: producto.ruta_produccion_id,
+    servicios: [],
+    acabados: [],
+    impuesto_iva: 21,
+  } as ProductConfiguration;
 }
 

@@ -1,5 +1,4 @@
 import { Package, AlertTriangle } from 'lucide-react';
-import { Badge } from '../ui/Badge';
 import { ItemConfigRenderer } from '../orders/ItemConfigRenderer';
 import { EmptyState } from '../ui/EmptyState';
 import type { PresupuestoItem } from '../../types/presupuestos';
@@ -90,8 +89,14 @@ export function PresupuestoItemsTab({ items, presupuestoId, esEditable = false }
                           {item.producto_nombre}
                         </span>
                         {isPendiente && <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold uppercase">Pendiente</span>}
-                        {item.tipo_item === 'item_personalizado' && <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Personalizado</span>}
+                        {item.configuracion?.es_compuesto && (
+                          <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Construido</span>
+                        )}
+                        {item.tipo_item === 'item_personalizado' && !item.configuracion?.es_compuesto && (
+                          <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Personalizado</span>
+                        )}
                         {item.tipo_item === 'centro_copiado' && <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Centro de Copiado</span>}
+                        {item.tipo_item === 'producto_sistema' && <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Catálogo</span>}
                       </div>
                       {item.descripcion && (
                         <p className="text-gray-500 text-xs leading-relaxed max-w-lg">

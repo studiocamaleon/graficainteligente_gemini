@@ -120,6 +120,7 @@ export interface PresupuestoItem {
   producto_id?: string;
   producto_nombre: string;
   producto_categoria?: string;
+  categoria_id?: string | null;
 
   // Configuración (estructura varía según tipo de producto)
   configuracion: Record<string, any>;
@@ -257,6 +258,7 @@ export interface CreatePresupuestoItemData {
   producto_id?: string;
   producto_nombre: string;
   producto_categoria?: string;
+  categoria_id?: string | null;
   configuracion: Record<string, any>;
   cantidad: number;
   precio_base: number;

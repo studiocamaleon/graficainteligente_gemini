@@ -10,9 +10,10 @@ interface PresupuestoRutasTabProps {
     items: PresupuestoItem[];
     companyId: string;
     esEditable?: boolean;
+    onRoutesChange?: () => void;
 }
 
-export function PresupuestoRutasTab({ presupuestoId, items, companyId, esEditable = false }: PresupuestoRutasTabProps) {
+export function PresupuestoRutasTab({ presupuestoId, items, companyId, esEditable = false, onRoutesChange }: PresupuestoRutasTabProps) {
     const [loading, setLoading] = useState(true);
     const [itemsWithRoutes, setItemsWithRoutes] = useState<any[]>([]);
 
@@ -95,6 +96,7 @@ export function PresupuestoRutasTab({ presupuestoId, items, companyId, esEditabl
             if (stepIndex !== -1) {
                 item.rutas_generadas[stepIndex].comentario_vendedor = comment;
                 setItemsWithRoutes(newItems);
+                if (onRoutesChange) onRoutesChange();
             }
         } catch (err) {
             console.error('Error updating comment:', err);
@@ -135,6 +137,7 @@ export function PresupuestoRutasTab({ presupuestoId, items, companyId, esEditabl
                 }
                 // Refrescar todo por seguridad
                 await fetchRoutes();
+                if (onRoutesChange) onRoutesChange();
                 return;
             }
         }

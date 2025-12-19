@@ -60,24 +60,48 @@ Deno.serve(async (req: Request) => {
     return new Response(null, { status: 200, headers: corsHeaders });
   }
 
-  // VALIDACIÓN DE SEGURIDAD
-  const triggerSecret = Deno.env.get('TRIGGER_SECRET_TOKEN');
-  const providedSecret = req.headers.get('X-Trigger-Secret');
-
-  // Solo validar si la variable de entorno está configurada (para no romper dev local si no se usa)
-  // Pero en producción debería estar seteadas.
-  if (triggerSecret && providedSecret !== triggerSecret) {
-    console.error('[Security] Intento de acceso no autorizado (Secret mismatch)');
-    return new Response(
-      JSON.stringify({ error: 'No autorizado' }),
-      { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  }
-
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // VALIDACIÓN DE SEGURIDAD DUAL (Secret o JWT)
+    const triggerSecret = Deno.env.get('TRIGGER_SECRET_TOKEN');
+    const providedSecret = req.headers.get('X-Trigger-Secret');
+    const authHeader = req.headers.get('Authorization');
+
+    let authorized = false;
+
+    // 1. Validar por Secret (Triggers/Servidor)
+    if (triggerSecret && providedSecret === triggerSecret) {
+      authorized = true;
+      console.log('[Security] Acceso autorizado vía Secret Token');
+    }
+    // 2. Validar por JWT (Frontend)
+    else if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.replace('Bearer ', '');
+      const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+
+      if (!authError && user) {
+        authorized = true;
+        console.log('[Security] Acceso autorizado vía JWT (User:', user.id, ')');
+      } else {
+        console.error('[Security] JWT inválido:', authError?.message);
+      }
+    }
+    // 3. Fallback para dev local si no hay secreto configurado
+    else if (!triggerSecret) {
+      authorized = true;
+      console.warn('[Security] Acceso permitido (TRIGGER_SECRET_TOKEN no configurado)');
+    }
+
+    if (!authorized) {
+      console.error('[Security] Intento de acceso no autorizado (No Secret, No Valid JWT)');
+      return new Response(
+        JSON.stringify({ error: 'No autorizado' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     const body: RequestBody = await req.json();
     const { orden_id, company_id, tipo, orden_tipo, frontend_origin } = body;
@@ -124,40 +148,7 @@ Deno.serve(async (req: Request) => {
             )
           ),
           pagos:ordenes_trabajo_pagos(monto),
-          ordenesCopiado:centro_copiado_ordenes!orden_trabajo_id(
-            id,
-            numero_orden,
-            total,
-            items:centro_copiado_ordenes_items(
-              cantidad_unidades,
-              cantidad_hojas,
-              subtotal,
-              tipo_tinta,
-              cara_impresa,
-              tipo_anillado,
-              tipo_plastificado,
-              descripcion,
-              tamanio_papel:centro_copiado_tamanios_papel(nombre),
-              papel:centro_copiado_papeles(
-                variante_nombre,
-                espesor,
-                unidad_espesor,
-                material:material_id(nombre)
-              )
-            )
-          )
-          *,
-          items:ordenes_trabajo_items(
-            *,
-            servicios:ordenes_trabajo_servicios_items(
-              servicio:servicio_id(nombre)
-            ),
-            acabados:ordenes_trabajo_acabados_items(
-              acabado:acabado_id(nombre)
-            )
-          ),
-          pagos:ordenes_trabajo_pagos(monto),
-          ordenesCopiado:centro_copiado_ordenes!orden_trabajo_id(
+          ordenesCopiado:centro_copiado_ordenes(
             id,
             numero_orden,
             total,

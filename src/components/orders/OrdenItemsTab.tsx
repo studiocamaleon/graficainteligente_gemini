@@ -14,6 +14,7 @@ import { AplicarServicioMasivoModal } from './AplicarServicioMasivoModal';
 import { ItemConfigRenderer } from './ItemConfigRenderer';
 import { ConstructorConfigurator } from './ConstructorConfigurator';
 import { generateProductionRoutes } from '../../utils/generateProductionRoutes';
+import { supabase } from '../../lib/supabase';
 
 interface OrdenItem {
   id?: string;
@@ -270,22 +271,50 @@ export function OrdenItemsTab({
     setShowAddModal(false);
   };
 
-  const handleAgregarItemPersonalizado = (itemData: {
+  const handleAgregarItemPersonalizado = async (itemData: {
     producto_nombre: string;
     descripcion: string;
     cantidad: number;
     precio_unitario_final: number | null;
-    tiempo_produccion_dias?: number;
+    categoria_id?: string;
+    ruta_produccion_id?: string;
   }) => {
     const isPending = itemData.precio_unitario_final === null;
+
+    // Obtener nombre de categoría si existe para mayor claridad en la UI
+    let categoriaNombre = 'Personalizado';
+    if (itemData.categoria_id) {
+      const { data: cat } = await supabase
+        .from('categorias')
+        .select('nombre')
+        .eq('id', itemData.categoria_id)
+        .single();
+      if (cat) categoriaNombre = (cat as any).nombre;
+    }
+
+    // Generar rutas si hay ruta_produccion_id
+    let rutasGeneradas: any[] = [];
+    if (itemData.ruta_produccion_id) {
+      try {
+        rutasGeneradas = await generateProductionRoutes({
+          productoId: '', // Es personalizado, no viene de catálogo
+          categoria: categoriaNombre,
+          configuracion: {
+            ruta_produccion_id: itemData.ruta_produccion_id
+          }
+        });
+      } catch (err) {
+        console.error('Error generating routes for custom item:', err);
+      }
+    }
+
     const nuevoItem: any = {
-      id: `temp-${Date.now()}-${Math.random()}`,
+      id: editingIndex !== null ? items[editingIndex].id : `temp-${Date.now()}-${Math.random()}`,
       tipo_item: 'personalizado',
       producto_id: null,
       producto_nombre: itemData.producto_nombre,
-      producto_categoria: 'Personalizado',
+      producto_categoria: categoriaNombre,
       descripcion: itemData.descripcion,
-      tiempo_produccion_dias: itemData.tiempo_produccion_dias,
       cantidad: itemData.cantidad,
       precio_base: 0,
       precio_servicios: 0,
@@ -293,21 +322,18 @@ export function OrdenItemsTab({
       precio_unitario_final: itemData.precio_unitario_final,
       precio_total: isPending ? null : (itemData.cantidad * (itemData.precio_unitario_final || 0)),
       descuento_individual: 0,
-      rutas_generadas: [],
+      rutas_generadas: rutasGeneradas,
       configuracion: {
         tipo_item: 'personalizado',
         descripcion: itemData.descripcion,
+        categoria_id: itemData.categoria_id,
+        ruta_produccion_id: itemData.ruta_produccion_id,
+        _rutas_snapshot: rutasGeneradas
       },
     };
 
-
-
     if (editingIndex !== null) {
       const newItems = [...items];
-      const oldId = items[editingIndex].id;
-      if (oldId && !oldId.startsWith('temp-')) {
-        nuevoItem.id = oldId;
-      }
       newItems[editingIndex] = nuevoItem;
       setItems(newItems);
       setEditingIndex(null);
@@ -327,10 +353,8 @@ export function OrdenItemsTab({
     if (item.configuracion?.es_compuesto) {
       setShowConstructor(true);
     } else if (item.tipo_item === 'personalizado') {
-      setEditingItemType('personalizado');
       setShowAddPersonalizadoModal(true);
     } else {
-      setEditingItemType('catalogo');
       setShowAddModal(true);
     }
   };
@@ -409,7 +433,7 @@ export function OrdenItemsTab({
           className="w-20"
         />
       ),
-      width: '100px'
+      width: '80px'
     },
     {
       key: 'producto',
@@ -419,7 +443,9 @@ export function OrdenItemsTab({
           <div className="flex items-center gap-2 mb-1">
             <div className="font-medium text-gray-900">{item.producto_nombre}</div>
             {item.tipo_item === 'personalizado' && !item.configuracion?.es_compuesto && (
-              <Badge variant="purple" size="sm">Personalizado</Badge>
+              <Badge variant="purple" size="sm">
+                {item.producto_categoria || 'Personalizado'}
+              </Badge>
             )}
             {item.configuracion?.es_compuesto && (
               <Badge variant="blue" className="bg-blue-100 text-blue-800" size="sm">
@@ -469,7 +495,7 @@ export function OrdenItemsTab({
                 handleDescuentoIndividualChange(index, numValue);
               }
             }}
-            className="w-16 text-center"
+            className="w-20 text-center"
             placeholder="0"
           />
           <span className="text-sm text-gray-500">%</span>

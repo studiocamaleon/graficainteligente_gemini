@@ -1236,6 +1236,7 @@ export type TipoEventoHistorial =
   | 'orden_cancelada';
 
 export interface ItemConfiguracion {
+  categoria_id?: string | null;
   tecnologia_id?: string;
   tecnologia_nombre?: string;
   tipo_tinta?: string;
@@ -1376,6 +1377,7 @@ export interface OrdenTrabajoItem {
   id: string;
   orden_id: string;
   producto_id: string;
+  categoria_id?: string | null;
   producto_nombre: string | null;
   producto_categoria: string | null;
   cantidad: number;

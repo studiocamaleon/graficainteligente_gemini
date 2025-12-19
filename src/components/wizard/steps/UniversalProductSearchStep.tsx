@@ -1,4 +1,4 @@
-import { Search, Package, Tag, FileText } from 'lucide-react';
+import { Search, Package, Tag, FileText, Layers } from 'lucide-react';
 import { Input } from '../../ui/Input';
 import { Card } from '../../ui/Card';
 import { Badge } from '../../ui/Badge';
@@ -108,8 +108,15 @@ export function UniversalProductSearchStep({
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
-                      <Package className="w-5 h-5 text-gray-400" />
+                      {product.es_compuesto ? (
+                        <Layers className="w-5 h-5 text-blue-600" />
+                      ) : (
+                        <Package className="w-5 h-5 text-gray-400" />
+                      )}
                       <h3 className="font-semibold text-gray-900">{product.nombre}</h3>
+                      {product.es_compuesto && (
+                        <Badge variant="purple" size="sm" className="ml-auto">Plantilla</Badge>
+                      )}
                     </div>
 
                     <div className="flex items-center gap-2">

@@ -1,5 +1,7 @@
 import { Card } from '../../ui/Card';
 import { Badge } from '../../ui/Badge';
+import { MeasurementLinesTable } from './MeasurementLinesTable';
+import { ConfigDetailRenderer } from '../../shared/ConfigDetailRenderer';
 import { Package, Ruler, Layers, Wrench, Sparkles, DollarSign } from 'lucide-react';
 import type { ProductConfiguration } from '../../../hooks/wizard/useProductConfiguration';
 import type { SelectedConfiguration } from './ConfigurationStep';
@@ -198,6 +200,30 @@ export function UniversalSummaryStep({
             <span className="text-gray-600">Categoría:</span>
             <Badge variant="blue">{config.categoria}</Badge>
           </div>
+
+          {config.es_compuesto && config.componentes && config.componentes.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-gray-100">
+              <span className="text-xs font-semibold text-blue-600 uppercase tracking-wider block mb-2">Composición del Producto</span>
+              <div className="space-y-2">
+                {config.componentes.map((comp: any, idx: number) => (
+                  <div key={idx} className="flex flex-col p-4 bg-gray-50 rounded-lg border border-gray-100">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-medium text-gray-900">{comp.nombre}</span>
+                      <Badge variant="default" size="sm">x{comp.cantidad}</Badge>
+                    </div>
+
+                    {/* Detalle Técnico del Componente */}
+                    <div className="pt-2 border-t border-gray-200/50">
+                      <ConfigDetailRenderer
+                        config={comp.config}
+                        tipoItem={comp.tipo_componente}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </Card>
 

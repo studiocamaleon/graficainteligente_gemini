@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react';
 import { Card } from '../../ui/Card';
 import { Input } from '../../ui/Input';
 import { Button } from '../../ui/Button';
+import { Badge } from '../../ui/Badge';
 import { Ruler, Package, Layers, Palette, FileText, Check, RotateCcw, CheckCircle } from 'lucide-react';
 import type { ProductConfiguration } from '../../../hooks/wizard/useProductConfiguration';
 import { MeasurementLinesTable } from './MeasurementLinesTable';
 import type { SelectedService, SelectedFinishing } from './ServicesAndFinishingsStep';
+import { ConfigDetailRenderer } from '../../shared/ConfigDetailRenderer';
 
 interface ConfigurationStepProps {
   config: ProductConfiguration;
@@ -114,7 +116,10 @@ export interface SelectedConfiguration {
     cantidad: number;
     config: any;
     precio: number;
+    tipo_componente: string;
+    referencia_id: string;
   }[];
+  ruta_produccion_id?: string | null;
 }
 
 // ===============================================
@@ -223,7 +228,7 @@ export function ConfigurationStep({
     }
 
     // Auto-seleccionar tecnología única para UV (siempre es una sola)
-    if (config.categoria === 'Impresión UV sobre Rígidos' && config.tecnologias && config.tecnologias.length === 1) {
+    if (config.categoria === 'Materiales Rigidos' && config.tecnologias && config.tecnologias.length === 1) {
       const tecnologia = config.tecnologias[0];
       autoSelections.tecnologia_id = tecnologia.tecnologia_id;
       autoSelections.tecnologia_nombre = tecnologia.tecnologia_nombre;
@@ -310,10 +315,55 @@ export function ConfigurationStep({
   };
 
   const isImpresionLaser = config.categoria === 'Impresion Laser';
-  const isImpresionUV = config.categoria === 'Impresión UV sobre Rígidos';
+  const isImpresionUV = config.categoria === 'Materiales Rigidos';
 
   return (
     <div className="space-y-6">
+      {/* Desglose de Componentes (para productos compuestos) */}
+      {config.es_compuesto && (
+        <Card className="p-6 border-blue-100 bg-blue-50/30">
+          <div className="flex items-center gap-2 mb-4">
+            <Layers className="w-5 h-5 text-blue-600" />
+            <h3 className="text-lg font-semibold text-gray-900">Estructura del Producto</h3>
+          </div>
+
+          {(!config.componentes || config.componentes.length === 0) ? (
+            <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-700 text-sm italic">
+              Este producto está marcado como plantilla pero no se encontraron sus componentes.
+              Verificando ID: {config.id}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {config.componentes.map((comp: any, idx: number) => (
+                <div key={idx} className="flex flex-col p-4 bg-white border border-blue-100 rounded-lg shadow-sm">
+                  <div className="flex justify-between items-center mb-2">
+                    <div>
+                      <div className="font-medium text-gray-900">{comp.nombre}</div>
+                      <div className="text-xs text-gray-500 capitalize">
+                        {comp.tipo_componente?.replace('_', ' ') || 'Componente'} • {comp.cantidad} unidad(es)
+                      </div>
+                    </div>
+                    <Badge variant="purple" size="sm">Incluido</Badge>
+                  </div>
+
+                  {/* Detalle Técnico del Componente */}
+                  <div className="pt-2 border-t border-gray-50">
+                    <ConfigDetailRenderer
+                      config={comp.config}
+                      tipoItem={comp.tipo_componente}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <p className="mt-4 text-xs text-blue-600 italic">
+            * El precio se calcula automáticamente sumando el valor actual de todos estos componentes.
+          </p>
+        </Card>
+      )}
+
       {/* Cantidad - Solo para productos sin múltiples líneas (y que no sean del centro de copiado) */}
       {!config.permite_multiples_lineas && config.categoria !== 'Centro de Copiado' && (
         <Card className="p-6">
@@ -925,7 +975,10 @@ export function ConfigurationStep({
             tinta_nombre: localConfig.tinta_nombre,
             cara_impresa: localConfig.cara_impresa,
             color: localConfig.color,
-            marca: localConfig.marca
+            marca: localConfig.marca,
+            tipo_copia: localConfig.tipo_copia || null,
+            usa_material_catalogo: localConfig.usa_material_catalogo || false,
+            ruta_produccion_id: localConfig.ruta_produccion_id || null
           }}
           onChange={(lines) => handleChange({ lineas_medidas: lines })}
         />

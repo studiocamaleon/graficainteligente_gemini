@@ -268,6 +268,7 @@ export function CreateOrderPage() {
 
       const mappedItems = (orden.items || []).map(item => ({
         ...item,
+        categoria_id: item.categoria_id || item.configuracion?.categoria_id || null,
         configuracion: item.configuracion || {},
         rutas_generadas: (item as any).rutas || []
       }));
@@ -620,6 +621,7 @@ export function CreateOrderPage() {
         id: item.id,
         tipo_item: item.tipo_item || 'catalogo',
         producto_id: item.producto_id,
+        categoria_id: item.categoria_id || item.configuracion?.categoria_id,
         producto_nombre: item.producto_nombre,
         producto_categoria: item.producto_categoria || item.categoria || 'Sin categoría',
         descripcion: item.descripcion || (item.tipo_item === 'centro_copiado' || item.categoria_id === 'centro_copiado' ? generarDescripcionCopiado(item.configuracion) : null),

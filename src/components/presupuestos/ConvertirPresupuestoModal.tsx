@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { Calendar, DollarSign, Receipt, Info } from 'lucide-react';
+import { Calendar, DollarSign, Receipt, Info, AlertCircle } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
+import { DatePicker } from '../ui/DatePicker';
 import { MedioCobroSelector } from '../medios-cobro/MedioCobroSelector';
 import { useMediosCobro } from '../../hooks/useMediosCobro';
+import { useWorkload } from '../../hooks/useWorkload';
 import type { PresupuestoConRelaciones } from '../../types/presupuestos';
 
 interface ConvertirPresupuestoModalProps {
@@ -40,10 +42,30 @@ export function ConvertirPresupuestoModal({
   const [requiereFactura, setRequiereFactura] = useState(true);
 
   const { mediosCobro } = useMediosCobro();
+  const { workloadData } = useWorkload({ type: 'orden_trabajo' });
 
-  // Verificar si hay items que NO tienen rutas guardadas
-  const itemsSinRutas = (presupuesto.items || []).filter(item =>
+  // Filtrar items que realmente requieren producción (igual que en PresupuestoRutasTab)
+  const itemsProduccion = (presupuesto.items || []).filter(item =>
+    item.producto_categoria !== 'Servicio Adicional' &&
+    !item.configuracion?.es_servicio_global
+  );
+
+  const itemsSinRutasPersistidas = itemsProduccion.filter(item =>
     (!item.rutas_generadas || item.rutas_generadas.length === 0)
+  );
+
+  const itemsPersonalizadosSinRutas = itemsSinRutasPersistidas.filter(item => {
+    const esCompuesto = item.configuracion?.es_compuesto;
+    const tieneCategoriaValida = item.producto_categoria &&
+      item.producto_categoria !== 'Sin categoría' &&
+      item.producto_categoria !== 'Personalizado';
+
+    // Es manual puro solo si es item_personalizado Y NO es compuesto Y NO tiene categoría válida
+    return item.tipo_item === 'item_personalizado' && !esCompuesto && !tieneCategoriaValida;
+  });
+
+  const itemsAutomaticos = itemsSinRutasPersistidas.filter(item =>
+    !itemsPersonalizadosSinRutas.includes(item)
   );
 
   const handleSubmit = async () => {
@@ -80,9 +102,10 @@ export function ConvertirPresupuestoModal({
     }
   };
 
+  const totalFinal = requiereFactura ? presupuesto.total * 1.21 : presupuesto.total;
   const montoNumerico = montoPago ? parseFloat(montoPago) : 0;
-  const saldoPendiente = presupuesto.total - montoNumerico;
-  const pagoValido = !registrarPago || (montoNumerico > 0 && montoNumerico <= presupuesto.total && medioCobroId);
+  const saldoPendiente = totalFinal - montoNumerico;
+  const pagoValido = !registrarPago || (montoNumerico > 0 && montoNumerico <= totalFinal && medioCobroId);
   const formularioValido = fechaEntrega && pagoValido;
 
   return (
@@ -100,9 +123,9 @@ export function ConvertirPresupuestoModal({
             <p className="font-bold text-gray-900">{presupuesto.numero_presupuesto}</p>
           </div>
           <div className="text-right">
-            <p className="text-xs text-gray-500 uppercase font-semibold">Total</p>
+            <p className="text-xs text-gray-500 uppercase font-semibold">Total {requiereFactura ? '(c/ IVA)' : '(Neto)'}</p>
             <p className="font-bold text-blue-600">
-              ${presupuesto.total.toLocaleString('es-AR', { minimumFractionDigits: 0 })}
+              ${totalFinal.toLocaleString('es-AR', { minimumFractionDigits: 0 })}
             </p>
           </div>
         </div>
@@ -113,12 +136,14 @@ export function ConvertirPresupuestoModal({
             <Calendar className="w-4 h-4 text-gray-400" />
             Fecha de Entrega Estimada *
           </label>
-          <Input
-            type="date"
+          <DatePicker
             value={fechaEntrega}
-            onChange={(e) => setFechaEntrega(e.target.value)}
-            min={new Date().toISOString().split('T')[0]}
+            onChange={(date) => setFechaEntrega(date || '')}
+            minDate={new Date()}
             required
+            placeholder="Seleccionar fecha de entrega"
+            workloadData={workloadData}
+            workloadThresholds={{ low: 3, medium: 7 }}
           />
         </div>
 
@@ -160,8 +185,14 @@ export function ConvertirPresupuestoModal({
                     value={montoPago}
                     onChange={(e) => setMontoPago(e.target.value)}
                     placeholder="0.00"
-                    max={presupuesto.total}
+                    max={totalFinal}
+                    className={montoNumerico > totalFinal ? 'border-red-500 focus:ring-red-500' : ''}
                   />
+                  {montoNumerico > totalFinal && (
+                    <p className="text-[10px] text-red-600 mt-1 font-medium italic">
+                      El monto no puede superar los ${totalFinal.toLocaleString('es-AR')}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Medio *</label>
@@ -191,14 +222,42 @@ export function ConvertirPresupuestoModal({
           )}
         </div>
 
-        {/* Aviso de rutas si algún item no las tiene */}
-        {itemsSinRutas.length > 0 && (
-          <div className="flex items-start gap-2 p-3 bg-orange-50 rounded-lg border border-orange-100 text-[11px] text-orange-700">
-            <Info className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
-            <p>
-              Existen {itemsSinRutas.length} items sin ruta de producción definida.
-              El sistema generará rutas automáticas para ellos basándose en su configuración.
-            </p>
+        {/* Aviso de rutas si algún item no las tiene persistidas */}
+        {itemsSinRutasPersistidas.length > 0 && (
+          <div className="space-y-2">
+            {itemsPersonalizadosSinRutas.length > 0 && (
+              <div className="flex items-start gap-2 p-3 bg-red-50 rounded-lg border border-red-100 text-[11px] text-red-700">
+                <AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="font-bold">Items personalizados sin configuración de producción:</p>
+                  <ul className="list-disc list-inside mt-1 ml-1 opacity-90">
+                    {itemsPersonalizadosSinRutas.map(item => (
+                      <li key={item.id}>{item.producto_nombre}</li>
+                    ))}
+                  </ul>
+                  <p className="mt-1.5 leading-relaxed">
+                    Se recomienda configurar sus rutas desde la pestaña "Rutas" antes de convertir para asegurar la trazabilidad.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {itemsAutomaticos.length > 0 && (
+              <div className="flex items-start gap-2 p-3 bg-blue-50 rounded-lg border border-blue-100 text-[11px] text-blue-700">
+                <Info className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="font-bold">Items con rutas automáticas (Sugerido):</p>
+                  <ul className="list-disc list-inside mt-1 ml-1 opacity-90">
+                    {itemsAutomaticos.map(item => (
+                      <li key={item.id}>{item.producto_nombre}</li>
+                    ))}
+                  </ul>
+                  <p className="mt-1.5 leading-relaxed">
+                    El sistema generará sus rutas automáticamente basándose en su configuración estándar.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
