@@ -1,9 +1,10 @@
 import { useState, useMemo } from 'react';
-import { TrendingUp, Calendar, Plus } from 'lucide-react';
+import { TrendingUp, Plus } from 'lucide-react';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { DatePicker } from '../ui/DatePicker';
 import { Badge } from '../ui/Badge';
+import { formatDateDisplay } from '../../utils/dates';
 import { useIngresosPeriodo } from '../../hooks/useTesoreria';
 import { useIngresos } from '../../hooks/useIngresos';
 import { RegistrarIngresoModal } from './RegistrarIngresoModal';
@@ -16,60 +17,45 @@ export function IngresosPanel({ onIngresoRegistrado }: IngresosPanelProps = {}) 
   const hoy = new Date();
   hoy.setHours(0, 0, 0, 0);
 
-  const [fechaDesde, setFechaDesde] = useState<Date>(hoy);
-  const [fechaHasta, setFechaHasta] = useState<Date>(hoy);
+  const [fechaDesde, setFechaDesde] = useState<string>(hoy.toISOString().split('T')[0]);
+  const [fechaHasta, setFechaHasta] = useState<string>(hoy.toISOString().split('T')[0]);
   const [showRegistrarModal, setShowRegistrarModal] = useState(false);
 
-  const fechaDesdeStr = useMemo(() => {
-    return fechaDesde instanceof Date && !isNaN(fechaDesde.getTime())
-      ? fechaDesde.toISOString().split('T')[0]
-      : new Date().toISOString().split('T')[0];
-  }, [fechaDesde]);
-
-  const fechaHastaStr = useMemo(() => {
-    return fechaHasta instanceof Date && !isNaN(fechaHasta.getTime())
-      ? fechaHasta.toISOString().split('T')[0]
-      : new Date().toISOString().split('T')[0];
-  }, [fechaHasta]);
-
   const { ingresos, totalIngresos, totalComisiones, loading, refetch } = useIngresosPeriodo(
-    fechaDesdeStr,
-    fechaHastaStr
+    fechaDesde,
+    fechaHasta
   );
 
   const { createIngreso } = useIngresos();
 
   const setHoy = () => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    setFechaDesde(today);
-    setFechaHasta(today);
+    const todayStr = new Date().toISOString().split('T')[0];
+    setFechaDesde(todayStr);
+    setFechaHasta(todayStr);
   };
 
   const setAyer = () => {
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
-    yesterday.setHours(0, 0, 0, 0);
-    setFechaDesde(yesterday);
-    setFechaHasta(yesterday);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+    setFechaDesde(yesterdayStr);
+    setFechaHasta(yesterdayStr);
   };
 
   const setUltimaSemana = () => {
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const weekAgo = new Date(today);
-    weekAgo.setDate(weekAgo.getDate() - 7);
-    setFechaDesde(weekAgo);
-    setFechaHasta(today);
+    const weekAgo = new Date();
+    weekAgo.setDate(today.getDate() - 7);
+    setFechaDesde(weekAgo.toISOString().split('T')[0]);
+    setFechaHasta(today.toISOString().split('T')[0]);
   };
 
   const setUltimoMes = () => {
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const monthAgo = new Date(today);
-    monthAgo.setDate(monthAgo.getDate() - 30);
-    setFechaDesde(monthAgo);
-    setFechaHasta(today);
+    const monthAgo = new Date();
+    monthAgo.setDate(today.getDate() - 30);
+    setFechaDesde(monthAgo.toISOString().split('T')[0]);
+    setFechaHasta(today.toISOString().split('T')[0]);
   };
 
   const getTipoIngresoBadge = (ingreso: any) => {
@@ -183,7 +169,7 @@ export function IngresosPanel({ onIngresoRegistrado }: IngresosPanelProps = {}) 
         <div className="px-6 py-4 border-b border-gray-200">
           <h3 className="font-semibold text-gray-900">Detalle de Ingresos</h3>
           <p className="text-sm text-gray-500 mt-1">
-            {fechaDesde instanceof Date ? fechaDesde.toLocaleDateString('es-AR') : fechaDesdeStr} - {fechaHasta instanceof Date ? fechaHasta.toLocaleDateString('es-AR') : fechaHastaStr}
+            {formatDateDisplay(fechaDesde)} - {formatDateDisplay(fechaHasta)}
           </p>
         </div>
 
@@ -217,7 +203,7 @@ export function IngresosPanel({ onIngresoRegistrado }: IngresosPanelProps = {}) 
                 ingresos.map((ingreso) => (
                   <tr key={ingreso.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {new Date(ingreso.fecha).toLocaleDateString('es-AR')}
+                      {formatDateDisplay(ingreso.fecha)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {getTipoIngresoBadge(ingreso)}

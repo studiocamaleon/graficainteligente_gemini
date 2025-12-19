@@ -1,9 +1,7 @@
-import { useState, useEffect } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { formatCurrency } from '../../utils/stringUtils';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { formatDateDisplay } from '../../utils/dates';
 import {
     ArrowDownLeft,
     ArrowUpRight,
@@ -11,12 +9,10 @@ import {
     Calendar,
     User,
     FileText,
-    TrendingUp,
-    TrendingDown,
     RefreshCw
 } from 'lucide-react';
 import { Caja } from '../../types/medios-cobro';
-import { useCajaMovimientos } from '../../hooks/useCajas'; // We will create this
+import { useCajaMovimientos } from '../../hooks/useCajas';
 
 interface CajaMovimientosModalProps {
     isOpen: boolean;
@@ -25,7 +21,7 @@ interface CajaMovimientosModalProps {
 }
 
 export function CajaMovimientosModal({ isOpen, onClose, caja }: CajaMovimientosModalProps) {
-    const { movimientos, loading, error, refetch, hasMore, loadMore } = useCajaMovimientos(caja?.id || null, isOpen);
+    const { movimientos, loading, error, hasMore, loadMore } = useCajaMovimientos(caja?.id || null, isOpen);
 
     if (!caja) return null;
 
@@ -33,7 +29,7 @@ export function CajaMovimientosModal({ isOpen, onClose, caja }: CajaMovimientosM
         switch (tipo) {
             case 'ingreso': return <ArrowDownLeft className="w-5 h-5 text-green-600" />;
             case 'egreso': return <ArrowUpRight className="w-5 h-5 text-red-600" />;
-            case 'transferencia_entrante': return <ArrowRightLeft className="w-5 h-5 text-blue-600 rotate-45" />; // Incoming transfer
+            case 'transferencia_entrante': return <ArrowRightLeft className="w-5 h-5 text-blue-600 rotate-45" />;
             case 'transferencia_saliente': return <ArrowRightLeft className="w-5 h-5 text-orange-600" />;
             case 'ajuste': return <RefreshCw className="w-5 h-5 text-purple-600" />;
             default: return <FileText className="w-5 h-5 text-gray-500" />;
@@ -65,9 +61,6 @@ export function CajaMovimientosModal({ isOpen, onClose, caja }: CajaMovimientosM
             size="lg"
         >
             <div className="flex flex-col h-[60vh]">
-
-                {/* Header Stats could go here */}
-
                 <div className="flex-1 overflow-y-auto pr-2 space-y-3 mt-4">
                     {loading && movimientos.length === 0 && (
                         <div className="flex justify-center p-8 text-gray-400">
@@ -118,7 +111,7 @@ export function CajaMovimientosModal({ isOpen, onClose, caja }: CajaMovimientosM
                                 <div className="flex items-center gap-4 mt-3 text-xs opacity-70">
                                     <span className="flex items-center gap-1">
                                         <Calendar className="w-3 h-3" />
-                                        {format(new Date(mov.fecha), "d 'de' MMMM, yyyy", { locale: es })}
+                                        {formatDateDisplay(mov.fecha)}
                                     </span>
                                     {mov.usuario_nombre && (
                                         <span className="flex items-center gap-1">

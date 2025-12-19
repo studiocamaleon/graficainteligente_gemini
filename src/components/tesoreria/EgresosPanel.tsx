@@ -12,8 +12,7 @@ import { useCajas } from '../../hooks/useCajas';
 import { useTiposEgreso } from '../../hooks/useTiposEgreso';
 import { useToast } from '../../contexts/ToastContext';
 import { useConfirmDialog } from '../../hooks/useConfirmDialog';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { formatDateDisplay } from '../../utils/dates';
 
 interface EgresosPanelProps {
   onEgresoRegistrado?: () => void;
@@ -21,7 +20,7 @@ interface EgresosPanelProps {
 
 export function EgresosPanel({ onEgresoRegistrado }: EgresosPanelProps = {}) {
   const { showSuccess, showError } = useToast();
-  const { confirm } = useConfirmDialog();
+  const { confirmDelete, showConfirm } = useConfirmDialog();
   const { cajas } = useCajas();
   const { tipos } = useTiposEgreso();
 
@@ -37,11 +36,11 @@ export function EgresosPanel({ onEgresoRegistrado }: EgresosPanelProps = {}) {
   const { egresos, loading, total, createEgreso, deleteEgreso, refetch } = useEgresos(filters);
 
   const handleDelete = async (id: string) => {
-    const confirmed = await confirm({
+    const confirmed = await showConfirm({
       title: 'Eliminar egreso',
       message: '¿Estás seguro de eliminar este egreso? Esta acción no se puede deshacer y el movimiento de caja será eliminado.',
       confirmText: 'Eliminar',
-      type: 'danger',
+      variant: 'danger',
     });
 
     if (confirmed) {
@@ -74,7 +73,7 @@ export function EgresosPanel({ onEgresoRegistrado }: EgresosPanelProps = {}) {
         <div className="flex items-center gap-2">
           <Calendar className="w-4 h-4 text-gray-400" />
           <span className="font-medium">
-            {format(new Date(egreso.fecha), 'dd MMM yyyy', { locale: es })}
+            {formatDateDisplay(egreso.fecha)}
           </span>
         </div>
       ),
@@ -84,7 +83,7 @@ export function EgresosPanel({ onEgresoRegistrado }: EgresosPanelProps = {}) {
       header: 'Concepto',
       render: (egreso: any) => (
         <Badge
-          variant="outline"
+          variant="info"
           style={{
             borderColor: egreso.tipo_egreso?.color || '#64748b',
             color: egreso.tipo_egreso?.color || '#64748b',
