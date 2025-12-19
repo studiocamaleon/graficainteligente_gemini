@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { JobsKanbanBoard } from '../../../components/production/JobsKanbanBoard';
 import { JobExecutionModal } from '../../../components/production/JobExecutionModal';
 import { useProductionJobs } from '../../../hooks/useProductionJobs';
 import type { JobItem } from '../../../hooks/useProductionJobs';
-import { RefreshCw, Radio, Monitor } from 'lucide-react';
+import { RefreshCw, Radio, Monitor, Search } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
+import { Input } from '../../../components/ui/Input';
 import { useAuth } from '../../../hooks/useAuth';
 import { useToast } from '../../../contexts/ToastContext';
 
@@ -14,6 +15,22 @@ export function JobsView() {
   const { jobsByEstado, loading, error, refreshJobs, isUpdating, recentlyUpdatedJobs } = useProductionJobs();
   const [selectedJob, setSelectedJob] = useState<JobItem | null>(null);
   const [showExecutionModal, setShowExecutionModal] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const filteredJobsByEstado = useMemo(() => {
+    if (!searchTerm.trim()) return jobsByEstado;
+
+    const term = searchTerm.toLowerCase();
+    const filterFn = (job: JobItem) =>
+      job.cliente_nombre.toLowerCase().includes(term) ||
+      job.numero_orden.toLowerCase().includes(term);
+
+    return {
+      pendiente: jobsByEstado.pendiente.filter(filterFn),
+      en_proceso: jobsByEstado.en_proceso.filter(filterFn),
+      finalizado: jobsByEstado.finalizado.filter(filterFn),
+    };
+  }, [jobsByEstado, searchTerm]);
 
   const handleJobClick = (job: JobItem) => {
     setSelectedJob(job);
@@ -70,15 +87,24 @@ export function JobsView() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="text-sm text-gray-600">
+        <div className="flex items-center gap-4 flex-1">
+          <div className="text-sm text-gray-600 whitespace-nowrap">
             <span className="font-semibold">
-              {jobsByEstado.pendiente.length + jobsByEstado.en_proceso.length + jobsByEstado.finalizado.length}
+              {filteredJobsByEstado.pendiente.length + filteredJobsByEstado.en_proceso.length + filteredJobsByEstado.finalizado.length}
             </span>{' '}
-            jobs en producción
+            jobs mostrados
+          </div>
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            <Input
+              placeholder="Buscar cliente o número de orden..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 py-2 h-10"
+            />
           </div>
           {isUpdating && (
-            <div className="flex items-center gap-1.5 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
+            <div className="flex items-center gap-1.5 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full whitespace-nowrap">
               <Radio className="w-3 h-3 animate-pulse" />
               <span>Sincronizando...</span>
             </div>
@@ -97,7 +123,7 @@ export function JobsView() {
       </div>
 
       <JobsKanbanBoard
-        jobsByEstado={jobsByEstado}
+        jobsByEstado={filteredJobsByEstado}
         onJobClick={handleJobClick}
         recentlyUpdatedJobs={recentlyUpdatedJobs}
       />
