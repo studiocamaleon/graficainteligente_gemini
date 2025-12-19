@@ -81,14 +81,14 @@ BEGIN
     nombre = EXCLUDED.nombre;
 
   ---------------------------------------------------------------------------
-  -- 9. Centro de Copiado
+  -- 9. Re-establecer Constraint (Hotfix)
   ---------------------------------------------------------------------------
-  INSERT INTO categorias (id, company_id, nombre, descripcion, color, is_system_category, is_active)
-  VALUES ('00000000-0000-0000-0000-000000000009', NULL, 'Centro de Copiado', 'Servicios de fotocopias, impresiones y escaneos', '#6366f1', true, true)
-  ON CONFLICT (id) DO UPDATE SET 
-    is_active = true,
-    is_system_category = true,
-    company_id = NULL,
-    nombre = EXCLUDED.nombre;
+  ALTER TABLE categorias DROP CONSTRAINT IF EXISTS check_only_system_categories;
+  
+  -- Asegurar que todos los datos cumplen antes de activar
+  UPDATE categorias SET is_system_category = true WHERE company_id IS NULL;
+  
+  ALTER TABLE categorias ADD CONSTRAINT check_only_system_categories
+    CHECK (company_id IS NULL AND is_system_category = true);
 
 END $$;
