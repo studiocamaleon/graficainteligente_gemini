@@ -22,12 +22,17 @@ export function StationsView() {
 
   const navigate = useNavigate();
 
-  const handleStationClick = (estacionId: string) => {
+  const handleStationChange = (estacionId: string | null) => {
     setSelectedStationId(estacionId);
+    localStorage.setItem('production_selected_station', estacionId || 'all');
+  };
+
+  const handleStationClick = (estacionId: string) => {
+    handleStationChange(estacionId);
   };
 
   const handleViewAllStations = () => {
-    setSelectedStationId(null);
+    handleStationChange(null);
   };
 
   const handleViewStepDetails = (step: StationStep) => {
@@ -126,7 +131,7 @@ export function StationsView() {
               total_activos: s.total_pasos_activos,
             }))}
             selectedStationId={selectedStationId}
-            onChange={setSelectedStationId}
+            onChange={handleStationChange}
           />
           <div className="text-sm text-gray-600">
             <span className="font-semibold">{totalActivePasos}</span>{' '}
