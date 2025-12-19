@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { X, AlertCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { AlertCircle } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -61,6 +61,25 @@ export function RegistrarEgresoModal({
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (isOpen) {
+      setFormData({
+        caja_id: lockedCajaId || initialData?.caja_id || '',
+        tarjeta_id: '',
+        tipo_egreso_id: initialData?.tipo_egreso_id || tipoEgresoId || '',
+        monto: initialData?.monto || 0,
+        concepto: initialData?.concepto || '',
+        fecha: initialData?.fecha || new Date().toISOString().split('T')[0],
+        cuotas: 1,
+        medio_pago: lockedMedioPago || initialData?.medio_pago || undefined,
+        recurrente_id: recurrenteId,
+        periodo_devengado: periodoDevengado,
+        proveedor_id: proveedorId
+      });
+      setErrors({});
+    }
+  }, [isOpen, lockedCajaId, lockedMedioPago, initialData, recurrenteId, periodoDevengado, proveedorId, tipoEgresoId]);
 
   const selectedCaja = cajas.find(c => c.id === formData.caja_id);
   const saldoSuficiente = selectedCaja ? selectedCaja.saldo_actual >= formData.monto : false;
