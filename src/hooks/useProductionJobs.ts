@@ -16,6 +16,7 @@ export interface JobItem {
   fecha_creacion: string;
   updated_at: string;
   cliente_nombre: string;
+  cliente_razon_social?: string;
   total_pasos: number;
   pasos_completados: number;
   pasos_en_proceso: number;
@@ -113,7 +114,8 @@ export function useProductionJobs() {
             estado,
             cliente:clients!inner(
               id,
-              nombre_fantasia
+              nombre_fantasia,
+              razon_social
             )
           ),
           configuracion
@@ -142,7 +144,7 @@ export function useProductionJobs() {
         return fechaA - fechaB;
       });
 
-      const itemIds = sortedItemsData.map((item) => item.id);
+      const itemIds = (sortedItemsData as any[]).map((item) => item.id);
 
       const { data: rutasData, error: rutasError } = await supabase
         .from('ordenes_trabajo_items_rutas')
@@ -151,7 +153,7 @@ export function useProductionJobs() {
 
       if (rutasError) throw rutasError;
 
-      const rutasByItem = (rutasData || []).reduce((acc, ruta) => {
+      const rutasByItem = ((rutasData as any[]) || []).reduce((acc, ruta) => {
         if (!acc[ruta.orden_item_id]) {
           acc[ruta.orden_item_id] = [];
         }
@@ -163,13 +165,13 @@ export function useProductionJobs() {
         const itemRutas = rutasByItem[item.id] || [];
         const totalPasos = itemRutas.length;
         const pasosCompletados = itemRutas.filter(
-          (r) => r.estado_paso === 'completado' || r.estado_paso === 'omitido'
+          (r: any) => r.estado_paso === 'completado' || r.estado_paso === 'omitido'
         ).length;
         const pasosEnProceso = itemRutas.filter(
-          (r) => r.estado_paso === 'en_proceso'
+          (r: any) => r.estado_paso === 'en_proceso'
         ).length;
         const pasosPendientes = itemRutas.filter(
-          (r) => r.estado_paso === 'pendiente'
+          (r: any) => r.estado_paso === 'pendiente'
         ).length;
 
         const progresoPortcentaje =
@@ -188,6 +190,7 @@ export function useProductionJobs() {
           fecha_creacion: item.orden.fecha_creacion,
           updated_at: item.updated_at,
           cliente_nombre: item.orden.cliente?.nombre_fantasia || 'Sin cliente',
+          cliente_razon_social: item.orden.cliente?.razon_social || '',
           total_pasos: totalPasos,
           pasos_completados: pasosCompletados,
           pasos_en_proceso: pasosEnProceso,
@@ -258,7 +261,8 @@ export function useProductionJobs() {
               estado,
               cliente:clients!inner(
                 id,
-                nombre_fantasia
+                nombre_fantasia,
+                razon_social
               )
             )
           `)
@@ -274,7 +278,7 @@ export function useProductionJobs() {
 
         if (rutasError) throw rutasError;
 
-        const itemRutas = rutasData || [];
+        const itemRutas = (rutasData as any[]) || [];
         const totalPasos = itemRutas.length;
         const pasosCompletados = itemRutas.filter(
           (r) => r.estado_paso === 'completado' || r.estado_paso === 'omitido'
@@ -286,17 +290,19 @@ export function useProductionJobs() {
 
         const pasoRelevante = encontrarPasoRelevante(itemRutas);
 
+        const itemDataAny = itemData as any;
         const updatedJob: JobItem = {
-          id: itemData.id,
-          estado: itemData.estado,
-          producto_nombre: itemData.producto_nombre || 'Sin nombre',
-          producto_categoria: itemData.producto_categoria,
-          cantidad: itemData.cantidad,
-          orden_id: (itemData.orden as any).id,
-          numero_orden: (itemData.orden as any).numero_orden,
-          fecha_creacion: (itemData.orden as any).fecha_creacion,
-          updated_at: itemData.updated_at,
-          cliente_nombre: (itemData.orden as any).cliente?.nombre_fantasia || 'Sin cliente',
+          id: itemDataAny.id,
+          estado: itemDataAny.estado,
+          producto_nombre: itemDataAny.producto_nombre || 'Sin nombre',
+          producto_categoria: itemDataAny.producto_categoria,
+          cantidad: itemDataAny.cantidad,
+          orden_id: (itemDataAny.orden as any).id,
+          numero_orden: (itemDataAny.orden as any).numero_orden,
+          fecha_creacion: (itemDataAny.orden as any).fecha_creacion,
+          updated_at: itemDataAny.updated_at,
+          cliente_nombre: (itemDataAny.orden as any).cliente?.nombre_fantasia || 'Sin cliente',
+          cliente_razon_social: (itemDataAny.orden as any).cliente?.razon_social || '',
           total_pasos: totalPasos,
           pasos_completados: pasosCompletados,
           pasos_en_proceso: pasosEnProceso,

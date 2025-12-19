@@ -23,6 +23,7 @@ export function JobsView() {
     const term = searchTerm.toLowerCase();
     const filterFn = (job: JobItem) =>
       job.cliente_nombre.toLowerCase().includes(term) ||
+      (job.cliente_razon_social?.toLowerCase() || '').includes(term) ||
       job.numero_orden.toLowerCase().includes(term);
 
     return {
