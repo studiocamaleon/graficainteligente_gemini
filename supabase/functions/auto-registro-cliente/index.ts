@@ -387,7 +387,7 @@ Deno.serve(async (req: Request) => {
       .eq('id', body.company_id)
       .maybeSingle();
 
-    if (companyError) {local funciona
+    if (companyError) {
       console.error('[Company] Error consultando empresa:', companyError);
       return new Response(
         JSON.stringify({
