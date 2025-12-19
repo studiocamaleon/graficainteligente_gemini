@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -11,13 +11,17 @@ import {
     Layers,
     ChevronRight,
     Info,
-    Edit2
+    Edit2,
+    Loader2,
+    TrendingDown
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../contexts/ToastContext';
 import { UniversalAddItemWizard } from '../wizard/UniversalAddItemWizard';
 import { ConfigDetailRenderer } from '../shared/ConfigDetailRenderer';
+import { useUniversalPricing } from '../../hooks/wizard/useUniversalPricing';
+import { mapTipoToCategory } from '../../hooks/wizard/useUniversalPricing';
 
 interface ConstructorConfiguratorProps {
     isOpen: boolean;
@@ -66,13 +70,105 @@ export function ConstructorConfigurator({
     const [categorias, setCategorias] = useState<any[]>([]);
     const [rutas, setRutas] = useState<any[]>([]);
     const [isSaving, setIsSaving] = useState(false);
+    const [isSyncing, setIsSyncing] = useState(false);
+    const [showBetterPriceHint, setShowBetterPriceHint] = useState(false);
     const [editingComponentId, setEditingComponentId] = useState<string | null>(null);
+    const lastSyncKey = useRef<string>('');
+
+    const { calculatePrice } = useUniversalPricing();
 
     useEffect(() => {
         if (isOpen) {
             loadInitialData();
         }
     }, [isOpen]);
+
+    // Recalcular precios de componentes cuando cambia la cantidad total o los componentes
+    useEffect(() => {
+        if (!isOpen || componentes.length === 0 || showWizard) return;
+
+        // Generar una llave para evitar recálculos infinitos si los datos no han cambiado realmente
+        const currentKey = JSON.stringify({
+            cantidad,
+            componentes: componentes.map(c => ({ id: c.id, config: c.configuracion, ref: c.referencia_id, qty: c.cantidad_por_unidad }))
+        });
+
+        if (currentKey === lastSyncKey.current) return;
+
+        const syncPrices = async () => {
+            const safeParentQuantity = Math.max(1, cantidad);
+            setIsSyncing(true);
+            let changed = false;
+            let priceDropped = false;
+
+            // Calculamos el costo unitario total actual antes de sincronizar
+            const oldTotalUnitPrice = componentes.reduce((acc, c) => acc + c.precio_unitario, 0);
+
+            const updatedComponents = await Promise.all(componentes.map(async (comp) => {
+                // Priorizar la categoría real guardada en el componente si existe
+                const category = (comp.categoria && comp.categoria.length > 5)
+                    ? comp.categoria as any
+                    : mapTipoToCategory(comp.tipo_componente);
+
+                const needsReference = category !== 'Centro de Copiado';
+
+                if (!category || (needsReference && !comp.referencia_id)) {
+                    return comp;
+                }
+
+                try {
+                    const result = await calculatePrice(
+                        comp.referencia_id || '',
+                        category,
+                        comp.configuracion,
+                        comp.configuracion?.servicios_seleccionados || [],
+                        comp.configuracion?.acabados_seleccionados || [],
+                        undefined,
+                        false,
+                        safeParentQuantity
+                    );
+
+                    if (result.tiene_precio && result.precio_total !== null && Math.abs((result.precio_total || 0) - comp.precio_unitario) > 0.01) {
+                        changed = true;
+                        return {
+                            ...comp,
+                            precio_unitario: result.precio_total || 0,
+                            precio_total: (result.precio_total || 0) * comp.cantidad_por_unidad
+                        };
+                    }
+                } catch (err) {
+                    console.error('[Constructor] Error recalculando:', comp.nombre_personalizado, err);
+                }
+                return comp;
+            }));
+
+            if (changed) {
+                const newTotalUnitPrice = updatedComponents.reduce((acc, c) => acc + c.precio_unitario, 0);
+
+                // Si el precio unitario total bajó (mejor rango), activamos el hint
+                if (newTotalUnitPrice < oldTotalUnitPrice - 0.01) {
+                    priceDropped = true;
+                }
+
+                lastSyncKey.current = JSON.stringify({
+                    cantidad,
+                    componentes: updatedComponents.map(c => ({ id: c.id, config: c.configuracion, ref: c.referencia_id, qty: c.cantidad_por_unidad }))
+                });
+                setComponentes(updatedComponents);
+
+                if (priceDropped) {
+                    setShowBetterPriceHint(true);
+                    setTimeout(() => setShowBetterPriceHint(false), 5000); // Ocultar después de 5s
+                }
+            } else {
+                lastSyncKey.current = currentKey;
+            }
+            setIsSyncing(false);
+        };
+
+        const timer = setTimeout(syncPrices, 500);
+        return () => clearTimeout(timer);
+    }, [cantidad, componentes, isOpen, showWizard]);
 
     const loadInitialData = async () => {
         try {
@@ -108,7 +204,7 @@ export function ConstructorConfigurator({
             // ADD MODE
             const newComponent: Componente = {
                 id: `comp-${Date.now()}`,
-                tipo_componente: itemData.tipo_item || 'catálogo',
+                tipo_componente: itemData.categoria || itemData.tipo_item || 'catálogo',
                 referencia_id: itemData.producto_id,
                 categoria: itemData.categoria || null,
                 categoria_id: itemData.categoria_id || null,
@@ -139,18 +235,21 @@ export function ConstructorConfigurator({
                 setMedidaAlto(initialData.configuracion.medida_alto || 0);
 
                 if (initialData.configuracion.componentes) {
-                    setComponentes(initialData.configuracion.componentes.map((c: any) => ({
-                        id: `comp-${Math.random()}`,
-                        tipo_componente: c.tipo || (c.config?.cantidad_copias ? 'centro_copiado' : 'catalogo'),
-                        referencia_id: c.referencia_id,
-                        categoria: c.categoria || null,
-                        categoria_id: c.categoria_id || (c.config?.cantidad_copias ? 'centro_copiado' : null),
-                        nombre_personalizado: c.nombre,
-                        cantidad_por_unidad: c.cantidad,
-                        configuracion: c.config,
-                        precio_unitario: c.precio || 0,
-                        precio_total: (c.precio || 0) * (c.cantidad || 1)
-                    })));
+                    setComponentes(initialData.configuracion.componentes.map((c: any) => {
+                        const unitPrice = c.precio_unitario ?? c.precio ?? c.precio_unitario_final ?? 0;
+                        return {
+                            id: `comp-${Math.random()}`,
+                            tipo_componente: c.tipo || (c.config?.cantidad_copias ? 'centro_copiado' : 'catalogo'),
+                            referencia_id: c.referencia_id,
+                            categoria: c.categoria || null,
+                            categoria_id: c.categoria_id || (c.config?.cantidad_copias ? 'centro_copiado' : null),
+                            nombre_personalizado: c.nombre || c.nombre_personalizado,
+                            cantidad_por_unidad: c.cantidad || c.cantidad_por_unidad || 1,
+                            configuracion: c.config || c.configuracion,
+                            precio_unitario: unitPrice,
+                            precio_total: unitPrice * (c.cantidad || c.cantidad_por_unidad || 1)
+                        };
+                    }));
                 }
             } else if (!initialData) {
                 // Reset states for NEW product
@@ -309,9 +408,16 @@ export function ConstructorConfigurator({
     };
 
     const mapToDbTipo = (tipo: string) => {
-        // Mapper simple para el enum de la DB
-        if (tipo === 'centro_copiado') return 'centro_copiado';
-        if (tipo === 'catalogo') return 'laser'; // Asunción segura por ahora
+        const t = tipo.toLowerCase();
+        if (t.includes('copiado')) return 'centro_copiado';
+        if (t.includes('laser')) return 'laser';
+        if (t.includes('gran formato')) return 'gran_formato';
+        if (t.includes('rigido') || t.includes('rígido') || t.includes('uv')) return 'materiales_rigidos';
+        if (t.includes('plotter')) return 'plotter_corte';
+        if (t.includes('banner')) return 'portabanners';
+        if (t.includes('sello')) return 'sellos';
+        if (t.includes('talonario')) return 'talonarios';
+        if (t === 'catalogo' || t === 'catálogo') return 'laser';
         return 'servicio';
     };
 
@@ -475,12 +581,24 @@ export function ConstructorConfigurator({
                 </div>
 
                 {/* Footer Summary */}
-                <div className="p-6 border-t bg-gray-50">
+                <div className="p-6 border-t bg-gray-50 relative">
                     <div className="flex items-center justify-between mb-6">
                         <div className="flex items-center gap-8">
-                            <div>
-                                <p className="text-sm text-gray-500">Costo Base Unitario</p>
-                                <p className="text-2xl font-bold text-gray-900">${precioSugerido.toFixed(2)}</p>
+                            <div className="relative">
+                                <p className="text-sm text-gray-500 flex items-center gap-2">
+                                    Costo Base Unitario
+                                    {isSyncing && <Loader2 className="w-3 h-3 animate-spin text-blue-500" />}
+                                </p>
+                                <div className="flex items-center gap-3">
+                                    <p className="text-2xl font-bold text-gray-900">${precioSugerido.toFixed(2)}</p>
+
+                                    {showBetterPriceHint && (
+                                        <div className="flex items-center gap-1 bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-bold animate-bounce shadow-sm border border-green-200">
+                                            <TrendingDown className="w-3 h-3" />
+                                            ¡Mejor precio por volumen!
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                             <ChevronRight className="w-6 h-6 text-gray-300" />
                             <div>
@@ -490,18 +608,20 @@ export function ConstructorConfigurator({
                         </div>
 
                         <div className="flex items-center gap-3">
-                            <div className="flex items-center gap-2 mr-4 bg-white p-2 px-4 rounded-lg border shadow-sm">
-                                <input
-                                    type="checkbox"
-                                    id="plantilla"
-                                    checked={guardarComoPlantilla}
-                                    onChange={e => setGuardarComoPlantilla(e.target.checked)}
-                                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                                />
-                                <label htmlFor="plantilla" className="text-sm text-gray-700 cursor-pointer select-none">
-                                    Guardar en catálogo
-                                </label>
-                            </div>
+                            {!initialData?.producto_id && (
+                                <div className="flex items-center gap-2 mr-4 bg-white p-2 px-4 rounded-lg border shadow-sm">
+                                    <input
+                                        type="checkbox"
+                                        id="plantilla"
+                                        checked={guardarComoPlantilla}
+                                        onChange={e => setGuardarComoPlantilla(e.target.checked)}
+                                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                    />
+                                    <label htmlFor="plantilla" className="text-sm text-gray-700 cursor-pointer select-none">
+                                        Guardar en catálogo
+                                    </label>
+                                </div>
+                            )}
                             <Button variant="secondary" onClick={onClose}>Cancelar</Button>
                             <Button
                                 onClick={handleFinalSave}
@@ -531,6 +651,7 @@ export function ConstructorConfigurator({
                         setEditingComponentId(null);
                     }}
                     onAgregar={handleAddComponent}
+                    parentQuantity={cantidad}
                     initialData={editingComponentId ? (() => {
                         const comp = componentes.find(c => c.id === editingComponentId);
                         if (!comp) return null;

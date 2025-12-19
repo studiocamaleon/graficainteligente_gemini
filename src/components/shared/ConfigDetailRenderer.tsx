@@ -5,11 +5,22 @@ interface ConfigDetailRendererProps {
     tipoItem?: string;
 }
 
-export function ConfigDetailRenderer({ config, tipoItem }: ConfigDetailRendererProps) {
-    if (!config) return null;
+export function ConfigDetailRenderer({ config: rawConfig, tipoItem }: ConfigDetailRendererProps) {
+    if (!rawConfig) return null;
+
+    // Normalización: Si la configuración viene envuelta en una subpropiedad (común en ciertos flujos)
+    const config = (rawConfig.configuracion || rawConfig.config)
+        ? { ...rawConfig, ...(rawConfig.configuracion || rawConfig.config) }
+        : rawConfig;
 
     // Lógica específica para Centro de Copiado
-    if (tipoItem === 'centro_copiado') {
+    const isCentroCopiado =
+        (tipoItem || '').toLowerCase().includes('copiado') ||
+        (config.categoria || '').toLowerCase().includes('copiado') ||
+        config.cantidad_copias !== undefined ||
+        config.tamanio_papel_id !== undefined;
+
+    if (isCentroCopiado) {
         return (
             <div className="space-y-1 text-xs text-gray-600 mt-1">
                 {/* Info Copias/Hojas */}
@@ -105,9 +116,16 @@ export function ConfigDetailRenderer({ config, tipoItem }: ConfigDetailRendererP
                         {config.tinta_nombre}
                     </Badge>
                 )}
-                {(config.medida_ancho || config.medida_alto) && (
+                {(config.medida_ancho || config.medida_alto || config.ancho || config.alto) && (
                     <Badge variant="default" className="text-[10px] h-5">
-                        {config.medida_ancho}x{config.medida_alto} {config.unidad_medida || 'mm'}
+                        {config.medida_ancho || config.ancho}x{config.medida_alto || config.alto} {
+                            config.unidad_medida ||
+                            (['gran', 'formato', 'plotter', 'rigido', 'banner'].some(
+                                keyword => (tipoItem || '').toLowerCase().includes(keyword) ||
+                                    (config.categoria || '').toLowerCase().includes(keyword) ||
+                                    (config.producto_categoria || '').toLowerCase().includes(keyword)
+                            ) ? 'cm' : 'mm')
+                        }
                     </Badge>
                 )}
                 {config.cara_impresa && (

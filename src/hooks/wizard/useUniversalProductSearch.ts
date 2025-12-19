@@ -23,6 +23,7 @@ export interface UniversalProductSearchResult {
   tiene_precios: boolean;
   unidad_medida?: string;
   config_disponible: ProductConfig;
+  es_compuesto?: boolean;
 }
 
 export interface ProductConfig {
@@ -86,34 +87,28 @@ export function useUniversalProductSearch(searchTerm: string) {
       try {
         const results: UniversalProductSearchResult[] = [];
 
-        // Buscar en paralelo en todas las categorías
-        const [
-          laserProducts,
-          talonariosProducts,
-          granFormatoProducts,
-          materialesRigidosProducts,
-          plotterCorteProducts,
-          portabannersProducts,
-          sellosProducts
-        ] = await Promise.all([
-          searchImpresionLaser(profile.company_id, debouncedSearch),
-          searchTalonarios(profile.company_id, debouncedSearch),
-          searchGranFormato(profile.company_id, debouncedSearch),
-          searchMaterialesRigidos(profile.company_id, debouncedSearch),
-          searchPlotterCorte(profile.company_id, debouncedSearch),
-          searchPortabanners(profile.company_id, debouncedSearch),
-          searchSellos(profile.company_id, debouncedSearch)
-        ]);
+        // Buscar en paralelo en todas las categorías usando allSettled para resiliencia
+        const searchPromises = [
+          searchImpresionLaser(profile.company_id!, debouncedSearch),
+          searchTalonarios(profile.company_id!, debouncedSearch),
+          searchGranFormato(profile.company_id!, debouncedSearch),
+          searchMaterialesRigidos(profile.company_id!, debouncedSearch),
+          searchPlotterCorte(profile.company_id!, debouncedSearch),
+          searchPortabanners(profile.company_id!, debouncedSearch),
+          searchSellos(profile.company_id!, debouncedSearch),
+          searchProductosPersonalizados(profile.company_id!, debouncedSearch)
+        ];
 
-        results.push(
-          ...laserProducts,
-          ...talonariosProducts,
-          ...granFormatoProducts,
-          ...materialesRigidosProducts,
-          ...plotterCorteProducts,
-          ...portabannersProducts,
-          ...sellosProducts
-        );
+        const settlement = await Promise.allSettled(searchPromises);
+
+        // Recopilar resultados exitosos e informar errores en consola por categoría
+        settlement.forEach((result, index) => {
+          if (result.status === 'fulfilled') {
+            results.push(...result.value);
+          } else {
+            console.warn(`[Search] Falló una de las categorías de búsqueda (index ${index}):`, result.reason);
+          }
+        });
 
         // Ordenar por nombre
         results.sort((a, b) => a.nombre.localeCompare(b.nombre));
@@ -155,14 +150,14 @@ async function searchImpresionLaser(
   if (!data) return [];
 
   // Obtener categoría ID
-  const { data: catData } = await supabase
+  const { data: catData } = await (supabase as any)
     .from('categorias')
     .select('id')
     .eq('nombre', 'Impresion Laser')
     .eq('is_system_category', true)
     .single();
 
-  return data.map(p => ({
+  return (data as any[]).map(p => ({
     id: p.id,
     nombre: p.nombre,
     categoria: 'Impresion Laser',
@@ -201,14 +196,14 @@ async function searchTalonarios(
   if (error) throw error;
   if (!data) return [];
 
-  const { data: catData } = await supabase
+  const { data: catData } = await (supabase as any)
     .from('categorias')
     .select('id')
     .eq('nombre', 'Talonarios')
     .eq('is_system_category', true)
     .single();
 
-  return data.map(p => ({
+  return (data as any[]).map(p => ({
     id: p.id,
     nombre: p.nombre,
     categoria: 'Talonarios',
@@ -246,14 +241,14 @@ async function searchGranFormato(
   if (error) throw error;
   if (!data) return [];
 
-  const { data: catData } = await supabase
+  const { data: catData } = await (supabase as any)
     .from('categorias')
     .select('id')
     .eq('nombre', 'Impresion Gran Formato')
     .eq('is_system_category', true)
     .single();
 
-  return data.map(p => ({
+  return (data as any[]).map(p => ({
     id: p.id,
     nombre: p.nombre,
     categoria: 'Impresion Gran Formato',
@@ -291,14 +286,14 @@ async function searchMaterialesRigidos(
   if (error) throw error;
   if (!data) return [];
 
-  const { data: catData } = await supabase
+  const { data: catData } = await (supabase as any)
     .from('categorias')
     .select('id')
     .eq('nombre', 'Materiales Rigidos')
     .eq('is_system_category', true)
     .single();
 
-  return data.map(p => ({
+  return (data as any[]).map(p => ({
     id: p.id,
     nombre: p.nombre,
     categoria: 'Materiales Rigidos',
@@ -336,14 +331,14 @@ async function searchPlotterCorte(
   if (error) throw error;
   if (!data) return [];
 
-  const { data: catData } = await supabase
+  const { data: catData } = await (supabase as any)
     .from('categorias')
     .select('id')
     .eq('nombre', 'Plotter de Corte')
     .eq('is_system_category', true)
     .single();
 
-  return data.map(p => ({
+  return (data as any[]).map(p => ({
     id: p.id,
     nombre: p.nombre,
     categoria: 'Plotter de Corte',
@@ -381,14 +376,14 @@ async function searchPortabanners(
   if (error) throw error;
   if (!data) return [];
 
-  const { data: catData } = await supabase
+  const { data: catData } = await (supabase as any)
     .from('categorias')
     .select('id')
     .eq('nombre', 'Portabanners')
     .eq('is_system_category', true)
     .single();
 
-  return data.map(p => ({
+  return (data as any[]).map(p => ({
     id: p.id,
     nombre: p.nombre,
     categoria: 'Portabanners',
@@ -426,18 +421,18 @@ async function searchSellos(
   if (error) throw error;
   if (!data) return [];
 
-  const { data: catData } = await supabase
+  const { data: catData } = await (supabase as any)
     .from('categorias')
     .select('id')
     .eq('nombre', 'Sellos')
     .eq('is_system_category', true)
     .single();
 
-  return data.map(p => ({
+  return (data as any[]).map(p => ({
     id: p.id,
     nombre: p.nombre,
     categoria: 'Sellos',
-    categoria_id: catData?.id || '',
+    categoria_id: (catData as any)?.id || '',
     descripcion: null,
     precio_desde: null,
     tiene_precios: false,
@@ -455,3 +450,50 @@ async function searchSellos(
   }));
 }
 
+async function searchProductosPersonalizados(
+  companyId: string,
+  searchTerm: string
+): Promise<UniversalProductSearchResult[]> {
+  const { data, error } = await supabase
+    .from('productos_personalizados')
+    .select(`
+      id, 
+      nombre, 
+      descripcion, 
+      categoria_id,
+      categorias!inner(nombre),
+      medidas_ancho,
+      medidas_alto
+    `)
+    .eq('company_id', companyId)
+    .eq('es_plantilla', true)
+    .eq('is_active', true)
+    .ilike('nombre', `%${searchTerm}%`)
+    .limit(10);
+
+  if (error) throw error;
+  if (!data) return [];
+
+  return (data as any[]).map(p => ({
+    id: p.id,
+    nombre: p.nombre,
+    categoria: (p.categorias as any).nombre as ProductCategory,
+    categoria_id: p.categoria_id,
+    descripcion: p.descripcion,
+    precio_desde: null,
+    tiene_precios: false,
+    es_compuesto: true,
+    config_disponible: {
+      tiene_medidas: true,
+      medidas_disponibles: [{ ancho: p.medidas_ancho, alto: p.medidas_alto }],
+      tiene_cantidad: true,
+      tiene_material: false,
+      tiene_tecnologia: false,
+      tiene_tintas: false,
+      tiene_caras_impresion: false,
+      tiene_espesor: false,
+      tiene_color: false,
+      tiene_marca: false,
+    }
+  }));
+}

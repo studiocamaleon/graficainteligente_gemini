@@ -19,6 +19,7 @@ interface UniversalAddItemWizardProps {
   onAgregar: (itemData: any) => Promise<void>;
   initialData?: any;
   isEditing?: boolean;
+  parentQuantity?: number;
 }
 
 type WizardStep = 'search' | 'configuration' | 'services' | 'summary';
@@ -30,7 +31,14 @@ const stepTitles: Record<WizardStep, string> = {
   summary: 'Resumen'
 };
 
-export function UniversalAddItemWizard({ isOpen, onClose, onAgregar, initialData, isEditing = false }: UniversalAddItemWizardProps) {
+export function UniversalAddItemWizard({
+  isOpen,
+  onClose,
+  onAgregar,
+  initialData,
+  isEditing = false,
+  parentQuantity = 1
+}: UniversalAddItemWizardProps) {
   const [currentStep, setCurrentStep] = useState<WizardStep>('search');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProduct, setSelectedProduct] = useState<UniversalProductSearchResult | null>(null);
@@ -130,7 +138,8 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar, initialData
   });
   const { config, isLoading: loadingConfig } = useProductConfiguration(
     selectedProduct?.id || null,
-    selectedProduct?.categoria || null
+    selectedProduct?.categoria || null,
+    selectedProduct?.es_compuesto || false
   );
 
   // Hook de pricing
@@ -185,7 +194,19 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar, initialData
     if (config.color) newConfig.color = config.color;
     if (config.marca) newConfig.marca = config.marca;
 
-    setSelectedConfig(prev => ({ ...prev, ...newConfig }));
+    // Productos compuestos
+    if (config.es_compuesto) {
+      console.log('[UniversalWizard] Initializing composite data:', config.componentes?.length);
+      newConfig.es_compuesto = true;
+      newConfig.componentes = config.componentes;
+      newConfig.ruta_produccion_id = config.ruta_produccion_id;
+    }
+
+    setSelectedConfig(prev => {
+      const next = { ...prev, ...newConfig };
+      console.log('[UniversalWizard] New selectedConfig:', next);
+      return next;
+    });
   }, [config]);
 
   // Hydrate from initialData for Editing
@@ -207,7 +228,9 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar, initialData
         id: initialData.producto_id || (isCopyCenter ? 'centro_copiado_module' : null),
         nombre: initialData.producto_nombre,
         categoria: initialData.categoria || initialData.producto_categoria,
-        categoria_id: initialData.categoria_id || (isCopyCenter ? 'centro_copiado' : null)
+        categoria_id: initialData.categoria_id || (isCopyCenter ? 'centro_copiado' : null),
+        es_compuesto: !!(initialData.configuracion?.es_compuesto),
+        ruta_produccion_id: initialData.configuracion?.ruta_produccion_id || null
       } as unknown as UniversalProductSearchResult;
       console.log('[UniversalWizard] Setting selectedProduct:', product);
       setSelectedProduct(product);
@@ -227,7 +250,7 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar, initialData
         cantidad: initialData.cantidad || 1,
         medida_ancho: savedConfig.medida_ancho || savedConfig.ancho || null,
         medida_alto: savedConfig.medida_alto || savedConfig.alto || null,
-        medida_mt2: savedConfig.medida_mt2 || null, // Ensure this is mapped
+        medida_mt2: savedConfig.medida_mt2 || null,
         material_id: savedConfig.material_id || null,
         material_nombre: savedConfig.material_nombre || null,
         variante_id: savedConfig.variante_id || null,
@@ -243,7 +266,13 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar, initialData
         tipo_copia: savedConfig.tipo_copia || null,
         color: savedConfig.color || null,
         marca: savedConfig.marca || null,
-        usa_material_catalogo: savedConfig.usa_material_catalogo ?? false // Default false
+        usa_material_catalogo: savedConfig.usa_material_catalogo ?? false,
+        es_compuesto: !!savedConfig.es_compuesto,
+        componentes: (savedConfig.componentes || []).map((c: any) => ({
+          ...c,
+          configuracion: c.configuracion || c.config // Normalización crítica aquí
+        })),
+        ruta_produccion_id: savedConfig.ruta_produccion_id || null
       };
 
       console.log('[UniversalWizard] Restored base config (Partial):', restoredConfig);
@@ -497,13 +526,31 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar, initialData
       selectedConfig,
       selectedServicios,
       selectedAcabados,
-      config.cantidades_fijas
+      config.cantidades_fijas,
+      selectedProduct.es_compuesto,
+      parentQuantity
     );
 
     setPrecioBase(result.precio_base);
     setPrecioServicios(result.precio_servicios);
     setPrecioAcabados(result.precio_acabados);
     setPrecioTotal(result.precio_total);
+
+    // Si es un producto compuesto, actualizar los componentes con sus precios calculados
+    if (result.componentes_actualizados) {
+      console.log('[UniversalWizard] Updating components with calculated prices:', result.componentes_actualizados.length);
+
+      // [FIX] Evitar bucle infinito: Primero comparamos si realmente cambiaron los precios
+      const currentJson = JSON.stringify(selectedConfig.componentes || []);
+      const nextJson = JSON.stringify(result.componentes_actualizados);
+
+      if (currentJson !== nextJson) {
+        setSelectedConfig(prev => ({
+          ...prev,
+          componentes: result.componentes_actualizados
+        }));
+      }
+    }
   };
 
   const handleClose = () => {
@@ -598,6 +645,11 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar, initialData
     if (currentIndex < steps.length - 1) {
       let nextStep = steps[currentIndex + 1];
 
+      // Si es compuesto, saltar de configuration directamente a summary
+      if (currentStep === 'configuration' && selectedProduct?.es_compuesto) {
+        nextStep = 'summary';
+      }
+
       // Si el siguiente paso es 'services' y el producto permite múltiples líneas, saltarlo
       if (nextStep === 'services' && config?.permite_multiples_lineas) {
         nextStep = 'summary';
@@ -613,6 +665,11 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar, initialData
 
     if (currentIndex > 0) {
       let prevStep = steps[currentIndex - 1];
+
+      // Si es compuesto, volver de summary directamente a configuration
+      if (currentStep === 'summary' && selectedProduct?.es_compuesto) {
+        prevStep = 'configuration';
+      }
 
       // Si el paso anterior es 'services' y el producto permite múltiples líneas, saltarlo
       if (prevStep === 'services' && config?.permite_multiples_lineas) {
@@ -666,6 +723,7 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar, initialData
           // Construir configuraci\u00f3n JSONB para esta l\u00ednea
           const configuracionLinea = {
             categoria: selectedProduct.categoria,
+            categoria_id: selectedProduct.categoria_id,
             unidad_medida: selectedProduct.unidad_medida || null,
             medida_ancho: linea.ancho || linea.ancho_seleccionado || null,
             medida_alto: linea.alto || (linea.metros_lineales ? Math.round(linea.metros_lineales * 100) : null),
@@ -709,8 +767,10 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar, initialData
           const itemData = {
             producto_id: selectedProduct.id,
             producto_nombre: selectedProduct.nombre,
+            producto_categoria: selectedProduct.categoria,
             categoria: selectedProduct.categoria,
             categoria_id: selectedProduct.categoria_id,
+            tipo_item: selectedProduct.categoria_id === 'centro_copiado' ? 'centro_copiado' : 'catalogo',
             cantidad: linea.cantidad,
             configuracion: configuracionLinea,
             precio_base: linea.precio_base_unitario || 0,
@@ -805,11 +865,14 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar, initialData
         const itemData = {
           producto_id: selectedProduct.id === 'centro_copiado_module' ? null : selectedProduct.id,
           producto_nombre: selectedProduct.nombre,
+          producto_categoria: 'Centro de Copiado',
           categoria: 'Centro de Copiado',
           categoria_id: 'centro_copiado',
           cantidad: quantity,
           configuracion: {
             ...finalConfig,
+            es_compuesto: selectedConfig.es_compuesto,
+            componentes: selectedConfig.componentes,
             servicios_seleccionados: serviciosItem,
             acabados_seleccionados: acabadosItem
           },
@@ -834,6 +897,7 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar, initialData
 
         const configuracionItem = {
           categoria: selectedProduct.categoria,
+          categoria_id: selectedProduct.categoria_id,
           unidad_medida: selectedProduct.unidad_medida || null,
           medida_ancho: selectedConfig.medida_ancho,
           medida_alto: selectedConfig.medida_alto,
@@ -862,7 +926,10 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar, initialData
             acabado_id: a.acabado_id,
             nombre: a.acabado_nombre,
             nivel: a.nivel_nombre,
-          }))
+          })),
+          es_compuesto: selectedConfig.es_compuesto,
+          componentes: selectedConfig.componentes,
+          ruta_produccion_id: selectedConfig.ruta_produccion_id
         };
 
         // Generar rutas de producci\u00f3n para este item
@@ -875,8 +942,10 @@ export function UniversalAddItemWizard({ isOpen, onClose, onAgregar, initialData
         const itemData = {
           producto_id: selectedProduct.id,
           producto_nombre: selectedProduct.nombre,
+          producto_categoria: selectedProduct.categoria,
           categoria: selectedProduct.categoria,
           categoria_id: selectedProduct.categoria_id,
+          tipo_item: selectedProduct.categoria_id === 'centro_copiado' ? 'centro_copiado' : 'catalogo',
           cantidad: selectedConfig.cantidad,
           configuracion: configuracionItem,
           precio_base: precioBase || 0,
