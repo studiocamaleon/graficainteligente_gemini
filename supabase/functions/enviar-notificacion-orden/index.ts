@@ -71,37 +71,46 @@ Deno.serve(async (req: Request) => {
     const authHeader = req.headers.get('Authorization');
 
     let authorized = false;
+    let authMethod = '';
 
-    // 1. Validar por Secret (Triggers/Servidor)
+    // 1. Validar por Secret (Triggers/Servidor) - PRIORIDAD
     if (triggerSecret && providedSecret === triggerSecret) {
       authorized = true;
-      console.log('[Security] Acceso autorizado vía Secret Token');
+      authMethod = 'Secret Token';
     }
     // 2. Validar por JWT (Frontend)
     else if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.replace('Bearer ', '');
-      const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
-      if (!authError && user) {
+      // Si el token es el secreto (compatibilidad con triggers viejos en Authorization), autorizar
+      if (triggerSecret && token === triggerSecret) {
         authorized = true;
-        console.log('[Security] Acceso autorizado vía JWT (User:', user.id, ')');
+        authMethod = 'Secret Token (via Auth Header)';
       } else {
-        console.error('[Security] JWT inválido:', authError?.message);
+        const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+        if (!authError && user) {
+          authorized = true;
+          authMethod = `JWT (User: ${user.id})`;
+        } else {
+          console.error('[Security] JWT inválido o error de auth:', authError?.message);
+        }
       }
     }
     // 3. Fallback para dev local si no hay secreto configurado
     else if (!triggerSecret) {
       authorized = true;
-      console.warn('[Security] Acceso permitido (TRIGGER_SECRET_TOKEN no configurado)');
+      authMethod = 'None (Local Dev Fallback)';
     }
 
     if (!authorized) {
-      console.error('[Security] Intento de acceso no autorizado (No Secret, No Valid JWT)');
+      console.error('[Security] Intento de acceso no autorizado (No valid credentials)');
       return new Response(
         JSON.stringify({ error: 'No autorizado' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    console.log(`[Security] Acceso autorizado vía ${authMethod}`);
 
     const body: RequestBody = await req.json();
     const { orden_id, company_id, tipo, orden_tipo, frontend_origin } = body;
@@ -148,11 +157,12 @@ Deno.serve(async (req: Request) => {
             )
           ),
           pagos:ordenes_trabajo_pagos(monto),
-          ordenesCopiado:centro_copiado_ordenes(
+          ordenesCopiado:centro_copiado_ordenes!orden_trabajo_id(
             id,
             numero_orden,
             total,
             items:centro_copiado_ordenes_items(
+              id,
               cantidad_unidades,
               cantidad_hojas,
               subtotal,

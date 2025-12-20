@@ -156,27 +156,13 @@ export function generateNuevaOrdenTrabajoMessage(
   // Not rendering separate Copy Center Orders section anymore as requested implicitly by "simplified message"
 
   // Financial Summary Simplified
-  const subtotalNeto = total - parseFloat(orden.subtotal_iva || 0); // Estimate net subtotal
-  // Or better, use subtotalItems + Services as base?
-  // User wants: Subtotal: $ XXX | IVA: $ XXX | Total: $ XXXX
+  const subtotalNeto = total - parseFloat(orden.total_iva || 0);
 
-  // Let's use the values we have. 
-  // 'subtotalItems' in code was orden.subtotal (which is usually net items).
-  // But wait, orden.subtotal might exclude services based on previous bug.
-  // Let's just use the final total and work back if needed, or print what we have.
-
-  // Actually, 'subtotalItems' variable defined above is `orden.subtotal`.
-  // If `orden.subtotal` now includes services (after my fix), then it is the Net Taxable Base.
-
-  const iva = parseFloat(orden.subtotal_iva || 0);
-
-  mensaje += `💰 *Subtotal:* $${subtotalItems.toFixed(2)}\n`;
-
-  if (iva > 0) {
-    mensaje += `💰 *IVA (21%):* $${iva.toFixed(2)}\n`;
+  mensaje += `💰 *Subtotal:* $${subtotalNeto.toFixed(2)}\n`;
+  if (parseFloat(orden.total_iva) > 0) {
+    mensaje += `📝 *IVA:* $${parseFloat(orden.total_iva || 0).toFixed(2)}\n`;
   }
-
-  mensaje += `💰 *TOTAL:* $${total.toFixed(2)}\n`;
+  mensaje += `💵 *Total:* $${total.toFixed(2)}\n`;
   mensaje += `💳 *Saldo pendiente:* $${saldoPendiente}\n\n`;
 
   if (trackingUrl) {
@@ -184,17 +170,26 @@ export function generateNuevaOrdenTrabajoMessage(
     mensaje += `${trackingUrl}\n\n`;
   }
 
-  mensaje += `📍 *${company.name || 'Nuestra empresa'}*\n`;
-
+  mensaje += `📍 *Podés retirarla en:*\n`;
   if (company.address) {
-    mensaje += `${company.address}\n`;
+    mensaje += `${company.address}\n\n`;
+  }
+
+  if (company.business_hours) {
+    mensaje += `🕐 *Horarios de atención:*\n`;
+    mensaje += `${company.business_hours}\n\n`;
   }
 
   if (company.contact_phone) {
-    mensaje += `📞 ${company.contact_phone}\n`;
+    mensaje += `📞 *Contacto:* ${company.contact_phone}\n\n`;
   }
 
-  mensaje += `\nGracias por confiar en nosotros!\n\n`;
+  if (company.google_review_url) {
+    mensaje += `⭐ *Nos ayudarías mucho dejando tu opinión:*\n`;
+    mensaje += `${company.google_review_url}\n\n`;
+  }
+
+  mensaje += `Gracias por confiar en nosotros!\n\n`;
   mensaje += `_Tecnología desarrollada por CamaleonStudio - Agencia de desarrollo de Gráfica Corporearte_`;
 
   return mensaje;
@@ -302,8 +297,18 @@ export function generateNuevaOrdenCopiadoMessage(
     mensaje += `${company.address}\n`;
   }
 
+  if (company.business_hours) {
+    mensaje += `🕐 *Horarios de atención:*\n`;
+    mensaje += `${company.business_hours}\n`;
+  }
+
   if (company.contact_phone) {
     mensaje += `📞 ${company.contact_phone}\n`;
+  }
+
+  if (company.google_review_url) {
+    mensaje += `\n⭐ *Nos ayudarías mucho dejando tu opinión:*\n`;
+    mensaje += `${company.google_review_url}\n`;
   }
 
   mensaje += `\nGracias por confiar en nosotros!\n\n`;
