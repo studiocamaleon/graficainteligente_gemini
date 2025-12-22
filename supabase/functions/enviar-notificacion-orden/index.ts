@@ -82,7 +82,7 @@ Deno.serve(async (req: Request) => {
     else if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.replace('Bearer ', '');
 
-      // Si el token es el secreto (compatibilidad con triggers viejos en Authorization), autorizar
+      // FIX: Permitir que el token sea el Trigger Secret (Compatibilidad con Triggers legacy)
       if (triggerSecret && token === triggerSecret) {
         authorized = true;
         authMethod = 'Secret Token (via Auth Header)';
@@ -142,35 +142,177 @@ Deno.serve(async (req: Request) => {
     }
     company = companyData;
 
-    if (orden_tipo === 'trabajo') {
+    // --- ESTRATEGIA DE CONSULTA DIFERENCIADA ---
+    // Si es orden_finalizada, usamos una consulta LIGERA (evita joins complejos propensos a error)
+    if (tipo === 'orden_finalizada') {
+      console.log('[Notificación] Usando estrategia LIGERA para orden_finalizada');
+      const table = orden_tipo === 'trabajo' ? 'ordenes_trabajo' : 'centro_copiado_ordenes';
+      const pagosTable = orden_tipo === 'trabajo' ? 'ordenes_trabajo_pagos' : 'centro_copiado_ordenes_pagos';
+
+      // 1. Obtener datos base de la orden y suma de pagos
       const { data: ordenData, error: ordenError } = await supabase
-        .from('ordenes_trabajo')
-        .select(`
-          *,
-          items:ordenes_trabajo_items(
+        .from(table)
+        .select(`*, pagos:${pagosTable}(monto)`)
+        .eq('id', orden_id)
+        .single();
+
+      if (ordenError || !ordenData) {
+        throw new Error(`No se pudo obtener la orden finalizada: ${ordenError?.message}`);
+      }
+      orden = ordenData;
+
+      // 2. Obtener cliente
+      const { data: clienteData, error: clienteError } = await supabase
+        .from('clients')
+        .select('*')
+        .eq('id', orden.cliente_id)
+        .single();
+
+      if (clienteError || !clienteData) {
+        throw new Error('No se pudo obtener información del cliente');
+      }
+      cliente = clienteData;
+
+      // 3. Generar mensaje finalizada
+      if (!cliente.whatsapp) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Cliente sin WhatsApp configurado' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      const pagosTotal = (ordenData.pagos || []).reduce((sum: number, p: any) => sum + parseFloat(p.monto || 0), 0);
+      const saldoPendiente = parseFloat(orden.total || 0) - pagosTotal;
+      mensaje = generateOrdenFinalizadaMessage(orden, cliente, company, saldoPendiente);
+
+    } else {
+      // --- ESTRATEGIA COMPLETA (Para Nueva Orden) ---
+      console.log('[Notificación] Usando estrategia COMPLETA para nueva_orden');
+
+      if (orden_tipo === 'trabajo') {
+        // [SYNC PROD] Se agregó !orden_trabajo_id para resolver ambigüedad si existe en prod
+        const { data: ordenData, error: ordenError } = await supabase
+          .from('ordenes_trabajo')
+          .select(`
             *,
-            servicios:ordenes_trabajo_servicios_items(
-              servicio:servicio_id(nombre)
+            items:ordenes_trabajo_items(
+              *,
+              servicios:ordenes_trabajo_servicios_items(
+                servicio:servicio_id(nombre)
+              ),
+              acabados:ordenes_trabajo_acabados_items(
+                acabado:acabado_id(nombre)
+              )
             ),
-            acabados:ordenes_trabajo_acabados_items(
-              acabado:acabado_id(nombre)
-            )
-          ),
-          pagos:ordenes_trabajo_pagos(monto),
-          ordenesCopiado:centro_copiado_ordenes!orden_trabajo_id(
-            id,
-            numero_orden,
-            total,
-            items:centro_copiado_ordenes_items(
+            pagos:ordenes_trabajo_pagos(monto),
+            ordenesCopiado:centro_copiado_ordenes!orden_trabajo_id(
               id,
-              cantidad_unidades,
-              cantidad_hojas,
-              subtotal,
-              tipo_tinta,
-              cara_impresa,
-              tipo_anillado,
-              tipo_plastificado,
-              descripcion,
+              numero_orden,
+              total,
+              items:centro_copiado_ordenes_items(
+                id,
+                cantidad_unidades,
+                cantidad_hojas,
+                subtotal,
+                tipo_tinta,
+                cara_impresa,
+                tipo_anillado,
+                tipo_plastificado,
+                descripcion,
+                tamanio_papel:centro_copiado_tamanios_papel(nombre),
+                papel:centro_copiado_papeles(
+                  variante_nombre,
+                  espesor,
+                  unidad_espesor,
+                  material:material_id(nombre)
+                )
+              )
+            )
+          `)
+          .eq('id', orden_id)
+          .single();
+
+        if (ordenError || !ordenData) {
+          throw new Error('No se pudo obtener información de la orden');
+        }
+
+        orden = ordenData;
+        items = ordenData.items || [];
+
+        // Fetch servicios globales separately to avoid 500 errors with embeddings
+        const { data: serviciosData } = await supabase
+          .from('ordenes_trabajo_servicios')
+          .select('descripcion, cantidad, subtotal')
+          .eq('orden_id', orden_id);
+
+        const serviciosGlobales = serviciosData || [];
+
+        const { data: clienteData, error: clienteError } = await supabase
+          .from('clients')
+          .select('*')
+          .eq('id', orden.cliente_id)
+          .single();
+
+        if (clienteError || !clienteData) {
+          throw new Error('No se pudo obtener información del cliente');
+        }
+        cliente = clienteData;
+
+        if (!cliente.whatsapp) {
+          return new Response(
+            JSON.stringify({ success: false, error: 'Cliente sin WhatsApp configurado' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const pagosTotal = (ordenData.pagos || []).reduce((sum: number, p: any) => sum + parseFloat(p.monto || 0), 0);
+        orden.pagos_totales = pagosTotal;
+
+        if (tipo === 'nueva_orden_trabajo') {
+          let ordenesCopiado = ordenData.ordenesCopiado || [];
+          if (!Array.isArray(ordenesCopiado)) {
+            ordenesCopiado = ordenesCopiado ? [ordenesCopiado] : [];
+          }
+
+          if (ordenesCopiado.length > 0) {
+            for (const oc of ordenesCopiado) {
+              const { data: archivos } = await supabase
+                .from('centro_copiado_ordenes_archivos')
+                .select('nombre_archivo, item_generado_id')
+                .eq('orden_copiado_id', oc.id);
+
+              const archivosPorItem = new Map();
+              archivos?.forEach(archivo => {
+                if (archivo.item_generado_id) {
+                  archivosPorItem.set(archivo.item_generado_id, archivo.nombre_archivo);
+                }
+              });
+
+              oc.items?.forEach((item: any) => {
+                const nombreArchivo = archivosPorItem.get(item.id);
+                if (nombreArchivo) {
+                  item.nombre_archivo = nombreArchivo;
+                }
+              });
+            }
+          }
+
+          const origin = frontend_origin || Deno.env.get('FRONTEND_URL') || 'https://www.grafica.ar';
+
+          try {
+            mensaje = generateNuevaOrdenTrabajoMessage(orden, cliente, items, company, ordenesCopiado, origin, serviciosGlobales);
+          } catch (genError: any) {
+            console.error('[Generador] Error FATAL generando mensaje:', genError);
+            throw new Error(`Error generando mensaje: ${genError.message}`);
+          }
+        }
+      } else {
+        // Orden Copiado (Completa)
+        const { data: ordenData, error: ordenError } = await supabase
+          .from('centro_copiado_ordenes')
+          .select(`
+            *,
+            items:centro_copiado_ordenes_items(
+              *,
               tamanio_papel:centro_copiado_tamanios_papel(nombre),
               papel:centro_copiado_papeles(
                 variante_nombre,
@@ -178,173 +320,64 @@ Deno.serve(async (req: Request) => {
                 unidad_espesor,
                 material:material_id(nombre)
               )
-            )
-          )
-        `)
-        .eq('id', orden_id)
-        .single();
+            ),
+            pagos:centro_copiado_ordenes_pagos(monto)
+          `)
+          .eq('id', orden_id)
+          .single();
 
-      if (ordenError || !ordenData) {
-        throw new Error('No se pudo obtener información de la orden');
-      }
-
-      orden = ordenData;
-      items = ordenData.items || [];
-
-      // Fetch servicios globales separately to avoid 500 errors with embeddings
-      const { data: serviciosData } = await supabase
-        .from('ordenes_trabajo_servicios')
-        .select('descripcion, cantidad, subtotal')
-        .eq('orden_id', orden_id);
-
-      const serviciosGlobales = serviciosData || [];
-
-      const { data: clienteData, error: clienteError } = await supabase
-        .from('clients')
-        .select('*')
-        .eq('id', orden.cliente_id)
-        .single();
-
-      if (clienteError || !clienteData) {
-        throw new Error('No se pudo obtener información del cliente');
-      }
-      cliente = clienteData;
-
-      if (!cliente.whatsapp) {
-        return new Response(
-          JSON.stringify({ success: false, error: 'Cliente sin WhatsApp configurado' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      const pagosTotal = (ordenData.pagos || []).reduce((sum: number, p: any) => sum + parseFloat(p.monto || 0), 0);
-      orden.pagos_totales = pagosTotal;
-
-      if (tipo === 'nueva_orden_trabajo') {
-        let ordenesCopiado = ordenData.ordenesCopiado || [];
-        if (!Array.isArray(ordenesCopiado)) {
-          ordenesCopiado = ordenesCopiado ? [ordenesCopiado] : [];
+        if (ordenError || !ordenData) {
+          throw new Error('No se pudo obtener información de la orden copiado');
         }
 
-        if (ordenesCopiado.length > 0) {
-          for (const oc of ordenesCopiado) {
-            const { data: archivos } = await supabase
-              .from('centro_copiado_ordenes_archivos')
-              .select('nombre_archivo, item_generado_id')
-              .eq('orden_copiado_id', oc.id);
+        orden = ordenData;
+        items = ordenData.items || [];
 
-            const archivosPorItem = new Map();
-            archivos?.forEach(archivo => {
-              if (archivo.item_generado_id) {
-                archivosPorItem.set(archivo.item_generado_id, archivo.nombre_archivo);
-              }
-            });
+        const { data: clienteData, error: clienteError } = await supabase
+          .from('clients')
+          .select('*')
+          .eq('id', orden.cliente_id)
+          .single();
 
-            oc.items?.forEach((item: any) => {
-              const nombreArchivo = archivosPorItem.get(item.id);
-              if (nombreArchivo) {
-                item.nombre_archivo = nombreArchivo;
-              }
-            });
-          }
+        if (clienteError || !clienteData) {
+          throw new Error('No se pudo obtener información del cliente');
+        }
+        cliente = clienteData;
+
+        if (!cliente.whatsapp) {
+          return new Response(
+            JSON.stringify({ success: false, error: 'Cliente sin WhatsApp configurado' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
         }
 
-        const origin = frontend_origin || Deno.env.get('FRONTEND_URL') || 'https://www.grafica.ar';
+        if (tipo === 'nueva_orden_copiado') {
+          const { data: archivos } = await supabase
+            .from('centro_copiado_ordenes_archivos')
+            .select('nombre_archivo, item_generado_id')
+            .eq('orden_copiado_id', orden_id);
 
-        console.log('[Generador] Iniciando generación de mensaje con:', {
-          orden_id: orden.id,
-          items_count: items.length,
-          servicios_globales_count: serviciosGlobales.length,
-          origin
-        });
+          const archivosPorItem = new Map();
+          archivos?.forEach(archivo => {
+            if (archivo.item_generado_id) {
+              archivosPorItem.set(archivo.item_generado_id, archivo.nombre_archivo);
+            }
+          });
 
-        try {
-          mensaje = generateNuevaOrdenTrabajoMessage(orden, cliente, items, company, ordenesCopiado, origin, serviciosGlobales);
-        } catch (genError: any) {
-          console.error('[Generador] Error FATAL generando mensaje:', genError);
-          throw new Error(`Error generando mensaje: ${genError.message}`);
+          items.forEach(item => {
+            const nombreArchivo = archivosPorItem.get(item.id);
+            if (nombreArchivo) {
+              item.nombre_archivo = nombreArchivo;
+            }
+          });
+
+          mensaje = generateNuevaOrdenCopiadoMessage(orden, cliente, items, company);
         }
-      } else if (tipo === 'orden_finalizada') {
-        const saldoPendiente = parseFloat(orden.total || 0) - pagosTotal;
-        mensaje = generateOrdenFinalizadaMessage(orden, cliente, company, saldoPendiente);
-      }
-    } else {
-      const { data: ordenData, error: ordenError } = await supabase
-        .from('centro_copiado_ordenes')
-        .select(`
-          *,
-          items:centro_copiado_ordenes_items(
-            *,
-            tamanio_papel:centro_copiado_tamanios_papel(nombre),
-            papel:centro_copiado_papeles(
-              variante_nombre,
-              espesor,
-              unidad_espesor,
-              material:material_id(nombre)
-            )
-          ),
-          pagos:centro_copiado_ordenes_pagos(monto)
-        `)
-        .eq('id', orden_id)
-        .single();
-
-      if (ordenError || !ordenData) {
-        throw new Error('No se pudo obtener información de la orden');
-      }
-
-      orden = ordenData;
-      items = ordenData.items || [];
-
-      const { data: clienteData, error: clienteError } = await supabase
-        .from('clients')
-        .select('*')
-        .eq('id', orden.cliente_id)
-        .single();
-
-      if (clienteError || !clienteData) {
-        throw new Error('No se pudo obtener información del cliente');
-      }
-      cliente = clienteData;
-
-      if (!cliente.whatsapp) {
-        return new Response(
-          JSON.stringify({ success: false, error: 'Cliente sin WhatsApp configurado' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      const pagosTotal = (ordenData.pagos || []).reduce((sum: number, p: any) => sum + parseFloat(p.monto || 0), 0);
-      orden.pagos_totales = pagosTotal;
-
-      if (tipo === 'nueva_orden_copiado') {
-        const { data: archivos } = await supabase
-          .from('centro_copiado_ordenes_archivos')
-          .select('nombre_archivo, item_generado_id')
-          .eq('orden_copiado_id', orden_id);
-
-        const archivosPorItem = new Map();
-        archivos?.forEach(archivo => {
-          if (archivo.item_generado_id) {
-            archivosPorItem.set(archivo.item_generado_id, archivo.nombre_archivo);
-          }
-        });
-
-        items.forEach(item => {
-          const nombreArchivo = archivosPorItem.get(item.id);
-          if (nombreArchivo) {
-            item.nombre_archivo = nombreArchivo;
-          }
-        });
-
-        mensaje = generateNuevaOrdenCopiadoMessage(orden, cliente, items, company);
-      } else if (tipo === 'orden_finalizada') {
-        const saldoPendiente = parseFloat(orden.total || 0) - pagosTotal;
-        mensaje = generateOrdenFinalizadaMessage(orden, cliente, company, saldoPendiente);
       }
     }
 
     if (!mensaje) {
-      throw new Error('No se pudo generar el mensaje');
+      throw new Error(`No se pudo generar mensaje para tipo: ${tipo}`);
     }
 
     const mensajeSanitizado = sanitizeMessage(mensaje);
