@@ -37,16 +37,8 @@ export interface MeasurementLine {
   cantidad: number;
 
   // Acabados aplicables a esta línea
-  acabados: Array<{
-    acabado_id: string;
-    acabado_nombre: string;
-    nivel_id: string | null;
-    nivel_nombre: string | null;
-    tipo_impacto: string;
-    valor_porcentaje: number | null;
-    valor_monto: number | null;
-    cantidad?: number;
-  }>;
+  // Acabados aplicables a esta línea
+  acabados: SelectedFinishing[];
 
   // Precios calculados para esta línea
   precio_base_unitario?: number;

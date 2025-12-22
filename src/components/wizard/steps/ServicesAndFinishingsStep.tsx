@@ -21,6 +21,8 @@ export interface SelectedService {
   tipo_impacto: string;
   valor_porcentaje: number | null;
   valor_monto: number | null;
+  valor_impacto?: number | null;
+  valor_impacto_secundario?: number | null;
   cantidad?: number;
 }
 
@@ -32,6 +34,8 @@ export interface SelectedFinishing {
   tipo_impacto: string;
   valor_porcentaje: number | null;
   valor_monto: number | null;
+  valor_impacto?: number | null;
+  valor_impacto_secundario?: number | null;
   cantidad?: number;
 }
 
@@ -51,7 +55,8 @@ export function ServicesAndFinishingsStep({
         return;
       }
 
-      const nivel = acabadoConfig.tiene_niveles && acabadoConfig.niveles && acabadoConfig.niveles.length > 0
+      // Seleccionar el primer nivel si existe (funciona tanto para multinivel por defecto como para nivel sintético único)
+      const nivel = acabadoConfig.niveles && acabadoConfig.niveles.length > 0
         ? acabadoConfig.niveles[0]
         : null;
 
@@ -62,7 +67,9 @@ export function ServicesAndFinishingsStep({
         nivel_nombre: nivel?.nombre || null,
         tipo_impacto: nivel?.tipo_impacto || 'sin_impacto',
         valor_porcentaje: nivel?.valor_porcentaje || null,
-        valor_monto: nivel?.valor_monto || null
+        valor_monto: nivel?.valor_monto || null,
+        valor_impacto: nivel?.valor_impacto || null,
+        valor_impacto_secundario: nivel?.valor_impacto_secundario || null
       };
 
       onAcabadosChange([...selectedAcabados, newAcabado]);
@@ -84,7 +91,9 @@ export function ServicesAndFinishingsStep({
           nivel_nombre: nivel.nombre,
           tipo_impacto: nivel.tipo_impacto,
           valor_porcentaje: nivel.valor_porcentaje,
-          valor_monto: nivel.valor_monto
+          valor_monto: nivel.valor_monto,
+          valor_impacto: nivel.valor_impacto,
+          valor_impacto_secundario: nivel.valor_impacto_secundario
         };
       }
       return a;
@@ -94,53 +103,74 @@ export function ServicesAndFinishingsStep({
   };
 
 
-  const getImpactoBadgeText = (nivel: { tipo_impacto: string; valor_porcentaje: number | null; valor_monto: number | null }): string => {
-    if (nivel.tipo_impacto === 'sin_impacto' || (!nivel.valor_porcentaje && !nivel.valor_monto)) {
-      return 'Sin impacto';
-    }
+  const handleChangeCantidad = (acabadoId: string, cantidad: number) => {
+    const updatedAcabados = selectedAcabados.map(a => {
+      if (a.acabado_id === acabadoId) {
+        return { ...a, cantidad };
+      }
+      return a;
+    });
+    onAcabadosChange(updatedAcabados);
+  };
+
+  const getImpactoBadgeText = (nivel: {
+    tipo_impacto: string;
+    valor_porcentaje: number | null;
+    valor_monto: number | null;
+    valor_impacto?: number | null;
+    valor_impacto_secundario?: number | null;
+  }): string => {
+
+    // 1. Priorizar valores crudos si existen (lógica nueva)
+    // 2. Fallback a mapeo anterior si no (retrocompatibilidad)
+    const val1 = nivel.valor_impacto ?? nivel.valor_monto ?? 0;
+    const val2 = nivel.valor_impacto_secundario ?? nivel.valor_porcentaje ?? 0;  // NOTA: Para mixtos, porcentaje solía mapearse aquí.
 
     switch (nivel.tipo_impacto) {
+      case 'sin_impacto':
+        return 'Sin impacto';
+
       case 'precio_fijo':
-        return nivel.valor_monto ? formatCurrency(nivel.valor_monto) : 'Sin impacto';
+        return val1 ? formatCurrency(val1) : 'Sin impacto';
 
       case 'por_unidad':
-        return nivel.valor_monto ? `${formatCurrency(nivel.valor_monto)}/unidad` : 'Sin impacto';
+        return val1 ? `${formatCurrency(val1)}/unidad` : 'Sin impacto';
 
       case 'porcentual':
-        return nivel.valor_porcentaje ? `+${nivel.valor_porcentaje}%` : 'Sin impacto';
+        return val1 ? `+${val1}%` : 'Sin impacto'; // En porcentual simple, val1 es el porcentaje
 
       case 'por_mt2':
-        return nivel.valor_monto ? `${formatCurrency(nivel.valor_monto)}/m²` : 'Sin impacto';
+        return val1 ? `${formatCurrency(val1)}/m²` : 'Sin impacto';
 
       case 'por_metro_lineal':
-        return nivel.valor_monto ? `${formatCurrency(nivel.valor_monto)}/ml` : 'Sin impacto';
-
-      case 'fijo_porcentual': {
-        const parts = [];
-        if (nivel.valor_monto) parts.push(formatCurrency(nivel.valor_monto));
-        if (nivel.valor_porcentaje) parts.push(`+${nivel.valor_porcentaje}%`);
-        return parts.length > 0 ? parts.join(' + ') : 'Sin impacto';
-      }
-
-      case 'fijo_metro_cuadrado': {
-        const parts = [];
-        if (nivel.valor_monto) parts.push(formatCurrency(nivel.valor_monto));
-        if (nivel.valor_porcentaje) parts.push(`${formatCurrency(nivel.valor_porcentaje)}/m²`);
-        return parts.length > 0 ? parts.join(' + ') : 'Sin impacto';
-      }
-
-      case 'fijo_metro_lineal': {
-        const parts = [];
-        if (nivel.valor_monto) parts.push(formatCurrency(nivel.valor_monto));
-        if (nivel.valor_porcentaje) parts.push(`${formatCurrency(nivel.valor_porcentaje)}/ml`);
-        return parts.length > 0 ? parts.join(' + ') : 'Sin impacto';
-      }
+        return val1 ? `${formatCurrency(val1)}/ml` : 'Sin impacto';
 
       case 'por_minuto':
+        return val1 ? `${formatCurrency(val1)}/min` : 'Sin impacto';
+
+      // Mixtos
+      case 'fijo_porcentual':
+        return `Fijo ${formatCurrency(val1)} + ${val2}% de orden`;
+
+      case 'fijo_metro_cuadrado':
+      case 'fijo_mt2':
+      case 'fijo_m2':
+        return `Fijo ${formatCurrency(val1)} + (${formatCurrency(val2)} x m²)`;
+
+      case 'fijo_metro_lineal':
+      case 'fijo_mt_lineal':
+        return `Fijo ${formatCurrency(val1)} + (${formatCurrency(val2)} x ml)`;
+
+      case 'fijo_minuto':
       case 'fijo_por_minuto':
-        return nivel.valor_monto ? `${formatCurrency(nivel.valor_monto)}/min` : 'Sin impacto';
+        return `Fijo ${formatCurrency(val1)} + (${formatCurrency(val2)}/min)`;
 
       default:
+        // Intento de fallback inteligente
+        if (val1 && !val2) return formatCurrency(val1);
+        if (!val1 && val2) return formatCurrency(val2);
+
+        // VISIBLE DEBUG FOR USER
         return 'Sin impacto';
     }
   };
@@ -161,6 +191,10 @@ export function ServicesAndFinishingsStep({
               const isSelected = selectedAcabados.some(a => a.acabado_id === acabado.acabado_id);
               const selectedAcabado = selectedAcabados.find(a => a.acabado_id === acabado.acabado_id);
 
+              // Determinar si requiere input de minutos
+              const impactType = selectedAcabado?.tipo_impacto;
+              const requiresMinuteInput = impactType === 'por_minuto' || impactType === 'fijo_minuto' || impactType === 'fijo_por_minuto';
+
               return (
                 <motion.div
                   key={acabado.acabado_id}
@@ -178,6 +212,20 @@ export function ServicesAndFinishingsStep({
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex-1">
                         <h4 className="font-semibold text-gray-900">{acabado.acabado_nombre}</h4>
+                        {/* Always show impact badge for single-level finishings or default view */}
+                        {(!acabado.tiene_niveles && acabado.niveles && acabado.niveles.length > 0) && (
+                          <div className="mt-1">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                              {getImpactoBadgeText(acabado.niveles[0])}
+                            </span>
+                          </div>
+                        )}
+                        {/* If it has levels but none selected, maybe hint? Or just rely on dropdown */}
+                        {(acabado.tiene_niveles && !isSelected) && (
+                          <div className="mt-1 text-xs text-gray-500">
+                            {acabado.niveles?.length || 0} opciones disponibles
+                          </div>
+                        )}
                       </div>
                       {isSelected && (
                         <div className="flex-shrink-0 w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center">
@@ -208,7 +256,27 @@ export function ServicesAndFinishingsStep({
                       </div>
                     )}
 
-                    {!acabado.tiene_niveles && selectedAcabado && (
+                    {/* Input manual para Minutos */}
+                    {isSelected && requiresMinuteInput && (
+                      <div className="mt-3 pt-3 border-t border-gray-200" onClick={(e) => e.stopPropagation()}>
+                        <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                          Minutos estimados:
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            min="1"
+                            value={selectedAcabado?.cantidad || 1}
+                            onChange={(e) => handleChangeCantidad(acabado.acabado_id, parseFloat(e.target.value) || 0)}
+                            className="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                            placeholder="minutos"
+                          />
+                          <span className="text-xs text-gray-500 font-medium">min</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {!acabado.tiene_niveles && selectedAcabado && !requiresMinuteInput && (
                       <div className="mt-2">
                         <Badge variant="purple" size="sm">
                           {getImpactoBadgeText(selectedAcabado)}

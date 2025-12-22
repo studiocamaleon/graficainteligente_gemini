@@ -245,7 +245,7 @@ export function UniversalSummaryStep({
                     <span className="font-medium">
                       {config.tipo_venta_real === 'mt2'
                         ? `${linea.ancho}x${linea.alto} cm (${linea.mt2_calculado?.toFixed(2)} m²)`
-                        : `${linea.metros_lineales} m × {linea.ancho_seleccionado} cm`
+                        : `${linea.metros_lineales} m × ${linea.ancho_seleccionado} cm`
                       }
                     </span>
                   </div>

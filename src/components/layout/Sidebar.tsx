@@ -168,8 +168,8 @@ export function Sidebar({
     const toggleModule = (moduleId: string) => {
         setExpandedModules(prev =>
             prev.includes(moduleId)
-                ? prev.filter(id => id !== moduleId)
-                : [...prev, moduleId]
+                ? [] // Close if already open
+                : [moduleId] // Open this one, close others (Accordion effect)
         );
     };
 

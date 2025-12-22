@@ -88,7 +88,14 @@ export function useUniversalPricing() {
         // Por ahora asumimos que linea.precio_total_linea (base) viene populado o lo tomamos.
         // Si no, usamos las métricas.
 
-        lineasActualizadas = lineas.map(l => {
+        // DEBUG: Trace pricing inputs
+        console.log('DEBUG_PRICING: Starting Calculation', {
+          acabadosParam: acabados.map(a => `${a.nombre} (${a.tipo_impacto})`),
+          linesBasePrices: lineas.map(l => ({ id: l.id, base: l.precio_base_unitario, total: l.precio_total_linea })),
+          totalPrevious: precioBase
+        });
+
+        lineasActualizadas = await Promise.all(lineas.map(async l => {
           // Asegurar métricas por línea
           const lMt2 = l.mt2_calculado || ((l.ancho_seleccionado || 0) / 100) * ((l.metros_lineales || l.alto || 0) / 100) * (l.cantidad || 1);
           const lMl = (l.metros_lineales || ((l.alto || 0) / 100)) * (l.cantidad || 1);
@@ -98,17 +105,48 @@ export function useUniversalPricing() {
           totalItemsCount += (l.cantidad || 1);
 
           // Precio base de la línea (sin extras globales todavía)
-          // Si el precio base unitario no está set, intentamos usar el precio_total_linea
-          const baseLinePrice = (l.precio_base_unitario || 0) * (l.cantidad || 1);
+          // Si el precio base unitario no está set, intentamos calcularlo de cero
+          let baseUnitario = l.precio_base_unitario || 0;
+
+          if (!baseUnitario && productId) {
+            // Intento de recuperación robusta del precio base
+            try {
+              // Configuración base sin líneas
+              const baseConfigForLine = { ...normalizedConfig, lineas_medidas: [] };
+              // Llamamos a la función unitaria (exportada en este mismo archivo)
+              // Pasamos arrays vacíos de servicios/acabados porque solo queremos el base
+              const priceResult = await calculateLinePrice(
+                productId,
+                categoria,
+                l,
+                baseConfigForLine,
+                [],
+                [],
+                normalizedConfig.tipo_venta_real as any // cast if needed
+              );
+
+              if (priceResult?.precio_base_unitario) {
+                baseUnitario = priceResult.precio_base_unitario;
+                console.log("DEBUG_PRICING: Recovered base price for line", { lineId: l.id, baseUnitario });
+              }
+            } catch (err) {
+              console.error("Error recovering line base price:", err);
+            }
+          }
+
+          const baseLinePrice = baseUnitario * (l.cantidad || 1);
           consolidatedBasePrice += baseLinePrice;
 
           return {
             ...l,
+            precio_base_unitario: baseUnitario, // Ensure it is set for next steps
             _metrics: { mt2: lMt2, ml: lMl, qty: l.cantidad || 1, baseTotal: baseLinePrice },
             precio_servicios_extra_total: 0,
             precio_acabados_extra_total: 0
           };
-        });
+        }));
+
+
 
         // Use the aggregated total as the base for global calculations if needed
         if (precioBase === null) precioBase = consolidatedBasePrice;
@@ -158,43 +196,90 @@ export function useUniversalPricing() {
           let impactoLinea = 0;
           const { mt2, ml, qty, baseTotal } = linea._metrics;
 
+          // Normalizar valores (fallback a raw value si monto/porcentaje no estan definidos)
+          const valMonto = item.valor_monto ?? item.valor_impacto ?? 0;
+          // Para tipos mixtos, el secundario suele ser el porcentaje/variable. 
+          // Para porcentuales puros, el valor principal (impacto) es el porcentaje.
+          let valPorc = item.valor_porcentaje ?? item.valor_impacto_secundario ?? 0;
+          if (item.tipo_impacto === 'porcentual' && !valPorc) {
+            valPorc = item.valor_impacto ?? 0;
+          }
+
           // Lógica de distribución según tipo de impacto
           switch (item.tipo_impacto) {
             // 1. Porcentuales: Se aplican al precio base de LA LÍNEA
             case 'porcentual':
-              impactoLinea = (item.valor_porcentaje * baseTotal) / 100;
+              impactoLinea = (valPorc * baseTotal) / 100;
               break;
 
             // 2. Por métrica (mt2 / ml): Se aplican a las métricas DE LA LÍNEA
             case 'por_mt2':
-              impactoLinea = (item.valor_monto || 0) * mt2;
+              impactoLinea = valMonto * mt2;
               break;
             case 'por_metro_lineal':
-              impactoLinea = (item.valor_monto || 0) * ml;
+              impactoLinea = valMonto * ml;
               break;
 
-            // 3. Fijos: Se prorratean entre todas las líneas (o por cantidad de items)
-            // Opción A: Prorrateo equitativo por línea física (1/N) -> Puede ser injusto si una linea es de 100 unidades y otra de 1.
-            // Opción B: Prorrateo por cantidad de items (qty/TotalQty).
-            // El usuario dijo: "Fijo debe distribuirse o prorratearse en todos los items"
-            // Vamos a prorratear por peso en precio base o cantidad? Normalmente fijo es por "Set up", se divide.
+            // 3. Fijos: Se prorratean entre todas las líneas
             case 'precio_fijo':
-              // Prorrateo simple por número de líneas activas
-              impactoLinea = costoTotalCalculado / lineasActualizadas.length;
+              impactoLinea = valMonto / lineasActualizadas.length;
               break;
 
             // 4. Mixtos (Fijo + Variable)
             case 'fijo_metro_cuadrado':
+            case 'fijo_mt2':
+            case 'fijo_m2':
               // Fijo (prorrateado) + Variable (métrica linea)
-              const fijoPart4 = (item.valor_monto || 0) / lineasActualizadas.length;
-              const varPart4 = (item.valor_porcentaje || 0) * mt2;
+              const fijoPart4 = valMonto / lineasActualizadas.length;
+              const varPart4 = valPorc * mt2;
               impactoLinea = fijoPart4 + varPart4;
               break;
 
+            case 'fijo_metro_lineal':
+            case 'fijo_mt_lineal':
+              const fijoPartMl = valMonto / lineasActualizadas.length;
+              const varPartMl = valPorc * ml; // assuming ml is meters
+              impactoLinea = fijoPartMl + varPartMl;
+              break;
+
             case 'fijo_porcentual':
-              const fijoPart5 = (item.valor_monto || 0) / lineasActualizadas.length;
-              const varPart5 = (item.valor_porcentaje * baseTotal) / 100; // Porcentaje de ESA línea
+              const fijoPart5 = valMonto / lineasActualizadas.length;
+              const varPart5 = (valPorc * baseTotal) / 100; // Porcentaje de ESA línea
               impactoLinea = fijoPart5 + varPart5;
+              break;
+
+            // 5. Por Tiempo (Minutos / Horas)
+            case 'por_minuto':
+              // Se aplica: (Valor Mins * Cantidad Minutos) / N Líneas ?? 
+              // O si es "Por minuto GLOBAL" se divide?
+              // Generalmente el tiempo es global "X minutos de trabajo total".
+              // Entonces Impacto Total = Valor * CantidadMins.
+              // Y eso se prorratea entre las líneas.
+              const totalTimeCost = valMonto * (item.cantidad || 1);
+              impactoLinea = totalTimeCost / lineasActualizadas.length;
+              break;
+
+            // 6. Mixto Tiempo (Fijo + Minutos)
+            case 'fijo_minuto':
+              // Fijo (setup) + Variable (mins * valor min)
+              // Todo es global y se prorratea.
+              const fixedPartTime = valMonto; // Fijo (Base)
+              const varPartTime = valPorc * (item.cantidad || 1); // Variable (Minutos * PrecioMin)
+
+              const totalMixedTime = fixedPartTime + varPartTime;
+
+              if (item.tipo_impacto === 'fijo_minuto') {
+                console.log('DEBUG_TIME_PRICING:', {
+                  tipo: item.tipo_impacto,
+                  valMonto, // Fixed
+                  valPorc, // Min price ??
+                  qty: item.cantidad,
+                  varPartTime,
+                  itemRaw: item
+                });
+              }
+
+              impactoLinea = totalMixedTime / lineasActualizadas.length;
               break;
 
             default:
@@ -229,8 +314,8 @@ export function useUniversalPricing() {
         } else {
           impacto = calcularImpacto(
             servicio.tipo_impacto,
-            servicio.valor_monto,
-            servicio.valor_porcentaje,
+            servicio.valor_monto ?? servicio.valor_impacto ?? 0,
+            servicio.valor_porcentaje ?? servicio.valor_impacto_secundario ?? 0,
             precioBaseTotal,
             mt2,
             metrosLineales,
@@ -255,8 +340,8 @@ export function useUniversalPricing() {
         } else {
           impacto = calcularImpacto(
             acabado.tipo_impacto,
-            acabado.valor_monto,
-            acabado.valor_porcentaje,
+            acabado.valor_monto ?? acabado.valor_impacto ?? 0,
+            acabado.valor_porcentaje ?? acabado.valor_impacto_secundario ?? 0,
             precioBaseTotal,
             mt2,
             metrosLineales,
@@ -274,22 +359,40 @@ export function useUniversalPricing() {
         // FINALIZAR LÍNEAS ACTUALIZADAS
         // Actualizar los unitarios finales de cada línea para que el wizard los guarde bien
         lineasActualizadas = lineasActualizadas.map(l => {
-          const base = l.precio_base_unitario || 0; // Ya viene unitario del form
+          const base = l.precio_base_unitario || 0;
+
+          // Recuperar precios base "limpios" (Step 2) usando propiedad privada persistente
+          // Si no existe, asumimos que l.precio_X es el base (primera ejecución limpia)
+          const servBaseUnit = (l as any)._precio_servicios_unitario_base !== undefined
+            ? (l as any)._precio_servicios_unitario_base
+            : (l.precio_servicios_unitario || 0);
+
+          const acabBaseUnit = (l as any)._precio_acabados_unitario_base !== undefined
+            ? (l as any)._precio_acabados_unitario_base
+            : (l.precio_acabados_unitario || 0);
+
           const servExtrasUnit = l.precio_servicios_extra_total / (l.cantidad || 1);
           const acabExtrasUnit = l.precio_acabados_extra_total / (l.cantidad || 1);
 
-          // Sumar a lo que ya traía la línea (si traía servicios propios)
-          const servTotalUnit = (l.precio_servicios_unitario || 0) + servExtrasUnit;
-          const acabTotalUnit = (l.precio_acabados_unitario || 0) + acabExtrasUnit;
+          // Sumar: Base (Step 2) + Extras (Step 3)
+          const servTotalUnit = servBaseUnit + servExtrasUnit;
+          const acabTotalUnit = acabBaseUnit + acabExtrasUnit;
 
           const finalUnit = base + servTotalUnit + acabTotalUnit;
 
           return {
             ...l,
+            // Persistir los bases limpios para futuras ejecuciones
+            _precio_servicios_unitario_base: servBaseUnit,
+            _precio_acabados_unitario_base: acabBaseUnit,
+
+            // Actualizar los totales visibles
             precio_servicios_unitario: servTotalUnit,
             precio_acabados_unitario: acabTotalUnit,
+
             precio_unitario_final: finalUnit,
             precio_total_linea: finalUnit * (l.cantidad || 1),
+
             // Limpiar props temporales
             _metrics: undefined,
             precio_servicios_extra_total: undefined,
@@ -947,12 +1050,15 @@ export function calcularImpacto(
       return fijo + porcentual;
 
     case 'fijo_metro_cuadrado':
+    case 'fijo_mt2':
+    case 'fijo_m2':
       // Precio fijo + precio por mt2 multiplicado por cantidad
       const fijoMt2 = valorMonto || 0;
       const porMt2 = valorPorcentaje && mt2 ? valorPorcentaje * mt2 * cantidad : 0;
       return fijoMt2 + porMt2;
 
     case 'fijo_metro_lineal':
+    case 'fijo_mt_lineal':
       // Precio fijo + precio por metro lineal multiplicado por cantidad
       const fijoMl = valorMonto || 0;
       const porMl = valorPorcentaje && metrosLineales ? valorPorcentaje * metrosLineales * cantidad : 0;
@@ -1198,8 +1304,8 @@ export async function calculateLinePrice(
     for (const servicio of serviciosLinea) {
       const impacto = calcularImpacto(
         servicio.tipo_impacto,
-        servicio.valor_monto,
-        servicio.valor_porcentaje,
+        servicio.valor_monto ?? servicio.valor_impacto ?? 0,
+        servicio.valor_porcentaje ?? servicio.valor_impacto_secundario ?? 0,
         precioBaseTotal,
         mt2,
         metrosLineales,
@@ -1214,8 +1320,8 @@ export async function calculateLinePrice(
     for (const acabado of acabadosLinea) {
       const impacto = calcularImpacto(
         acabado.tipo_impacto,
-        acabado.valor_monto,
-        acabado.valor_porcentaje,
+        acabado.valor_monto ?? acabado.valor_impacto ?? 0,
+        acabado.valor_porcentaje ?? acabado.valor_impacto_secundario ?? 0,
         precioBaseTotal,
         mt2,
         metrosLineales,

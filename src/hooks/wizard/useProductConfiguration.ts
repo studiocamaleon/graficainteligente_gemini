@@ -90,6 +90,8 @@ export interface ProductConfiguration {
       tipo_impacto: string;
       valor_porcentaje: number | null;
       valor_monto: number | null;
+      valor_impacto: number | null;
+      valor_impacto_secundario: number | null;
     }>;
   }>;
 
@@ -828,7 +830,7 @@ async function loadAcabadosForProduct(
     .select(`
       id,
       acabado_id,
-      acabados!inner(id, nombre, tiene_niveles_precio)
+      acabados!inner(id, nombre, tiene_niveles_precio, tipo_impacto, valor_impacto, valor_impacto_secundario)
     `)
     .eq(foreignKey, productId);
 
@@ -871,6 +873,10 @@ async function loadAcabadosForProduct(
             case 'fijo_metro_cuadrado':
             case 'fijo_metro_lineal':
             case 'fijo_por_minuto':
+            case 'fijo_mt2':
+            case 'fijo_m2': // Variant
+            case 'fijo_mt_lineal':
+            case 'fijo_minuto':
               valor_monto = n.valor_impacto;
               valor_porcentaje = n.valor_impacto_secundario;
               break;
@@ -884,10 +890,54 @@ async function loadAcabadosForProduct(
             id: n.id,
             nombre: n.nombre,
             tipo_impacto: n.tipo_impacto,
+            valor_impacto: n.valor_impacto,
+            valor_impacto_secundario: n.valor_impacto_secundario,
             valor_porcentaje,
             valor_monto
           };
         }) || [];
+      } else {
+        // Handle finishings without explicit price levels (create synthetic level)
+        let valor_monto = null;
+        let valor_porcentaje = null;
+        const tipo = acabado.tipo_impacto;
+        const val1 = acabado.valor_impacto;
+        const val2 = acabado.valor_impacto_secundario;
+
+        switch (tipo) {
+          case 'precio_fijo':
+          case 'por_unidad':
+          case 'por_minuto':
+          case 'por_mt2':
+          case 'por_metro_lineal':
+            valor_monto = val1;
+            break;
+          case 'porcentual':
+            valor_porcentaje = val1; // Or val1 to monto if we want to standardise, but let's keep logic
+            valor_monto = val1; // Keep consistency with above
+            break;
+          case 'fijo_porcentual':
+          case 'fijo_metro_cuadrado':
+          case 'fijo_metro_lineal':
+          case 'fijo_por_minuto':
+          case 'fijo_mt2':
+          case 'fijo_m2':
+          case 'fijo_mt_lineal':
+          case 'fijo_minuto':
+            valor_monto = val1;
+            valor_porcentaje = val2;
+            break;
+        }
+
+        niveles = [{
+          id: 'default', // Virtual ID
+          nombre: 'Estándar',
+          tipo_impacto: tipo,
+          valor_impacto: val1,
+          valor_impacto_secundario: val2,
+          valor_monto,
+          valor_porcentaje
+        }];
       }
 
       return {
