@@ -73,7 +73,7 @@ export function Modal({
 
           <div className="fixed top-0 left-0 right-0 bottom-0 w-screen h-screen z-[9999] overflow-y-auto">
             <div className="flex min-h-full items-center justify-center p-4">
-              <div className="flex gap-0 items-stretch max-w-full">
+              <div className="flex gap-0 items-stretch w-full justify-center max-w-full">
                 <motion.div
                   initial={{ opacity: 0, scale: 0.95, y: 20 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
