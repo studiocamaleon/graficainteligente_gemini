@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '../../ui/Button';
 import { Input } from '../../ui/Input';
 import { Badge } from '../../ui/Badge';
-import { AlertCircle, Loader2, Package, Sparkles } from 'lucide-react';
+import { AlertCircle, Clock, Loader2, Package, Sparkles, Ruler } from 'lucide-react';
 import type { ProductConfiguration } from '../../../hooks/wizard/useProductConfiguration';
 import type { MeasurementLine, SelectedConfiguration } from './ConfigurationStep';
 import type { SelectedFinishing } from './ServicesAndFinishingsStep';
@@ -41,6 +41,7 @@ export function AddLineForm({
         tipo_impacto: string;
         valor_porcentaje: number | null;
         valor_monto: number | null;
+        valor_impacto_secundario?: number | null;
         cantidad?: number;
     }>>([]);
 
@@ -102,6 +103,11 @@ export function AddLineForm({
                 tempConfig.medida_alto = metrosLineales * 100;
             }
 
+            console.log('🚀 Calling calculatePrice from AddLineForm with:', {
+                acabados: acabadosSeleccionados,
+                cantidadManual: acabadosSeleccionados[0]?.cantidad
+            });
+
             const result = await calculatePrice(
                 config.id,
                 config.categoria as any,
@@ -109,6 +115,8 @@ export function AddLineForm({
                 [], // Servicios removidos de este nivel
                 acabadosSeleccionados
             );
+
+            console.log('💰 calculatePrice result:', result);
 
             if (result.tiene_precio) {
                 setPrecioCalculado({
@@ -187,7 +195,10 @@ export function AddLineForm({
                 nivel_nombre: acabadoConfig.tiene_niveles ? nivel.nombre : null,
                 tipo_impacto: nivel.tipo_impacto,
                 valor_porcentaje: nivel.valor_porcentaje,
-                valor_monto: nivel.valor_monto
+                valor_monto: nivel.valor_monto,
+                valor_impacto: nivel.valor_impacto, // Added fallback
+                valor_impacto_secundario: nivel.valor_impacto_secundario,
+                cantidad: 1 // Default quantity (e.g. 1 minute)
             }]);
         }
     };
@@ -204,11 +215,27 @@ export function AddLineForm({
                     nivel_nombre: nivel.nombre,
                     tipo_impacto: nivel.tipo_impacto,
                     valor_porcentaje: nivel.valor_porcentaje,
-                    valor_monto: nivel.valor_monto
+                    valor_monto: nivel.valor_monto,
+                    valor_impacto: nivel.valor_impacto, // Added fallback
+                    valor_impacto_secundario: nivel.valor_impacto_secundario
                 };
             }
             return a;
         }));
+    };
+
+    const handleChangeCantidadAcabado = (acabadoId: string, cantidad: number) => {
+        console.log('📝 handleChangeCantidadAcabado', { acabadoId, cantidad });
+        setAcabadosSeleccionados(prev => {
+            const next = prev.map(a => {
+                if (a.acabado_id === acabadoId) {
+                    return { ...a, cantidad };
+                }
+                return a;
+            });
+            console.log('🔄 New acabadosSeleccionados state:', next);
+            return next;
+        });
     };
 
     const formatImpacto = (item: { tipo_impacto: string; valor_monto: number | null; valor_porcentaje: number | null }) => {
@@ -231,7 +258,44 @@ export function AddLineForm({
         if (item.tipo_impacto === 'por_mt2' && item.valor_monto) return `+$${item.valor_monto.toFixed(2)} /m²`;
         if (item.tipo_impacto === 'por_metro_lineal' && item.valor_monto) return `+$${item.valor_monto.toFixed(2)} /ml`;
 
-        return '';
+        if (['fijo_mt2', 'fijo_metro_cuadrado', 'fijo_m2'].includes(item.tipo_impacto)) {
+            const parts = [];
+            if (item.valor_monto) parts.push(`$${item.valor_monto.toFixed(2)}`);
+            if (item.valor_porcentaje) parts.push(`$${item.valor_porcentaje.toFixed(2)}/m²`);
+            return parts.length > 0 ? parts.join(' + ') : '';
+        }
+
+        if (['fijo_mt_lineal', 'fijo_metro_lineal'].includes(item.tipo_impacto)) {
+            const parts = [];
+            if (item.valor_monto) parts.push(`$${item.valor_monto.toFixed(2)}`);
+            if (item.valor_porcentaje) parts.push(`$${item.valor_porcentaje.toFixed(2)}/ml`);
+            return parts.length > 0 ? parts.join(' + ') : '';
+        }
+
+        if (item.tipo_impacto === 'fijo_porcentual') {
+            const parts = [];
+            if (item.valor_monto) parts.push(`$${item.valor_monto.toFixed(2)}`);
+            if (item.valor_porcentaje) parts.push(`${item.valor_porcentaje}%`);
+            return parts.length > 0 ? parts.join(' + ') : '';
+        }
+
+        if (item.tipo_impacto === 'fijo_porcentual') {
+            const parts = [];
+            if (item.valor_monto) parts.push(`$${item.valor_monto.toFixed(2)}`);
+            if (item.valor_porcentaje) parts.push(`${item.valor_porcentaje}%`);
+            return parts.length > 0 ? parts.join(' + ') : '';
+        }
+
+        if (item.tipo_impacto === 'por_mt2_manual') {
+            return item.valor_monto ? `+$${item.valor_monto.toFixed(2)} /m² (manual)` : '';
+        }
+
+        if (item.tipo_impacto === 'fijo_mt2_manual') {
+            const parts = [];
+            if (item.valor_monto) parts.push(`$${item.valor_monto.toFixed(2)}`);
+            if (item.valor_porcentaje) parts.push(`$${item.valor_porcentaje.toFixed(2)}/m²`);
+            return parts.length > 0 ? parts.join(' + ') : '';
+        }
     };
 
     return (
@@ -405,6 +469,32 @@ export function AddLineForm({
                                                                 </span>
                                                             </label>
                                                         ))}
+                                                    </div>
+                                                )}
+
+                                                {/* Time-based Quantity Input */}
+                                                {/* Manual Quantity Input (Time or MT2) */}
+                                                {['por_minuto', 'fijo_minuto', 'por_mt2_manual', 'fijo_mt2_manual'].includes(selectedData?.tipo_impacto || '') && isSelected && (
+                                                    <div className="mt-3 flex items-center gap-3 bg-purple-50 p-2.5 rounded-lg border border-purple-100" onClick={(e) => e.preventDefault()}>
+                                                        <div className="flex items-center gap-2 text-purple-700">
+                                                            {['por_minuto', 'fijo_minuto'].includes(selectedData?.tipo_impacto || '') ? (
+                                                                <Clock className="w-4 h-4" />
+                                                            ) : (
+                                                                <Ruler className="w-4 h-4" />
+                                                            )}
+                                                            <span className="text-xs font-bold uppercase tracking-wide">
+                                                                {['por_minuto', 'fijo_minuto'].includes(selectedData?.tipo_impacto || '') ? 'Minutos:' : 'M² Manual:'}
+                                                            </span>
+                                                        </div>
+                                                        <Input
+                                                            type="number"
+                                                            min="0.1"
+                                                            step={['por_minuto', 'fijo_minuto'].includes(selectedData?.tipo_impacto || '') ? "1" : "0.01"}
+                                                            value={selectedData?.cantidad || 1}
+                                                            onChange={(e) => handleChangeCantidadAcabado(acabado.acabado_id, parseFloat(e.target.value) || 0)}
+                                                            className="w-24 h-9 text-right font-mono font-medium bg-white border-purple-200 focus:border-purple-500 focus:ring-purple-500 text-sm"
+                                                            onClick={(e) => e.stopPropagation()}
+                                                        />
                                                     </div>
                                                 )}
                                             </div>

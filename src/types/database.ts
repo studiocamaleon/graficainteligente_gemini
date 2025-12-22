@@ -381,7 +381,9 @@ export type TipoImpactoPrecio =
   | 'fijo_porcentual'
   | 'fijo_mt2'
   | 'fijo_mt_lineal'
-  | 'fijo_minuto';
+  | 'fijo_minuto'
+  | 'por_mt2_manual'
+  | 'fijo_mt2_manual';
 
 export type TipoMedida = 'medida_unica' | 'medidas_multiples' | 'ancho_maximo' | 'sin_medida';
 

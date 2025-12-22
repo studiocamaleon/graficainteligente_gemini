@@ -36,10 +36,9 @@ export function normalizarEtapa(etapa: string): TipoEtapaRuta {
   }
 
   // 3. Instalacion (verificar ANTES de otros checks para evitar conversión errónea)
+  // 3. Instalacion (verificar ANTES de otros checks para evitar conversión errónea)
   if (etapaLower.includes('instalacion')) {
-    // TipoEtapaRuta solo tiene 3 valores: 'pre_prensa' | 'principal' | 'post_prensa'
-    // Asumiendo que instalación es un proceso posterior o de campo:
-    return 'post_prensa';
+    return 'instalacion';
   }
 
   // 4. Post-prensa (verificar ANTES que pre para evitar que "post_prensa" sea capturado por "pre")

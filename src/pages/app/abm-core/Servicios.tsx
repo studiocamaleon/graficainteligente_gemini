@@ -36,7 +36,11 @@ const tipoImpactoLabels: Record<TipoImpactoPrecio, string> = {
   fijo_porcentual: 'Fijo + Porcentual',
   fijo_mt2: 'Fijo + Por m²',
   fijo_mt_lineal: 'Fijo + Por Metro Lineal',
+  fijo_minuto: 'Fijo + Por Minuto',
+  por_mt2_manual: 'Por m² (Manual)',
+  fijo_mt2_manual: 'Fijo + Por m² (Manual)',
 };
+
 
 export function Servicios() {
   const { profile } = useAuth();

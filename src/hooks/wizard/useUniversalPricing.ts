@@ -282,6 +282,21 @@ export function useUniversalPricing() {
               impactoLinea = totalMixedTime / lineasActualizadas.length;
               break;
 
+            case 'por_mt2_manual':
+              // Costo por m2 manual * Cantidad Manual
+              // Se prorratea entre las líneas (asumiendo que la cantidad manual es GLOBAL para todo el pedido)
+              const totalManualMt2Cost = valMonto * (item.cantidad || 1);
+              impactoLinea = totalManualMt2Cost / lineasActualizadas.length;
+              break;
+
+            case 'fijo_mt2_manual':
+              // Fijo + (Costo Variable * Cantidad Manual)
+              // Se prorratea todo
+              const fixedPartMt2Manual = valMonto;
+              const variablePartMt2Manual = (valPorc * (item.cantidad || 1));
+              impactoLinea = (fixedPartMt2Manual + variablePartMt2Manual) / lineasActualizadas.length;
+              break;
+
             default:
               // Fallback: Proporcional al precio base
               if (consolidatedBasePrice > 0) {
@@ -1076,6 +1091,16 @@ export function calcularImpacto(
       const fijoMin = valorMonto || 0;
       const varMin = valorPorcentaje ? valorPorcentaje * cantidadServicio : 0;
       return fijoMin + varMin;
+
+    case 'por_mt2_manual':
+      // Costo por m2 (manual) * Cantidad m2 manual
+      return valorMonto ? valorMonto * cantidadServicio : 0;
+
+    case 'fijo_mt2_manual':
+      // Fijo + (Costo por m2 * Cantidad m2 manual)
+      const fijoMt2Manual = valorMonto || 0;
+      const varMt2Manual = valorPorcentaje ? valorPorcentaje * cantidadServicio : 0;
+      return fijoMt2Manual + varMt2Manual;
 
     case 'sin_impacto':
     default:

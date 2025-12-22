@@ -33,7 +33,11 @@ const tipoImpactoLabels: Record<TipoImpactoPrecio, string> = {
   fijo_porcentual: 'Fijo + Porcentual',
   fijo_mt2: 'Fijo + Por m²',
   fijo_mt_lineal: 'Fijo + Por Metro Lineal',
+  fijo_minuto: 'Fijo + Por Minuto',
+  por_mt2_manual: 'Por m² (Manual)',
+  fijo_mt2_manual: 'Fijo + Por m² (Manual)',
 };
+
 
 export function Acabados() {
   const { profile } = useAuth();
@@ -280,9 +284,8 @@ export function Acabados() {
 
               <button
                 onClick={() => handleToggleStatus(acabado)}
-                className={`p-2 rounded-lg transition-colors ${
-                  acabado.is_active ? 'text-red-600 hover:bg-red-50' : 'text-green-600 hover:bg-green-50'
-                }`}
+                className={`p-2 rounded-lg transition-colors ${acabado.is_active ? 'text-red-600 hover:bg-red-50' : 'text-green-600 hover:bg-green-50'
+                  }`}
                 title={acabado.is_active ? 'Desactivar' : 'Activar'}
                 disabled={mutationLoading}
               >

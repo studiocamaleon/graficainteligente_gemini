@@ -3,7 +3,7 @@ import { Card } from '../../ui/Card';
 
 import { Select } from '../../ui/Select';
 import { Badge } from '../../ui/Badge';
-import { Sparkles, Check } from 'lucide-react';
+import { Sparkles, Check, Clock, Ruler } from 'lucide-react';
 import type { ProductConfiguration } from '../../../hooks/wizard/useProductConfiguration';
 import { formatCurrency } from '../../../utils/stringUtils';
 
@@ -148,6 +148,9 @@ export function ServicesAndFinishingsStep({
       case 'por_minuto':
         return val1 ? `${formatCurrency(val1)}/min` : 'Sin impacto';
 
+      case 'por_mt2_manual':
+        return val1 ? `${formatCurrency(val1)}/m² (manual)` : 'Sin impacto';
+
       // Mixtos
       case 'fijo_porcentual':
         return `Fijo ${formatCurrency(val1)} + ${val2}% de orden`;
@@ -164,6 +167,9 @@ export function ServicesAndFinishingsStep({
       case 'fijo_minuto':
       case 'fijo_por_minuto':
         return `Fijo ${formatCurrency(val1)} + (${formatCurrency(val2)}/min)`;
+
+      case 'fijo_mt2_manual':
+        return `Fijo ${formatCurrency(val1)} + (${formatCurrency(val2)} x m² manual)`;
 
       default:
         // Intento de fallback inteligente
@@ -193,7 +199,9 @@ export function ServicesAndFinishingsStep({
 
               // Determinar si requiere input de minutos
               const impactType = selectedAcabado?.tipo_impacto;
-              const requiresMinuteInput = impactType === 'por_minuto' || impactType === 'fijo_minuto' || impactType === 'fijo_por_minuto';
+              const isManualTime = ['por_minuto', 'fijo_minuto', 'fijo_por_minuto'].includes(impactType || '');
+              const isManualMt2 = ['por_mt2_manual', 'fijo_mt2_manual'].includes(impactType || '');
+              const requiresManualInput = isManualTime || isManualMt2;
 
               return (
                 <motion.div
@@ -257,26 +265,29 @@ export function ServicesAndFinishingsStep({
                     )}
 
                     {/* Input manual para Minutos */}
-                    {isSelected && requiresMinuteInput && (
+                    {/* Input manual para Minutos o MT2 */}
+                    {isSelected && requiresManualInput && (
                       <div className="mt-3 pt-3 border-t border-gray-200" onClick={(e) => e.stopPropagation()}>
-                        <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                          Minutos estimados:
+                        <label className="block text-xs font-medium text-gray-700 mb-1.5 flex items-center gap-2">
+                          {isManualTime ? <Clock className="w-3 h-3" /> : <Ruler className="w-3 h-3" />}
+                          {isManualTime ? 'Minutos estimados:' : 'M² Manuales:'}
                         </label>
                         <div className="flex items-center gap-2">
                           <input
                             type="number"
-                            min="1"
+                            min={isManualTime ? "1" : "0.01"}
+                            step={isManualTime ? "1" : "0.01"}
                             value={selectedAcabado?.cantidad || 1}
                             onChange={(e) => handleChangeCantidad(acabado.acabado_id, parseFloat(e.target.value) || 0)}
                             className="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
-                            placeholder="minutos"
+                            placeholder={isManualTime ? "minutos" : "m²"}
                           />
-                          <span className="text-xs text-gray-500 font-medium">min</span>
+                          <span className="text-xs text-gray-500 font-medium">{isManualTime ? 'min' : 'm²'}</span>
                         </div>
                       </div>
                     )}
 
-                    {!acabado.tiene_niveles && selectedAcabado && !requiresMinuteInput && (
+                    {!acabado.tiene_niveles && selectedAcabado && !requiresManualInput && (
                       <div className="mt-2">
                         <Badge variant="purple" size="sm">
                           {getImpactoBadgeText(selectedAcabado)}

@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
-import { Search, Loader, Check, Info } from 'lucide-react';
+import { Search, Loader, Check, Info, Ruler, Clock } from 'lucide-react';
 import { useServicios } from '../../hooks/useServicios';
 import { Badge } from '../ui/Badge';
 import { CATEGORIAS_SISTEMA } from '../../constants/categorias';
@@ -182,6 +182,16 @@ export function AplicarServicioMasivoModal({
                 label = `Fijo ${formatCurrency(val1)} + (${formatCurrency(val2)} x min)`;
                 break;
 
+            case 'por_mt2_manual':
+                total = val1 * customInputValue;
+                label = `${formatCurrency(val1)} x ${customInputValue} m² (manual)`;
+                break;
+
+            case 'fijo_mt2_manual':
+                total = val1 + (val2 * customInputValue);
+                label = `Fijo ${formatCurrency(val1)} + (${formatCurrency(val2)} x m² manual)`;
+                break;
+
             default:
                 total = 0;
                 label = 'Tipo de impacto desconocido';
@@ -212,7 +222,9 @@ export function AplicarServicioMasivoModal({
         }
     };
 
-    const showMinuteInput = ['por_minuto', 'fijo_minuto'].includes(precioInfo.tipo);
+    const isTimeInput = ['por_minuto', 'fijo_minuto'].includes(precioInfo.tipo);
+    const isManualMt2Input = ['por_mt2_manual', 'fijo_mt2_manual'].includes(precioInfo.tipo);
+    const showCustomInput = isTimeInput || isManualMt2Input;
 
     return (
         <Modal
@@ -362,24 +374,30 @@ export function AplicarServicioMasivoModal({
                                     </div>
                                 )}
 
-                                {/* Input para Minutos */}
-                                {showMinuteInput && (
+                                {/* Input para Minutos o Manual MT2 */}
+                                {showCustomInput && (
                                     <div className="bg-white p-4 rounded-lg border border-blue-200 shadow-sm">
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Cantidad de Minutos
+                                        <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                                            {isTimeInput ? <Clock className="w-4 h-4" /> : <Ruler className="w-4 h-4" />}
+                                            {isTimeInput ? 'Cantidad de Minutos' : 'Metros Cuadrados (Manual)'}
                                         </label>
                                         <div className="flex items-center gap-2">
                                             <Input
                                                 type="number"
-                                                min="1"
+                                                min={isTimeInput ? "1" : "0.01"}
+                                                step={isTimeInput ? "1" : "0.01"}
                                                 value={customInputValue}
                                                 onChange={(e) => setCustomInputValue(Number(e.target.value) || 0)}
                                                 className="w-full text-lg"
                                             />
-                                            <span className="text-gray-500">min</span>
+                                            <span className="text-gray-500 font-medium">
+                                                {isTimeInput ? 'min' : 'm²'}
+                                            </span>
                                         </div>
                                         <p className="text-xs text-gray-500 mt-1">
-                                            Se utilizará para calcular el costo total del tiempo.
+                                            {isTimeInput
+                                                ? 'Se utilizará para calcular el costo total del tiempo.'
+                                                : 'Ingrese la cantidad de metros cuadrados a cobrar.'}
                                         </p>
                                     </div>
                                 )}

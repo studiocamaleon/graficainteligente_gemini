@@ -51,11 +51,13 @@ const tipoImpactoOptions = [
   { value: 'fijo_mt2', label: 'Fijo + Por m²' },
   { value: 'fijo_mt_lineal', label: 'Fijo + Por Metro Lineal' },
   { value: 'fijo_minuto', label: 'Fijo + Por Minuto' },
+  { value: 'por_mt2_manual', label: 'Por m² (Manual)' },
+  { value: 'fijo_mt2_manual', label: 'Fijo + Por m² (Manual)' },
 ];
 
 const isTipoCombinado = (tipo: TipoImpactoPrecio | null): boolean => {
   if (!tipo) return false;
-  return ['fijo_porcentual', 'fijo_mt2', 'fijo_mt_lineal', 'fijo_minuto'].includes(tipo);
+  return ['fijo_porcentual', 'fijo_mt2', 'fijo_mt_lineal', 'fijo_minuto', 'fijo_mt2_manual'].includes(tipo);
 };
 
 export function ServicioForm({ servicio, onSubmit, onCancel }: ServicioFormProps) {
