@@ -142,7 +142,6 @@ export function useDashboardData() {
         .eq('company_id', companyId)
         .in('estado', ['pendiente', 'en_proceso'])
         .not('fecha_estimada_entrega', 'is', null)
-        .gte('fecha_estimada_entrega', hoy.toISOString())
         .order('fecha_estimada_entrega', { ascending: true })
         .limit(10);
 
