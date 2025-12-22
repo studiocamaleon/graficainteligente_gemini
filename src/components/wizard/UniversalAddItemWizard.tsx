@@ -1,13 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
-import { ChevronRight, ChevronLeft, Loader } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { UniversalProductSearchStep } from './steps/UniversalProductSearchStep';
 import { ConfigurationStep, type SelectedConfiguration } from './steps/ConfigurationStep';
 import { CentroCopiadoStep } from './steps/CentroCopiadoStep';
 import { ItemCopiadoConfig } from '../centro-copiado/CentroCopiadoItemForm';
 import { ServicesAndFinishingsStep, type SelectedService, type SelectedFinishing } from './steps/ServicesAndFinishingsStep';
 import { UniversalSummaryStep } from './steps/UniversalSummaryStep';
+import { SummaryPricingSidebar } from './steps/SummaryPricingSidebar';
 import { useProductConfiguration } from '../../hooks/wizard/useProductConfiguration';
 import { useUniversalPricing, calcularImpacto } from '../../hooks/wizard/useUniversalPricing';
 import type { UniversalProductSearchResult, ProductCategory } from '../../hooks/wizard/useUniversalProductSearch';
@@ -27,7 +28,7 @@ type WizardStep = 'search' | 'configuration' | 'services' | 'summary';
 const stepTitles: Record<WizardStep, string> = {
   search: 'Buscar Producto',
   configuration: 'Configuración',
-  services: 'Servicios y Acabados',
+  services: 'Acabados',
   summary: 'Resumen'
 };
 
@@ -126,6 +127,9 @@ export function UniversalAddItemWizard({
         cara_impresa: 'frente'
       });
       setCentroCopiadoPrice(0);
+
+      // Reset side panel
+      closeSidePanel();
     }
   }, [isOpen]);
 
@@ -146,6 +150,37 @@ export function UniversalAddItemWizard({
   const { calculatePrice, isCalculating } = useUniversalPricing();
 
   // Efecto para calcular precio cuando cambia la configuración
+  // Efecto para calcular precio cuando cambia la configuración
+  // [FIX] Usar dependencias específicas para evitar bucles infinitos cuando se actualizan precios en lineas_medidas
+  const pricingDependencies = JSON.stringify({
+    productId: selectedProduct?.id,
+    configParams: {
+      cantidad: selectedConfig.cantidad,
+      ancho: selectedConfig.medida_ancho,
+      alto: selectedConfig.medida_alto,
+      material: selectedConfig.material_id,
+      espesor: selectedConfig.espesor,
+      tecnologia: selectedConfig.tecnologia_id,
+      tinta: selectedConfig.tinta,
+      cara: selectedConfig.cara_impresa,
+      copia: selectedConfig.tipo_copia,
+      variante: selectedConfig.variante_id,
+      componentes: selectedConfig.componentes?.map(c => ({ id: c.referencia_id, qty: c.cantidad, config: c.config })),
+      // Para líneas, solo nos importa cantidades y medidas, NO precios ni resultados calculados
+      lineas: selectedConfig.lineas_medidas?.map(l => ({
+        id: l.id,
+        cantidad: l.cantidad,
+        ancho: l.ancho,
+        alto: l.alto,
+        ml: l.metros_lineales,
+        mt2: l.mt2_calculado,
+        // Importante: No incluir precios aquí
+      }))
+    },
+    servicios: selectedServicios.map(s => ({ id: s.servicio_id, qty: s.cantidad })),
+    acabados: selectedAcabados.map(a => ({ id: a.acabado_id, qty: a.cantidad, nivel: a.nivel_id }))
+  });
+
   useEffect(() => {
     if (!selectedProduct || !config) return;
 
@@ -154,7 +189,7 @@ export function UniversalAddItemWizard({
     if (shouldCalculate) {
       recalculatePrice();
     }
-  }, [selectedProduct, config, selectedConfig, selectedServicios, selectedAcabados]);
+  }, [pricingDependencies, config]); // Usar la string de dependencias en lugar del objeto completo
 
   // Inicializar configuración cuando se carga el config
   useEffect(() => {
@@ -333,7 +368,7 @@ export function UniversalAddItemWizard({
           // Construct a line from the top-level dimenions
           if (restoredConfig.medida_ancho) {
             restoredConfig.lineas_medidas = [{
-              id: `line-${Date.now()}`,
+              id: `line - ${Date.now()} `,
               ancho: restoredConfig.medida_ancho,
               alto: restoredConfig.medida_alto || 0,
               ancho_seleccionado: restoredConfig.medida_ancho,
@@ -341,8 +376,7 @@ export function UniversalAddItemWizard({
               mt2_calculado: restoredConfig.medida_mt2 || savedConfig.mt2_total || 0,
               cantidad: initialData.cantidad || 1,
 
-              // IMPORTANT: Map services/finishings to the line so the table can show/edit them
-              servicios: itemServicios,
+              // IMPORTANT: Map finishings to the line so the table can show/edit them
               acabados: itemAcabados,
 
               // Pricing (optional for hydration but good for table)
@@ -368,6 +402,20 @@ export function UniversalAddItemWizard({
       if (itemAcabados.length > 0) setSelectedAcabados(itemAcabados);
     }
   }, [config, initialData, isOpen]);
+
+  // Estado para el panel lateral integrado (AddLineForm)
+  const [sidePanelContent, setSidePanelContent] = useState<ReactNode>(null);
+  const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
+
+  const openSidePanel = (content: ReactNode) => {
+    setSidePanelContent(content);
+    setIsSidePanelOpen(true);
+  };
+
+  const closeSidePanel = () => {
+    setIsSidePanelOpen(false);
+    setTimeout(() => setSidePanelContent(null), 300); // Dar tiempo a la animación
+  };
 
   const isConfigurationComplete = (): boolean => {
     console.log('[UniversalWizard] === Validando configuración completa ===');
@@ -551,6 +599,20 @@ export function UniversalAddItemWizard({
         }));
       }
     }
+
+    // [NEW] Si es un producto multi-línea, actualizar las líneas con sus precios calculados (incluyendo distribución de acabados globales)
+    if (result.lineas_actualizadas) {
+      const currentLinesJson = JSON.stringify(selectedConfig.lineas_medidas || []);
+      const nextLinesJson = JSON.stringify(result.lineas_actualizadas);
+
+      if (currentLinesJson !== nextLinesJson) {
+        console.log('[UniversalWizard] Updating lines with calculated prices (distribution):', result.lineas_actualizadas.length);
+        setSelectedConfig(prev => ({
+          ...prev,
+          lineas_medidas: result.lineas_actualizadas as any
+        }));
+      }
+    }
   };
 
   const handleClose = () => {
@@ -639,7 +701,7 @@ export function UniversalAddItemWizard({
   const handleNext = () => {
     if (!canProceedToNext()) return;
 
-    const steps: WizardStep[] = ['search', 'configuration', 'services', 'summary'];
+    const steps = getActiveSteps();
     const currentIndex = steps.indexOf(currentStep);
 
     if (currentIndex < steps.length - 1) {
@@ -650,17 +712,13 @@ export function UniversalAddItemWizard({
         nextStep = 'summary';
       }
 
-      // Si el siguiente paso es 'services' y el producto permite múltiples líneas, saltarlo
-      if (nextStep === 'services' && config?.permite_multiples_lineas) {
-        nextStep = 'summary';
-      }
-
       setCurrentStep(nextStep);
+      closeSidePanel();
     }
   };
 
   const handlePrevious = () => {
-    const steps: WizardStep[] = ['search', 'configuration', 'services', 'summary'];
+    const steps = getActiveSteps();
     const currentIndex = steps.indexOf(currentStep);
 
     if (currentIndex > 0) {
@@ -671,12 +729,8 @@ export function UniversalAddItemWizard({
         prevStep = 'configuration';
       }
 
-      // Si el paso anterior es 'services' y el producto permite múltiples líneas, saltarlo
-      if (prevStep === 'services' && config?.permite_multiples_lineas) {
-        prevStep = 'configuration';
-      }
-
       setCurrentStep(prevStep);
+      closeSidePanel();
     }
   };
 
@@ -685,42 +739,18 @@ export function UniversalAddItemWizard({
 
     setIsSubmitting(true);
     try {
-      // 1. Identificar servicios globales (tipo_impacto = 'precio_fijo')
-      const globalTaskMap = new Map<string, string>(); // serviceId -> uuid
-
-      if (config.permite_multiples_lineas && selectedConfig.lineas_medidas.length > 0) {
-        // Pre-escanear para generar IDs de tareas globales
-        for (const linea of selectedConfig.lineas_medidas) {
-          if (linea.servicios) {
-            for (const s of linea.servicios) {
-              if (s.tipo_impacto === 'precio_fijo') {
-                if (!globalTaskMap.has(s.servicio_id)) {
-                  globalTaskMap.set(s.servicio_id, self.crypto.randomUUID());
-                }
-              }
-            }
-          }
+      // 1. Identificar servicios globales (tipo_impacto = 'precio_fijo') que requieren ID de tarea compartido
+      const globalTaskMap = new Map<string, string>();
+      for (const s of selectedServicios) {
+        if (s.tipo_impacto === 'precio_fijo') {
+          globalTaskMap.set(s.servicio_id, self.crypto.randomUUID());
         }
       }
 
       // Si el producto permite m\u00faltiples l\u00edneas, crear un item por cada l\u00ednea
       if (config.permite_multiples_lineas && selectedConfig.lineas_medidas.length > 0) {
         for (const linea of selectedConfig.lineas_medidas) {
-          // Usar servicios directamente de la línea
-          const serviciosLinea = (linea.servicios || []).map(s => ({
-            servicio_id: s.servicio_id,
-            nombre: s.servicio_nombre,
-            nivel: s.nivel_nombre,
-          }));
-
-          // Usar acabados directamente de la línea
-          const acabadosLinea = (linea.acabados || []).map(a => ({
-            acabado_id: a.acabado_id,
-            nombre: a.acabado_nombre,
-            nivel: a.nivel_nombre,
-          }));
-
-          // Construir configuraci\u00f3n JSONB para esta l\u00ednea
+          // Construir configuración JSONB para esta línea
           const configuracionLinea = {
             categoria: selectedProduct.categoria,
             categoria_id: selectedProduct.categoria_id,
@@ -744,8 +774,24 @@ export function UniversalAddItemWizard({
             cara_impresa: selectedConfig.cara_impresa,
             color: selectedConfig.color,
             marca: selectedConfig.marca,
-            servicios_seleccionados: serviciosLinea,
-            acabados_seleccionados: acabadosLinea
+            servicios_seleccionados: (selectedServicios || []).map(s => ({
+              servicio_id: s.servicio_id,
+              nombre: s.servicio_nombre,
+              nivel: s.nivel_nombre,
+              global_task_id: globalTaskMap.get(s.servicio_id) || null
+            })),
+            acabados_seleccionados: [
+              ...(linea.acabados || []).map(a => ({
+                acabado_id: a.acabado_id,
+                nombre: a.acabado_nombre,
+                nivel: a.nivel_nombre,
+              })),
+              ...(selectedAcabados || []).map(a => ({
+                acabado_id: a.acabado_id,
+                nombre: a.acabado_nombre,
+                nivel: a.nivel_nombre,
+              }))
+            ]
           };
 
           // Generar rutas de producci\u00f3n para esta l\u00ednea
@@ -848,7 +894,8 @@ export function UniversalAddItemWizard({
           ...finalConfig,
           servicios_seleccionados: serviciosItem.map(s => ({
             servicio_id: s.servicio_id,
-            nombre: s.nombre
+            nombre: s.nombre,
+            global_task_id: globalTaskMap.get(s.servicio_id) || null
           })),
           acabados_seleccionados: acabadosItem.map(a => ({
             acabado_id: a.acabado_id,
@@ -921,6 +968,7 @@ export function UniversalAddItemWizard({
             servicio_id: s.servicio_id,
             nombre: s.servicio_nombre,
             nivel: s.nivel_nombre,
+            global_task_id: globalTaskMap.get(s.servicio_id) || null,
           })),
           acabados_seleccionados: selectedAcabados.map(a => ({
             acabado_id: a.acabado_id,
@@ -971,10 +1019,6 @@ export function UniversalAddItemWizard({
   if (!isOpen) return null;
 
   const getActiveSteps = (): WizardStep[] => {
-    // Para productos con múltiples líneas, omitir el paso de servicios
-    if (config?.permite_multiples_lineas) {
-      return ['search', 'configuration', 'summary'];
-    }
     return ['search', 'configuration', 'services', 'summary'];
   };
 
@@ -1022,14 +1066,141 @@ export function UniversalAddItemWizard({
     );
   };
 
-  return (
-    <Modal
-      isOpen={isOpen}
-      onClose={handleClose}
-      title={isEditing ? 'Editar Item' : stepTitles[currentStep]}
-    // Removed maxWidth as it is not supported
-    >
-      <div className="flex flex-col h-full">
+  const renderStepContent = () => {
+    switch (currentStep) {
+      case 'search':
+        return (
+          <UniversalProductSearchStep
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            onSelectProduct={handleSelectProduct}
+          />
+        );
+      case 'configuration':
+        if (loadingConfig) {
+          return (
+            <div className="flex flex-col items-center justify-center py-16 space-y-4">
+              <Loader2 className="w-12 h-12 animate-spin text-blue-600" />
+              <div className="text-center">
+                <p className="text-lg font-medium text-gray-900">Cargando configuración del producto</p>
+                <p className="text-sm text-gray-500 mt-1">Preparando opciones disponibles...</p>
+              </div>
+            </div>
+          );
+        }
+        if (config) {
+          if (selectedProduct?.categoria_id === 'centro_copiado') {
+            return (
+              <CentroCopiadoStep
+                config={centroCopiadoConfig}
+                onChange={(u) => setCentroCopiadoConfig((prev: Partial<ItemCopiadoConfig>) => ({ ...prev, ...u }))}
+                onPriceChange={setCentroCopiadoPrice}
+              />
+            );
+          }
+          return (
+            <ConfigurationStep
+              config={config}
+              selectedConfig={selectedConfig}
+              selectedAcabados={selectedAcabados}
+              onConfigChange={handleConfigChange}
+              isEditing={isEditing}
+              onOpenSidePanel={openSidePanel}
+              onEditSidePanel={openSidePanel} // Assuming edit also uses openSidePanel
+              onCloseSidePanel={closeSidePanel}
+            />
+          );
+        }
+        return null;
+      case 'services':
+        return config && (
+          <ServicesAndFinishingsStep
+            config={config}
+            selectedAcabados={selectedAcabados}
+            onAcabadosChange={setSelectedAcabados}
+          />
+        );
+      case 'summary':
+        return config && (
+          <UniversalSummaryStep
+            config={config}
+            selectedConfig={selectedConfig}
+            selectedServicios={selectedServicios}
+            selectedAcabados={selectedAcabados}
+            precioBase={precioBase}
+            precioServicios={precioServicios}
+            precioAcabados={precioAcabados}
+            precioTotal={precioTotal}
+            isCalculatingPrice={isCalculating}
+            centroCopiadoConfig={centroCopiadoConfig}
+            centroCopiadoPrice={centroCopiadoPrice}
+          />
+        );
+      default:
+        return null;
+    }
+  };
+
+  const renderFooter = () => (
+    <div className="px-6 py-4 border-t bg-gray-50 flex items-center justify-between mt-6">
+      <div>
+        {currentStep !== 'search' && (
+          <Button
+            variant="ghost"
+            onClick={handlePrevious}
+            disabled={isSubmitting}
+            className="text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+          >
+            <ChevronLeft className="w-4 h-4 mr-1" />
+            Anterior
+          </Button>
+        )}
+      </div>
+
+      <div className="flex items-center gap-3">
+        <Button
+          variant="ghost"
+          onClick={handleClose}
+          disabled={isSubmitting}
+          className="text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+        >
+          Cancelar
+        </Button>
+
+        {currentStep !== 'summary' ? (
+          <Button
+            onClick={handleNext}
+            disabled={!canProceedToNext() || isSubmitting}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            Siguiente
+            <ChevronRight className="w-4 h-4 ml-1" />
+          </Button>
+        ) : (
+          <Button
+            onClick={handleAgregar}
+            disabled={!canProceedToNext() || isSubmitting}
+            className="bg-green-600 hover:bg-green-700"
+          >
+            {isSubmitting ? (isEditing ? 'Guardando...' : 'Agregando...') : (isEditing ? 'Guardar Cambios' : 'Agregar a la Orden')}
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderMainContent = () => {
+    return (
+      <div className="flex flex-col h-full relative pt-6">
+        {/* Close Button Inside */}
+        <button
+          onClick={handleClose}
+          className="absolute top-0 right-0 p-2 text-gray-400 hover:text-gray-600 transition-colors rounded-lg hover:bg-gray-100 z-50"
+          title="Cerrar"
+        >
+          <X className="w-6 h-6" />
+        </button>
+
         {/* Step Indicator */}
         <div className="mb-6">
           {renderStepIndicator()}
@@ -1037,115 +1208,39 @@ export function UniversalAddItemWizard({
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto">
-          {currentStep === 'search' && (
-            <UniversalProductSearchStep
-              searchTerm={searchTerm}
-              onSearchChange={setSearchTerm}
-              onSelectProduct={handleSelectProduct}
-            />
-          )}
-
-          {currentStep === 'configuration' && (
-            loadingConfig ? (
-              <div className="flex flex-col items-center justify-center py-16 space-y-4">
-                <Loader className="w-12 h-12 animate-spin text-blue-600" />
-                <div className="text-center">
-                  <p className="text-lg font-medium text-gray-900">Cargando configuración del producto</p>
-                  <p className="text-sm text-gray-500 mt-1">Preparando opciones disponibles...</p>
-                </div>
-              </div>
-            ) : config ? (
-              <ConfigurationStep
-                config={config}
-                selectedConfig={selectedConfig}
-                selectedServicios={selectedServicios}
-                selectedAcabados={selectedAcabados}
-                onConfigChange={handleConfigChange}
-                isEditing={isEditing}
-              />
-            ) : null
-          )}
-
-          {currentStep === 'configuration' && selectedProduct?.categoria_id === 'centro_copiado' && (
-            <CentroCopiadoStep
-              config={centroCopiadoConfig}
-              onChange={(u) => setCentroCopiadoConfig((prev: Partial<ItemCopiadoConfig>) => ({ ...prev, ...u }))}
-              onPriceChange={setCentroCopiadoPrice}
-            />
-          )}
-
-          {currentStep === 'services' && config && (
-            <ServicesAndFinishingsStep
-              config={config}
-              selectedServicios={selectedServicios}
-              selectedAcabados={selectedAcabados}
-              onServiciosChange={setSelectedServicios}
-              onAcabadosChange={setSelectedAcabados}
-            />
-          )}
-
-          {currentStep === 'summary' && config && (
-            <UniversalSummaryStep
-              config={config}
-              selectedConfig={selectedConfig}
-              selectedServicios={selectedServicios}
-              selectedAcabados={selectedAcabados}
-              precioBase={precioBase}
-              precioServicios={precioServicios}
-              precioAcabados={precioAcabados}
-              precioTotal={precioTotal}
-              isCalculatingPrice={isCalculating}
-              centroCopiadoConfig={centroCopiadoConfig}
-              centroCopiadoPrice={centroCopiadoPrice}
-            />
-          )}
+          {renderStepContent()}
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t bg-gray-50 flex items-center justify-between mt-6">
-          <div>
-            {currentStep !== 'search' && (
-              <Button
-                variant="secondary"
-                onClick={handlePrevious}
-                disabled={isSubmitting}
-              >
-                <ChevronLeft className="w-4 h-4 mr-1" />
-                Anterior
-              </Button>
-            )}
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Button
-              variant="secondary"
-              onClick={handleClose}
-              disabled={isSubmitting}
-            >
-              Cancelar
-            </Button>
-
-            {currentStep !== 'summary' ? (
-              <Button
-                onClick={handleNext}
-                disabled={!canProceedToNext() || isSubmitting}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
-                Siguiente
-                <ChevronRight className="w-4 h-4 ml-1" />
-              </Button>
-            ) : (
-              <Button
-                onClick={handleAgregar}
-                disabled={!canProceedToNext() || isSubmitting}
-                className="bg-green-600 hover:bg-green-700"
-              >
-                {isSubmitting ? (isEditing ? 'Guardando...' : 'Agregando...') : (isEditing ? 'Guardar Cambios' : 'Agregar a la Orden')}
-              </Button>
-            )}
-          </div>
-        </div>
+        {renderFooter()}
       </div>
+    );
+  };
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={handleClose}
+      title={(currentStep === 'summary' && !isEditing) ? '' : (isEditing ? 'Editar Item' : stepTitles[currentStep])}
+      showHeader={false}
+      sidePanel={currentStep === 'summary' && config ? (
+        <SummaryPricingSidebar
+          config={config}
+          selectedConfig={selectedConfig}
+          precioBase={precioBase}
+          precioServicios={precioServicios}
+          precioAcabados={precioAcabados}
+          precioTotal={precioTotal}
+          isCalculatingPrice={isCalculating}
+          centroCopiadoConfig={centroCopiadoConfig}
+          centroCopiadoPrice={centroCopiadoPrice}
+        />
+      ) : sidePanelContent}
+      isSidePanelOpen={currentStep === 'summary' || isSidePanelOpen}
+      size="xl"
+    >
+      {renderMainContent()}
     </Modal>
   );
 }
+

@@ -75,7 +75,7 @@ export function ShippingModal({ isOpen, onClose, onSave, loading = false }: Ship
                         <div className="relative">
                             <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                             <Input
-                                value={formData.transporte} // Wait, careful copy paste
+
                                 onChange={(e) => setFormData({ ...formData, numero_guia: e.target.value })}
                                 value={formData.numero_guia}
                                 placeholder="Ej: 394857392"

@@ -85,7 +85,7 @@ export async function generateProductionRoutes({
             .select('ruta_produccion_id')
             .eq('id', productoId)
             .maybeSingle();
-          rutaId = data?.ruta_produccion_id || null;
+          rutaId = (data as any)?.ruta_produccion_id || null;
           break;
         }
         case 'Impresion Gran Formato': {
@@ -94,7 +94,7 @@ export async function generateProductionRoutes({
             .select('ruta_produccion_id')
             .eq('id', productoId)
             .maybeSingle();
-          rutaId = data?.ruta_produccion_id || null;
+          rutaId = (data as any)?.ruta_produccion_id || null;
           break;
         }
         case 'Materiales Rigidos': {
@@ -103,7 +103,7 @@ export async function generateProductionRoutes({
             .select('ruta_produccion_id')
             .eq('id', productoId)
             .maybeSingle();
-          rutaId = data?.ruta_produccion_id || null;
+          rutaId = (data as any)?.ruta_produccion_id || null;
           break;
         }
         case 'Plotter de Corte': {
@@ -112,7 +112,7 @@ export async function generateProductionRoutes({
             .select('ruta_produccion_id')
             .eq('id', productoId)
             .maybeSingle();
-          rutaId = data?.ruta_produccion_id || null;
+          rutaId = (data as any)?.ruta_produccion_id || null;
           break;
         }
         case 'Portabanners': {
@@ -121,7 +121,7 @@ export async function generateProductionRoutes({
             .select('ruta_produccion_id')
             .eq('id', productoId)
             .maybeSingle();
-          rutaId = data?.ruta_produccion_id || null;
+          rutaId = (data as any)?.ruta_produccion_id || null;
           break;
         }
         case 'Sellos': {
@@ -130,7 +130,7 @@ export async function generateProductionRoutes({
             .select('ruta_produccion_id')
             .eq('id', productoId)
             .maybeSingle();
-          rutaId = data?.ruta_produccion_id || null;
+          rutaId = (data as any)?.ruta_produccion_id || null;
           break;
         }
         case 'Talonarios': {
@@ -139,7 +139,7 @@ export async function generateProductionRoutes({
             .select('ruta_produccion_id')
             .eq('id', productoId)
             .maybeSingle();
-          rutaId = data?.ruta_produccion_id || null;
+          rutaId = (data as any)?.ruta_produccion_id || null;
           break;
         }
         case 'centro_copiado': {
@@ -151,7 +151,7 @@ export async function generateProductionRoutes({
             .maybeSingle();
 
           if (data) {
-            rutaId = data.id;
+            rutaId = (data as any).id;
           }
           break;
         }
@@ -335,8 +335,8 @@ export async function generateProductionRoutes({
                       .eq('nombre', nivelAplicado)
                       .maybeSingle();
 
-                    if (nivelData?.paso_id) {
-                      pasoIdEspecifico = nivelData.paso_id;
+                    if ((nivelData as any)?.paso_id) {
+                      pasoIdEspecifico = (nivelData as any).paso_id;
                     }
                   }
                 }
@@ -383,8 +383,8 @@ export async function generateProductionRoutes({
                       .eq('nombre', nivelAplicado)
                       .maybeSingle();
 
-                    if (nivelData?.paso_id) {
-                      pasoIdEspecifico = nivelData.paso_id;
+                    if ((nivelData as any)?.paso_id) {
+                      pasoIdEspecifico = (nivelData as any).paso_id;
                     }
                   }
                 }
@@ -411,8 +411,8 @@ export async function generateProductionRoutes({
                       .eq('tinta', tintaCodigo)
                       .maybeSingle();
 
-                    if (tintaData?.paso_id) {
-                      pasoIdEspecifico = tintaData.paso_id;
+                    if ((tintaData as any)?.paso_id) {
+                      pasoIdEspecifico = (tintaData as any).paso_id;
                     }
                   }
                 }
@@ -448,36 +448,39 @@ export async function generateProductionRoutes({
           }
         }
 
-        // 4. Consultar nombres reales de todos los pasos específicos
+        // 4. Consultar nombres reales Y ETAPAS de todos los pasos específicos
         const pasosIdsUnicos = [...new Set(
           generatedSteps
             .map(s => s.paso_id_especifico)
             .filter((id): id is string => id !== null)
         )];
 
-        let nombresRealesPasos: Record<string, string> = {};
+        let datosRealesPasos: Record<string, { nombre: string, etapa: string }> = {};
         if (pasosIdsUnicos.length > 0) {
           const { data: pasosReales } = await supabase
             .from('pasos')
-            .select('id, nombre')
+            .select('id, nombre, etapa')
             .in('id', pasosIdsUnicos);
 
           if (pasosReales) {
-            nombresRealesPasos = pasosReales.reduce((acc, paso) => {
-              acc[paso.id] = paso.nombre;
+            datosRealesPasos = (pasosReales as any[]).reduce((acc, paso) => {
+              acc[paso.id] = { nombre: paso.nombre, etapa: paso.etapa };
               return acc;
-            }, {} as Record<string, string>);
+            }, {} as Record<string, { nombre: string, etapa: string }>);
           }
         }
 
         // 5. Construir pasos finales con nombres reales y etapas normalizadas
         pasosFinales = generatedSteps.map((step, index) => {
-          const nombreReal = step.paso_id_especifico
-            ? nombresRealesPasos[step.paso_id_especifico]
+          const datosReal = step.paso_id_especifico
+            ? datosRealesPasos[step.paso_id_especifico]
             : undefined;
 
-          const nombreFinal = nombreReal || 'Paso sin nombre';
-          const etapaNormalizada = normalizarEtapa(step.etapa);
+          const nombreFinal = datosReal?.nombre || 'Paso sin nombre';
+
+          // FIX: Usar la etapa real definida en el paso si existe, sino fallback al template
+          const etapaOrigen = datosReal?.etapa || step.etapa;
+          const etapaNormalizada = normalizarEtapa(etapaOrigen);
 
           return {
             id: `temp-${step.origen_plantilla_id}-${index}`,

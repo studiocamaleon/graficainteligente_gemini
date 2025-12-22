@@ -640,7 +640,8 @@ export function CreateOrderPage() {
         cantidad: s.cantidad,
         precio_unitario: s.precio_unitario_final,
         subtotal: s.precio_total,
-        servicio_id: null
+        servicio_id: null,
+        metadata: (s as any).metadata
       })),
       estadoInicial: 'pendiente' as const,
     };

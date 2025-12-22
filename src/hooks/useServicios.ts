@@ -20,6 +20,7 @@ interface ServicioWithDetails extends Servicio {
 interface UseServiciosParams {
   searchTerm?: string;
   categoriaId?: string | null;
+  categoriasIds?: string[]; // Nueva propiedad para filtro múltiple
   estacionId?: string | null;
   tipoImpacto?: TipoImpactoPrecio | null;
   disponibleIndependiente?: boolean | null;
@@ -32,6 +33,7 @@ interface UseServiciosParams {
 export function useServicios({
   searchTerm = '',
   categoriaId = null,
+  categoriasIds = [],
   estacionId = null,
   tipoImpacto = null,
   disponibleIndependiente = null,
@@ -48,12 +50,15 @@ export function useServicios({
     try {
       setLoading(true);
 
+      // Decidir si usamos inner join para filtrar por categorías
+      const filterByCategorias = categoriaId || (categoriasIds && categoriasIds.length > 0);
+
       let query = supabase
         .from('servicios')
         .select(
           `
           *,
-          servicios_categorias${categoriaId ? '!inner' : ''}(
+          servicios_categorias${filterByCategorias ? '!inner' : ''}(
             categoria_id,
             categoria:categorias(id, nombre, color)
           ),
@@ -86,6 +91,9 @@ export function useServicios({
 
       if (categoriaId) {
         query = query.eq('servicios_categorias.categoria_id', categoriaId);
+      } else if (categoriasIds && categoriasIds.length > 0) {
+        // Filtro "OR" para múltiples categorías (IN)
+        query = query.in('servicios_categorias.categoria_id', categoriasIds);
       }
 
       if (estacionId) {
@@ -129,7 +137,7 @@ export function useServicios({
 
   useEffect(() => {
     fetchServicios();
-  }, [searchTerm, categoriaId, estacionId, tipoImpacto, disponibleIndependiente, tieneNiveles, isActive, page, itemsPerPage]);
+  }, [searchTerm, categoriaId, categoriasIds?.join(','), estacionId, tipoImpacto, disponibleIndependiente, tieneNiveles, isActive, page, itemsPerPage]);
 
   return {
     servicios,

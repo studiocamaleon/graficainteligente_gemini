@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { normalizarEtapa } from '../utils/generateProductionRoutes';
 
 export interface GeneratedStep {
   id: string;
@@ -352,7 +351,7 @@ export function useGenerateProductionRoute({
           }
         }
 
-        // 4. Consultar nombres reales de todos los pasos específicos
+        // 4. Consultar nombres reales y etapas de todos los pasos específicos
         const pasosIdsUnicos = [...new Set(
           generatedSteps
             .map(s => s.paso_id_especifico)
@@ -360,34 +359,39 @@ export function useGenerateProductionRoute({
         )];
 
 
-        let nombresRealesPasos: Record<string, string> = {};
+        let dataPasosReales: Record<string, { nombre: string, etapa: string }> = {};
         if (pasosIdsUnicos.length > 0) {
           const { data: pasosRealesRaw } = await supabase
             .from('pasos')
-            .select('id, nombre')
+            .select('id, nombre, etapa') // Agregado: etapa
             .in('id', pasosIdsUnicos);
 
           const pasosReales = (pasosRealesRaw || []) as any[];
 
           if (pasosReales) {
-            nombresRealesPasos = pasosReales.reduce((acc: any, paso: any) => {
-              acc[paso.id] = paso.nombre;
+            dataPasosReales = pasosReales.reduce((acc: any, paso: any) => {
+              acc[paso.id] = { nombre: paso.nombre, etapa: paso.etapa };
               return acc;
             }, {});
           }
         }
 
-        // 5. Construir pasos finales con nombres reales
+        // 5. Construir pasos finales con nombres reales y etapas correctas
         const pasosFinales: GeneratedStep[] = generatedSteps.map(step => {
-          const nombreReal = step.paso_id_especifico
-            ? nombresRealesPasos[step.paso_id_especifico]
+          const datosReal = step.paso_id_especifico
+            ? dataPasosReales[step.paso_id_especifico]
             : undefined;
 
-          const nombreFinal = nombreReal || 'Paso sin nombre';
+          const nombreFinal = datosReal?.nombre || 'Paso sin nombre';
+
+          // CRITICAL FIX: Use the stage defined in the actual STEP (paso) if available, 
+          // falling back to the template stage (rutas_produccion_pasos.etapa) only if necessary.
+          // This ensures that if "Impresion UV" generates a "Produccion" step, it appears in "Produccion".
+          const etapaFinal = datosReal?.etapa || step.etapa;
 
           return {
             id: step.id,
-            etapa: normalizarEtapa(step.etapa),
+            etapa: etapaFinal, // Direct use, assuming DB has valid enum values ('Produccion', etc.)
             paso_id: step.paso_id_especifico,
             paso_nombre: nombreFinal,
             orden: step.orden,

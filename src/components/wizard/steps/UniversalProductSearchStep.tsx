@@ -4,6 +4,7 @@ import { Card } from '../../ui/Card';
 import { Badge } from '../../ui/Badge';
 import { EmptyState } from '../../ui/EmptyState';
 import { useUniversalProductSearch, type UniversalProductSearchResult } from '../../../hooks/wizard/useUniversalProductSearch';
+import { formatCurrency } from '../../../utils/stringUtils';
 
 interface UniversalProductSearchStepProps {
   searchTerm: string;
@@ -128,7 +129,7 @@ export function UniversalProductSearchStep({
 
                     {product.precio_desde && (
                       <p className="text-sm text-gray-600 mt-2">
-                        Desde ${product.precio_desde.toFixed(2)}
+                        Desde {formatCurrency(product.precio_desde)}
                       </p>
                     )}
                   </div>

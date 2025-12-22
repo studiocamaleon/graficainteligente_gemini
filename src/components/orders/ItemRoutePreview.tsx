@@ -18,33 +18,45 @@ interface ItemRoutePreviewProps {
 }
 
 function normalizeEtapa(etapa: string): string {
-  if (!etapa) return 'Pre-prensa';
-  const etapaLower = etapa.toLowerCase().replace(/[-\s]/g, '_');
+  if (!etapa) return 'Produccion';
 
-  if (etapaLower === 'pre_prensa') return 'Pre-prensa';
-  if (etapaLower === 'post_prensa') return 'Terminacion';
-  if (etapaLower === 'principal') return 'Produccion';
-  if (etapaLower === 'instalacion') return 'Instalacion';
+  // Normalizar entrada por si viene sucia (espacios, mayúsculas)
+  const normalized = etapa.toLowerCase().trim().replace(/ /g, '_').replace(/-/g, '_');
 
-  if (etapaLower.includes('instalacion')) {
-    return 'Instalacion';
-  }
+  // Mapeo EXACTO de los valores del sistema (según types y BD) a los headers de la UI
+  const map: Record<string, string> = {
+    // DB: pre_prensa / UI: Pre-prensa
+    'pre_prensa': 'Pre-prensa',
+    'preprensa': 'Pre-prensa',
+    'diseno': 'Pre-prensa', // Casos legacy si existen
+    'diseño': 'Pre-prensa',
 
-  if (etapaLower.includes('post') ||
-    etapaLower.includes('terminacion') ||
-    etapaLower.includes('acabado')) {
-    return 'Terminacion';
-  }
+    // DB: produccion / principal / UI: Produccion
+    'produccion': 'Produccion',
+    'principal': 'Produccion',
+    'impresion': 'Produccion', // Si alguna etapa se llamó así explícitamente
 
-  if (etapaLower.startsWith('pre') && !etapaLower.includes('post')) {
-    return 'Pre-prensa';
-  }
+    // DB: terminacion / post_prensa / UI: Terminacion
+    'terminacion': 'Terminacion',
+    'post_prensa': 'Terminacion',
+    'acabado': 'Terminacion',
 
-  if (etapaLower.includes('produccion') || etapaLower.includes('principal')) {
-    return 'Produccion';
-  }
+    // DB: instalacion / UI: Instalacion
+    'instalacion': 'Instalacion'
+  };
 
-  return etapa;
+  // 1. Intento directo por clave exacta normalizada
+  if (map[normalized]) return map[normalized];
+
+  // 2. Si contiene la clave (ej: "etapa_produccion" -> "Produccion") - Lógica de backup conservadora
+  if (normalized.includes('pre_prensa') || normalized.includes('preprensa')) return 'Pre-prensa';
+  if (normalized.includes('produccion') || normalized.includes('principal')) return 'Produccion';
+  if (normalized.includes('terminacion') || normalized.includes('post_prensa')) return 'Terminacion';
+  if (normalized.includes('instalacion')) return 'Instalacion';
+
+  // 3. Si llega algo como "Impresion UV" que no mapeó antes, validamos si contiene keywords fuertes
+  // del sistema, sino fallback a Produccion (el core del negocio)
+  return 'Produccion';
 }
 
 export function ItemRoutePreview({
@@ -136,6 +148,7 @@ export function ItemRoutePreview({
   }, {} as Record<string, any[]>);
 
   const etapas = ['Pre-prensa', 'Produccion', 'Terminacion', 'Instalacion'];
+
   const totalPasos = stepsWithComments.length;
   const canEdit = !readOnly && allowManualSteps && setItems;
 
@@ -278,6 +291,7 @@ export function ItemRoutePreview({
                       return (
                         <div key={paso.id} className="space-y-2">
                           <div
+                            title={`Etapa origen (DB): "${paso.etapa}"`}
                             className={`flex items-start gap-3 p-3 rounded-lg border ${tieneComentario
                               ? 'bg-blue-50 border-blue-200'
                               : 'bg-gray-50 border-gray-200'

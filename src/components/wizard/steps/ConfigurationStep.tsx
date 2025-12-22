@@ -3,19 +3,21 @@ import { Card } from '../../ui/Card';
 import { Input } from '../../ui/Input';
 import { Button } from '../../ui/Button';
 import { Badge } from '../../ui/Badge';
-import { Ruler, Package, Layers, Palette, FileText, Check, RotateCcw, CheckCircle } from 'lucide-react';
+import { Ruler, Package, Layers, Palette, FileText, Check, RotateCcw } from 'lucide-react';
 import type { ProductConfiguration } from '../../../hooks/wizard/useProductConfiguration';
 import { MeasurementLinesTable } from './MeasurementLinesTable';
-import type { SelectedService, SelectedFinishing } from './ServicesAndFinishingsStep';
+import type { SelectedFinishing } from './ServicesAndFinishingsStep';
 import { ConfigDetailRenderer } from '../../shared/ConfigDetailRenderer';
 
 interface ConfigurationStepProps {
   config: ProductConfiguration;
   selectedConfig: SelectedConfiguration;
-  selectedServicios?: SelectedService[];
   selectedAcabados?: SelectedFinishing[];
   onConfigChange: (config: Partial<SelectedConfiguration>) => void;
   isEditing?: boolean;
+  onOpenSidePanel?: (content: React.ReactNode) => void;
+  onEditSidePanel?: (content: React.ReactNode) => void;
+  onCloseSidePanel?: () => void;
 }
 
 // Interface para una línea de medida/cantidad individual
@@ -33,18 +35,6 @@ export interface MeasurementLine {
 
   // Cantidad de unidades de esta línea
   cantidad: number;
-
-  // Servicios aplicables a esta línea
-  servicios: Array<{
-    servicio_id: string;
-    servicio_nombre: string;
-    nivel_id: string | null;
-    nivel_nombre: string | null;
-    tipo_impacto: string;
-    valor_porcentaje: number | null;
-    valor_monto: number | null;
-    cantidad?: number;
-  }>;
 
   // Acabados aplicables a esta línea
   acabados: Array<{
@@ -154,10 +144,12 @@ function getEspesoresPorVariante(
 export function ConfigurationStep({
   config,
   selectedConfig,
-  selectedServicios = [],
   selectedAcabados = [],
   onConfigChange,
-  isEditing = false
+  isEditing = false,
+  onOpenSidePanel,
+  onEditSidePanel,
+  onCloseSidePanel
 }: ConfigurationStepProps) {
   const [localConfig, setLocalConfig] = useState(selectedConfig);
 
@@ -197,11 +189,11 @@ export function ConfigurationStep({
     }
 
     // Auto-seleccionar material único (para cualquier categoría con 1 solo material)
-    if (config.materiales && config.materiales.length === 1 && config.categoria !== 'Materiales Rigidos') {
+    if (config.materiales && config.materiales.length === 1) {
       const material = config.materiales[0];
       autoSelections.material_id = material.material_id;
       autoSelections.material_nombre = material.material_nombre;
-      autoSelections.variante_id = material.variante_id;
+      autoSelections.variante_id = material.variante_id || material.material_id;
       autoSelections.variante_nombre = material.variante_nombre;
       autoSelections.espesor = material.espesor || null;
       autoSelections.unidad_espesor = material.unidad_espesor || null;
@@ -243,12 +235,12 @@ export function ConfigurationStep({
   // Efecto para inicializar variantes disponibles en Materiales Rígidos
   useEffect(() => {
     if (config.categoria === 'Materiales Rigidos' && config.materiales && config.materiales.length > 0) {
-      const variantes = getVariantesUnicas(config.materiales);
+      const variantes = getVariantesUnicas(config.materiales as any);
       setVariantesDisponibles(variantes);
 
       // Si ya hay una variante seleccionada (edición o vuelta atrás), calcular espesores
       if (localConfig.variante_nombre) {
-        const espesores = getEspesoresPorVariante(config.materiales, localConfig.variante_nombre);
+        const espesores = getEspesoresPorVariante(config.materiales as any, localConfig.variante_nombre);
         setEspesoresDisponibles(espesores);
       }
     }
@@ -257,7 +249,7 @@ export function ConfigurationStep({
   // Efecto para calcular espesores cuando cambia la variante seleccionada
   useEffect(() => {
     if (config.categoria === 'Materiales Rigidos' && localConfig.variante_nombre && config.materiales) {
-      const espesores = getEspesoresPorVariante(config.materiales, localConfig.variante_nombre);
+      const espesores = getEspesoresPorVariante(config.materiales as any, localConfig.variante_nombre);
       setEspesoresDisponibles(espesores);
     }
   }, [localConfig.variante_nombre, config]);
@@ -590,7 +582,7 @@ export function ConfigurationStep({
       )}
 
       {/* Material - Selector Progresivo para Materiales Rígidos */}
-      {config.categoria === 'Materiales Rigidos' && config.materiales && config.materiales.length > 0 && (
+      {config.categoria === 'Materiales Rigidos' && config.materiales && config.materiales.length > 1 && (
         <>
           {/* PASO 1: Seleccionar Variante */}
           <Card className="p-6">
@@ -645,7 +637,7 @@ export function ConfigurationStep({
                 <div className="grid grid-cols-3 gap-3">
                   {espesoresDisponibles.map((espesor) => {
                     const isSelected = localConfig.espesor === espesor;
-                    const unidad = config.materiales[0]?.unidad_espesor || 'mm';
+                    const unidad = config.materiales?.[0]?.unidad_espesor || 'mm';
 
                     return (
                       <Card
@@ -683,21 +675,31 @@ export function ConfigurationStep({
             </Card>
           )}
 
-          {/* Indicador de selección completa */}
-          {localConfig.variante_nombre && localConfig.espesor && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="w-5 h-5 text-green-600" />
-                <div>
-                  <div className="font-semibold text-green-900">Selección completa</div>
-                  <div className="text-sm text-green-700">
-                    {config.materiales[0]?.material_nombre} {localConfig.variante_nombre} - {localConfig.espesor}{config.materiales[0]?.unidad_espesor}
-                  </div>
-                </div>
+
+        </>
+      )}
+
+      {/* Indicador de Material y Espesor Seleccionado (Visible para Auto-selección y Manual) */}
+      {config.categoria === 'Materiales Rigidos' && localConfig.espesor && (
+        <Card className="p-6 bg-slate-50 border-slate-200">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <Layers className="w-6 h-6 text-blue-600" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold text-gray-900">Material Seleccionado</h3>
+              <div className="flex items-center gap-2 mt-1 text-sm text-gray-700">
+                <span>{localConfig.material_nombre || config.materiales?.[0]?.material_nombre || 'Material'}</span>
+                <span className="text-gray-300">•</span>
+                <span>{localConfig.variante_nombre}</span>
+                <span className="text-gray-300">•</span>
+                <Badge variant="success" className="font-mono">
+                  {localConfig.espesor} {localConfig.unidad_espesor || config.materiales?.[0]?.unidad_espesor || 'mm'}
+                </Badge>
               </div>
             </div>
-          )}
-        </>
+          </div>
+        </Card>
       )}
 
       {/* Material UV - Solo si se eligió usar material de catálogo */}
@@ -922,65 +924,19 @@ export function ConfigurationStep({
         </Card>
       )}
 
-      {/* Material auto-seleccionado (solo info) - Para productos con múltiples líneas y 1 solo material */}
-      {config.permite_multiples_lineas &&
-        localConfig.material_nombre &&
-        config.materiales &&
-        config.materiales.length === 1 && (
-          <Card className="p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Layers className="w-5 h-5 text-blue-600" />
-              <h3 className="text-lg font-semibold text-gray-900">Material</h3>
-            </div>
+      {/* Material auto-seleccionado (solo info) - Removido por redundancia según solicitud del usuario */}
 
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <p className="text-sm text-gray-700">
-                <span className="font-semibold">{localConfig.material_nombre}</span>
-                {localConfig.variante_nombre && ` - ${localConfig.variante_nombre}`}
-                {localConfig.espesor && localConfig.unidad_espesor && (
-                  <span className="text-gray-600 ml-2">
-                    ({localConfig.espesor}{localConfig.unidad_espesor})
-                  </span>
-                )}
-              </p>
-              <p className="text-xs text-gray-500 mt-1">
-                Material asignado a este producto
-              </p>
-            </div>
-          </Card>
-        )}
-
-      {/* M\u00faltiples l\u00edneas de medidas (para Gran Formato, Materiales R\u00edgidos y Plotter) */}
+      {/* Múltiples líneas de medidas (para Gran Formato, Materiales Rígidos y Plotter) */}
       {config.permite_multiples_lineas && (
         <MeasurementLinesTable
           config={config}
-          lines={localConfig.lineas_medidas}
-          selectedServicios={selectedServicios}
+          lines={selectedConfig.lineas_medidas}
+          baseConfig={selectedConfig}
           selectedAcabados={selectedAcabados}
-          baseConfig={{
-            cantidad: localConfig.cantidad,
-            medida_ancho: localConfig.medida_ancho,
-            medida_alto: localConfig.medida_alto,
-            medida_mt2: localConfig.medida_mt2,
-            material_id: localConfig.material_id,
-            material_nombre: localConfig.material_nombre,
-            variante_id: localConfig.variante_id,
-            variante_nombre: localConfig.variante_nombre,
-            espesor: localConfig.espesor,
-            unidad_espesor: localConfig.unidad_espesor,
-            gramaje: localConfig.gramaje,
-            tecnologia_id: localConfig.tecnologia_id,
-            tecnologia_nombre: localConfig.tecnologia_nombre,
-            tinta: localConfig.tinta,
-            tinta_nombre: localConfig.tinta_nombre,
-            cara_impresa: localConfig.cara_impresa,
-            color: localConfig.color,
-            marca: localConfig.marca,
-            tipo_copia: localConfig.tipo_copia || null,
-            usa_material_catalogo: localConfig.usa_material_catalogo || false,
-            ruta_produccion_id: localConfig.ruta_produccion_id || null
-          }}
-          onChange={(lines) => handleChange({ lineas_medidas: lines })}
+          onChange={(lines) => onConfigChange({ lineas_medidas: lines })}
+          onOpenSidePanel={onOpenSidePanel}
+          onEditSidePanel={onEditSidePanel}
+          onCloseSidePanel={onCloseSidePanel}
         />
       )}
 

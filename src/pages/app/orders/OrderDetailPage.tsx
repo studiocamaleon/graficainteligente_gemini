@@ -579,20 +579,29 @@ export function OrderDetailPage() {
                             <h4 className="font-semibold text-gray-900">
                               {item.producto_nombre || 'Producto'}
                             </h4>
-                            {item.producto_categoria && (
-                              <Badge variant="default" className="text-xs">
-                                {item.producto_categoria}
-                              </Badge>
-                            )}
-
-                            {/* Clasificación de Tipo Item */}
-                            {(item.tipo_item === 'centro_copiado' || (item.tipo_item === 'personalizado' && item.producto_categoria === 'Centro de Copiado')) ? (
-                              <Badge variant="blue" className="text-xs">
+                            {/* Clasificación de Categoría y Tipo */}
+                            {(item.tipo_item === 'centro_copiado' || item.producto_categoria === 'Centro de Copiado' || item.categoria_id === 'centro_copiado') ? (
+                              <Badge variant="blue" className="bg-blue-100 text-blue-800 text-xs">
                                 Centro de Copiado
                               </Badge>
-                            ) : item.tipo_item === 'personalizado' && (
-                              <Badge variant="purple" className="text-xs">
-                                Personalizado
+                            ) : (
+                              <>
+                                {item.producto_categoria && (
+                                  <Badge variant="default" className="text-xs">
+                                    {item.producto_categoria}
+                                  </Badge>
+                                )}
+                                {item.tipo_item === 'personalizado' && (
+                                  <Badge variant="purple" className="text-xs">
+                                    Personalizado
+                                  </Badge>
+                                )}
+                              </>
+                            )}
+                            {/* Servicios Check */}
+                            {orden.servicios?.some((s: any) => s.metadata?.linked_item_ids?.includes(item.id)) && (
+                              <Badge variant="warning" className="text-xs bg-orange-100 text-orange-800 border-orange-200">
+                                + Servicios
                               </Badge>
                             )}
                           </div>
@@ -632,37 +641,55 @@ export function OrderDetailPage() {
                   {/* Servicios Adicionales */}
                   {orden.servicios && orden.servicios.length > 0 && (
                     <div className="mt-8 space-y-4">
-                      <h3 className="text-lg font-semibold text-gray-900">
+                      <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                        <span className="w-1 h-6 bg-blue-600 rounded-full inline-block"></span>
                         Servicios Adicionales ({orden.servicios.length})
                       </h3>
                       <div className="space-y-3">
-                        {orden.servicios.map((servicio: any, index: number) => (
-                          <div
-                            key={servicio.id || index}
-                            className="p-4 bg-indigo-50 rounded-lg border border-indigo-100 flex justify-between items-center"
-                          >
-                            <div>
-                              <h4 className="font-semibold text-indigo-900">
-                                {servicio.descripcion || 'Servicio sin descripción'}
-                              </h4>
-                              <p className="text-sm text-indigo-700 mt-1">
-                                Cantidad: {servicio.cantidad}
-                              </p>
-                            </div>
-                            {canViewPrices && (
-                              <div className="text-right">
-                                <span className="block text-lg font-bold text-indigo-700">
-                                  ${Number(servicio.subtotal).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                        {orden.servicios.map((servicio: any, index: number) => {
+                          // Encontrar items vinculados si existen en metadata
+                          const linkedItemIds = servicio.metadata?.linked_item_ids || [];
+                          const linkedItemsNames = orden.items
+                            ? orden.items
+                              .filter((item: any) => linkedItemIds.includes(item.id))
+                              .map((item: any) => item.producto_nombre)
+                            : [];
+
+                          return (
+                            <div
+                              key={servicio.id || index}
+                              className="p-4 bg-white rounded-lg border border-gray-200"
+                            >
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className="text-xs font-semibold text-gray-500">#{index + 1}</span>
+                                <h4 className="font-semibold text-gray-900">
+                                  {servicio.descripcion || 'Servicio sin descripción'}
+                                </h4>
+                                <Badge variant="blue" className="bg-blue-50 text-blue-700 border-blue-100 text-xs">
+                                  Servicio Adicional
+                                </Badge>
+                              </div>
+
+                              {linkedItemsNames.length > 0 && (
+                                <div className="mb-3 py-1 px-2 bg-gray-50 rounded text-xs text-gray-600 inline-flex items-center">
+                                  <span className="font-medium mr-1">Aplicado a:</span>
+                                  {linkedItemsNames.join(', ')}
+                                </div>
+                              )}
+
+                              <div className="flex items-center justify-between pt-4 mt-2 border-t border-gray-100">
+                                <span className="text-sm text-gray-600">
+                                  Cantidad: <span className="font-semibold text-gray-900">{servicio.cantidad}</span>
                                 </span>
-                                {Number(servicio.cantidad) > 1 && (
-                                  <span className="text-xs text-indigo-600">
-                                    (${Number(servicio.precio_unitario).toLocaleString('es-AR', { minimumFractionDigits: 2 })} c/u)
+                                {canViewPrices && (
+                                  <span className="text-lg font-bold text-blue-600">
+                                    ${Number(servicio.subtotal).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                                   </span>
                                 )}
                               </div>
-                            )}
-                          </div>
-                        ))}
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   )}

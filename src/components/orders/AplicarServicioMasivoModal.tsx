@@ -1,400 +1,423 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
-import { Search, Loader, AlertTriangle, Info } from 'lucide-react';
+import { Search, Loader, Check, Info } from 'lucide-react';
 import { useServicios } from '../../hooks/useServicios';
 import { Badge } from '../ui/Badge';
-// import type { Servicio, ServicioNivelPrecio } from '../../types/database'; // Se infieren del hook
+import { CATEGORIAS_SISTEMA } from '../../constants/categorias';
 
 interface AplicarServicioMasivoModalProps {
     isOpen: boolean;
     onClose: () => void;
-    selectedItems: any[];
-    onConfirm: (servicioSeleccionado: ServicioSeleccionado) => Promise<void>;
+    selectedCount: number;
+    onAplicar: (data: ServicioSeleccionado) => void;
+    selectedItems?: any[];
 }
 
 export interface ServicioSeleccionado {
     servicio: any;
-    nivel?: any;
+    nivel: any | null;
     precioTotalCalculado: number;
-    precioPorItem: number;
-    esPrecioFijoGlobal: boolean;
 }
+
+const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('es-AR', {
+        style: 'currency',
+        currency: 'ARS',
+    }).format(value);
+};
 
 export function AplicarServicioMasivoModal({
     isOpen,
     onClose,
-    selectedItems,
-    onConfirm
+    selectedCount,
+    onAplicar,
+    selectedItems = []
 }: AplicarServicioMasivoModalProps) {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedServicio, setSelectedServicio] = useState<any | null>(null);
     const [selectedNivel, setSelectedNivel] = useState<any | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [customInputValue, setCustomInputValue] = useState<number>(1); // Para minutos u otros inputs manuales
 
-    const { servicios, loading, refetch } = useServicios({
-        searchTerm,
-        itemsPerPage: 50,
-        isActive: true
-    });
-
-    // Debounce para búsqueda
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            if (isOpen) refetch();
-        }, 300);
-        return () => clearTimeout(timer);
-    }, [searchTerm, isOpen]);
-
-    const handleSelectServicio = (servicio: any) => {
-        setSelectedServicio(servicio);
-        setSelectedNivel(null);
-
-        // Si tiene un solo nivel o no tiene niveles pero configuración directa
-        if (servicio.tiene_niveles_precio) {
-            // Esperar selección de nivel
-        }
-    };
-
-    const calculateTotalDimensions = () => {
-        let totalMt2 = 0;
-        let totalMtLineal = 0;
-        let totalPrecioBase = 0;
-        let totalCantidadItems = 0;
+    // Helper para métricas de items
+    const metrics = useMemo(() => {
+        let totalItems = 0;
+        let totalPrice = 0;
+        let totalM2 = 0;
+        let totalLinearMeters = 0;
 
         selectedItems.forEach(item => {
-            const qty = item.cantidad || 1;
-            totalCantidadItems += qty;
-            totalPrecioBase += (item.precio_total || 0);
+            const qty = item.cantidad || 0;
+            const price = item.precio_total || 0;
+            const width = item.configuracion?.medida_ancho || 0; // cm
+            const height = item.configuracion?.medida_alto || 0; // cm
 
-            // Intentar obtener medidas de la configuración
-            const ancho = Number(item.configuracion?.medida_ancho) || 0; // cm
-            const alto = Number(item.configuracion?.medida_alto) || 0;   // cm
+            totalItems += qty;
+            totalPrice += price;
+            totalM2 += ((width * height) / 10000) * qty;
 
-            if (ancho > 0) {
-                // Metros lineales (basado en ancho)
-                totalMtLineal += (ancho / 100) * qty;
+            // Asumimos el lado más largo como metros lineales si no está explícito,
+            // o usamos 'alto' por convención. Para seguridad usamos el mayor.
+            // Si el producto es de 'plotter', suele ser por largo.
+            totalLinearMeters += (Math.max(width, height) / 100) * qty;
+        });
 
-                if (alto > 0) {
-                    // Metros cuadrados
-                    totalMt2 += ((ancho * alto) / 10000) * qty;
-                }
+        return { totalItems, totalPrice, totalM2, totalLinearMeters };
+    }, [selectedItems]);
+
+    // 1. Extraer IDs de categorías únicos de los items seleccionados
+    const categoriasContexto = useMemo(() => {
+        if (!selectedItems || selectedItems.length === 0) return [];
+
+        const ids = new Set<string>();
+
+        selectedItems.forEach(item => {
+            if (item.categoria_id) {
+                ids.add(item.categoria_id);
+                return;
+            }
+
+            if (item.configuracion?.categoria_id) {
+                ids.add(item.configuracion.categoria_id);
+                return;
+            }
+
+            const catName = item.producto_categoria || item.configuracion?.categoria || item.configuracion?.categoria_nombre;
+            if (catName) {
+                const catEntry = Object.values(CATEGORIAS_SISTEMA).find(
+                    c => c.nombre === catName || c.nombre.toLowerCase() === catName.toLowerCase()
+                );
+                if (catEntry) ids.add(catEntry.id);
             }
         });
 
-        return { totalMt2, totalMtLineal, totalPrecioBase, totalCantidadItems };
+        return Array.from(ids);
+    }, [selectedItems]);
+
+    const { servicios, loading } = useServicios({
+        searchTerm,
+        itemsPerPage: 50,
+        isActive: true,
+        categoriasIds: categoriasContexto.length > 0 ? categoriasContexto : undefined
+    });
+
+    const handleSelectServicio = (servicio: any) => {
+        if (selectedServicio?.id === servicio.id) {
+            setSelectedServicio(null);
+            setSelectedNivel(null);
+        } else {
+            setSelectedServicio(servicio);
+            setSelectedNivel(null);
+        }
     };
 
-    const getPrecioInfo = () => {
-        if (!selectedServicio) return null;
+    const precioInfo = useMemo(() => {
+        // 1. Obtener datos base
+        const base = selectedNivel || selectedServicio;
+        if (!base) return { total: 0, tipo: 'sin_configuracion', label: 'Seleccionar servicio' };
 
-        let tipoImpacto = selectedServicio.tipo_impacto;
-        let valorImpacto = selectedServicio.valor_impacto;
-        let valorImpactoSecundario = selectedServicio.valor_impacto_secundario; // Nuevo param
+        const tipo = base.tipo_impacto || 'sin_impacto';
+        const val1 = base.valor_impacto || 0;
+        const val2 = base.valor_impacto_secundario || 0;
 
-        if (selectedNivel) {
-            tipoImpacto = selectedNivel.tipo_impacto;
-            valorImpacto = selectedNivel.valor_impacto;
-            valorImpactoSecundario = selectedNivel.valor_impacto_secundario;
-        }
+        let total = 0;
+        let label = '';
 
-        if (!tipoImpacto || valorImpacto === undefined || valorImpacto === null) return null;
+        switch (tipo) {
+            case 'sin_impacto':
+                total = 0;
+                label = 'Sin cargo correpondiente';
+                break;
 
-        const { totalMt2, totalMtLineal, totalPrecioBase, totalCantidadItems } = calculateTotalDimensions();
-        const selectedItemsCount = selectedItems.length; // Filas seleccionadas
-
-        let precioTotal = 0;
-        let precioPorItem = 0;
-        let detalleCalculo = '';
-        let esGlobal = false;
-
-        switch (tipoImpacto) {
             case 'precio_fijo':
-                esGlobal = true;
-                precioTotal = valorImpacto;
-                precioPorItem = valorImpacto / selectedItemsCount;
-                break;
-
-            case 'fijo_mt2':
-                esGlobal = true;
-                // Fijo + (Variable * Metros Cuadrados Totales)
-                const variableMt2 = (valorImpactoSecundario || 0) * totalMt2;
-                precioTotal = valorImpacto + variableMt2;
-                precioPorItem = precioTotal / selectedItemsCount;
-                detalleCalculo = `Fijo: $${valorImpacto} + Var: $${(valorImpactoSecundario || 0)} x ${totalMt2.toFixed(2)}m²`;
-                break;
-
-            case 'fijo_mt_lineal':
-                esGlobal = true;
-                // Fijo + (Variable * Metros Lineales Totales)
-                const variableMtLineal = (valorImpactoSecundario || 0) * totalMtLineal;
-                precioTotal = valorImpacto + variableMtLineal;
-                precioPorItem = precioTotal / selectedItemsCount;
-                detalleCalculo = `Fijo: $${valorImpacto} + Var: $${(valorImpactoSecundario || 0)} x ${totalMtLineal.toFixed(2)}m`;
-                break;
-
-            case 'fijo_porcentual':
-                esGlobal = true;
-                // Fijo + (Variable % del Precio Base Total)
-                const variablePorcentual = (totalPrecioBase * (valorImpactoSecundario || 0) / 100);
-                precioTotal = valorImpacto + variablePorcentual;
-                precioPorItem = precioTotal / selectedItemsCount;
-                detalleCalculo = `Fijo: $${valorImpacto} + Var: ${(valorImpactoSecundario || 0)}% de $${totalPrecioBase}`;
-                break;
-
-            case 'por_mt2':
-                esGlobal = true; // Se calcula sobre el total de mt2
-                precioTotal = valorImpacto * totalMt2;
-                precioPorItem = precioTotal / selectedItemsCount;
-                detalleCalculo = `$${valorImpacto} x ${totalMt2.toFixed(2)}m² (Total)`;
+                total = val1;
+                label = `Precio fijo global: ${formatCurrency(val1)}`;
                 break;
 
             case 'por_unidad':
-                // Multiplica el valor por la cantidad total de items físicos (unidades reales, no filas)
-                // OJO: Si la logica anterior era "valor unitario por fila", debemos decidir.
-                // Asumiremos que "por unidad" en contexto masivo multiplica por la suma de cantidades.
-                precioTotal = valorImpacto * totalCantidadItems;
-                precioPorItem = precioTotal / selectedItemsCount; // Promedio por fila
-                esGlobal = false; // No es global fijo, depende de cantidad
+                total = val1 * metrics.totalItems;
+                label = `${formatCurrency(val1)} x ${metrics.totalItems} unidades`;
+                break;
+
+            case 'por_minuto':
+                total = val1 * customInputValue;
+                label = `${formatCurrency(val1)} x ${customInputValue} min`;
+                break;
+
+            case 'porcentual':
+                total = metrics.totalPrice * (val1 / 100);
+                label = `${val1}% de ${formatCurrency(metrics.totalPrice)}`;
+                break;
+
+            case 'por_mt2':
+                total = val1 * metrics.totalM2;
+                label = `${formatCurrency(val1)} x ${metrics.totalM2.toFixed(2)} m²`;
+                break;
+
+            case 'por_mt_lineal':
+                total = val1 * metrics.totalLinearMeters;
+                label = `${formatCurrency(val1)} x ${metrics.totalLinearMeters.toFixed(2)} ml`;
+                break;
+
+            // Mixtos
+            case 'fijo_porcentual':
+                total = val1 + (metrics.totalPrice * (val2 / 100));
+                label = `Fijo ${formatCurrency(val1)} + ${val2}% de orden`;
+                break;
+
+            case 'fijo_mt2':
+                total = val1 + (val2 * metrics.totalM2);
+                label = `Fijo ${formatCurrency(val1)} + (${formatCurrency(val2)} x m²)`;
+                break;
+
+            case 'fijo_mt_lineal':
+                total = val1 + (val2 * metrics.totalLinearMeters);
+                label = `Fijo ${formatCurrency(val1)} + (${formatCurrency(val2)} x ml)`;
+                break;
+
+            case 'fijo_minuto':
+                total = val1 + (val2 * customInputValue);
+                label = `Fijo ${formatCurrency(val1)} + (${formatCurrency(val2)} x min)`;
                 break;
 
             default:
-                // Casos simples o no soportados (como porcentaje puro base)
-                if (tipoImpacto === 'porcentaje_base') {
-                    return { error: 'Los servicios basados solo en porcentaje base no se calculan directamente en masivo global.' };
-                }
-                // Fallback a lógica similar a 'por_unidad' o alertar
-                precioPorItem = valorImpacto;
-                precioTotal = valorImpacto * selectedItemsCount; // Asume valor unitario por fila
-                break;
+                total = 0;
+                label = 'Tipo de impacto desconocido';
         }
 
-        return {
-            esGlobal,
-            precioTotal,
-            precioPorItem,
-            tipoImpacto,
-            detalleCalculo,
-            stats: { totalMt2, totalMtLineal, totalCantidadItems }
-        };
-    };
+        return { total, tipo, label };
 
-    const precioInfo = getPrecioInfo();
+    }, [selectedServicio, selectedNivel, metrics, customInputValue]);
 
-    const handleConfirmClick = async () => {
-        if (!precioInfo || precioInfo.error) return;
+    const handleSubmit = async () => {
+        if (!selectedServicio) return;
+        if (selectedServicio.tiene_niveles_precio && !selectedNivel) return;
 
         setIsSubmitting(true);
         try {
-            await onConfirm({
+            await onAplicar({
                 servicio: selectedServicio,
                 nivel: selectedNivel,
-                precioTotalCalculado: precioInfo.precioTotal!,
-                precioPorItem: precioInfo.precioPorItem!,
-                esPrecioFijoGlobal: precioInfo.esGlobal ?? false
+                precioTotalCalculado: precioInfo.total
             });
             onClose();
         } catch (error) {
-            console.error('Error al aplicar servicio:', error);
+            console.error('Error aplicando servicio:', error);
         } finally {
             setIsSubmitting(false);
+            setSelectedServicio(null);
+            setSelectedNivel(null);
         }
     };
+
+    const showMinuteInput = ['por_minuto', 'fijo_minuto'].includes(precioInfo.tipo);
 
     return (
         <Modal
             isOpen={isOpen}
             onClose={onClose}
-            title="Aplicar Servicio a Múltiples Items"
-            size="lg"
+            title={`Aplicar Servicio a ${selectedCount} items`}
+            size="xl"
         >
-            <div className="flex flex-col h-[600px]">
-                {/* Header con resumen de selección */}
-                <div className="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-lg flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <Info className="w-5 h-5 text-blue-600" />
-                        <span className="text-sm text-blue-800">
-                            Aplicando a <strong>{selectedItems.length}</strong> items seleccionados.
+            <div className="flex flex-col h-[70vh]">
+                {/* Header con Info de Contexto */}
+                <div className="px-6 py-4 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <Info className="w-4 h-4 text-blue-500" />
+                        <span>
+                            {categoriasContexto.length > 0
+                                ? "Mostrando servicios compatibles con los items seleccionados."
+                                : "Mostrando todos los servicios disponibles globalmente."}
                         </span>
                     </div>
-                    {precioInfo && !precioInfo.error && (
-                        <div className="flex gap-2">
-                            {precioInfo.detalleCalculo && <Badge variant="default">{precioInfo.detalleCalculo}</Badge>}
-                            <Badge variant={precioInfo.esGlobal ? "purple" : "blue"}>
-                                {precioInfo.esGlobal ? "Costo Global" : "Costo por Unidad"}
-                            </Badge>
-                        </div>
+                    {categoriasContexto.length > 0 && (
+                        <Badge variant="default" className="text-xs">
+                            Fitrado por contexto
+                        </Badge>
                     )}
                 </div>
 
                 {/* Buscador */}
-                <div className="relative mb-4">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                    <Input
-                        placeholder="Buscar servicio (ej: Diseño, Laminado...)"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-9"
-                    />
+                <div className="p-4 border-b border-gray-100">
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <Input
+                            placeholder="Buscar servicio..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="pl-9"
+                            autoFocus
+                        />
+                    </div>
                 </div>
 
-                {/* Contenido Principal: Lista o Detalle */}
-                <div className="flex-1 overflow-hidden flex gap-4">
-
-                    {/* Lista de Servicios */}
-                    <div className={`flex-1 overflow-y-auto border rounded-lg ${selectedServicio ? 'hidden md:block md:w-1/2' : 'w-full'}`}>
+                {/* Contenido Principal - Dos Columnas */}
+                <div className="flex-1 overflow-hidden flex">
+                    {/* Columna Izquierda: Lista de Servicios */}
+                    <div className="w-1/2 overflow-y-auto border-r border-gray-100 p-4">
                         {loading ? (
-                            <div className="flex justify-center p-8"><Loader className="animate-spin text-gray-400" /></div>
+                            <div className="flex flex-col items-center justify-center h-40">
+                                <Loader className="w-8 h-8 text-blue-600 animate-spin mb-2" />
+                                <p className="text-sm text-gray-500">Cargando servicios...</p>
+                            </div>
                         ) : servicios.length === 0 ? (
-                            <div className="p-8 text-center text-gray-500">No se encontraron servicios</div>
+                            <div className="flex flex-col items-center justify-center h-40 text-center p-4">
+                                <Search className="w-8 h-8 text-gray-300 mb-2" />
+                                <p className="text-gray-500 font-medium">No se encontraron servicios</p>
+                                <p className="text-sm text-gray-400">Intenta con otros términos de búsqueda</p>
+                            </div>
                         ) : (
-                            <div className="divide-y">
+                            <div className="space-y-2">
                                 {servicios.map((servicio) => (
-                                    <div
+                                    <button
                                         key={servicio.id}
                                         onClick={() => handleSelectServicio(servicio)}
-                                        className={`p-3 cursor-pointer hover:bg-gray-50 transition-colors ${selectedServicio?.id === servicio.id ? 'bg-blue-50 border-l-4 border-blue-500' : ''}`}
+                                        className={`w-full text-left p-3 rounded-lg border transition-all ${selectedServicio?.id === servicio.id
+                                            ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500'
+                                            : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
+                                            }`}
                                     >
-                                        <div className="font-medium text-gray-900">{servicio.nombre}</div>
-                                        <div className="text-xs text-gray-500 mt-1">
-                                            {servicio.estacion?.nombre || 'Sin estación'} •
-                                            {servicio.tiene_niveles_precio ? ' Niveles disponibles' : ' Precio directo'}
+                                        <div className="flex justify-between items-start mb-1">
+                                            <span className={`font-medium ${selectedServicio?.id === servicio.id ? 'text-blue-700' : 'text-gray-900'
+                                                }`}>
+                                                {servicio.nombre}
+                                            </span>
+                                            {servicio.tiene_niveles_precio && (
+                                                <Badge variant="primary" className="text-xs">
+                                                    Opciones
+                                                </Badge>
+                                            )}
                                         </div>
-                                    </div>
+                                        {servicio.estacion && (
+                                            <span className="text-xs text-gray-500 flex items-center gap-1">
+                                                {servicio.estacion.nombre}
+                                            </span>
+                                        )}
+                                    </button>
                                 ))}
                             </div>
                         )}
                     </div>
 
-                    {/* Panel de Configuración del Servicio Seleccionado */}
-                    {selectedServicio && (
-                        <div className="flex-1 border rounded-lg p-4 bg-gray-50 flex flex-col md:w-1/2">
-                            <h3 className="font-semibold text-lg mb-2">{selectedServicio.nombre}</h3>
-
-                            {/* Validación de Estación (Inconsistencia Servicio vs Paso) */}
-                            {(() => {
-                                const pasoVinculado = selectedServicio.tiene_niveles_precio
-                                    ? selectedNivel?.paso
-                                    : selectedServicio.pasos?.[0]?.paso;
-
-                                if (pasoVinculado?.estacion?.id && selectedServicio.estacion?.id && pasoVinculado.estacion.id !== selectedServicio.estacion.id) {
-                                    return (
-                                        <div className="mb-4 bg-red-50 border border-red-200 rounded p-3 text-sm text-red-800 animate-in fade-in slide-in-from-top-2">
-                                            <div className="flex items-start gap-2">
-                                                <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0" />
-                                                <div>
-                                                    <p className="font-bold text-red-700">¡Alerta de Configuración!</p>
-                                                    <p>
-                                                        Servicio declarado en: <strong className="text-gray-800">{selectedServicio.estacion?.nombre}</strong>
-                                                    </p>
-                                                    <p>
-                                                        Pero ejecuta paso en: <strong className="text-red-700">{pasoVinculado.estacion?.nombre}</strong>
-                                                    </p>
-                                                    <p className="mt-1 text-xs text-red-600 opacity-90">
-                                                        Esto causará que la tarea aparezca en la estación incorrecta. Edita el servicio/paso en ABM Core.
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    );
-                                }
-                                return null;
-                            })()}
-
-                            {selectedServicio.tiene_niveles_precio ? (
-                                <div className="mb-4">
-                                    <label className="text-sm font-medium text-gray-700 mb-2 block">Selecciona un Nivel:</label>
-                                    <div className="space-y-2">
-                                        {selectedServicio.niveles_precio?.map((nivel: any) => (
-                                            <div
-                                                key={nivel.id}
-                                                onClick={() => setSelectedNivel(nivel)}
-                                                className={`p-2 border rounded cursor-pointer transition-all ${selectedNivel?.id === nivel.id ? 'bg-white border-blue-500 ring-1 ring-blue-500 shadow-sm' : 'bg-white border-gray-200 hover:border-blue-300'}`}
-                                            >
-                                                <div className="flex justify-between items-center">
-                                                    <span className="font-medium text-sm">{nivel.nombre}</span>
-                                                    <span className="text-sm text-gray-600">${nivel.valor_impacto}</span>
-                                                </div>
-                                                <div className="text-xs text-gray-500 mt-1">
-                                                    {nivel.tipo_impacto === 'precio_fijo' ? 'Precio Fijo Global' : 'Precio por Unidad'}
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
+                    {/* Columna Derecha: Configuración */}
+                    <div className="w-1/2 overflow-y-auto p-4 bg-gray-50/50">
+                        {!selectedServicio ? (
+                            <div className="h-full flex flex-col items-center justify-center text-gray-400 text-center p-8">
+                                <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mb-3">
+                                    <Check className="w-6 h-6 text-gray-300" />
                                 </div>
-                            ) : (
-                                <div className="p-3 bg-white border rounded mb-4">
-                                    <div className="text-sm text-gray-500">Configuración Base</div>
-                                    <div className="flex justify-between items-center mt-1">
-                                        <span className="font-medium text-gray-900">
-                                            {selectedServicio.tipo_impacto === 'precio_fijo' ? 'Precio Fijo' : 'Precio Unitario'}
-                                        </span>
-                                        <span className="font-bold text-lg text-green-600">
-                                            ${selectedServicio.valor_impacto}
-                                        </span>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Resumen de Impacto */}
-                            <div className="mt-auto pt-4 border-t border-gray-200">
-                                {precioInfo && !precioInfo.error ? (
-                                    <div className="space-y-3">
-                                        {precioInfo.esGlobal && (
-                                            <div className="bg-purple-50 text-purple-800 p-2 rounded text-xs flex items-start gap-2">
-                                                <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                                                <span>
-                                                    Al ser un servicio de <strong>cobro global</strong>, el costo total de ${precioInfo.precioTotal?.toFixed(2)} se dividirá equitativamente entre los {selectedItems.length} items.
-                                                </span>
-                                            </div>
+                                <p>Selecciona un servicio de la lista para continuar</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-6">
+                                <div>
+                                    <h3 className="text-lg font-semibold text-gray-900 mb-1">{selectedServicio.nombre}</h3>
+                                    <div className="flex gap-2">
+                                        {selectedServicio.estacion && (
+                                            <Badge variant="default">{selectedServicio.estacion.nombre}</Badge>
                                         )}
+                                        {precioInfo.tipo === 'precio_fijo' && (
+                                            <Badge variant="purple" className="bg-purple-100 text-purple-800 border-purple-200">
+                                                Precio Fijo Global
+                                            </Badge>
+                                        )}
+                                    </div>
+                                </div>
 
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="text-center p-2 bg-white rounded border">
-                                                <div className="text-xs text-gray-500">Costo por Item</div>
-                                                <div className="font-semibold text-gray-900">
-                                                    +${precioInfo.precioPorItem!.toFixed(2)}
-                                                </div>
-                                            </div>
-                                            <div className="text-center p-2 bg-blue-50 rounded border border-blue-100">
-                                                <div className="text-xs text-blue-600 font-medium">Incremento Total</div>
-                                                <div className="font-bold text-blue-700 text-lg">
-                                                    +${precioInfo.precioTotal!.toFixed(2)}
-                                                </div>
-                                            </div>
+                                {/* Niveles de Precio (Si aplica) */}
+                                {selectedServicio.tiene_niveles_precio ? (
+                                    <div className="space-y-3">
+                                        <label className="text-sm font-medium text-gray-700 block">
+                                            Selecciona una opción:
+                                        </label>
+                                        <div className="grid gap-2">
+                                            {selectedServicio.niveles_precio?.map((nivel: any) => (
+                                                <button
+                                                    key={nivel.id}
+                                                    onClick={() => setSelectedNivel(nivel)}
+                                                    className={`flex items-center justify-between p-3 rounded-md border text-sm transition-colors ${selectedNivel?.id === nivel.id
+                                                        ? 'border-blue-500 bg-white ring-1 ring-blue-500'
+                                                        : 'border-gray-200 bg-white hover:border-blue-300'
+                                                        }`}
+                                                >
+                                                    <span className="font-medium text-gray-700">{nivel.nombre}</span>
+                                                    <span className="font-semibold text-green-600">
+                                                        {formatCurrency(nivel.valor_impacto)}
+                                                        {['fijo_mt2', 'fijo_mt_lineal', 'fijo_porcentual', 'fijo_minuto'].includes(nivel.tipo_impacto) && ' + var'}
+                                                    </span>
+                                                </button>
+                                            ))}
                                         </div>
                                     </div>
-                                ) : precioInfo?.error ? (
-                                    <div className="text-red-500 text-sm">{precioInfo.error}</div>
                                 ) : (
-                                    <div className="text-gray-400 text-sm italic text-center">
-                                        Selecciona un nivel o servicio válido para ver el cálculo.
+                                    <div className="bg-white p-4 rounded-lg border border-gray-200">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-gray-600">Costo Base</span>
+                                            <span className="text-xl font-bold text-green-600">
+                                                {formatCurrency(selectedServicio.valor_impacto || 0)}
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Input para Minutos */}
+                                {showMinuteInput && (
+                                    <div className="bg-white p-4 rounded-lg border border-blue-200 shadow-sm">
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Cantidad de Minutos
+                                        </label>
+                                        <div className="flex items-center gap-2">
+                                            <Input
+                                                type="number"
+                                                min="1"
+                                                value={customInputValue}
+                                                onChange={(e) => setCustomInputValue(Number(e.target.value) || 0)}
+                                                className="w-full text-lg"
+                                            />
+                                            <span className="text-gray-500">min</span>
+                                        </div>
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            Se utilizará para calcular el costo total del tiempo.
+                                        </p>
+                                    </div>
+                                )}
+
+                                {/* Resumen de Aplicación */}
+                                {(!selectedServicio.tiene_niveles_precio || selectedNivel) && (
+                                    <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+                                        <h4 className="font-medium text-blue-900 mb-2 flex items-center gap-2">
+                                            <Info className="w-4 h-4" />
+                                            Cálculo:
+                                        </h4>
+                                        <ul className="space-y-1 text-sm text-blue-800">
+                                            <li>• Se aplicará a <strong>{selectedCount} item(s)</strong>.</li>
+                                            <li>• Método: <strong>{precioInfo.label}</strong></li>
+
+                                            <li className="pt-2 border-t border-blue-200 mt-2 font-semibold flex justify-between items-center">
+                                                <span>Total a sumar a la orden:</span>
+                                                <span className="text-lg">{formatCurrency(precioInfo.total)}</span>
+                                            </li>
+                                        </ul>
                                     </div>
                                 )}
                             </div>
-                        </div>
-                    )}
+                        )}
+                    </div>
                 </div>
 
                 {/* Footer */}
-                <div className="mt-4 pt-4 border-t flex justify-end gap-3">
-                    <Button variant="secondary" onClick={onClose} disabled={isSubmitting}>
+                <div className="px-6 py-4 border-t border-gray-100 bg-white flex justify-end gap-2">
+                    <Button variant="outline" onClick={onClose}>
                         Cancelar
                     </Button>
                     <Button
-                        onClick={handleConfirmClick}
-                        disabled={!selectedServicio || (selectedServicio.tiene_niveles_precio && !selectedNivel) || isSubmitting || !!precioInfo?.error}
-                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                        onClick={handleSubmit}
+                        disabled={!selectedServicio || (selectedServicio.tiene_niveles_precio && !selectedNivel) || isSubmitting}
+                        isLoading={isSubmitting}
                     >
-                        {isSubmitting ? (
-                            <>
-                                <Loader className="w-4 h-4 mr-2 animate-spin" />
-                                Aplicando...
-                            </>
-                        ) : (
-                            'Aplicar Servicio'
-                        )}
+                        Aplicar Servicio
                     </Button>
                 </div>
             </div>

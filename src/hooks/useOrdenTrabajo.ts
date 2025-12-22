@@ -26,6 +26,7 @@ export interface OrdenTrabajoServicio {
   precio_unitario: number;
   subtotal: number;
   created_at: string;
+  metadata?: any;
 }
 
 export interface OrdenTrabajoFull extends OrdenTrabajo {
@@ -110,6 +111,7 @@ interface AddServicioData {
   precio_unitario: number;
   subtotal: number;
   servicio_id?: string | null;
+  metadata?: any;
 }
 
 interface CreateOrdenConItemsData {
@@ -737,7 +739,8 @@ export function useOrdenTrabajo() {
           precio_unitario: s.precio_unitario,
           subtotal: s.subtotal,
           servicio_id: s.servicio_id || null,
-          created_by: profile.id
+          created_by: profile.id,
+          metadata: s.metadata || {}
         }));
 
         const { error: insertServError } = await supabase
@@ -1096,15 +1099,37 @@ export function useOrdenTrabajo() {
         // 3.5. Insertar servicios adicionales (si existen)
         let totalServicios = 0;
         if (data.servicios && data.servicios.length > 0) {
-          const serviciosToInsert = data.servicios.map(s => ({
-            orden_id: newOrden.id,
-            descripcion: s.descripcion,
-            cantidad: s.cantidad,
-            precio_unitario: s.precio_unitario,
-            subtotal: s.subtotal,
-            servicio_id: s.servicio_id || null,
-            created_by: profile.id
-          }));
+          // Crear mapa de IDs temporales a reales
+          const tempIdToRealId = new Map<string, string>();
+          data.items.forEach((item, index) => {
+            const tempId = (item as any).id; // El item original del frontend tiene ID temporal
+            if (tempId && insertedItems[index]) {
+              tempIdToRealId.set(tempId, insertedItems[index].id);
+            }
+          });
+
+          const serviciosToInsert = data.servicios.map(s => {
+            // Remapear linked_item_ids si existen
+            let metadata = s.metadata || {};
+            if (metadata.linked_item_ids && Array.isArray(metadata.linked_item_ids)) {
+              const newLinkedIds = metadata.linked_item_ids
+                .map((tempId: string) => tempIdToRealId.get(tempId) || tempId)
+                .filter(Boolean); // Filtrar nulos si falla el map
+
+              metadata = { ...metadata, linked_item_ids: newLinkedIds };
+            }
+
+            return {
+              orden_id: newOrden.id,
+              descripcion: s.descripcion,
+              cantidad: s.cantidad,
+              precio_unitario: s.precio_unitario,
+              subtotal: s.subtotal,
+              servicio_id: s.servicio_id || null,
+              created_by: profile.id,
+              metadata: metadata
+            };
+          });
 
           const { error: servError } = await supabase
             .from('ordenes_trabajo_servicios' as any)

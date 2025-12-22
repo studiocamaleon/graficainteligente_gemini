@@ -1,34 +1,37 @@
-import { useState } from 'react';
 import { Card } from '../../ui/Card';
 import { Button } from '../../ui/Button';
 import { Badge } from '../../ui/Badge';
 import { Plus, Edit2, Trash2, Layers } from 'lucide-react';
-import { AddLineModal } from './AddLineModal';
+import { AddLineForm } from './AddLineForm';
 import { useMeasurementLinesPricing } from '../../../hooks/wizard/useMeasurementLinesPricing';
 import type { ProductConfiguration } from '../../../hooks/wizard/useProductConfiguration';
 import type { ProductCategory } from '../../../hooks/wizard/useUniversalProductSearch';
 import type { MeasurementLine, SelectedConfiguration } from './ConfigurationStep';
-import type { SelectedService, SelectedFinishing } from './ServicesAndFinishingsStep';
+import type { SelectedFinishing } from './ServicesAndFinishingsStep';
+import { formatCurrency } from '../../../utils/stringUtils';
 
 interface MeasurementLinesTableProps {
   config: ProductConfiguration;
   lines: MeasurementLine[];
-  selectedServicios: SelectedService[];
   selectedAcabados: SelectedFinishing[];
   baseConfig: Omit<SelectedConfiguration, 'lineas_medidas'>;
   onChange: (lines: MeasurementLine[]) => void;
+  onOpenSidePanel?: (content: React.ReactNode) => void;
+  onEditSidePanel?: (content: React.ReactNode) => void;
+  onCloseSidePanel?: () => void;
 }
 
 export function MeasurementLinesTable({
   config,
   lines,
-  selectedServicios,
   selectedAcabados,
   baseConfig,
-  onChange
+  onChange,
+  onOpenSidePanel,
+  onEditSidePanel,
+  onCloseSidePanel
 }: MeasurementLinesTableProps) {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingLine, setEditingLine] = useState<MeasurementLine | undefined>(undefined);
+  // Ya no usamos estado local para el modal, se maneja vía Side Panel en el Wizard
 
   // Calcular precios de las líneas automáticamente
   useMeasurementLinesPricing(
@@ -36,7 +39,7 @@ export function MeasurementLinesTable({
     config.categoria as ProductCategory,
     lines,
     baseConfig,
-    selectedServicios,
+    [], // Servicios removidos de este nivel
     selectedAcabados,
     config.tipo_venta_real,
     config.cantidad_minima,  // Pasar cantidad_minima del producto
@@ -45,12 +48,13 @@ export function MeasurementLinesTable({
 
   const handleAddLine = (line: MeasurementLine) => {
     onChange([...lines, line]);
+    onCloseSidePanel?.();
   };
 
   const handleEditLine = (line: MeasurementLine) => {
     const updatedLines = lines.map((l) => (l.id === line.id ? line : l));
     onChange(updatedLines);
-    setEditingLine(undefined);
+    onCloseSidePanel?.();
   };
 
   const handleDeleteLine = (lineId: string) => {
@@ -65,25 +69,31 @@ export function MeasurementLinesTable({
   };
 
   const openAddModal = () => {
-    setEditingLine(undefined);
-    setIsModalOpen(true);
+    if (onOpenSidePanel) {
+      onOpenSidePanel(
+        <AddLineForm
+          config={config}
+          baseConfig={baseConfig}
+          selectedAcabados={selectedAcabados}
+          onSave={handleAddLine}
+          onCancel={() => onCloseSidePanel?.()}
+        />
+      );
+    }
   };
 
   const openEditModal = (line: MeasurementLine) => {
-    setEditingLine(line);
-    setIsModalOpen(true);
-  };
-
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setEditingLine(undefined);
-  };
-
-  const handleSaveLine = (line: MeasurementLine) => {
-    if (editingLine) {
-      handleEditLine(line);
-    } else {
-      handleAddLine(line);
+    if (onEditSidePanel) {
+      onEditSidePanel(
+        <AddLineForm
+          config={config}
+          baseConfig={baseConfig}
+          selectedAcabados={selectedAcabados}
+          existingLine={line}
+          onSave={handleEditLine}
+          onCancel={() => onCloseSidePanel?.()}
+        />
+      );
     }
   };
 
@@ -112,10 +122,12 @@ export function MeasurementLinesTable({
           <Layers className="w-5 h-5 text-blue-600" />
           <h3 className="text-lg font-semibold text-gray-900">Medidas y Cantidades</h3>
         </div>
-        <Button variant="primary" size="sm" onClick={openAddModal}>
-          <Plus className="w-4 h-4 mr-2" />
-          Agregar Línea
-        </Button>
+        {lines.length > 0 && (
+          <Button variant="primary" size="sm" onClick={openAddModal}>
+            <Plus className="w-4 h-4 mr-2" />
+            Agregar Línea
+          </Button>
+        )}
       </div>
 
       {lines.length === 0 ? (
@@ -136,10 +148,8 @@ export function MeasurementLinesTable({
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Medidas</th>
                   {config.tipo_venta_real === 'mt2' && <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">MT2</th>}
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cantidad</th>
-                  {config.servicios.length > 0 && <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Servicios</th>}
                   {config.acabados.length > 0 && <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acabados</th>}
                   {lines.some(l => l.precio_base_unitario) && <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Base</th>}
-                  {lines.some(l => l.precio_servicios_unitario && l.precio_servicios_unitario > 0) && <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">+ Serv.</th>}
                   {lines.some(l => l.precio_acabados_unitario && l.precio_acabados_unitario > 0) && <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">+ Acab.</th>}
                   {lines.some(l => l.precio_unitario_final) && <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Precio Unit.</th>}
                   {lines.some(l => l.precio_total_linea) && <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subtotal</th>}
@@ -156,22 +166,7 @@ export function MeasurementLinesTable({
                       </td>
                     )}
                     <td className="px-4 py-3 whitespace-nowrap">{line.cantidad}</td>
-                    {config.servicios.length > 0 && (
-                      <td className="px-4 py-3">
-                        <div className="flex flex-wrap gap-1">
-                          {!line.servicios || line.servicios.length === 0 ? (
-                            <span className="text-gray-400 text-sm">Ninguno</span>
-                          ) : (
-                            line.servicios.map((servicio) => (
-                              <Badge key={servicio.servicio_id} variant="warning" size="sm">
-                                {servicio.servicio_nombre}
-                                {servicio.nivel_nombre && ` (${servicio.nivel_nombre})`}
-                              </Badge>
-                            ))
-                          )}
-                        </div>
-                      </td>
-                    )}
+
                     {config.acabados.length > 0 && (
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-1">
@@ -191,25 +186,17 @@ export function MeasurementLinesTable({
                     {lines.some(l => l.precio_base_unitario) && (
                       <td className="px-4 py-3 whitespace-nowrap text-gray-700">
                         {line.precio_base_unitario ? (
-                          `$${line.precio_base_unitario.toFixed(2)}`
+                          formatCurrency(line.precio_base_unitario)
                         ) : (
                           <span className="text-gray-400">-</span>
                         )}
                       </td>
                     )}
-                    {lines.some(l => l.precio_servicios_unitario && l.precio_servicios_unitario > 0) && (
-                      <td className="px-4 py-3 whitespace-nowrap text-green-600">
-                        {line.precio_servicios_unitario && line.precio_servicios_unitario > 0 ? (
-                          `+$${line.precio_servicios_unitario.toFixed(2)}`
-                        ) : (
-                          <span className="text-gray-400">-</span>
-                        )}
-                      </td>
-                    )}
+
                     {lines.some(l => l.precio_acabados_unitario && l.precio_acabados_unitario > 0) && (
                       <td className="px-4 py-3 whitespace-nowrap text-green-600">
                         {line.precio_acabados_unitario && line.precio_acabados_unitario > 0 ? (
-                          `+$${line.precio_acabados_unitario.toFixed(2)}`
+                          `+${formatCurrency(line.precio_acabados_unitario)}`
                         ) : (
                           <span className="text-gray-400">-</span>
                         )}
@@ -218,7 +205,7 @@ export function MeasurementLinesTable({
                     {lines.some(l => l.precio_unitario_final) && (
                       <td className="px-4 py-3 whitespace-nowrap font-medium text-gray-900">
                         {line.precio_unitario_final ? (
-                          `$${line.precio_unitario_final.toFixed(2)}`
+                          formatCurrency(line.precio_unitario_final)
                         ) : (
                           <span className="text-gray-400">-</span>
                         )}
@@ -227,7 +214,7 @@ export function MeasurementLinesTable({
                     {lines.some(l => l.precio_total_linea) && (
                       <td className="px-4 py-3 whitespace-nowrap font-semibold text-blue-600">
                         {line.precio_total_linea ? (
-                          `$${line.precio_total_linea.toFixed(2)}`
+                          formatCurrency(line.precio_total_linea)
                         ) : (
                           <span className="text-gray-400">-</span>
                         )}
@@ -285,25 +272,13 @@ export function MeasurementLinesTable({
               {totalPrecio > 0 && (
                 <div className="text-right">
                   <div className="text-sm text-gray-600">Total Precio</div>
-                  <div className="text-xl font-bold text-blue-600">${totalPrecio.toFixed(2)}</div>
+                  <div className="text-xl font-bold text-blue-600">{formatCurrency(totalPrecio)}</div>
                 </div>
               )}
             </div>
           </div>
         </>
       )}
-
-      {/* Modal para agregar/editar línea */}
-      <AddLineModal
-        isOpen={isModalOpen}
-        onClose={closeModal}
-        config={config}
-        baseConfig={baseConfig}
-        selectedServicios={selectedServicios}
-        selectedAcabados={selectedAcabados}
-        existingLine={editingLine}
-        onSave={handleSaveLine}
-      />
     </Card>
   );
 }

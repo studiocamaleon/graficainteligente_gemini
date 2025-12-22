@@ -170,8 +170,8 @@ export function NivelesPrecionEditor({ niveles, onChange, errors = {} }: Niveles
                     onClick={() => handleMoveUp(index)}
                     disabled={index === 0}
                     className={`p-1 rounded transition-colors ${index === 0
-                        ? 'text-gray-300 cursor-not-allowed'
-                        : 'text-gray-600 hover:bg-gray-200'
+                      ? 'text-gray-300 cursor-not-allowed'
+                      : 'text-gray-600 hover:bg-gray-200'
                       }`}
                     title="Mover arriba"
                   >
@@ -182,8 +182,8 @@ export function NivelesPrecionEditor({ niveles, onChange, errors = {} }: Niveles
                     onClick={() => handleMoveDown(index)}
                     disabled={index === niveles.length - 1}
                     className={`p-1 rounded transition-colors ${index === niveles.length - 1
-                        ? 'text-gray-300 cursor-not-allowed'
-                        : 'text-gray-600 hover:bg-gray-200'
+                      ? 'text-gray-300 cursor-not-allowed'
+                      : 'text-gray-600 hover:bg-gray-200'
                       }`}
                     title="Mover abajo"
                   >

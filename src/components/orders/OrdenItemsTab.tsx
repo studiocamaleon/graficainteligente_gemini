@@ -34,6 +34,7 @@ interface OrdenItem {
   precio_total: number | null;
   descuento_individual?: number;
   rutas_generadas?: any[];
+  metadata?: any;
 }
 
 interface OrdenItemsTabProps {
@@ -208,7 +209,10 @@ export function OrdenItemsTab({
       configuracion: {},
       rutas_generadas: [], // IMPORTANTE: Este item NO genera ruta propia, solo cobra. La ruta está en los items físicos.
       es_servicio_cobro: true, // Flag para ocultarlo en vistas de producción
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
+      metadata: {
+        linked_item_ids: Array.from(selectedItemIds)
+      }
     } as any;
 
     setItems([...newItems, servicioItem]);
@@ -424,14 +428,10 @@ export function OrdenItemsTab({
     {
       key: 'cantidad',
       header: 'Cantidad',
-      render: (item: OrdenItem, index: number) => (
-        <Input
-          type="number"
-          min="1"
-          value={item.cantidad}
-          onChange={(e) => handleCantidadChange(index, parseInt(e.target.value) || 1)}
-          className="w-20"
-        />
+      render: (item: OrdenItem) => (
+        <div className="text-center font-bold text-gray-900">
+          {item.cantidad}
+        </div>
       ),
       width: '80px'
     },
@@ -442,18 +442,24 @@ export function OrdenItemsTab({
         <div>
           <div className="flex items-center gap-2 mb-1">
             <div className="font-medium text-gray-900">{item.producto_nombre}</div>
-            {item.tipo_item === 'personalizado' && !item.configuracion?.es_compuesto && (
-              <Badge variant="purple" size="sm">
-                {item.producto_categoria || 'Personalizado'}
-              </Badge>
-            )}
-            {item.configuracion?.es_compuesto && (
+            {/* Clasificación de Categoría y Tipo */}
+            {(item.tipo_item === 'centro_copiado' || item.producto_categoria === 'Centro de Copiado' || item.categoria_id === 'centro_copiado') ? (
               <Badge variant="blue" className="bg-blue-100 text-blue-800" size="sm">
-                {item.producto_categoria || 'Compuesto'}
+                Centro de Copiado
               </Badge>
-            )}
-            {item.tipo_item === 'centro_copiado' && (
-              <Badge variant="default" className="bg-teal-100 text-teal-800" size="sm">Copiado</Badge>
+            ) : (
+              <>
+                {item.tipo_item === 'personalizado' && !item.configuracion?.es_compuesto && (
+                  <Badge variant="purple" size="sm">
+                    {item.producto_categoria || 'Personalizado'}
+                  </Badge>
+                )}
+                {item.configuracion?.es_compuesto && (
+                  <Badge variant="blue" className="bg-blue-100 text-blue-800" size="sm">
+                    {item.producto_categoria || 'Compuesto'}
+                  </Badge>
+                )}
+              </>
             )}
           </div>
           {item.tipo_item === 'personalizado' && !item.configuracion?.es_compuesto && item.descripcion ? (
@@ -868,8 +874,9 @@ export function OrdenItemsTab({
       <AplicarServicioMasivoModal
         isOpen={showMasivoModal}
         onClose={() => setShowMasivoModal(false)}
-        selectedItems={items.filter(i => selectedItemIds.has(i.id || ''))}
-        onConfirm={handleAplicarServicioMasivo}
+        selectedCount={selectedItemIds.size}
+        onAplicar={handleAplicarServicioMasivo}
+        selectedItems={items.filter(item => selectedItemIds.has(item.id || ''))}
       />
     </div >
   );

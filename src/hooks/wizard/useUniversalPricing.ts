@@ -12,6 +12,7 @@ export interface PriceCalculationResult {
   precio_total: number | null;
   tiene_precio: boolean;
   componentes_actualizados?: any[];
+  lineas_actualizadas?: any[];
 }
 
 export function useUniversalPricing() {
@@ -68,68 +69,240 @@ export function useUniversalPricing() {
         };
       }
 
+      // ==========================================================================================
+      // LÓGICA MULTI-LÍNEA (Gran Formato y otros que usen lineas_medidas)
+      // ==========================================================================================
+      const lineas = config.lineas_medidas || [];
+      const tieneLineas = lineas.length > 0;
+      let lineasActualizadas: any[] = [];
+      let consolidatedBasePrice = 0;
+
+      if (tieneLineas) {
+        // 1. Calcular Totales Agregados de las líneas
+        let totalMt2Lines = 0;
+        let totalMlLines = 0;
+        let totalItemsCount = 0;
+
+        // Primero calculamos el precio base de cada línea si no viene pre-calculado
+        // Ojo: En GF el precio base suele venir del componente AddLineForm, pero aquí podríamos recalcularlo si fuera necesario.
+        // Por ahora asumimos que linea.precio_total_linea (base) viene populado o lo tomamos.
+        // Si no, usamos las métricas.
+
+        lineasActualizadas = lineas.map(l => {
+          // Asegurar métricas por línea
+          const lMt2 = l.mt2_calculado || ((l.ancho_seleccionado || 0) / 100) * ((l.metros_lineales || l.alto || 0) / 100) * (l.cantidad || 1);
+          const lMl = (l.metros_lineales || ((l.alto || 0) / 100)) * (l.cantidad || 1);
+
+          totalMt2Lines += lMt2;
+          totalMlLines += lMl;
+          totalItemsCount += (l.cantidad || 1);
+
+          // Precio base de la línea (sin extras globales todavía)
+          // Si el precio base unitario no está set, intentamos usar el precio_total_linea
+          const baseLinePrice = (l.precio_base_unitario || 0) * (l.cantidad || 1);
+          consolidatedBasePrice += baseLinePrice;
+
+          return {
+            ...l,
+            _metrics: { mt2: lMt2, ml: lMl, qty: l.cantidad || 1, baseTotal: baseLinePrice },
+            precio_servicios_extra_total: 0,
+            precio_acabados_extra_total: 0
+          };
+        });
+
+        // Use the aggregated total as the base for global calculations if needed
+        if (precioBase === null) precioBase = consolidatedBasePrice;
+
+      }
+
+      // ==========================================================================================
+      // CÁLCULO ESTÁNDAR (O BASE PARA LÍNEAS)
+      // ==========================================================================================
+
+      // Si no hay líneas, usamos la lógica original para precio base total
       // Para productos con cantidades fijas, el precio base es para toda la cantidad
       // Para productos con cantidades variables, el precio base ya es unitario
       const esCantidadFija = cantidadesFijas && cantidadesFijas.length > 0;
-      const precioBaseTotal = esCantidadFija ? precioBase : precioBase * safeQty;
-      const precioBaseUnitario = esCantidadFija ? precioBase / safeQty : precioBase;
 
-      // Calcular metros cuadrados y lineales si es necesario
-      const mt2 = config.medida_ancho && config.medida_alto
-        ? (config.medida_ancho / 100) * (config.medida_alto / 100)
-        : 0;
-      const metrosLineales = config.medida_alto ? config.medida_alto / 100 : 0;
+      // Si tiene líneas, precioBaseTotal es la suma de todas
+      const precioBaseTotal = tieneLineas
+        ? consolidatedBasePrice
+        : (esCantidadFija ? precioBase : (precioBase || 0) * safeQty);
 
-      // Calcular impacto de servicios según su tipo de impacto
-      // Los impactos se calculan sobre el PRECIO BASE TOTAL y luego se dividen por cantidad
+      const precioBaseUnitario = tieneLineas
+        ? (safeQty > 0 ? consolidatedBasePrice / safeQty : 0) // Promedio si es multi línea? Ojo, safeQty en multi línea es 1 (la orden) o N? Normalmente parentQuantity.
+        : (esCantidadFija ? (precioBase || 0) / safeQty : (precioBase || 0));
+
+      // Métricas globales (si no es multi-linea)
+      const mt2 = tieneLineas
+        ? 0 // Se usa por línea
+        : (config.medida_ancho && config.medida_alto ? (config.medida_ancho / 100) * (config.medida_alto / 100) : 0);
+
+      const metrosLineales = tieneLineas
+        ? 0 // Se usa por línea
+        : (config.medida_alto ? config.medida_alto / 100 : 0);
+
+
+      // ==========================================================================================
+      // CÁLCULO DE SERVICIOS Y ACABADOS (GLOBALES)
+      // ==========================================================================================
+
       let precioServiciosTotal = 0;
-      for (const servicio of servicios) {
-        console.log('🔍 Calculando servicio:', {
-          nombre: servicio.servicio_nombre,
-          tipo_impacto: servicio.tipo_impacto,
-          valor_monto: servicio.valor_monto,
-          valor_porcentaje: servicio.valor_porcentaje,
-          precioBaseTotal,
-          precioBaseUnitario,
-          mt2,
-          metrosLineales,
-          cantidad: config.cantidad
-        });
-
-        const impacto = calcularImpacto(
-          servicio.tipo_impacto,
-          servicio.valor_monto,
-          servicio.valor_porcentaje,
-          precioBaseTotal,
-          mt2,
-          metrosLineales,
-          safeQty,
-          servicio.cantidad // Cantidad específica del servicio (ej. minutos)
-        );
-
-        console.log('💰 Impacto total calculado:', impacto, '| Unitario:', impacto / safeQty);
-        precioServiciosTotal += (impacto || 0);
-      }
-
-      // Calcular impacto de acabados según su tipo de impacto
       let precioAcabadosTotal = 0;
-      for (const acabado of acabados) {
-        const impacto = calcularImpacto(
-          acabado.tipo_impacto,
-          acabado.valor_monto,
-          acabado.valor_porcentaje,
-          precioBaseTotal,
-          mt2,
-          metrosLineales,
-          safeQty,
-          acabado.cantidad // Cantidad específica del acabado
-        );
-        precioAcabadosTotal += (impacto || 0);
+
+      // Helper para distribuir costos a líneas
+      const distribuirAlineas = (tipo: 'servicio' | 'acabado', item: any, costoTotalCalculado: number) => {
+        if (!tieneLineas) return;
+
+        lineasActualizadas = lineasActualizadas.map(linea => {
+          let impactoLinea = 0;
+          const { mt2, ml, qty, baseTotal } = linea._metrics;
+
+          // Lógica de distribución según tipo de impacto
+          switch (item.tipo_impacto) {
+            // 1. Porcentuales: Se aplican al precio base de LA LÍNEA
+            case 'porcentual':
+              impactoLinea = (item.valor_porcentaje * baseTotal) / 100;
+              break;
+
+            // 2. Por métrica (mt2 / ml): Se aplican a las métricas DE LA LÍNEA
+            case 'por_mt2':
+              impactoLinea = (item.valor_monto || 0) * mt2;
+              break;
+            case 'por_metro_lineal':
+              impactoLinea = (item.valor_monto || 0) * ml;
+              break;
+
+            // 3. Fijos: Se prorratean entre todas las líneas (o por cantidad de items)
+            // Opción A: Prorrateo equitativo por línea física (1/N) -> Puede ser injusto si una linea es de 100 unidades y otra de 1.
+            // Opción B: Prorrateo por cantidad de items (qty/TotalQty).
+            // El usuario dijo: "Fijo debe distribuirse o prorratearse en todos los items"
+            // Vamos a prorratear por peso en precio base o cantidad? Normalmente fijo es por "Set up", se divide.
+            case 'precio_fijo':
+              // Prorrateo simple por número de líneas activas
+              impactoLinea = costoTotalCalculado / lineasActualizadas.length;
+              break;
+
+            // 4. Mixtos (Fijo + Variable)
+            case 'fijo_metro_cuadrado':
+              // Fijo (prorrateado) + Variable (métrica linea)
+              const fijoPart4 = (item.valor_monto || 0) / lineasActualizadas.length;
+              const varPart4 = (item.valor_porcentaje || 0) * mt2;
+              impactoLinea = fijoPart4 + varPart4;
+              break;
+
+            case 'fijo_porcentual':
+              const fijoPart5 = (item.valor_monto || 0) / lineasActualizadas.length;
+              const varPart5 = (item.valor_porcentaje * baseTotal) / 100; // Porcentaje de ESA línea
+              impactoLinea = fijoPart5 + varPart5;
+              break;
+
+            default:
+              // Fallback: Proporcional al precio base
+              if (consolidatedBasePrice > 0) {
+                impactoLinea = costoTotalCalculado * (baseTotal / consolidatedBasePrice);
+              } else {
+                impactoLinea = costoTotalCalculado / lineasActualizadas.length;
+              }
+          }
+
+          // Acumular en la línea
+          if (tipo === 'servicio') {
+            linea.precio_servicios_extra_total += impactoLinea;
+          } else {
+            linea.precio_acabados_extra_total += impactoLinea;
+          }
+
+          return linea;
+        });
+      };
+
+
+      // --- Procesar Servicios ---
+      for (const servicio of servicios) {
+        let impacto = 0;
+        if (tieneLineas) {
+          // Calcular impacto "Virtual" global para distribuir o calcular directo
+          // Nota: Para porcentuales en multi-linea, el "Total" es la suma de los porcentuales individuales.
+          // Para simplificar, calculamos y distribuimos dentro de la función auxiliar.
+          distribuirAlineas('servicio', servicio, servicio.valor_monto || 0); // Pasamos valor fijo 'raw' para distribución
+        } else {
+          impacto = calcularImpacto(
+            servicio.tipo_impacto,
+            servicio.valor_monto,
+            servicio.valor_porcentaje,
+            precioBaseTotal,
+            mt2,
+            metrosLineales,
+            safeQty,
+            servicio.cantidad
+          );
+        }
+        precioServiciosTotal += impacto;
       }
 
-      // Convertir a precios unitarios
-      const precioServiciosUnitario = precioServiciosTotal / safeQty;
-      const precioAcabadosUnitario = precioAcabadosTotal / safeQty;
+      // Si es multi-linea, recalcular el total de servicios sumando lo de las líneas
+      if (tieneLineas) {
+        precioServiciosTotal = lineasActualizadas.reduce((acc, l) => acc + l.precio_servicios_extra_total, 0);
+      }
+
+
+      // --- Procesar Acabados ---
+      for (const acabado of acabados) {
+        let impacto = 0;
+        if (tieneLineas) {
+          distribuirAlineas('acabado', acabado, acabado.valor_monto || 0);
+        } else {
+          impacto = calcularImpacto(
+            acabado.tipo_impacto,
+            acabado.valor_monto,
+            acabado.valor_porcentaje,
+            precioBaseTotal,
+            mt2,
+            metrosLineales,
+            safeQty,
+            acabado.cantidad
+          );
+        }
+        precioAcabadosTotal += impacto;
+      }
+
+      // Si es multi-linea, recalcular el total de acabados sumando lo de las líneas
+      if (tieneLineas) {
+        precioAcabadosTotal = lineasActualizadas.reduce((acc, l) => acc + l.precio_acabados_extra_total, 0);
+
+        // FINALIZAR LÍNEAS ACTUALIZADAS
+        // Actualizar los unitarios finales de cada línea para que el wizard los guarde bien
+        lineasActualizadas = lineasActualizadas.map(l => {
+          const base = l.precio_base_unitario || 0; // Ya viene unitario del form
+          const servExtrasUnit = l.precio_servicios_extra_total / (l.cantidad || 1);
+          const acabExtrasUnit = l.precio_acabados_extra_total / (l.cantidad || 1);
+
+          // Sumar a lo que ya traía la línea (si traía servicios propios)
+          const servTotalUnit = (l.precio_servicios_unitario || 0) + servExtrasUnit;
+          const acabTotalUnit = (l.precio_acabados_unitario || 0) + acabExtrasUnit;
+
+          const finalUnit = base + servTotalUnit + acabTotalUnit;
+
+          return {
+            ...l,
+            precio_servicios_unitario: servTotalUnit,
+            precio_acabados_unitario: acabTotalUnit,
+            precio_unitario_final: finalUnit,
+            precio_total_linea: finalUnit * (l.cantidad || 1),
+            // Limpiar props temporales
+            _metrics: undefined,
+            precio_servicios_extra_total: undefined,
+            precio_acabados_extra_total: undefined
+          };
+        });
+      }
+
+
+      // Convertir a precios unitarios globales (promedio ponderado o simple división)
+      const divider = safeQty;
+      const precioServiciosUnitario = divider > 0 ? precioServiciosTotal / divider : 0;
+      const precioAcabadosUnitario = divider > 0 ? precioAcabadosTotal / divider : 0;
       const precioTotalUnitario = precioBaseUnitario + precioServiciosUnitario + precioAcabadosUnitario;
 
       console.log('📊 Resultado final:', {
@@ -147,7 +320,8 @@ export function useUniversalPricing() {
         precio_acabados: precioAcabadosUnitario,
         precio_total: precioTotalUnitario,
         tiene_precio: true,
-        componentes_actualizados: componentesActualizados
+        componentes_actualizados: componentesActualizados,
+        lineas_actualizadas: tieneLineas ? lineasActualizadas : undefined
       };
     } catch (err) {
       console.error('Error calculando precio:', err);
@@ -251,11 +425,13 @@ async function getPrecioGranFormato(
   }
 
   // Para gran formato, buscar en rangos de precio
-  const { data, error } = await (supabase as any)
+  const { data: rawData, error } = await (supabase as any)
     .from('productos_gran_formato_precios')
     .select('precio, rango_precio_min, rango_precio_max')
     .eq('producto_gran_formato_id', productId)
     .eq('tinta', config.tinta);
+
+  const data = (rawData as any[]) || [];
 
   if (error) {
     console.error('Error buscando precio gran formato:', error);
@@ -284,17 +460,27 @@ async function getPrecioMaterialesRigidos(
   config: SelectedConfiguration
 ): Promise<number | null> {
   if (!config.material_id || !config.espesor) {
+    console.warn('⚠️ Missing config for MR:', config);
     return null;
   }
 
-  const { data, error } = await supabase
+  console.log('🔍 MR Pricing Query params:', {
+    producto_materiales_rigidos_id: productId,
+    material_id: config.material_id,
+    variante_nombre: config.variante_nombre,
+    espesor: config.espesor
+  });
+
+  const { data: rawData, error } = await supabase
     .from('productos_materiales_rigidos_precios')
     .select('precio_mt2')
     .eq('producto_materiales_rigidos_id', productId)
     .eq('material_id', config.material_id)
     .eq('variante_nombre', config.variante_nombre)
     .eq('espesor', config.espesor)
-    .single();
+    .maybeSingle();
+
+  const data = (rawData as any);
 
   if (error) {
     console.error('Error buscando precio materiales rígidos:', error);
@@ -321,11 +507,13 @@ async function getPrecioPlotterCorte(
     return null;
   }
 
-  const { data, error } = await supabase
+  const { data: rawData, error } = await supabase
     .from('productos_plotter_corte_precios')
     .select('precio, cantidad_desde, cantidad_hasta')
     .eq('producto_id', productId)
     .eq('ancho', config.medida_ancho);
+
+  const data = (rawData as any[]) || [];
 
   if (error) {
     console.error('Error buscando precio plotter corte:', error);
