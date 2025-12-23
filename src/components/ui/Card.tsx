@@ -1,34 +1,75 @@
-import { ReactNode, HTMLAttributes } from 'react';
-import { motion } from 'framer-motion';
+import * as React from "react"
+import { cn } from "../../lib/utils"
 
-interface CardProps extends HTMLAttributes<HTMLDivElement> {
-  children: ReactNode;
-  hover?: boolean;
-  padding?: 'none' | 'sm' | 'md' | 'lg';
-  allowOverflow?: boolean;
-}
+const Card = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn(
+      "rounded-xl border bg-card text-card-foreground shadow",
+      className
+    )}
+    {...props}
+  />
+))
+Card.displayName = "Card"
 
-const paddingStyles = {
-  none: '',
-  sm: 'p-4',
-  md: 'p-6',
-  lg: 'p-8',
-};
+const CardHeader = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn("flex flex-col space-y-1.5 p-6", className)}
+    {...props}
+  />
+))
+CardHeader.displayName = "CardHeader"
 
-export function Card({ children, hover = false, padding = 'md', allowOverflow = false, className = '', ...props }: CardProps) {
-  const baseStyles = 'bg-white rounded-xl border border-gray-200 shadow-sm';
-  const hoverStyles = hover ? 'hover:shadow-lg hover:border-gray-300 cursor-pointer' : '';
-  const overflowStyles = allowOverflow ? 'overflow-visible' : '';
+const CardTitle = React.forwardRef<
+  HTMLParagraphElement,
+  React.HTMLAttributes<HTMLHeadingElement>
+>(({ className, ...props }, ref) => (
+  <h3
+    ref={ref}
+    className={cn("font-semibold leading-none tracking-tight", className)}
+    {...props}
+  />
+))
+CardTitle.displayName = "CardTitle"
 
-  return (
-    <motion.div
-      initial={hover ? { y: 0 } : undefined}
-      whileHover={hover ? { y: -4 } : undefined}
-      transition={{ duration: 0.2 }}
-      className={`${baseStyles} ${hoverStyles} ${overflowStyles} ${paddingStyles[padding]} transition-all duration-200 ${className}`}
-      {...props}
-    >
-      {children}
-    </motion.div>
-  );
-}
+const CardDescription = React.forwardRef<
+  HTMLParagraphElement,
+  React.HTMLAttributes<HTMLParagraphElement>
+>(({ className, ...props }, ref) => (
+  <p
+    ref={ref}
+    className={cn("text-sm text-muted-foreground", className)}
+    {...props}
+  />
+))
+CardDescription.displayName = "CardDescription"
+
+const CardContent = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div ref={ref} className={cn("p-6 pt-0", className)} {...props} />
+))
+CardContent.displayName = "CardContent"
+
+const CardFooter = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn("flex items-center p-6 pt-0", className)}
+    {...props}
+  />
+))
+CardFooter.displayName = "CardFooter"
+
+export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent }

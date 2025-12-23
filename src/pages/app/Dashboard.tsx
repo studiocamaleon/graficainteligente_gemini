@@ -6,6 +6,7 @@ import { DashboardStatCard } from '../../components/dashboard/DashboardStatCard'
 import { TasaCumplimientoCard } from '../../components/dashboard/TasaCumplimientoCard';
 import { ProximasEntregasTable } from '../../components/dashboard/ProximasEntregasTable';
 import { ActividadRecienteList } from '../../components/dashboard/ActividadRecienteList';
+import { OrdenesPorDiaChart } from '../../components/dashboard/OrdenesPorDiaChart';
 import { Button } from '../../components/ui/Button';
 
 import { WelcomeIntro } from '../../components/dashboard/WelcomeIntro';
@@ -13,7 +14,7 @@ import { WelcomeIntro } from '../../components/dashboard/WelcomeIntro';
 export function Dashboard() {
   const navigate = useNavigate();
   usePageHeader('Centro de Control');
-  const { loading, stats, tasaCumplimiento, proximasEntregas, actividadReciente, refresh } = useDashboardData();
+  const { loading, stats, tasaCumplimiento, proximasEntregas, actividadReciente, ordenesPorDia, refresh } = useDashboardData();
 
   const getTasaColor = () => {
     if (!tasaCumplimiento) return 'text-gray-600';
@@ -36,7 +37,7 @@ export function Dashboard() {
       <WelcomeIntro stats={stats} loading={loading} />
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-muted-foreground">
             {new Date().toLocaleDateString('es-ES', {
               weekday: 'long',
               year: 'numeric',
@@ -101,14 +102,15 @@ export function Dashboard() {
         />
       </div>
 
-      <TasaCumplimientoCard data={tasaCumplimiento} loading={loading} />
+      <div className="grid lg:grid-cols-7 gap-6">
+        <div className="lg:col-span-4 space-y-6">
+          <OrdenesPorDiaChart data={ordenesPorDia} />
+          <ProximasEntregasTable entregas={proximasEntregas} loading={loading} />
+        </div>
 
-      <ProximasEntregasTable entregas={proximasEntregas} loading={loading} />
-
-      <div className="grid lg:grid-cols-2 gap-6">
-        <ActividadRecienteList actividades={actividadReciente} loading={loading} />
-
-        <div className="hidden lg:block">
+        <div className="lg:col-span-3 space-y-6">
+          <TasaCumplimientoCard data={tasaCumplimiento} loading={loading} />
+          <ActividadRecienteList actividades={actividadReciente} loading={loading} />
         </div>
       </div>
     </div>

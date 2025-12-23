@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { LucideIcon } from 'lucide-react';
-import { Card } from '../ui/Card';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 
 interface DashboardStatCardProps {
   label: string;
@@ -23,14 +23,18 @@ export function DashboardStatCard({
 }: DashboardStatCardProps) {
   if (loading) {
     return (
-      <Card hover padding="md">
-        <div className="flex items-center justify-between">
-          <div className="flex-1">
-            <div className="h-4 bg-gray-200 rounded w-24 mb-2 animate-pulse"></div>
-            <div className="h-8 bg-gray-200 rounded w-16 animate-pulse"></div>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">
+            <div className="h-4 bg-gray-200 rounded w-24 animate-pulse"></div>
+          </CardTitle>
+          <div className={`w-8 h-8 rounded-lg bg-gray-200 animate-pulse`}></div>
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">
+            <div className="h-8 bg-gray-200 rounded w-16 animate-pulse mt-2"></div>
           </div>
-          <div className={`w-12 h-12 rounded-xl ${bgColor} animate-pulse`}></div>
-        </div>
+        </CardContent>
       </Card>
     );
   }
@@ -41,19 +45,21 @@ export function DashboardStatCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
-      <Card hover padding="md">
-        <div className="flex items-center justify-between">
-          <div className="flex-1">
-            <p className="text-sm text-gray-600 mb-1">{label}</p>
-            <p className="text-3xl font-bold text-gray-900">{value}</p>
-            {subtitle && (
-              <p className="text-xs text-gray-500 mt-1">{subtitle}</p>
-            )}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium text-muted-foreground">
+            {label}
+          </CardTitle>
+          <div className={`p-2 rounded-xl ${bgColor}`}>
+            <Icon className={`w-4 h-4 ${color}`} />
           </div>
-          <div className={`w-12 h-12 rounded-xl ${bgColor} flex items-center justify-center`}>
-            <Icon className={`w-6 h-6 ${color}`} />
-          </div>
-        </div>
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{value}</div>
+          {subtitle && (
+            <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
+          )}
+        </CardContent>
       </Card>
     </motion.div>
   );

@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { TrendingUp, TrendingDown, AlertCircle, CheckCircle } from 'lucide-react';
-import { Card } from '../ui/Card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
 import { TasaCumplimiento } from '../../types/database';
 
 interface TasaCumplimientoCardProps {
@@ -11,26 +11,38 @@ interface TasaCumplimientoCardProps {
 export function TasaCumplimientoCard({ data, loading }: TasaCumplimientoCardProps) {
   if (loading) {
     return (
-      <Card padding="lg">
-        <div className="animate-pulse">
-          <div className="h-6 bg-gray-200 rounded w-48 mb-4"></div>
-          <div className="h-20 bg-gray-200 rounded w-full"></div>
-        </div>
+      <Card className="col-span-1 lg:col-span-3">
+        <CardHeader>
+          <div className="h-6 bg-gray-200 rounded w-48 mb-1 animate-pulse"></div>
+          <div className="h-4 bg-gray-200 rounded w-full animate-pulse"></div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="h-20 bg-gray-200 rounded w-full animate-pulse"></div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 border-t border-gray-100 pt-4">
+              <div className="h-10 bg-gray-200 rounded animate-pulse"></div>
+              <div className="h-10 bg-gray-200 rounded animate-pulse"></div>
+              <div className="h-10 bg-gray-200 rounded animate-pulse"></div>
+            </div>
+          </div>
+        </CardContent>
       </Card>
     );
   }
 
   if (!data || data.total_ordenes_evaluadas === 0) {
     return (
-      <Card padding="lg">
-        <div className="flex items-center gap-3 mb-3">
-          <AlertCircle className="w-6 h-6 text-gray-400" />
-          <h3 className="text-lg font-bold text-gray-900">Tasa de Cumplimiento</h3>
-        </div>
-        <div className="text-center py-8">
-          <p className="text-gray-500">No hay suficientes datos para calcular la tasa de cumplimiento</p>
-          <p className="text-sm text-gray-400 mt-2">Se necesitan órdenes completadas con fecha estimada de entrega</p>
-        </div>
+      <Card className="col-span-1 lg:col-span-3">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-5 h-5 text-gray-400" />
+            <CardTitle>Tasa de Cumplimiento</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent className="text-center py-8">
+          <p className="text-muted-foreground">No hay suficientes datos para calcular la tasa de cumplimiento</p>
+          <p className="text-xs text-muted-foreground mt-2">Se necesitan órdenes completadas con fecha estimada de entrega</p>
+        </CardContent>
       </Card>
     );
   }
@@ -38,7 +50,6 @@ export function TasaCumplimientoCard({ data, loading }: TasaCumplimientoCardProp
   const tasa = Number(data.tasa_cumplimiento);
   const meta = 95;
 
-  let bgColor = 'bg-red-50';
   let borderColor = 'border-red-200';
   let textColor = 'text-red-700';
   let accentColor = 'text-red-600';
@@ -46,14 +57,12 @@ export function TasaCumplimientoCard({ data, loading }: TasaCumplimientoCardProp
   let mensaje = 'Necesitamos mejorar';
 
   if (tasa >= meta) {
-    bgColor = 'bg-green-50';
     borderColor = 'border-green-200';
     textColor = 'text-green-700';
     accentColor = 'text-green-600';
     Icon = CheckCircle;
     mensaje = 'Meta alcanzada';
   } else if (tasa >= 85) {
-    bgColor = 'bg-yellow-50';
     borderColor = 'border-yellow-200';
     textColor = 'text-yellow-700';
     accentColor = 'text-yellow-600';
@@ -66,62 +75,67 @@ export function TasaCumplimientoCard({ data, loading }: TasaCumplimientoCardProp
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
+      className="col-span-1 lg:col-span-3"
     >
-      <Card padding="lg" className={`${bgColor} border-2 ${borderColor}`}>
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <Icon className={`w-6 h-6 ${accentColor}`} />
-            <h3 className="text-lg font-bold text-gray-900">Tasa de Cumplimiento</h3>
+      <Card className={`border-l-4 ${borderColor}`}>
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Icon className={`w-5 h-5 ${accentColor}`} />
+              <CardTitle>Tasa de Cumplimiento</CardTitle>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-muted-foreground">Meta</p>
+              <p className={`text-xs font-semibold ${textColor}`}>{meta}%</p>
+            </div>
           </div>
-          <div className="text-right">
-            <p className="text-sm text-gray-600">Meta</p>
-            <p className={`text-sm font-semibold ${textColor}`}>{meta}%</p>
-          </div>
-        </div>
+        </CardHeader>
 
-        <div className="flex items-end justify-between mb-4">
-          <div>
-            <p className={`text-6xl font-bold ${textColor}`}>{tasa.toFixed(1)}%</p>
-            <p className={`text-lg font-medium ${textColor} mt-1`}>{mensaje}</p>
-          </div>
-          <div className="text-right">
-            <div className="space-y-1">
-              <div className="flex items-center justify-end gap-2">
-                <span className="text-sm text-gray-600">A tiempo:</span>
-                <span className="text-lg font-bold text-green-700">{data.ordenes_a_tiempo}</span>
-              </div>
-              <div className="flex items-center justify-end gap-2">
-                <span className="text-sm text-gray-600">Retrasadas:</span>
-                <span className="text-lg font-bold text-red-700">{data.ordenes_retrasadas}</span>
+        <CardContent>
+          <div className="flex items-end justify-between mb-6">
+            <div>
+              <p className={`text-4xl font-bold ${textColor}`}>{tasa.toFixed(1)}%</p>
+              <p className={`text-sm font-medium ${textColor} mt-1`}>{mensaje}</p>
+            </div>
+            <div className="text-right">
+              <div className="space-y-1">
+                <div className="flex items-center justify-end gap-2">
+                  <span className="text-sm text-muted-foreground">A tiempo:</span>
+                  <span className="text-lg font-bold text-green-700">{data.ordenes_a_tiempo}</span>
+                </div>
+                <div className="flex items-center justify-end gap-2">
+                  <span className="text-sm text-muted-foreground">Retrasadas:</span>
+                  <span className="text-lg font-bold text-red-700">{data.ordenes_retrasadas}</span>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-gray-300">
-          <div>
-            <p className="text-xs text-gray-600 mb-1">Total Evaluadas</p>
-            <p className="text-xl font-bold text-gray-900">{data.total_ordenes_evaluadas}</p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-border">
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Total Evaluadas</p>
+              <p className="text-lg font-bold text-foreground">{data.total_ordenes_evaluadas}</p>
+            </div>
+            {Number(data.promedio_dias_adelanto) > 0 && (
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Promedio Adelanto</p>
+                <p className="text-lg font-bold text-green-700">{Number(data.promedio_dias_adelanto).toFixed(1)} días</p>
+              </div>
+            )}
+            {Number(data.promedio_dias_retraso) > 0 && (
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Promedio Retraso</p>
+                <p className="text-lg font-bold text-red-700">{Number(data.promedio_dias_retraso).toFixed(1)} días</p>
+              </div>
+            )}
+            {data.ordenes_sin_fecha_estimada > 0 && (
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Sin Fecha Estimada</p>
+                <p className="text-lg font-bold text-muted-foreground">{data.ordenes_sin_fecha_estimada}</p>
+              </div>
+            )}
           </div>
-          {Number(data.promedio_dias_adelanto) > 0 && (
-            <div>
-              <p className="text-xs text-gray-600 mb-1">Promedio Adelanto</p>
-              <p className="text-xl font-bold text-green-700">{Number(data.promedio_dias_adelanto).toFixed(1)} días</p>
-            </div>
-          )}
-          {Number(data.promedio_dias_retraso) > 0 && (
-            <div>
-              <p className="text-xs text-gray-600 mb-1">Promedio Retraso</p>
-              <p className="text-xl font-bold text-red-700">{Number(data.promedio_dias_retraso).toFixed(1)} días</p>
-            </div>
-          )}
-          {data.ordenes_sin_fecha_estimada > 0 && (
-            <div>
-              <p className="text-xs text-gray-600 mb-1">Sin Fecha Estimada</p>
-              <p className="text-xl font-bold text-gray-600">{data.ordenes_sin_fecha_estimada}</p>
-            </div>
-          )}
-        </div>
+        </CardContent>
       </Card>
     </motion.div>
   );

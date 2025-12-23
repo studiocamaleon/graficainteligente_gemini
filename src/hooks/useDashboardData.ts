@@ -14,6 +14,7 @@ export function useDashboardData() {
     ordenesEnProceso: 0,
     entregasHoy: 0,
   });
+  const [ordenesPorDia, setOrdenesPorDia] = useState<{ fecha: string; date: string; creadas: number; finalizadas: number }[]>([]);
   const [tasaCumplimiento, setTasaCumplimiento] = useState<TasaCumplimiento | null>(null);
   const [proximasEntregas, setProximasEntregas] = useState<ProximaEntrega[]>([]);
   const [actividadReciente, setActividadReciente] = useState<ActividadReciente[]>([]);
@@ -91,10 +92,76 @@ export function useDashboardData() {
     }
   }, [companyId]);
 
+  const loadOrdenesPorDia = useCallback(async () => {
+    if (!companyId) return;
+
+    try {
+      const hoy = new Date();
+      const hace7Dias = new Date();
+      hace7Dias.setDate(hoy.getDate() - 7);
+
+      const { data: creadasData, error: errorCreadas } = await supabase
+        .from('ordenes_trabajo')
+        .select('created_at')
+        .eq('company_id', companyId)
+        .gte('created_at', hace7Dias.toISOString())
+        .order('created_at', { ascending: true });
+
+      if (errorCreadas) throw errorCreadas;
+
+      const { data: finalizadasData, error: errorFinalizadas } = await supabase
+        .from('ordenes_trabajo')
+        .select('fecha_completado')
+        .eq('company_id', companyId)
+        .gte('fecha_completado', hace7Dias.toISOString())
+        .not('fecha_completado', 'is', null)
+        .order('fecha_completado', { ascending: true });
+
+      if (errorFinalizadas) throw errorFinalizadas;
+
+      // Estructura para agrupar
+      const agrupados: Record<string, { creadas: number; finalizadas: number }> = {};
+
+      // Inicializar últimos 7 días con 0
+      for (let i = 0; i <= 7; i++) {
+        const d = new Date(hace7Dias);
+        d.setDate(d.getDate() + i);
+        const fechaStr = d.toISOString().split('T')[0];
+        agrupados[fechaStr] = { creadas: 0, finalizadas: 0 };
+      }
+
+      (creadasData as any[])?.forEach((orden) => {
+        const fechaStr = new Date(orden.created_at).toISOString().split('T')[0];
+        if (agrupados[fechaStr]) {
+          agrupados[fechaStr].creadas++;
+        }
+      });
+
+      (finalizadasData as any[])?.forEach((orden) => {
+        const fechaStr = new Date(orden.fecha_completado).toISOString().split('T')[0];
+        if (agrupados[fechaStr]) {
+          agrupados[fechaStr].finalizadas++;
+        }
+      });
+
+      const chartData = Object.entries(agrupados).map(([fecha, datos]) => ({
+        fecha,
+        date: new Date(fecha).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }),
+        creadas: datos.creadas,
+        finalizadas: datos.finalizadas,
+      })).sort((a, b) => a.fecha.localeCompare(b.fecha));
+
+      setOrdenesPorDia(chartData);
+    } catch (err) {
+      console.error('Error loading ordenes por dia:', err);
+    }
+  }, [companyId]);
+
   const loadTasaCumplimiento = useCallback(async () => {
     if (!companyId) return;
 
     try {
+      // @ts-ignore - Supabase RPC types might be mismatched
       const { data, error } = await supabase.rpc('fn_tasa_cumplimiento', {
         p_company_id: companyId,
         p_fecha_desde: null,
@@ -106,8 +173,8 @@ export function useDashboardData() {
         return;
       }
 
-      if (data && data.length > 0) {
-        setTasaCumplimiento(data[0]);
+      if (data && (data as any[]).length > 0) {
+        setTasaCumplimiento((data as any[])[0]);
       }
     } catch (err) {
       console.error('Error loading tasa cumplimiento:', err);
@@ -151,11 +218,11 @@ export function useDashboardData() {
       }
 
       const entregas: ProximaEntrega[] = (data || []).map((orden: any) => {
-        const totalPasos = orden.ordenes_trabajo_items?.reduce((acc: number, item: any) => {
+        const totalPasos = (orden.ordenes_trabajo_items as any[])?.reduce((acc: number, item: any) => {
           return acc + (item.ordenes_trabajo_items_rutas?.length || 0);
         }, 0) || 0;
 
-        const pasosCompletados = orden.ordenes_trabajo_items?.reduce((acc: number, item: any) => {
+        const pasosCompletados = (orden.ordenes_trabajo_items as any[])?.reduce((acc: number, item: any) => {
           return acc + (item.ordenes_trabajo_items_rutas?.filter((r: any) => r.estado_paso === 'completado').length || 0);
         }, 0) || 0;
 
@@ -360,6 +427,7 @@ export function useDashboardData() {
         loadTasaCumplimiento(),
         loadProximasEntregas(),
         loadActividadReciente(),
+        loadOrdenesPorDia(),
       ]);
     } catch (err) {
       console.error('Error loading dashboard data:', err);
@@ -367,7 +435,7 @@ export function useDashboardData() {
     } finally {
       setLoading(false);
     }
-  }, [companyId, loadStats, loadTasaCumplimiento, loadProximasEntregas, loadActividadReciente]);
+  }, [companyId, loadStats, loadTasaCumplimiento, loadProximasEntregas, loadActividadReciente, loadOrdenesPorDia]);
 
   useEffect(() => {
     loadAllData();
@@ -390,6 +458,7 @@ export function useDashboardData() {
     tasaCumplimiento,
     proximasEntregas,
     actividadReciente,
+    ordenesPorDia,
     refresh,
   };
 }

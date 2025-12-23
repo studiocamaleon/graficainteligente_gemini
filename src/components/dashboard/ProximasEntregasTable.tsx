@@ -1,7 +1,15 @@
 import { motion } from 'framer-motion';
 import { Calendar, AlertCircle, Clock, Package } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { Card } from '../ui/Card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from '../ui/shadcn-table';
 import { Badge } from '../ui/Badge';
 import { ProximaEntrega, UrgenciaConfig } from '../../types/dashboard';
 
@@ -42,144 +50,109 @@ export function ProximasEntregasTable({ entregas, loading }: ProximasEntregasTab
 
   if (loading) {
     return (
-      <Card padding="lg">
-        <div className="flex items-center justify-between mb-6">
+      <Card>
+        <CardHeader>
           <div className="h-6 bg-gray-200 rounded w-48 animate-pulse"></div>
-        </div>
-        <div className="space-y-3">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-20 bg-gray-100 rounded animate-pulse"></div>
-          ))}
-        </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex gap-4">
+                <div className="h-12 w-12 bg-gray-200 rounded animate-pulse"></div>
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 bg-gray-200 rounded w-3/4 animate-pulse"></div>
+                  <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
       </Card>
     );
   }
-
-  if (entregas.length === 0) {
-    return (
-      <Card padding="lg">
-        <div className="flex items-center gap-3 mb-6">
-          <Calendar className="w-6 h-6 text-green-600" />
-          <h3 className="text-lg font-bold text-gray-900">Próximas Entregas</h3>
-        </div>
-        <div className="text-center py-12">
-          <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <p className="text-gray-500 font-medium">¡Todo al día!</p>
-          <p className="text-sm text-gray-400 mt-1">No hay entregas próximas pendientes</p>
-        </div>
-      </Card>
-    );
-  }
-
-  const formatearFecha = (fecha: string) => {
-    return new Date(fecha).toLocaleDateString('es-ES', {
-      weekday: 'short',
-      day: '2-digit',
-      month: 'short',
-    });
-  };
-
-  const getDiasTexto = (dias: number) => {
-    if (dias === 0) return 'Hoy';
-    if (dias === 1) return 'Mañana';
-    if (dias < 0) return `Vencida (${Math.abs(dias)}d)`;
-    return `En ${dias} días`;
-  };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-    >
-      <Card padding="lg">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <Calendar className="w-6 h-6 text-blue-600" />
-            <h3 className="text-lg font-bold text-gray-900">Próximas Entregas</h3>
+    <Card className="col-span-1 lg:col-span-2">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Clock className="w-5 h-5 text-gray-500" />
+          Próximas Entregas
+        </CardTitle>
+        <CardDescription>
+          Órdenes pendientes de entrega organizadas por urgencia
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {entregas.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            <Package className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+            <p>No hay entregas pendientes próximas</p>
           </div>
-          <Badge variant="info" className="text-sm">
-            {entregas.length} {entregas.length === 1 ? 'orden' : 'órdenes'}
-          </Badge>
-        </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Orden</TableHead>
+                <TableHead>Cliente</TableHead>
+                <TableHead>Entrega</TableHead>
+                <TableHead>Progreso</TableHead>
+                <TableHead>Estado</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {entregas.map((entrega) => {
+                const urgencia = urgenciaConfig[entrega.nivel_urgencia];
 
-        <div className="space-y-3">
-          {entregas.map((entrega, index) => {
-            const config = urgenciaConfig[entrega.nivel_urgencia];
-
-            return (
-              <motion.div
-                key={entrega.id}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.05 }}
-                onClick={() => navigate(`/app/orders/${entrega.id}`)}
-                className={`${config.bgColor} border-l-4 ${config.color.replace('bg-', 'border-')} rounded-lg p-4 hover:shadow-md transition-all cursor-pointer`}
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="font-bold text-gray-900">#{entrega.numero_orden}</span>
-                      <Badge variant={entrega.estado === 'pendiente' ? 'warning' : 'info'} className="text-xs">
-                        {entrega.estado === 'pendiente' ? 'Pendiente' : 'En Proceso'}
+                return (
+                  <TableRow
+                    key={entrega.id}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => navigate(`/app/orders/${entrega.id}`)}
+                  >
+                    <TableCell className="font-medium">
+                      {entrega.numero_orden}
+                      {entrega.nivel_urgencia === 'critico' && (
+                        <AlertCircle className="w-4 h-4 text-red-500 inline ml-2" />
+                      )}
+                    </TableCell>
+                    <TableCell>{entrega.cliente_nombre}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-col">
+                        <span className="flex items-center gap-1 text-sm">
+                          <Calendar className="w-3 h-3 text-gray-400" />
+                          {new Date(entrega.fecha_estimada_entrega).toLocaleDateString()}
+                        </span>
+                        <span className={`text-xs w-fit px-1.5 py-0.5 rounded-full mt-1 ${urgencia.bgColor} ${urgencia.textColor}`}>
+                          {entrega.dias_restantes} días
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="w-full max-w-[100px]">
+                        <div className="flex justify-between text-xs mb-1">
+                          <span className="text-gray-500">{entrega.progreso_porcentaje}%</span>
+                        </div>
+                        <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${entrega.progreso_porcentaje}%` }}
+                            className={`h-full rounded-full ${urgencia.color}`}
+                          />
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={entrega.estado === 'en_proceso' ? 'blue' : 'default'}>
+                        {entrega.estado === 'en_proceso' ? 'En Proceso' : 'Pendiente'}
                       </Badge>
-                    </div>
-
-                    <p className="text-sm text-gray-700 font-medium truncate mb-2">
-                      {entrega.cliente_nombre}
-                    </p>
-
-                    <div className="flex flex-wrap items-center gap-3 text-xs text-gray-600">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="w-3.5 h-3.5" />
-                        <span>{formatearFecha(entrega.fecha_estimada_entrega)}</span>
-                      </div>
-                      <div className={`flex items-center gap-1 font-semibold ${config.textColor}`}>
-                        <Clock className="w-3.5 h-3.5" />
-                        <span>{getDiasTexto(entrega.dias_restantes)}</span>
-                      </div>
-                    </div>
-
-                    {entrega.total_pasos > 0 && (
-                      <div className="mt-3">
-                        <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
-                          <span>Progreso</span>
-                          <span className="font-semibold">
-                            {entrega.pasos_completados}/{entrega.total_pasos} pasos
-                          </span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div
-                            className="bg-blue-600 h-2 rounded-full transition-all"
-                            style={{ width: `${entrega.progreso_porcentaje}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex flex-col items-center">
-                    <div className={`w-12 h-12 rounded-full ${config.color} flex items-center justify-center`}>
-                      <AlertCircle className="w-6 h-6 text-white" />
-                    </div>
-                    <span className={`text-2xl font-bold ${config.textColor} mt-1`}>
-                      {entrega.progreso_porcentaje}%
-                    </span>
-                  </div>
-                </div>
-              </motion.div>
-            );
-          })}
-        </div>
-
-        {entregas.length >= 10 && (
-          <div className="mt-4 text-center">
-            <p className="text-sm text-gray-500">
-              Mostrando las 10 entregas más próximas
-            </p>
-          </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
         )}
-      </Card>
-    </motion.div>
+      </CardContent>
+    </Card>
   );
 }
