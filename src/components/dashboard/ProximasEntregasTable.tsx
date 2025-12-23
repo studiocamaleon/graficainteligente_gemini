@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { Calendar, AlertCircle, Clock, Package } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '../ui/card';
 import {
   Table,
   TableBody,
