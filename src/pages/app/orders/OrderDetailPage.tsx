@@ -23,7 +23,7 @@ import {
   History,
 } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
-import { Card } from '../../../components/ui/Card';
+import { Card } from '../../../components/ui/card';
 import { EmptyState } from '../../../components/ui/EmptyState';
 import { Badge } from '../../../components/ui/Badge';
 import { Avatar } from '../../../components/ui/Avatar';

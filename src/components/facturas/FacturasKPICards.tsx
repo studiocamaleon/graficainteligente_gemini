@@ -1,5 +1,5 @@
 import { FileText, Clock, CheckCircle, DollarSign, TrendingUp, Calendar } from 'lucide-react';
-import { Card } from '../ui/Card';
+import { Card } from '../ui/card';
 import type { EstadisticasFacturacion } from '../../hooks/useFacturas';
 
 interface FacturasKPICardsProps {

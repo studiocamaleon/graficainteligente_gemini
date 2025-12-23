@@ -9,7 +9,7 @@ import { PausasView } from './PausasView';
 import { useProductionJobs } from '../../../hooks/useProductionJobs';
 import { useProductionStations } from '../../../hooks/useProductionStations';
 import { Layers, Boxes, Activity, TrendingUp, Pause } from 'lucide-react';
-import { Card } from '../../../components/ui/Card';
+import { Card } from '../../../components/ui/card';
 import { useAuth } from '../../../hooks/useAuth';
 
 type TabId = 'jobs' | 'estaciones' | 'productividad' | 'actividad' | 'pausas';

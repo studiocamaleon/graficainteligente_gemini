@@ -1,6 +1,6 @@
 import { ExternalLink, Info, DollarSign, CheckCircle, AlertTriangle, FileText } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { Card } from '../ui/Card';
+import { Card } from '../ui/card';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 

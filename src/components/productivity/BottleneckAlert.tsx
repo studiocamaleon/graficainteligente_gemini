@@ -1,4 +1,4 @@
-import { Card } from '../ui/Card';
+import { Card } from '../ui/card';
 import { CuelloBottella } from '../../hooks/useProductivityMetrics';
 import { AlertTriangle, TrendingUp } from 'lucide-react';
 import { Badge } from '../ui/Badge';

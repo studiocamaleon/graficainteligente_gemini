@@ -1,5 +1,5 @@
 import { Clock, Package, User, FileText, PauseCircle } from 'lucide-react';
-import { Card } from '../ui/Card';
+import { Card } from '../ui/card';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import { calcularTiempoTranscurrido, calcularTiempoNeto, formatearFechaOrden } from '../../utils/timeUtils';

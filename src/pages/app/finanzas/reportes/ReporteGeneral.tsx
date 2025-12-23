@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Calendar, Download, RefreshCw } from 'lucide-react';
 import { Button } from '../../../../components/ui/Button';
-import { Card } from '../../../../components/ui/Card';
+import { Card } from '../../../../components/ui/card';
 import { Select } from '../../../../components/ui/Select';
 import { DatePicker } from '../../../../components/ui/DatePicker';
 import { VentasKPICards } from '../../../../components/reportes/VentasKPICards';

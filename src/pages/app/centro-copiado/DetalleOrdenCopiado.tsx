@@ -3,7 +3,7 @@ import { Switch } from '../../../components/ui/Switch';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Calendar, User, FileText, DollarSign, AlertCircle, Download, ExternalLink, Edit } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
-import { Card } from '../../../components/ui/Card';
+import { Card } from '../../../components/ui/card';
 import { Badge } from '../../../components/ui/Badge';
 import { Table } from '../../../components/ui/Table';
 import { Modal } from '../../../components/ui/Modal';

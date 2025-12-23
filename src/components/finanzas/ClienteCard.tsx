@@ -1,5 +1,5 @@
 import { AlertCircle, CheckCircle, Clock, DollarSign, Calendar } from 'lucide-react';
-import { Card } from '../ui/Card';
+import { Card } from '../ui/card';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import type { ClienteConSaldo } from '../../types/database';

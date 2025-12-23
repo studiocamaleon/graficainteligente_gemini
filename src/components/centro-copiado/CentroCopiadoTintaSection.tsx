@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { Palette, FileText } from 'lucide-react';
-import { Card } from '../ui/Card';
+import { Card } from '../ui/card';
 import { Badge } from '../ui/Badge';
 import { CentroCopiadoMatrizPrecios } from './CentroCopiadoMatrizPrecios';
 import type {

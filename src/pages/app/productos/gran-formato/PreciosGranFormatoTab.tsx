@@ -1,6 +1,6 @@
 import { useEffect, useCallback, useState, useMemo } from 'react';
 import { Package, Loader2, Percent } from 'lucide-react';
-import { Card } from '../../../../components/ui/Card';
+import { Card } from '../../../../components/ui/card';
 import { Button } from '../../../../components/ui/Button';
 import { EmptyState } from '../../../../components/ui/EmptyState';
 import { ExportPDFButtonGroup } from '../../../../components/ui/ExportPDFButtonGroup';

@@ -4,7 +4,7 @@ import { FileUploadZone } from './FileUploadZone';
 import { UploadedFileCard } from './UploadedFileCard';
 import { useFileUpload } from '../../hooks/useFileUpload';
 import { useCentroCopiadoArchivos } from '../../hooks/useCentroCopiadoArchivos';
-import { Card } from '../ui/Card';
+import { Card } from '../ui/card';
 import { Button } from '../ui/Button';
 import { useAuth } from '../../hooks/useAuth';
 

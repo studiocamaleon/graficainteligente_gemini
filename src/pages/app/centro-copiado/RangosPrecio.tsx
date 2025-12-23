@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { Percent, Plus, Edit2, Trash2 } from 'lucide-react';
-import { Card } from '../../../components/ui/Card';
+import { Card } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/Button';
 import { Table } from '../../../components/ui/Table';
 import { Modal } from '../../../components/ui/Modal';

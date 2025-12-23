@@ -1,5 +1,5 @@
 import { Input } from '../../ui/Input';
-import { Card } from '../../ui/Card';
+import { Card } from '../../ui/card';
 import { AlertCircle } from 'lucide-react';
 
 interface QuantityStepProps {

@@ -1,4 +1,4 @@
-import { Card } from '../ui/Card';
+import { Card } from '../ui/card';
 import { SimpleTable } from '../ui/SimpleTable';
 import { MetricaOperario } from '../../hooks/useProductivityMetrics';
 import { Award, User } from 'lucide-react';

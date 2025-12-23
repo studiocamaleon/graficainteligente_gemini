@@ -2,7 +2,7 @@ import { Plus, DollarSign, AlertCircle, Edit2, Trash2, CheckCircle, CreditCard, 
 import { Link } from 'react-router-dom';
 import { Button } from '../ui/Button';
 import { EmptyState } from '../ui/EmptyState';
-import { Card } from '../ui/Card';
+import { Card } from '../ui/card';
 import { useMediosCobro } from '../../hooks/useMediosCobro';
 import { useConfirmDialog } from '../../hooks/useConfirmDialog';
 import { formatDateDisplay } from '../../utils/dates';

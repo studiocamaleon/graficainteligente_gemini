@@ -1,7 +1,7 @@
 import { supabase } from '../../../lib/supabase';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { MessageSquare, QrCode, CheckCircle2, XCircle, Loader2, AlertCircle, Send, History, Bell, Settings } from 'lucide-react';
-import { Card } from '../../../components/ui/Card';
+import { Card } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
 import { Badge } from '../../../components/ui/Badge';

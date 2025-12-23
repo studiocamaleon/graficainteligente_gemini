@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Plus, Edit2, Trash2, Tag, RefreshCw } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
-import { Card } from '../../../components/ui/Card';
+import { Card } from '../../../components/ui/card';
 import { Badge } from '../../../components/ui/Badge';
 import { Table } from '../../../components/ui/Table';
 import { Modal } from '../../../components/ui/Modal';

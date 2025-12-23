@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { AlertTriangle, Unlink, X } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
-import { Card } from '../ui/Card';
+import { Card } from '../ui/card';
 import type { CentroCopiadoOrdenResumida } from '../../types/database';
 
 interface DesvincularOrdenCopiadoModalProps {

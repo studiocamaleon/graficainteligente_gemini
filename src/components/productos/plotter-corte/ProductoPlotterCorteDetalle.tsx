@@ -2,7 +2,7 @@ import { X, Edit, Package, Ruler, Palette, Tag, Percent, DollarSign, GitBranch, 
 import { Modal } from '../../ui/Modal';
 import { Button } from '../../ui/Button';
 import { Badge } from '../../ui/Badge';
-import { Card } from '../../ui/Card';
+import { Card } from '../../ui/card';
 import type { ProductoPlotterCorteConRelaciones } from '../../../types/database';
 
 interface ProductoPlotterCorteDetalleProps {

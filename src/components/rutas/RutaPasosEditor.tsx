@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Plus, Edit2, Trash2, ChevronUp, ChevronDown, Settings, CheckCircle2, AlertCircle } from 'lucide-react';
-import { Card } from '../ui/Card';
+import { Card } from '../ui/card';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import { Modal } from '../ui/Modal';

@@ -1,4 +1,4 @@
-import { Input } from '../../ui/Card';
+import { Input } from '../../ui/card';
 
 interface MedidaPortabannerInputProps {
   ancho: number | undefined;

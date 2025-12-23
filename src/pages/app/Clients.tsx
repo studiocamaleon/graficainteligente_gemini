@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Users, Plus, Eye, Edit2, Power, Check, X as XIcon, CheckCircle2, XCircle, Link as LinkIcon, Copy, QrCode, Download } from 'lucide-react';
 import QRCode from 'qrcode';
-import { Card } from '../../components/ui/Card';
+import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/Button';
 import { usePageHeader } from '../../hooks/usePageHeader';
 import { SearchInput } from '../../components/ui/SearchInput';

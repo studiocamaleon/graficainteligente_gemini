@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Shield, Plus, MoreVertical, Edit, Trash2, Copy } from 'lucide-react';
-import { Card } from '../../../components/ui/Card';
+import { Card } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/Button';
 import { Table } from '../../../components/ui/Table';
 import { Badge } from '../../../components/ui/Badge';

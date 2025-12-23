@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { Truck, Plus, Edit2, Power, CreditCard, FileText, Banknote, MoreHorizontal, Search, Filter } from 'lucide-react';
-import { Card } from '../../components/ui/Card';
+import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/Button';
 import { usePageHeader } from '../../hooks/usePageHeader';
 import { Badge } from '../../components/ui/Badge';

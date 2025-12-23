@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Save, Loader2 } from 'lucide-react';
 import { Button } from '../../ui/Button';
 import { Input } from '../../ui/Input';
-import { Card } from '../../ui/Card';
+import { Card } from '../../ui/card';
 import type { ProductoLaserConRelaciones } from '../../../hooks/useProductosImpresionLaser';
 import { useProductosImpresionLaserPreciosRangos, type PrecioRangoInput } from '../../../hooks/useProductosImpresionLaserPreciosRangos';
 import { formatRangoValue } from '../../../utils/rangoUtils';

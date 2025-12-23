@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, FileText, Package, DollarSign, Unlink, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react';
-import { Card } from '../ui/Card';
+import { Card } from '../ui/card';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import type { CentroCopiadoOrdenResumida, EstadoOrdenCopiado } from '../../types/database';

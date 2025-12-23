@@ -7,7 +7,7 @@ import {
   AlertCircle,
   Calculator,
 } from 'lucide-react';
-import { Card } from '../ui/Card';
+import { Card } from '../ui/card';
 import { usePresupuestosStats } from '../../hooks/usePresupuestosStats';
 import type { PresupuestosFilters } from '../../types/presupuestos';
 

@@ -1,4 +1,4 @@
-import { Card } from '../../ui/Card';
+import { Card } from '../../ui/card';
 import { Badge } from '../../ui/Badge';
 import { ConfigDetailRenderer } from '../../shared/ConfigDetailRenderer';
 import { Package, Ruler, Layers, Wrench, Sparkles } from 'lucide-react';

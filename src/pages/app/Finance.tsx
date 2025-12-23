@@ -1,5 +1,5 @@
 import { TrendingUp } from 'lucide-react';
-import { Card } from '../../components/ui/Card';
+import { Card } from '../../components/ui/card';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { usePageHeader } from '../../hooks/usePageHeader';
 

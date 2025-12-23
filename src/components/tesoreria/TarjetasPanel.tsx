@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { CreditCard, Plus, Calendar, Edit2, Trash2 } from 'lucide-react';
-import { Card } from '../ui/Card';
+import { Card } from '../ui/card';
 import { Button } from '../ui/Button';
 import { useTarjetas, useResumenes } from '../../hooks/useTarjetas';
 import { CreateTarjetaModal } from './CreateTarjetaModal';

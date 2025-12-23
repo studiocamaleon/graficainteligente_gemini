@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Plus, Search, Edit2, Trash2, Power } from 'lucide-react';
-import { Card } from '../../../../components/ui/Card';
+import { Card } from '../../../../components/ui/card';
 import { Button } from '../../../../components/ui/Button';
 import { Input } from '../../../../components/ui/Input';
 import { Table } from '../../../../components/ui/Table';

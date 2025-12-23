@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
 import { Plus, ArrowLeft, ChevronDown, ChevronUp, MessageSquare, Globe, Store, Smartphone } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
-import { Card } from '../../../components/ui/Card';
+import { Card } from '../../../components/ui/card';
 import { SearchableSelect } from '../../../components/ui/SearchableSelect';
 import { DatePicker } from '../../../components/ui/DatePicker';
 import { Tabs } from '../../../components/ui/Tabs';

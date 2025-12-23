@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Package } from 'lucide-react';
-import { Card } from '../../ui/Card';
+import { Card } from '../../ui/card';
 import { ProductoTalonarioPrecioMatriz } from './ProductoTalonarioPrecioMatriz';
 import type { ProductoTalonarioParaPrecios } from '../../../hooks/useAllProductosTalonarioPrecios';
 import type { PrecioInput } from '../../../hooks/useProductosTalonariosPrecios';

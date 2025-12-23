@@ -1,5 +1,5 @@
 import { FileText, User, Calendar, Clock, DollarSign, Upload } from 'lucide-react';
-import { Card } from '../ui/Card';
+import { Card } from '../ui/card';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import type { OrdenPendienteFacturacion } from '../../hooks/useFacturas';

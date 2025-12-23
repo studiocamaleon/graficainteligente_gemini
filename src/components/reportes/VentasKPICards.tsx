@@ -1,5 +1,5 @@
 import { TrendingUp, TrendingDown, ShoppingCart, DollarSign, CreditCard, Target, Percent } from 'lucide-react';
-import { Card } from '../ui/Card';
+import { Card } from '../ui/card';
 import type { ReporteGeneralKPIs } from '../../types/reportes';
 
 interface VentasKPICardsProps {

@@ -1,5 +1,5 @@
 import { CheckCircle2, XCircle, Calendar, Clock, TrendingUp, TrendingDown } from 'lucide-react';
-import { Card } from '../ui/Card';
+import { Card } from '../ui/card';
 import { Badge } from '../ui/Badge';
 import type { TasaCumplimiento } from '../../types/database';
 

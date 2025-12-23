@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { MessageSquare, CheckCircle2, XCircle, RefreshCw, Filter } from 'lucide-react';
-import { Card } from '../ui/Card';
+import { Card } from '../ui/card';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import { Select } from '../ui/Select';

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Plus, Filter, Trash2, Calendar, DollarSign, User, FileText, Eye, X } from 'lucide-react';
 import { Button } from '../ui/Button';
-import { Card } from '../ui/Card';
+import { Card } from '../ui/card';
 import { Badge } from '../ui/Badge';
 import { Table } from '../ui/Table';
 import { Input } from '../ui/Input';

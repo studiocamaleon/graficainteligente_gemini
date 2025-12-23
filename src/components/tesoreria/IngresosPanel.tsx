@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { TrendingUp, Plus } from 'lucide-react';
-import { Card } from '../ui/Card';
+import { Card } from '../ui/card';
 import { Button } from '../ui/Button';
 import { DatePicker } from '../ui/DatePicker';
 import { Badge } from '../ui/Badge';

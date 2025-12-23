@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Users, Shield, Lock, FileText } from 'lucide-react';
-import { Card } from '../../components/ui/Card';
+import { Card } from '../../components/ui/card';
 import { usePageHeader } from '../../hooks/usePageHeader';
 import { TeamMembersTab } from './team/TeamMembersTab';
 import { CustomRolesTab } from './team/CustomRolesTab';

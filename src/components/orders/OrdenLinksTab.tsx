@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link as LinkIcon, Plus, ExternalLink, Copy, Trash2, Edit2, AlertTriangle, Clock } from 'lucide-react';
 import { useOrdenLinks } from '../../hooks/useOrdenLinks';
 import { Button } from '../ui/Button';
-import { Card } from '../ui/Card';
+import { Card } from '../ui/card';
 import { EmptyState } from '../ui/EmptyState';
 import { Modal } from '../ui/Modal';
 import { Input } from '../ui/Input';

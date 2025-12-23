@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Wrench, ChevronDown } from 'lucide-react';
-import { Card } from '../../ui/Card';
+import { Card } from '../../ui/card';
 import { supabase } from '../../../lib/supabase';
 
 interface Servicio {

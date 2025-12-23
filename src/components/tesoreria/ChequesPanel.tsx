@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Plus, Edit2, Trash2, Calendar, DollarSign, Wallet, AlertTriangle, ArrowRightLeft } from 'lucide-react';
 import { Button } from '../ui/Button';
-import { Card } from '../ui/Card';
+import { Card } from '../ui/card';
 import { Table } from '../ui/Table';
 import { Badge } from '../ui/Badge';
 import { useCheques } from '../../hooks/useCheques';

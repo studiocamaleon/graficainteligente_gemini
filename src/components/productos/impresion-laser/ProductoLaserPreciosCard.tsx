@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Package } from 'lucide-react';
-import { Card } from '../../ui/Card';
+import { Card } from '../../ui/card';
 import { ProductoLaserPrecioMatriz } from './ProductoLaserPrecioMatriz';
 import { ProductoLaserPrecioMatrizRangos } from './ProductoLaserPrecioMatrizRangos';
 import type { ProductoLaserParaPrecios } from '../../../hooks/useAllProductosLaserPrecios';

@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { TrendingUp, TrendingDown, AlertCircle, CheckCircle } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../ui/card';
+import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
 import { TasaCumplimiento } from '../../types/database';
 
 interface TasaCumplimientoCardProps {

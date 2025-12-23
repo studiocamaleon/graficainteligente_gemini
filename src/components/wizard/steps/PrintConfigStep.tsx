@@ -1,4 +1,4 @@
-import { Card } from '../../ui/Card';
+import { Card } from '../../ui/card';
 import { Palette, FileText } from 'lucide-react';
 import type { TintaDisponible } from '../../../types/wizard';
 

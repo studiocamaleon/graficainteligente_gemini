@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { Zap, Plus, Edit2, Power, Eye, Trash2, FileText } from 'lucide-react';
-import { Card } from '../../../components/ui/Card';
+import { Card } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/Button';
 import { usePageHeader } from '../../../hooks/usePageHeader';
 import { SearchInput } from '../../../components/ui/SearchInput';

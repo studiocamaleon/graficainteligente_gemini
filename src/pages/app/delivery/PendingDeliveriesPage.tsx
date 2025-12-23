@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Search, Package, Check, ArrowLeft, Clock, DollarSign, Truck } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { PagoFormModal } from '../../../components/orders/PagoFormModal';
-import { Card } from '../../../components/ui/Card';
+import { Card } from '../../../components/ui/card';
 import { Badge } from '../../../components/ui/Badge';
 import { Table } from '../../../components/ui/Table';
 import { usePageHeader } from '../../../hooks/usePageHeader';

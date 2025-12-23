@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Search, Package, AlertCircle } from 'lucide-react';
 import { Input } from '../../ui/Input';
-import { Card } from '../../ui/Card';
+import { Card } from '../../ui/card';
 import { Badge } from '../../ui/Badge';
 import { useProductSearch } from '../../../hooks/wizard/useProductSearch';
 import type { ProductSearchResult } from '../../../types/wizard';

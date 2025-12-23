@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Wrench, Pause, Building } from 'lucide-react';
-import { Card } from '../../components/ui/Card';
+import { Card } from '../../components/ui/card';
 import { Tabs } from '../../components/ui/Tabs';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { usePageHeader } from '../../hooks/usePageHeader';

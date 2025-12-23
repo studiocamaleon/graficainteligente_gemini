@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Lock, Shield, Plus, Trash2, AlertTriangle, Globe } from 'lucide-react';
-import { Card } from '../../../components/ui/Card';
+import { Card } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/Button';
 import { SearchableSelect } from '../../../components/ui/SearchableSelect';
 import { Badge } from '../../../components/ui/Badge';

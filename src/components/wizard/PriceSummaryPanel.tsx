@@ -1,5 +1,5 @@
 import { AlertTriangle, Loader2 } from 'lucide-react';
-import { Card } from '../ui/Card';
+import { Card } from '../ui/card';
 
 interface PriceSummaryPanelProps {
   precioBase: number | null;

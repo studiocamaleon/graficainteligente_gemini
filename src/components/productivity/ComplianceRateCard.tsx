@@ -1,5 +1,5 @@
 import { Target, TrendingDown, AlertTriangle } from 'lucide-react';
-import { Card } from '../ui/Card';
+import { Card } from '../ui/card';
 import type { TasaCumplimiento } from '../../types/database';
 
 interface ComplianceRateCardProps {

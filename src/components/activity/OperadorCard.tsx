@@ -1,6 +1,6 @@
 import { Clock, CheckCircle2, XCircle, Zap } from 'lucide-react';
 import { Avatar } from '../ui/Avatar';
-import { Card } from '../ui/Card';
+import { Card } from '../ui/card';
 import type { MetricasRendimientoOperador } from '../../types/database';
 
 interface OperadorCardProps {

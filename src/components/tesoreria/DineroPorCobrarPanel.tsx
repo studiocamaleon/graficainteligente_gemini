@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { DollarSign, Users, UserCheck, Clock, AlertTriangle } from 'lucide-react';
-import { Card } from '../ui/Card';
+import { Card } from '../ui/card';
 import { Badge } from '../ui/Badge';
 import { useSaldosPendientes, useOrdenesPorCobrar } from '../../hooks/useTesoreria';
 

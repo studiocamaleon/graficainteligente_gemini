@@ -14,7 +14,7 @@ import {
   Calendar,
   DollarSign,
 } from 'lucide-react';
-import { Card } from '../ui/Card';
+import { Card } from '../ui/card';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import type { PresupuestoConRelaciones } from '../../types/presupuestos';

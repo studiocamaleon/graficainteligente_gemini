@@ -1,5 +1,5 @@
 import { AlertTriangle, CheckCircle, TrendingUp, TrendingDown } from 'lucide-react';
-import { Card } from '../ui/Card';
+import { Card } from '../ui/card';
 import type { TasaSenaData } from '../../types/reportes';
 
 interface TasaSenaCardProps {

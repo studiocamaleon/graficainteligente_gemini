@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Search, List, LayoutGrid, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
-import { Card } from '../../../components/ui/Card';
+import { Card } from '../../../components/ui/card';
 import { usePageHeader } from '../../../hooks/usePageHeader';
 import { useOrdenesTrabajo } from '../../../hooks/useOrdenesTrabajo';
 import { KanbanBoard } from '../../../components/orders/KanbanBoard';

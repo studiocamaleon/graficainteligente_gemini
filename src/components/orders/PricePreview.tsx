@@ -1,5 +1,5 @@
 import { Loader2, DollarSign } from 'lucide-react';
-import { Card } from '../ui/Card';
+import { Card } from '../ui/card';
 
 interface PricePreviewProps {
   productoNombre?: string;

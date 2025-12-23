@@ -1,6 +1,6 @@
 import { useEffect, useCallback, useMemo } from 'react';
 import { Package, Loader2 } from 'lucide-react';
-import { Card } from '../../../../components/ui/Card';
+import { Card } from '../../../../components/ui/card';
 import { EmptyState } from '../../../../components/ui/EmptyState';
 import { ExportPDFButtonGroup } from '../../../../components/ui/ExportPDFButtonGroup';
 import { FloatingPreciosSaveButton } from '../../../../components/productos/impresion-laser/FloatingPreciosSaveButton';

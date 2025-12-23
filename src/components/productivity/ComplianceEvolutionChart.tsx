@@ -1,5 +1,5 @@
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
-import { Card } from '../ui/Card';
+import { Card } from '../ui/card';
 import type { EvolutivoTasaCumplimiento } from '../../types/database';
 
 interface ComplianceEvolutionChartProps {

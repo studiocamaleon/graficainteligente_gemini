@@ -1,7 +1,7 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { Scissors, Plus, Edit2, Trash2 } from 'lucide-react';
-import { Card } from '../../../components/ui/Card';
+import { Card } from '../../../components/ui/card';
 import { Tabs } from '../../../components/ui/Tabs';
 import { Button } from '../../../components/ui/Button';
 import { Table } from '../../../components/ui/Table';

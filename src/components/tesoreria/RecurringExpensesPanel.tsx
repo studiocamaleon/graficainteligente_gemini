@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Plus, Edit2, Trash2, Calendar, DollarSign, RefreshCw, AlertCircle } from 'lucide-react';
 import { Button } from '../ui/Button';
-import { Card } from '../ui/Card';
+import { Card } from '../ui/card';
 import { Table } from '../ui/Table';
 import { Badge } from '../ui/Badge';
 import { useRecurringExpenses } from '../../hooks/useRecurringExpenses';

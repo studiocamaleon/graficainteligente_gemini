@@ -1,6 +1,6 @@
 import { useState, useEffect, RefObject } from 'react';
 import { DollarSign, ShoppingCart, AlertCircle } from 'lucide-react';
-import { Card } from '../ui/Card';
+import { Card } from '../ui/card';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';

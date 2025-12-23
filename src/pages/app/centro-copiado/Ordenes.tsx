@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, FileText, Eye, Calendar, DollarSign, CheckCircle, AlertCircle, Clock } from 'lucide-react';
 import { Switch } from '../../../components/ui/Switch';
 import { supabase } from '../../../lib/supabase';
-import { Card } from '../../../components/ui/Card';
+import { Card } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/Button';
 import { Badge } from '../../../components/ui/Badge';
 import { SearchInput } from '../../../components/ui/SearchInput';

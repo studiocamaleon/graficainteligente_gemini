@@ -1,4 +1,4 @@
-import { Card } from '../../ui/Card';
+import { Card } from '../../ui/card';
 import { Button } from '../../ui/Button';
 import { Badge } from '../../ui/Badge';
 import { Plus, Edit2, Trash2, Layers } from 'lucide-react';

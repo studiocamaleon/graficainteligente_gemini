@@ -6,7 +6,7 @@ import { Switch } from '../ui/Switch';
 import { Badge } from '../ui/Badge';
 import { Table } from '../ui/Table';
 import { EmptyState } from '../ui/EmptyState';
-import { Card } from '../ui/Card';
+import { Card } from '../ui/card';
 import { UniversalAddItemWizard } from '../wizard/UniversalAddItemWizard';
 import { AsociarOrdenCopiadoModal } from './AsociarOrdenCopiadoModal';
 import { AddItemPersonalizadoOrdenModal } from './AddItemPersonalizadoOrdenModal';

@@ -10,7 +10,7 @@ import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
 import { descargarPresupuestoPDF } from '../../../utils/pdfGenerators/presupuestoPDF';
 import { Button } from '../../../components/ui/Button';
 import { Tabs } from '../../../components/ui/Tabs';
-import { Card } from '../../../components/ui/Card';
+import { Card } from '../../../components/ui/card';
 import { PresupuestoHeader } from '../../../components/presupuestos/PresupuestoHeader';
 import { PresupuestoItemsTab } from '../../../components/presupuestos/PresupuestoItemsTab';
 import { PresupuestoArchivosTab } from '../../../components/presupuestos/PresupuestoArchivosTab';

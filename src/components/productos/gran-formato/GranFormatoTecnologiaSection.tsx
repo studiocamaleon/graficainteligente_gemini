@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { ChevronDown, ChevronUp, Zap } from 'lucide-react';
-import { Card } from '../../ui/Card';
+import { Card } from '../../ui/card';
 import { InkBadge } from '../../ui/InkBadge';
 import { GranFormatoMatrizPrecios } from './GranFormatoMatrizPrecios';
 import type {

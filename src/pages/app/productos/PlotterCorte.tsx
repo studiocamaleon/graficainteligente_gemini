@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Package, Plus, DollarSign } from 'lucide-react';
-import { Card } from '../../../components/ui/Card';
+import { Card } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/Button';
 import { Tabs } from '../../../components/ui/Tabs';
 import { usePageHeader } from '../../../hooks/usePageHeader';

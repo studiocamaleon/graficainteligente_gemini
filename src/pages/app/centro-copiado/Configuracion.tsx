@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { Settings2, FileText, Plus, Edit2, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
-import { Card } from '../../../components/ui/Card';
+import { Card } from '../../../components/ui/card';
 import { Tabs } from '../../../components/ui/Tabs';
 import { Button } from '../../../components/ui/Button';
 import { Table } from '../../../components/ui/Table';
