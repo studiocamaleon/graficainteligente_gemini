@@ -122,34 +122,46 @@ export function useDashboardData() {
       // Estructura para agrupar
       const agrupados: Record<string, { creadas: number; finalizadas: number }> = {};
 
+      // Función helper para obtener fecha en formato YYYY-MM-DD local
+      const getLocalDateKey = (date: Date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+
       // Inicializar últimos 7 días con 0
       for (let i = 0; i <= 7; i++) {
         const d = new Date(hace7Dias);
         d.setDate(d.getDate() + i);
-        const fechaStr = d.toISOString().split('T')[0];
+        const fechaStr = getLocalDateKey(d);
         agrupados[fechaStr] = { creadas: 0, finalizadas: 0 };
       }
 
       (creadasData as any[])?.forEach((orden) => {
-        const fechaStr = new Date(orden.created_at).toISOString().split('T')[0];
+        const fechaStr = getLocalDateKey(new Date(orden.created_at));
         if (agrupados[fechaStr]) {
           agrupados[fechaStr].creadas++;
         }
       });
 
       (finalizadasData as any[])?.forEach((orden) => {
-        const fechaStr = new Date(orden.fecha_completado).toISOString().split('T')[0];
+        const fechaStr = getLocalDateKey(new Date(orden.fecha_completado));
         if (agrupados[fechaStr]) {
           agrupados[fechaStr].finalizadas++;
         }
       });
 
-      const chartData = Object.entries(agrupados).map(([fecha, datos]) => ({
-        fecha,
-        date: new Date(fecha).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }),
-        creadas: datos.creadas,
-        finalizadas: datos.finalizadas,
-      })).sort((a, b) => a.fecha.localeCompare(b.fecha));
+      const chartData = Object.entries(agrupados).map(([fecha, datos]) => {
+        const [year, month, day] = fecha.split('-').map(Number);
+        const dateObj = new Date(year, month - 1, day);
+        return {
+          fecha,
+          date: dateObj.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }),
+          creadas: datos.creadas,
+          finalizadas: datos.finalizadas,
+        };
+      }).sort((a, b) => a.fecha.localeCompare(b.fecha));
 
       setOrdenesPorDia(chartData);
     } catch (err) {
