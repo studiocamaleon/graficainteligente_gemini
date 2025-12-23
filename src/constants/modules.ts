@@ -40,6 +40,7 @@ import {
   Pause,
   Calculator,
   FileCheck,
+  Calendar,
 } from 'lucide-react';
 
 export interface SubModule {
@@ -231,6 +232,13 @@ export const MODULES: Module[] = [
         description: 'Templates de condiciones',
         path: '/app/settings/condiciones-comerciales',
         icon: FileCheck,
+      },
+      {
+        id: 'presupuestos-visitas',
+        name: 'Calendario de Visitas',
+        description: 'Gestión de visitas y equipo',
+        path: '/app/presupuestos/visitas',
+        icon: Calendar,
       },
     ],
   },

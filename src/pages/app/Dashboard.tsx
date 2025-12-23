@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Package, Clock, TrendingUp, AlertCircle, RefreshCw, Truck } from 'lucide-react';
+import { Package, Clock, TrendingUp, AlertCircle, RefreshCw, Truck, Calendar } from 'lucide-react';
 import { usePageHeader } from '../../hooks/usePageHeader';
 import { useDashboardData } from '../../hooks/useDashboardData';
 import { DashboardStatCard } from '../../components/dashboard/DashboardStatCard';
@@ -67,7 +67,16 @@ export function Dashboard() {
         </div>
       </div>
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-6">
+        <DashboardStatCard
+          label="Visitas Hoy"
+          value={stats.visitasHoy}
+          icon={Calendar}
+          color="text-purple-600"
+          bgColor="bg-purple-100"
+          loading={loading}
+          onClick={() => navigate('/app/presupuestos/visitas')}
+        />
         <DashboardStatCard
           label="Órdenes Pendientes"
           value={stats.ordenesPendientes}

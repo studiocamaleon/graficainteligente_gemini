@@ -1781,6 +1781,16 @@ export interface Database {
         Insert: Omit<Client, 'id' | 'created_at' | 'updated_at' | 'created_by' | 'updated_by'>;
         Update: Partial<Omit<Client, 'id' | 'created_at' | 'company_id' | 'created_by'>>;
       };
+      visitas: {
+        Row: Visita;
+        Insert: Omit<Visita, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<Visita, 'id' | 'created_at' | 'updated_at'>>;
+      };
+      visitas_config: {
+        Row: VisitasConfig;
+        Insert: Omit<VisitasConfig, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<VisitasConfig, 'id' | 'created_at' | 'updated_at'>>;
+      };
       providers: {
         Row: Provider;
         Insert: Omit<Provider, 'id' | 'created_at' | 'updated_at' | 'created_by' | 'updated_by'>;
@@ -2067,6 +2077,39 @@ export interface Database {
           p_fecha_hasta: string;
         };
         Returns: number;
+      };
+      get_visitas_config_public: {
+        Args: {
+          p_company_id: string;
+        };
+        Returns: any; // JSON
+      };
+      get_busy_slots_public: {
+        Args: {
+          p_company_id: string;
+          p_start: string;
+          p_end: string;
+        };
+        Returns: {
+          fecha_inicio: string;
+          fecha_fin: string;
+        }[];
+      };
+      create_public_visit: {
+        Args: {
+          p_company_id: string;
+          p_cliente_nombre: string;
+          p_cliente_whatsapp: string;
+          p_domicilio: string;
+          p_fecha_inicio: string;
+          p_fecha_fin: string;
+          p_titulo: string;
+          p_notas: string;
+        };
+        Returns: {
+          id: string;
+          status: string;
+        };
       };
     };
   };
@@ -2401,4 +2444,50 @@ export interface TarjetaConsumo {
   categoria_id: string | null;
   created_by: string | null;
   created_at: string;
+}
+
+export interface VisitasConfig {
+  id: string;
+  company_id: string;
+  dias_habilitados: number[]; // 0=Sun, 1=Mon, etc.
+  hora_inicio?: string; // Legacy
+  hora_fin?: string; // Legacy
+  horarios_disponibles?: { inicio: string; fin: string }[] | null; // Allow null for Json compatibility
+  duracion_slot: number; // minutes
+  deshabilitar_visitas_hoy?: boolean;
+  bloqueos?: {
+    id: string;
+    fecha: string; // YYYY-MM-DD
+    todo_el_dia: boolean;
+    hora_inicio?: string;
+    hora_fin?: string;
+    motivo?: string;
+  }[] | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Visita {
+  id: string;
+  company_id: string;
+  titulo: string;
+  descripcion: string | null;
+  cliente_nombre: string | null;
+  cliente_empresa: string | null;
+  cliente_whatsapp: string | null;
+  domicilio?: string | null;
+  fecha_inicio: string; // ISO timestamp
+  fecha_fin: string; // ISO timestamp
+  estado: 'pendiente' | 'confirmada' | 'completada' | 'cancelada';
+  creado_por: string | null;
+  cliente_id: string | null;
+  orden_id: string | null;
+  staff_id?: string | null;
+  // Notifications
+  notif_cliente_creacion_env?: boolean;
+  notif_staff_creacion_env?: boolean;
+  notif_cliente_1h_env?: boolean;
+  notif_staff_30m_env?: boolean;
+  created_at: string;
+  updated_at: string;
 }

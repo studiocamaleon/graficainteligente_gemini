@@ -10,6 +10,7 @@ interface DashboardStatCardProps {
   bgColor?: string;
   subtitle?: string;
   loading?: boolean;
+  onClick?: () => void;
 }
 
 export function DashboardStatCard({
@@ -20,6 +21,7 @@ export function DashboardStatCard({
   bgColor = 'bg-gray-100',
   subtitle,
   loading,
+  onClick,
 }: DashboardStatCardProps) {
   if (loading) {
     return (
@@ -44,6 +46,8 @@ export function DashboardStatCard({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
+      onClick={onClick}
+      className={onClick ? 'cursor-pointer hover:opacity-90 active:scale-95 transition-all' : ''}
     >
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

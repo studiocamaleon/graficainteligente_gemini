@@ -4,6 +4,7 @@ export interface DashboardStats {
   ordenesPendientes: number;
   ordenesEnProceso: number;
   entregasHoy: number;
+  visitasHoy: number;
 }
 
 export interface ProximaEntrega {

@@ -200,10 +200,15 @@ export default function PresupuestosListPage() {
           description="Crea tu primer presupuesto para empezar a cotizar productos"
           icon={AlertCircle}
           action={
-            <Button onClick={handleCreate}>
-              <Plus className="w-5 h-5 mr-2" />
-              Crear Presupuesto
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={handleCreate}>
+                <Plus className="w-5 h-5 mr-2" />
+                Crear Presupuesto
+              </Button>
+              <Button variant="outline" onClick={() => navigate('/app/presupuestos/visitas')}>
+                Agenda Visitas
+              </Button>
+            </div>
           }
         />
       )}

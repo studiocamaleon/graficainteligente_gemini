@@ -26,6 +26,7 @@ import TiposEgreso from './pages/app/settings/TiposEgreso';
 import TiposIngreso from './pages/app/settings/TiposIngreso';
 import CondicionesComerciales from './pages/app/settings/CondicionesComerciales';
 import PresupuestosListPage from './pages/app/presupuestos/PresupuestosListPage';
+import VisitasPage from './pages/app/presupuestos/VisitasPage';
 import DetallePresupuesto from './pages/app/presupuestos/DetallePresupuesto';
 import { Estaciones } from './pages/app/abm-core/Estaciones';
 import { Tecnologias } from './pages/app/abm-core/Tecnologias';
@@ -54,6 +55,7 @@ import { JobsMonitor } from './pages/public/JobsMonitor';
 import PresupuestoTracking from './pages/public/PresupuestoTracking';
 import { FacturaRedirect } from './pages/public/FacturaRedirect';
 import { ClienteRegistro } from './pages/public/ClienteRegistro';
+import { AgendarVisita } from './pages/public/AgendarVisita';
 import { PendingDeliveriesPage } from './pages/app/delivery/PendingDeliveriesPage';
 
 function AppRoutes() {
@@ -90,6 +92,7 @@ function AppRoutes() {
       <Route path="/monitor/jobs/:companyId" element={<JobsMonitor />} />
       <Route path="/:companyId/facturas/:token" element={<FacturaRedirect />} />
       <Route path="/registro/:companyId" element={<ClienteRegistro />} />
+      <Route path="/agenda/:companyId" element={<AgendarVisita />} />
 
       <Route
         path="/app/*"
@@ -340,6 +343,14 @@ function AppRoutes() {
                   }
                 />
                 <Route path="presupuestos" element={<Navigate to="/app/presupuestos/lista" replace />} />
+                <Route
+                  path="presupuestos/visitas"
+                  element={
+                    <ProtectedModuleRoute moduleId="presupuestos-lista">
+                      <VisitasPage />
+                    </ProtectedModuleRoute>
+                  }
+                />
                 <Route
                   path="presupuestos/lista"
                   element={

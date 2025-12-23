@@ -13,6 +13,7 @@ export function useDashboardData() {
     ordenesPendientes: 0,
     ordenesEnProceso: 0,
     entregasHoy: 0,
+    visitasHoy: 0,
   });
   const [ordenesPorDia, setOrdenesPorDia] = useState<{ fecha: string; date: string; creadas: number; finalizadas: number }[]>([]);
   const [tasaCumplimiento, setTasaCumplimiento] = useState<TasaCumplimiento | null>(null);
@@ -82,10 +83,19 @@ export function useDashboardData() {
         .gte('fecha_estimada_entrega', hoy.toISOString())
         .lt('fecha_estimada_entrega', manana.toISOString());
 
+      const { count: visitasHoyCount } = await supabase
+        .from('visitas')
+        .select('*', { count: 'exact', head: true })
+        .eq('company_id', companyId)
+        .neq('estado', 'cancelada')
+        .gte('fecha_inicio', hoy.toISOString())
+        .lt('fecha_inicio', manana.toISOString());
+
       setStats({
         ordenesPendientes: pendientesCount || 0,
         ordenesEnProceso: enProcesoCount || 0,
         entregasHoy: entregasHoyCount || 0,
+        visitasHoy: visitasHoyCount || 0,
       });
     } catch (err) {
       console.error('Error loading stats:', err);
