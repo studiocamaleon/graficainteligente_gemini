@@ -3,7 +3,7 @@ import { Card } from '../../ui/card';
 
 import { Select } from '../../ui/Select';
 import { Badge } from '../../ui/Badge';
-import { Sparkles, Check, Clock, Ruler } from 'lucide-react';
+import { Sparkles, Check, Clock, Ruler, Wrench } from 'lucide-react';
 import type { ProductConfiguration } from '../../../hooks/wizard/useProductConfiguration';
 import { formatCurrency } from '../../../utils/stringUtils';
 
@@ -11,6 +11,9 @@ interface ServicesAndFinishingsStepProps {
   config: ProductConfiguration;
   selectedAcabados: SelectedFinishing[];
   onAcabadosChange: (acabados: SelectedFinishing[]) => void;
+  selectedServicios?: SelectedService[];
+  onServiciosChange?: (servicios: SelectedService[]) => void;
+  hideServices?: boolean;
 }
 
 export interface SelectedService {
@@ -42,8 +45,69 @@ export interface SelectedFinishing {
 export function ServicesAndFinishingsStep({
   config,
   selectedAcabados,
-  onAcabadosChange
+  onAcabadosChange,
+  selectedServicios = [],
+  onServiciosChange,
+  hideServices = false
 }: ServicesAndFinishingsStepProps) {
+
+  const handleToggleServicio = (servicioConfig: typeof config.servicios[0]) => {
+    if (!onServiciosChange) return;
+
+    const isSelected = selectedServicios.some(s => s.servicio_id === servicioConfig.servicio_id);
+
+    if (isSelected) {
+      onServiciosChange(selectedServicios.filter(s => s.servicio_id !== servicioConfig.servicio_id));
+    } else {
+      if (servicioConfig.tiene_niveles && (!servicioConfig.niveles || servicioConfig.niveles.length === 0)) {
+        return;
+      }
+
+      const nivel = servicioConfig.niveles && servicioConfig.niveles.length > 0
+        ? servicioConfig.niveles[0]
+        : null;
+
+      const newServicio: SelectedService = {
+        servicio_id: servicioConfig.servicio_id,
+        servicio_nombre: servicioConfig.servicio_nombre,
+        nivel_id: nivel?.id || null,
+        nivel_nombre: nivel?.nombre || null,
+        tipo_impacto: nivel?.tipo_impacto || 'precio_fijo',
+        valor_porcentaje: nivel?.valor_porcentaje || null,
+        valor_monto: nivel?.valor_monto || null,
+        cantidad: 1
+      };
+
+      onServiciosChange([...selectedServicios, newServicio]);
+    }
+  };
+
+  const handleChangeNivelServicio = (servicioId: string, nivelId: string) => {
+    if (!onServiciosChange) return;
+
+    const servicioConfig = config.servicios.find(s => s.servicio_id === servicioId);
+    if (!servicioConfig || !servicioConfig.niveles) return;
+
+    const nivel = servicioConfig.niveles.find(n => n.id === nivelId);
+    if (!nivel) return;
+
+    const updatedServicios = selectedServicios.map(s => {
+      if (s.servicio_id === servicioId) {
+        return {
+          ...s,
+          nivel_id: nivel.id,
+          nivel_nombre: nivel.nombre,
+          tipo_impacto: nivel.tipo_impacto,
+          valor_porcentaje: nivel.valor_porcentaje,
+          valor_monto: nivel.valor_monto,
+        };
+      }
+      return s;
+    });
+
+    onServiciosChange(updatedServicios);
+  };
+
 
   const handleToggleAcabado = (acabadoConfig: typeof config.acabados[0]) => {
     const isSelected = selectedAcabados.some(a => a.acabado_id === acabadoConfig.acabado_id);
@@ -184,7 +248,82 @@ export function ServicesAndFinishingsStep({
   return (
     <div className="space-y-6">
 
+      {/* Servicios */}
+      {!hideServices && config.servicios && config.servicios.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Wrench className="w-5 h-5 text-blue-600" />
+            <h3 className="text-lg font-semibold text-gray-900">Servicios Adicionales</h3>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {config.servicios.map((servicio) => {
+              const isSelected = selectedServicios.some(s => s.servicio_id === servicio.servicio_id);
+              const selectedServicio = selectedServicios.find(s => s.servicio_id === servicio.servicio_id);
+
+              return (
+                <motion.div
+                  key={servicio.servicio_id}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <Card
+                    className={`p-4 cursor-pointer transition-all ${isSelected
+                      ? 'border-2 border-blue-500 bg-blue-50'
+                      : 'border border-gray-200 hover:border-blue-300 hover:shadow-md'
+                      }`}
+                    onClick={() => handleToggleServicio(servicio)}
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-gray-900">{servicio.servicio_nombre}</h4>
+                        {(!servicio.tiene_niveles && servicio.niveles && servicio.niveles.length > 0) && (
+                          <div className="mt-1">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                              {getImpactoBadgeText(servicio.niveles[0])}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      {isSelected && (
+                        <div className="flex-shrink-0 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
+                          <Check className="w-4 h-4 text-white" />
+                        </div>
+                      )}
+                    </div>
+
+                    {servicio.tiene_niveles && servicio.niveles && servicio.niveles.length > 0 && isSelected && (
+                      <div className="mt-3 pt-3 border-t border-gray-200" onClick={(e) => e.stopPropagation()}>
+                        <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                          Selecciona el nivel:
+                        </label>
+                        <Select
+                          value={selectedServicio?.nivel_id || ''}
+                          onChange={(value) => handleChangeNivelServicio(servicio.servicio_id, value)}
+                          className="text-sm"
+                        >
+                          {servicio.niveles.map((nivel) => {
+                            const impactoText = getImpactoBadgeText(nivel);
+                            return (
+                              <option key={nivel.id} value={nivel.id}>
+                                {nivel.nombre} {impactoText !== 'Sin impacto' && `(${impactoText})`}
+                              </option>
+                            );
+                          })}
+                        </Select>
+                      </div>
+                    )}
+                  </Card>
+                </motion.div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Acabados */}
+
       {config.acabados && config.acabados.length > 0 && (
         <div className="space-y-3">
           <div className="flex items-center gap-2">
@@ -302,10 +441,10 @@ export function ServicesAndFinishingsStep({
         </div>
       )}
 
-      {config.acabados.length === 0 && (
+      {(!config.acabados || config.acabados.length === 0) && (!config.servicios || config.servicios.length === 0) && (
         <Card className="p-8">
           <p className="text-center text-gray-500">
-            Este producto no tiene acabados disponibles
+            Este producto no tiene servicios ni acabados disponibles
           </p>
         </Card>
       )}

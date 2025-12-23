@@ -1118,6 +1118,9 @@ export function UniversalAddItemWizard({
             config={config}
             selectedAcabados={selectedAcabados}
             onAcabadosChange={setSelectedAcabados}
+            selectedServicios={selectedServicios}
+            onServiciosChange={setSelectedServicios}
+            hideServices={selectedProduct?.categoria_id === 'centro_copiado'}
           />
         );
       case 'summary':

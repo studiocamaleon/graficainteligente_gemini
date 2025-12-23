@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { Settings2, FileText, Plus, Edit2, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
+import { Settings2, FileText, Plus, Edit2, Trash2, ArrowUp, ArrowDown, GitBranch } from 'lucide-react';
 import { Card } from '../../../components/ui/card';
 import { Tabs } from '../../../components/ui/Tabs';
 import { Button } from '../../../components/ui/Button';
@@ -15,6 +15,7 @@ import { useCentroCopiadoTamanios } from '../../../hooks/useCentroCopiadoTamanio
 import { useCentroCopiadoPapeles } from '../../../hooks/useCentroCopiadoPapeles';
 import { TamanioPapelForm } from '../../../components/centro-copiado/TamanioPapelForm';
 import { PapelForm } from '../../../components/centro-copiado/PapelForm';
+import { RutasConfigTab } from '../../../components/centro-copiado/RutasConfigTab';
 import type { CentroCopiadoTamanioPapel, CentroCopiadoPapel } from '../../../types/database';
 
 interface PapelWithMaterial extends CentroCopiadoPapel {
@@ -24,7 +25,7 @@ interface PapelWithMaterial extends CentroCopiadoPapel {
   };
 }
 
-type TabType = 'tamanios' | 'papeles';
+type TabType = 'tamanios' | 'papeles' | 'rutas';
 
 export function Configuracion() {
   const [activeTab, setActiveTab] = useState<TabType>('tamanios');
@@ -89,6 +90,7 @@ export function Configuracion() {
   const tabs = [
     { id: 'tamanios', name: 'Tamaños de Papel', icon: FileText },
     { id: 'papeles', name: 'Tipos de Papel', icon: Settings2 },
+    { id: 'rutas', name: 'Rutas de Producción', icon: GitBranch },
   ];
 
   const filteredTamanios = useMemo(() => {
@@ -314,11 +316,10 @@ export function Configuracion() {
                       <button
                         onClick={() => handleMovePapelUp(index!)}
                         disabled={index === 0 || searchTerm !== ''}
-                        className={`p-1 rounded transition-colors ${
-                          index === 0 || searchTerm !== ''
-                            ? 'text-gray-300 cursor-not-allowed'
-                            : 'text-blue-600 hover:bg-blue-50'
-                        }`}
+                        className={`p-1 rounded transition-colors ${index === 0 || searchTerm !== ''
+                          ? 'text-gray-300 cursor-not-allowed'
+                          : 'text-blue-600 hover:bg-blue-50'
+                          }`}
                         title="Mover arriba"
                       >
                         <ArrowUp className="w-3 h-3" />
@@ -326,11 +327,10 @@ export function Configuracion() {
                       <button
                         onClick={() => handleMovePapelDown(index!)}
                         disabled={index === papeles.length - 1 || searchTerm !== ''}
-                        className={`p-1 rounded transition-colors ${
-                          index === papeles.length - 1 || searchTerm !== ''
-                            ? 'text-gray-300 cursor-not-allowed'
-                            : 'text-blue-600 hover:bg-blue-50'
-                        }`}
+                        className={`p-1 rounded transition-colors ${index === papeles.length - 1 || searchTerm !== ''
+                          ? 'text-gray-300 cursor-not-allowed'
+                          : 'text-blue-600 hover:bg-blue-50'
+                          }`}
                         title="Mover abajo"
                       >
                         <ArrowDown className="w-3 h-3" />
@@ -397,6 +397,8 @@ export function Configuracion() {
         return renderTamaniosTab();
       case 'papeles':
         return renderPapelesTab();
+      case 'rutas':
+        return <RutasConfigTab />;
       default:
         return null;
     }

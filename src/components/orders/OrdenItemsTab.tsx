@@ -13,7 +13,7 @@ import { AddItemPersonalizadoOrdenModal } from './AddItemPersonalizadoOrdenModal
 import { AplicarServicioMasivoModal } from './AplicarServicioMasivoModal';
 import { ItemConfigRenderer } from './ItemConfigRenderer';
 import { ConstructorConfigurator } from './ConstructorConfigurator';
-import { generateProductionRoutes } from '../../utils/generateProductionRoutes';
+import { generateProductionRoutes, normalizarEtapa } from '../../utils/generateProductionRoutes';
 import { supabase } from '../../lib/supabase';
 
 interface OrdenItem {
@@ -108,18 +108,6 @@ export function OrdenItemsTab({
     const pasoVinculado = nivel?.paso || servicio.pasos?.[0]?.paso;
     const pasoId = pasoVinculado?.id || (servicio.tiene_niveles_precio ? null : servicio.pasos?.[0]?.paso_id);
 
-    // Mapper de etapas para visualización correcta en timeline
-    const mapEtapaToTipo = (etapaDb: string = '') => {
-      const map: Record<string, string> = {
-        'Pre-prensa': 'pre_prensa',
-        'Produccion': 'produccion',
-        'Terminacion': 'post_prensa',
-        'Instalacion': 'instalacion',
-        'Entrega': 'entrega'
-      };
-      return map[etapaDb] || 'pre_prensa'; // Default a pre_prensa si no machea o es nulo
-    };
-
     // Paso 2: Identificar items afectados para descripción del item de cobro
     const itemsAfectados = items.filter(i => selectedItemIds.has(i?.id || ''));
     if (itemsAfectados.length === 0) return;
@@ -152,12 +140,27 @@ export function OrdenItemsTab({
       }
 
       if (pasoId) {
+        // Fetch real stage from DB to be 100% sure
+        let etapaReal = pasoVinculado?.etapa || '';
+        try {
+          const { data: pasoDb } = await supabase
+            .from('pasos')
+            .select('etapa')
+            .eq('id', pasoId)
+            .single();
+          if (pasoDb) {
+            etapaReal = pasoDb.etapa;
+          }
+        } catch (err) {
+          console.error('Error fetching real stage for service step:', err);
+        }
+
         // Construir objeto ruta completo
         const nuevaRuta = {
           company_id: '',
           orden_item_id: '',
-          tipo_etapa: mapEtapaToTipo(pasoVinculado?.etapa),
-          etapa: pasoVinculado?.etapa || pasoVinculado?.estacion?.nombre || 'Servicios',
+          tipo_etapa: normalizarEtapa(etapaReal),
+          etapa: etapaReal || pasoVinculado?.estacion?.nombre || 'Servicios',
           id: `temp-step-${Math.random()}`,
           paso_id: pasoId,
           paso_nombre: pasoVinculado?.nombre || `[Servicio] ${servicio.nombre}`,

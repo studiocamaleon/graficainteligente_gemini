@@ -141,19 +141,8 @@ export async function generateProductionRoutes({
           rutaId = (data as any)?.ruta_produccion_id || null;
           break;
         }
-        case 'centro_copiado': {
-          // Buscar la ruta estándar de copiado por nombre
-          const { data } = await supabase
-            .from('rutas_produccion')
-            .select('id')
-            .eq('nombre', 'Ruta Centro de Copiado')
-            .maybeSingle();
-
-          if (data) {
-            rutaId = (data as any).id;
-          }
-          break;
-        }
+        // case 'centro_copiado': REMOVED - We rely fully on dynamic rules now
+        //   break;
         case 'personalizado': {
           // Primero intentar usar la ruta definida en la configuración (para productos ad-hoc)
           if (configuracion?.ruta_produccion_id) {
@@ -176,35 +165,90 @@ export async function generateProductionRoutes({
     // 1b. Inyección Dinámica de Terminaciones (Centro de Copiado)
     let pasosExtra: GeneratedRouteStep[] = [];
     if (categoria === 'centro_copiado') {
-      const acabadosBuscados: string[] = [];
-      if (configuracion.anillado) acabadosBuscados.push('Anillado');
-      if (configuracion.plastificado) acabadosBuscados.push('Plastificado');
-      if (configuracion.guillotinado) acabadosBuscados.push('Guillotinado');
+      const keysToCheck = ['anillado', 'plastificado', 'guillotinado', 'tipo_tinta'];
+      const dynamicStepsToAdd: { paso_id: string, orden_offset: number }[] = [];
+      let maxOrden = 900;
 
-      if (acabadosBuscados.length > 0) {
-        // Buscar pasos con estos nombres de forma flexible
+      // Fetch ALL configuration rules for this company (optimized: could be cached or passed in)
+      // For now, we fetch ad-hoc to ensure accuracy.
+      const { data: configRules } = await supabase
+        .from('centro_copiado_rutas_configuracion')
+        .select('*');
+
+      if (configRules) {
+        for (const key of keysToCheck) {
+          if (configuracion[key]) {
+            const configValue = configuracion[key];
+            let valueToMatch: string | null = null;
+
+            // Extract value based on type (simulating PL/PGSQL logic)
+            if (typeof configValue === 'string') {
+              valueToMatch = configValue;
+            } else if (typeof configValue === 'object' && configValue !== null) {
+              valueToMatch = configValue.tipo || null;
+            }
+
+            // 1. Find match: Exact Match > Wildcard (Value is NULL)
+            // Sort by valor NULLS LAST to prioritize specific value matches
+            const match = configRules
+              .filter(r => r.clave === key && (r.valor === valueToMatch || r.valor === null))
+              .sort((a, b) => {
+                if (a.valor === valueToMatch && b.valor !== valueToMatch) return -1;
+                if (a.valor !== valueToMatch && b.valor === valueToMatch) return 1;
+                return 0;
+              })[0];
+
+            if (match) {
+              dynamicStepsToAdd.push({ paso_id: match.paso_id, orden_offset: maxOrden++ });
+            } else {
+              // Fallback Legacy Logic (only if no DB rule found)
+              let fallbackPattern = '';
+              if (key === 'anillado') fallbackPattern = '%Anillado%';
+              else if (key === 'plastificado') fallbackPattern = '%Plastificado%';
+              else if (key === 'guillotinado') fallbackPattern = '%Guillotinado%';
+
+              if (fallbackPattern) {
+                const { data: fallbackStep } = await supabase
+                  .from('pasos')
+                  .select('id')
+                  .ilike('nombre', fallbackPattern)
+                  .limit(1)
+                  .maybeSingle();
+
+                if (fallbackStep) {
+                  dynamicStepsToAdd.push({ paso_id: fallbackStep.id, orden_offset: maxOrden++ });
+                }
+              }
+            }
+          }
+        }
+      }
+
+      if (dynamicStepsToAdd.length > 0) {
+        // Fetch details for all found steps
         const { data: pasosEncontradosRaw } = await supabase
           .from('pasos')
           .select('id, nombre, etapa')
-          .in('nombre', acabadosBuscados)
-          .returns<{ id: string, nombre: string, etapa: string }[]>(); // Use returns for typed response if possible, or cast below
+          .in('id', dynamicStepsToAdd.map(d => d.paso_id))
+          .returns<{ id: string, nombre: string, etapa: string }[]>();
 
         if (pasosEncontradosRaw) {
-          const pasosEncontrados = pasosEncontradosRaw as { id: string, nombre: string, etapa: string }[];
-          pasosEncontrados.forEach((p, idx) => {
-            // Force Type Safety for Etapa
-            const etapaFinal: TipoEtapaRuta = 'post_prensa';
+          const pasosMap = new Map((pasosEncontradosRaw as { id: string, nombre: string, etapa: string }[]).map(p => [p.id, p]));
 
-            pasosExtra.push({
-              id: `dynamic-${p.id}-${idx}`,
-              etapa: etapaFinal,
-              paso_id: p.id,
-              paso_nombre: p.nombre,
-              orden: 900 + idx, // Orden alto para que vaya al final
-              es_obligatorio: true,
-              origen_plantilla_id: p.id,
-              comentario_vendedor: null
-            });
+          dynamicStepsToAdd.forEach((item, idx) => {
+            const paso = pasosMap.get(item.paso_id);
+            if (paso) {
+              pasosExtra.push({
+                id: `dynamic-${paso.id}-${idx}`,
+                etapa: normalizarEtapa(paso.etapa), // Use dynamic stage
+                paso_id: paso.id,
+                paso_nombre: paso.nombre,
+                orden: item.orden_offset,
+                es_obligatorio: true,
+                origen_plantilla_id: paso.id,
+                comentario_vendedor: null
+              });
+            }
           });
         }
       }

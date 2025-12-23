@@ -74,6 +74,15 @@ export function AplicarServicioMasivoModal({
         const ids = new Set<string>();
 
         selectedItems.forEach(item => {
+            // Special handling for legacy/simple Copy Center items
+            if (item.tipo_item === 'centro_copiado') {
+                const copyCenterId = Object.values(CATEGORIAS_SISTEMA).find(c => c.nombre === 'Centro de Copiado')?.id;
+                if (copyCenterId) {
+                    ids.add(copyCenterId);
+                    return;
+                }
+            }
+
             if (item.categoria_id) {
                 ids.add(item.categoria_id);
                 return;
