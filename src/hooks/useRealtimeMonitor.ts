@@ -59,6 +59,7 @@ export function useRealtimeMonitor(options: RealtimeMonitorOptions) {
           event: '*',
           schema: 'public',
           table: 'ordenes_trabajo_items',
+          filter: `company_id=eq.${companyId}`,
         },
         (payload) => {
           const timestamp = new Date().toISOString();
@@ -170,7 +171,7 @@ export function useRealtimeMonitor(options: RealtimeMonitorOptions) {
 
   return {
     isSubscribed: isSubscribedRef.current &&
-                  channelRef.current !== null &&
-                  rutasChannelRef.current !== null,
+      channelRef.current !== null &&
+      rutasChannelRef.current !== null,
   };
 }
