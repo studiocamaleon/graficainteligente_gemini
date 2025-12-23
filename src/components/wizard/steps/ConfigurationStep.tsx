@@ -90,6 +90,7 @@ export interface SelectedConfiguration {
 
   // Metadata para visualización
   es_metro_lineal?: boolean;
+  tipo_venta_real?: 'mt2' | 'mt_lineal' | 'unidad' | 'cantidades_fijas';
 
   // Campos para productos compuestos (Product Constructor)
   es_compuesto?: boolean;

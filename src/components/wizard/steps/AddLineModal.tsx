@@ -73,9 +73,11 @@ export function AddLineModal({
     }
   }, [isOpen]);
 
-  const mt2Calculado = config.tipo_venta_real === 'mt2'
+  const effectiveTipoVenta = config.tipo_venta_real === 'mt2' ? 'mt2' : 'mt_lineal';
+
+  const mt2Calculado = effectiveTipoVenta === 'mt2'
     ? (ancho && alto ? (ancho * alto) / 10000 : 0)
-    : (config.tipo_venta_real === 'mt_lineal' && anchoSeleccionado && metrosLineales
+    : (effectiveTipoVenta === 'mt_lineal' && anchoSeleccionado && metrosLineales
       ? (anchoSeleccionado * (metrosLineales * 100)) / 10000
       : 0);
 
@@ -93,9 +95,9 @@ export function AddLineModal({
   useEffect(() => {
     const calcularPrecioEnVivo = async () => {
       // Solo calcular si tenemos los datos mínimos requeridos
-      const datosCompletos = config.tipo_venta_real === 'mt2'
+      const datosCompletos = effectiveTipoVenta === 'mt2'
         ? (ancho > 0 && alto > 0)
-        : (config.tipo_venta_real === 'mt_lineal' ? (anchoSeleccionado && metrosLineales > 0) : true);
+        : (effectiveTipoVenta === 'mt_lineal' ? (anchoSeleccionado && metrosLineales > 0) : true);
 
       if (!datosCompletos || cantidad <= 0) {
         setPrecioCalculado(null);
@@ -107,12 +109,13 @@ export function AddLineModal({
         ...baseConfig,
         lineas_medidas: [], // No se usa para el cálculo unitario
         cantidad: cantidad,
-        medida_ancho: config.tipo_venta_real === 'mt2' ? ancho : (anchoSeleccionado || 0),
-        medida_alto: config.tipo_venta_real === 'mt2' ? alto : (metrosLineales * 100),
+        medida_ancho: effectiveTipoVenta === 'mt2' ? ancho : (anchoSeleccionado || 0),
+        medida_alto: effectiveTipoVenta === 'mt2' ? alto : (metrosLineales * 100),
+        tipo_venta_real: effectiveTipoVenta // FORCE THE EFFECTIVE TYPE
       };
 
       // Ajuste específico para metros lineales si es necesario que la altura sea en cm
-      if (config.tipo_venta_real === 'mt_lineal') {
+      if (effectiveTipoVenta === 'mt_lineal') {
         tempConfig.medida_alto = metrosLineales * 100;
       }
 
@@ -147,10 +150,10 @@ export function AddLineModal({
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
-    if (config.tipo_venta_real === 'mt2') {
+    if (effectiveTipoVenta === 'mt2') {
       if (!ancho || ancho <= 0) newErrors.ancho = 'Requerido';
       if (!alto || alto <= 0) newErrors.alto = 'Requerido';
-    } else if (config.tipo_venta_real === 'mt_lineal') {
+    } else if (effectiveTipoVenta === 'mt_lineal') {
       if (!anchoSeleccionado) newErrors.ancho = 'Requerido';
       if (!metrosLineales || metrosLineales <= 0) newErrors.metros = 'Requerido';
     }
@@ -168,11 +171,11 @@ export function AddLineModal({
 
     const newLine: MeasurementLine = {
       id: existingLine?.id || crypto.randomUUID(),
-      ancho: config.tipo_venta_real === 'mt2' ? ancho : undefined,
-      alto: config.tipo_venta_real === 'mt2' ? alto : undefined,
-      mt2_calculado: (config.tipo_venta_real === 'mt2' || config.tipo_venta_real === 'mt_lineal') ? mt2Calculado : undefined,
-      ancho_seleccionado: config.tipo_venta_real === 'mt_lineal' ? anchoSeleccionado || undefined : undefined,
-      metros_lineales: config.tipo_venta_real === 'mt_lineal' ? metrosLineales : undefined,
+      ancho: effectiveTipoVenta === 'mt2' ? ancho : undefined,
+      alto: effectiveTipoVenta === 'mt2' ? alto : undefined,
+      mt2_calculado: (effectiveTipoVenta === 'mt2' || effectiveTipoVenta === 'mt_lineal') ? mt2Calculado : undefined,
+      ancho_seleccionado: effectiveTipoVenta === 'mt_lineal' ? anchoSeleccionado || undefined : undefined,
+      metros_lineales: effectiveTipoVenta === 'mt_lineal' ? metrosLineales : undefined,
       cantidad,
       acabados: acabadosSeleccionados
     };
@@ -253,7 +256,7 @@ export function AddLineModal({
         <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
           <div className="grid grid-cols-12 gap-4 items-start">
             <div className="col-span-8 grid grid-cols-2 gap-3">
-              {config.tipo_venta_real === 'mt2' ? (
+              {effectiveTipoVenta === 'mt2' ? (
                 <>
                   <div className="space-y-1">
                     <label className="text-xs font-semibold text-gray-500 uppercase">Ancho (cm)</label>

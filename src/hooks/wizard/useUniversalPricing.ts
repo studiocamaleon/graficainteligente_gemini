@@ -558,10 +558,10 @@ async function getPrecioGranFormato(
 
   if (!data || data.length === 0) return null;
 
-  // Calcular metros cuadrados
-  const mt2 = config.medida_ancho && config.medida_alto
-    ? (config.medida_ancho / 100) * (config.medida_alto / 100)
-    : 1;
+  // Calcular cantidad bases según tipo de venta
+  const factorCantidad = config.tipo_venta_real === 'mt_lineal'
+    ? (config.medida_alto ? config.medida_alto / 100 : 1)
+    : (config.medida_ancho && config.medida_alto ? (config.medida_ancho / 100) * (config.medida_alto / 100) : 1);
 
   // Buscar en qué rango cae
   const precioEnRango = data.find((p: any) => {
@@ -570,7 +570,7 @@ async function getPrecioGranFormato(
     return max === null ? config.cantidad >= min : (config.cantidad >= min && config.cantidad <= max);
   });
 
-  return precioEnRango ? precioEnRango.precio * mt2 : null;
+  return precioEnRango ? precioEnRango.precio * factorCantidad : null;
 }
 
 async function getPrecioMaterialesRigidos(
@@ -1420,12 +1420,14 @@ async function getPrecioGranFormatoLine(
   if (!precioRango) return null;
 
   // Determinar si es MT2 o Metro Lineal
+  // Si es 'mt_lineal' O si NO es 'mt2' (para cubrir undefined/default), usar métrica lineal
   if (tipoVentaReal === 'mt2') {
     const mt2Real = line.mt2_calculado || 0;
     // Aplicar factor de ajuste
     const mt2ParaPrecio = factorAjuste ? mt2Real * factorAjuste : mt2Real;
     return precioRango.precio * mt2ParaPrecio;
   } else {
+    // Caso 'mt_lineal' o undefined (default)
     const metrosReales = line.metros_lineales || 0;
     // Aplicar factor de ajuste
     const metrosParaPrecio = factorAjuste ? metrosReales * factorAjuste : metrosReales;

@@ -571,7 +571,7 @@ export function UniversalAddItemWizard({
     const result = await calculatePrice(
       selectedProduct.id,
       selectedProduct.categoria,
-      selectedConfig,
+      { ...selectedConfig, tipo_venta_real: config.tipo_venta_real },
       selectedServicios,
       selectedAcabados,
       config.cantidades_fijas,
