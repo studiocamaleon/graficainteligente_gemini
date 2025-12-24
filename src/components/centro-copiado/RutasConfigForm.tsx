@@ -37,7 +37,7 @@ const CONFIG_VALUES: Record<string, { value: string; label: string }[]> = {
 };
 
 export function RutasConfigForm({ onSubmit, onCancel }: RutasConfigFormProps) {
-    const { pasos, loading: loadingPasos } = usePasos({ orderBy: 'nombre' });
+    const { pasos, loading: loadingPasos } = usePasos({ orderBy: 'nombre', itemsPerPage: 1000 });
 
     const [formData, setFormData] = useState({
         clave: 'tipo_tinta',
