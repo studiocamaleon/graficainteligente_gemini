@@ -43,6 +43,15 @@ export function useUniversalPricing() {
       // Inyectar la cantidad normalizada en el config para que las funciones internas la usen
       const normalizedConfig = { ...config, cantidad: safeQty };
 
+      // DEBUG: Entry Log
+      console.log('[calculatePrice] ENTRY:', {
+        productId,
+        categoria,
+        lineasCount: config.lineas_medidas?.length,
+        acabadosCount: acabados.length,
+        firstAcabado: acabados[0]
+      });
+
       let precioBase: number | null = null;
       let componentesActualizados: any[] | undefined;
 
@@ -88,12 +97,7 @@ export function useUniversalPricing() {
         // Por ahora asumimos que linea.precio_total_linea (base) viene populado o lo tomamos.
         // Si no, usamos las métricas.
 
-        // DEBUG: Trace pricing inputs
-        console.log('DEBUG_PRICING: Starting Calculation', {
-          acabadosParam: acabados.map(a => `${a.nombre} (${a.tipo_impacto})`),
-          linesBasePrices: lineas.map(l => ({ id: l.id, base: l.precio_base_unitario, total: l.precio_total_linea })),
-          totalPrevious: precioBase
-        });
+
 
         lineasActualizadas = await Promise.all(lineas.map(async l => {
           // Asegurar métricas por línea
@@ -127,10 +131,9 @@ export function useUniversalPricing() {
 
               if (priceResult?.precio_base_unitario) {
                 baseUnitario = priceResult.precio_base_unitario;
-                console.log("DEBUG_PRICING: Recovered base price for line", { lineId: l.id, baseUnitario });
               }
             } catch (err) {
-              console.error("Error recovering line base price:", err);
+              // Ignore error
             }
           }
 
@@ -196,17 +199,22 @@ export function useUniversalPricing() {
           let impactoLinea = 0;
           const { mt2, ml, qty, baseTotal } = linea._metrics;
 
-          // Normalizar valores (fallback a raw value si monto/porcentaje no estan definidos)
-          const valMonto = item.valor_monto ?? item.valor_impacto ?? 0;
+          // Normalización robusta
+          const tipoImpacto = item.tipo_impacto ? item.tipo_impacto.toLowerCase() : 'sin_impacto';
+          const valMonto = Number(item.valor_monto ?? item.valor_impacto ?? 0);
           // Para tipos mixtos, el secundario suele ser el porcentaje/variable. 
           // Para porcentuales puros, el valor principal (impacto) es el porcentaje.
-          let valPorc = item.valor_porcentaje ?? item.valor_impacto_secundario ?? 0;
-          if (item.tipo_impacto === 'porcentual' && !valPorc) {
-            valPorc = item.valor_impacto ?? 0;
+          let valPorc = Number(item.valor_porcentaje ?? item.valor_impacto_secundario ?? 0);
+          if (tipoImpacto === 'porcentual' && !valPorc) {
+            valPorc = Number(item.valor_impacto ?? 0);
           }
 
+
+
+
+
           // Lógica de distribución según tipo de impacto
-          switch (item.tipo_impacto) {
+          switch (tipoImpacto) {
             // 1. Porcentuales: Se aplican al precio base de LA LÍNEA
             case 'porcentual':
               impactoLinea = (valPorc * baseTotal) / 100;
@@ -217,12 +225,24 @@ export function useUniversalPricing() {
               impactoLinea = valMonto * mt2;
               break;
             case 'por_metro_lineal':
+            case 'por_mt_lineal':
               impactoLinea = valMonto * ml;
               break;
 
             // 3. Fijos: Se prorratean entre todas las líneas
+            // 3. Fijos: Se prorratean entre todas las líneas
             case 'precio_fijo':
+              // Precio Fijo GLOBAL (Step 3) se prorratea
               impactoLinea = valMonto / lineasActualizadas.length;
+              break;
+
+            case 'por_unidad':
+              // Precio por UNIDAD (Step 3).
+              // Si se seleccionó en Global Step 3 con cantidad X.
+              // Significa que CADA unidad producida lleva este costo? 
+              // O que el servicio se cobra por unidad global?
+              // Si es "Por Pieza", cada item de la línea paga el costo.
+              impactoLinea = valMonto * qty;
               break;
 
             // 4. Mixtos (Fijo + Variable)
@@ -268,15 +288,8 @@ export function useUniversalPricing() {
 
               const totalMixedTime = fixedPartTime + varPartTime;
 
-              if (item.tipo_impacto === 'fijo_minuto') {
-                console.log('DEBUG_TIME_PRICING:', {
-                  tipo: item.tipo_impacto,
-                  valMonto, // Fixed
-                  valPorc, // Min price ??
-                  qty: item.cantidad,
-                  varPartTime,
-                  itemRaw: item
-                });
+              if (tipoImpacto === 'fijo_minuto') {
+                // Remove debug log
               }
 
               impactoLinea = totalMixedTime / lineasActualizadas.length;
@@ -306,6 +319,12 @@ export function useUniversalPricing() {
               }
           }
 
+          if (impactoLinea > 0) {
+            console.log(`[distribuirAlineas] ✅ Applied Impact: ${impactoLinea} to Line ${linea.id}`);
+          } else {
+            console.log(`[distribuirAlineas] ❌ Zero Impact for Line ${linea.id}`);
+          }
+
           // Acumular en la línea
           if (tipo === 'servicio') {
             linea.precio_servicios_extra_total += impactoLinea;
@@ -327,10 +346,16 @@ export function useUniversalPricing() {
           // Para simplificar, calculamos y distribuimos dentro de la función auxiliar.
           distribuirAlineas('servicio', servicio, servicio.valor_monto || 0); // Pasamos valor fijo 'raw' para distribución
         } else {
+          // Normalizar valores (fallback a raw value si monto/porcentaje no estan definidos)
+          let valPorc = servicio.valor_porcentaje ?? servicio.valor_impacto_secundario ?? 0;
+          if (servicio.tipo_impacto === 'porcentual' && !valPorc) {
+            valPorc = servicio.valor_impacto ?? 0;
+          }
+
           impacto = calcularImpacto(
             servicio.tipo_impacto,
             servicio.valor_monto ?? servicio.valor_impacto ?? 0,
-            servicio.valor_porcentaje ?? servicio.valor_impacto_secundario ?? 0,
+            valPorc,
             precioBaseTotal,
             mt2,
             metrosLineales,
@@ -353,16 +378,26 @@ export function useUniversalPricing() {
         if (tieneLineas) {
           distribuirAlineas('acabado', acabado, acabado.valor_monto || 0);
         } else {
+          // Normalizar valores (fallback a raw value si monto/porcentaje no estan definidos)
+          const tipo = acabado.tipo_impacto ? acabado.tipo_impacto.toLowerCase() : '';
+          let valPorc = Number(acabado.valor_porcentaje ?? acabado.valor_impacto_secundario ?? 0);
+
+          if (tipo === 'porcentual' && !valPorc) {
+            valPorc = Number(acabado.valor_impacto ?? 0);
+          }
+
           impacto = calcularImpacto(
             acabado.tipo_impacto,
             acabado.valor_monto ?? acabado.valor_impacto ?? 0,
-            acabado.valor_porcentaje ?? acabado.valor_impacto_secundario ?? 0,
+            valPorc,
             precioBaseTotal,
             mt2,
             metrosLineales,
             safeQty,
             acabado.cantidad
           );
+
+          console.log('[StandardCalc] Acabado:', { nombre: acabado.nombre, tipo, impacto });
         }
         precioAcabadosTotal += impacto;
       }
@@ -622,6 +657,11 @@ async function getPrecioPlotterCorte(
   config: SelectedConfiguration
 ): Promise<number | null> {
   if (!config.medida_ancho) {
+    // Si tiene líneas definidas (multi-linea), el precio base global es 0 (se suma por línea).
+    // Evitamos retornar null para que el flujo continúe a la lógica multi-línea.
+    if (config.lineas_medidas && config.lineas_medidas.length > 0) {
+      return 0;
+    }
     return null;
   }
 
@@ -1028,7 +1068,7 @@ export function mapTipoToCategory(tipo: string): ProductCategory | null {
  * @returns El precio TOTAL a sumar por este servicio/acabado (se dividirá por cantidad después)
  */
 export function calcularImpacto(
-  tipoImpacto: string,
+  tipoImpactoRaw: string,
   valorMonto: number | null,
   valorPorcentaje: number | null,
   precioBaseTotal: number,
@@ -1037,6 +1077,8 @@ export function calcularImpacto(
   cantidad: number, // Cantidad global del producto
   cantidadServicio: number = 1 // Cantidad específica del servicio (ej. minutos, u otras unidades)
 ): number {
+  const tipoImpacto = tipoImpactoRaw ? tipoImpactoRaw.toLowerCase() : 'sin_impacto';
+
   switch (tipoImpacto) {
     case 'precio_fijo':
       // Precio fijo se suma directamente al total
@@ -1055,6 +1097,7 @@ export function calcularImpacto(
       return valorMonto && mt2 ? valorMonto * mt2 * cantidad : 0;
 
     case 'por_metro_lineal':
+    case 'por_mt_lineal':
       // Precio por metro lineal multiplicado por los metros lineales y por la cantidad
       return valorMonto && metrosLineales ? valorMonto * metrosLineales * cantidad : 0;
 
@@ -1327,10 +1370,16 @@ export async function calculateLinePrice(
     // Calcular impacto de servicios
     let precioServiciosTotal = 0;
     for (const servicio of serviciosLinea) {
+      // Normalizar valores (fallback a raw value si monto/porcentaje no estan definidos)
+      let valPorc = servicio.valor_porcentaje ?? servicio.valor_impacto_secundario ?? 0;
+      if (servicio.tipo_impacto === 'porcentual' && !valPorc) {
+        valPorc = servicio.valor_impacto ?? 0;
+      }
+
       const impacto = calcularImpacto(
         servicio.tipo_impacto,
         servicio.valor_monto ?? servicio.valor_impacto ?? 0,
-        servicio.valor_porcentaje ?? servicio.valor_impacto_secundario ?? 0,
+        valPorc,
         precioBaseTotal,
         mt2,
         metrosLineales,
@@ -1343,10 +1392,16 @@ export async function calculateLinePrice(
     // Calcular impacto de acabados
     let precioAcabadosTotal = 0;
     for (const acabado of acabadosLinea) {
+      // Normalizar valores (fallback a raw value si monto/porcentaje no estan definidos)
+      let valPorc = acabado.valor_porcentaje ?? acabado.valor_impacto_secundario ?? 0;
+      if (acabado.tipo_impacto === 'porcentual' && !valPorc) {
+        valPorc = acabado.valor_impacto ?? 0;
+      }
+
       const impacto = calcularImpacto(
         acabado.tipo_impacto,
         acabado.valor_monto ?? acabado.valor_impacto ?? 0,
-        acabado.valor_porcentaje ?? acabado.valor_impacto_secundario ?? 0,
+        valPorc,
         precioBaseTotal,
         mt2,
         metrosLineales,

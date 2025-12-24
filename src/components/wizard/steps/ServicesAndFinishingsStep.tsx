@@ -207,6 +207,7 @@ export function ServicesAndFinishingsStep({
         return val1 ? `${formatCurrency(val1)}/m²` : 'Sin impacto';
 
       case 'por_metro_lineal':
+      case 'por_mt_lineal':
         return val1 ? `${formatCurrency(val1)}/ml` : 'Sin impacto';
 
       case 'por_minuto':
