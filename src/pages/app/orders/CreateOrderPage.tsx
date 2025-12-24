@@ -199,7 +199,8 @@ export function CreateOrderPage() {
         .from('presupuestos')
         .select(`
           *,
-          items:presupuestos_items(*)
+          items:presupuestos_items(*),
+          servicios:presupuestos_servicios(*)
         `)
         .eq('id', presupuestoId)
         .single();
@@ -220,6 +221,7 @@ export function CreateOrderPage() {
 
       const mappedItems = (presupuesto.items || []).map((item: any) => ({
         id: item.id,
+        es_servicio_cobro: false,
         tipo_item: (item.configuracion?.cantidad_copias && item.configuracion?.cantidad_hojas) ? 'centro_copiado' :
           (item.tipo_item === 'item_personalizado' ? 'personalizado' :
             (item.tipo_item === 'producto_sistema' && !item.producto_id ? 'personalizado' : (item.tipo_item === 'producto_sistema' ? 'catalogo' : item.tipo_item))),
@@ -238,7 +240,21 @@ export function CreateOrderPage() {
         rutas_generadas: item.configuracion?._rutas_snapshot || []
       }));
 
-      setItems(mappedItems);
+      const mappedServicios = (presupuesto.servicios || []).map((s: any) => ({
+        id: s.id, // ID real de presupuestos_servicios (distinto de item)
+        es_servicio_cobro: true,
+        tipo_item: 'item_personalizado',
+        producto_nombre: s.descripcion,
+        producto_categoria: 'Servicio Adicional',
+        cantidad: Number(s.cantidad),
+        precio_unitario_final: Number(s.precio_unitario),
+        precio_total: Number(s.subtotal),
+        descripcion: s.descripcion,
+        metadata: s.metadata,
+        configuracion: {}
+      }));
+
+      setItems([...mappedItems, ...mappedServicios]);
 
     } catch (err) {
       console.error('Error loading presupuesto:', err);
@@ -470,6 +486,8 @@ export function CreateOrderPage() {
 
         // Limpiar items anteriores para re-insertar (Estrategia Full Replace)
         await (supabase as any).from('presupuestos_items').delete().eq('presupuesto_id', presupuestoId);
+        // Limpiar servicios anteriores
+        await (supabase as any).from('presupuestos_servicios').delete().eq('presupuesto_id', presupuestoId);
 
       } else {
         // CREATE MODE
@@ -547,19 +565,18 @@ export function CreateOrderPage() {
           if (rutasError) console.error('Error insertando rutas de presupuesto:', rutasError);
         }
       }
-      // Servicios extra
+      // Servicios extra (Guardar en tabla separada)
       const servicios = items.filter(i => i.es_servicio_cobro);
       for (const s of servicios) {
-        await (supabase as any).from('presupuestos_items').insert({
+        await (supabase as any).from('presupuestos_servicios').insert({
           presupuesto_id: presupuestoId,
-          tipo_item: 'item_personalizado',
-          producto_nombre: s.producto_nombre,
-          producto_categoria: 'Servicio Adicional',
-          configuracion: {},
+          descripcion: s.producto_nombre,
           cantidad: s.cantidad,
-          precio_unitario_final: s.precio_unitario_final,
-          precio_total: s.precio_total,
-          descripcion: s.descripcion || 'Servicio'
+          precio_unitario: s.precio_unitario_final,
+          subtotal: s.precio_total,
+          servicio_id: null, // Si tuviéramos ID real de servicio lo pondríamos aquí
+          created_by: profile?.id,
+          metadata: (s as any).metadata || {}
         });
       }
 

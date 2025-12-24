@@ -104,6 +104,7 @@ export interface PresupuestoConRelaciones extends Presupuesto {
   };
   items_count?: number;
   items?: PresupuestoItem[];
+  servicios?: PresupuestoServicio[];
   archivos_count?: number;
 }
 
@@ -140,6 +141,23 @@ export interface PresupuestoItem {
 
   created_at: string;
   updated_at: string;
+}
+
+// ============================================================================
+// INTERFACE: PresupuestoServicio
+// ============================================================================
+
+export interface PresupuestoServicio {
+  id: string;
+  presupuesto_id: string;
+  servicio_id: string | null;
+  descripcion: string;
+  cantidad: number;
+  precio_unitario: number;
+  subtotal: number;
+  metadata?: any;
+  created_at: string;
+  created_by?: string;
 }
 
 // ============================================================================

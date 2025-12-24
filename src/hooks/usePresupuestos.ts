@@ -227,6 +227,29 @@ export function usePresupuestos(
         await supabase.from('presupuestos_items').insert(itemsCopiados);
       }
 
+      // Copiar Servicios
+      const { data: servicios, error: serviciosError } = await (supabase as any)
+        .from('presupuestos_servicios')
+        .select('*')
+        .eq('presupuesto_id', id);
+
+      if (serviciosError) throw serviciosError;
+
+      if (servicios && servicios.length > 0) {
+        const serviciosCopiados = servicios.map((s: any) => ({
+          presupuesto_id: duplicado.id,
+          descripcion: s.descripcion,
+          cantidad: s.cantidad,
+          precio_unitario: s.precio_unitario,
+          subtotal: s.subtotal,
+          servicio_id: s.servicio_id,
+          metadata: s.metadata,
+          created_by: user?.id,
+        }));
+
+        await (supabase as any).from('presupuestos_servicios').insert(serviciosCopiados);
+      }
+
       await fetchPresupuestos();
       return duplicado as Presupuesto;
     } catch (err: any) {

@@ -19,8 +19,13 @@ export function PresupuestoRutasTab({ presupuestoId, items, companyId, esEditabl
 
     // Filtrar items de producción (no servicios de cobro)
     const productionItems = items.filter(i => {
-        // Detectar si es servicio de cobro basado en propiedades o tipo
-        return i.tipo_item !== 'producto_sistema' || (i.configuracion as any)?.categoria !== 'Servicio Adicional';
+        // Detectar si es servicio de cobro
+        if (i.producto_categoria === 'Servicio Adicional') return false;
+        if ((i as any).es_servicio_cobro) return false;
+        // Excluir Items Personalizados que son Servicios mapeados
+        if (i.tipo_item === 'item_personalizado' && i.producto_nombre?.toLowerCase()?.includes('servicio')) return false; // Heuristic fallback if category is missing
+
+        return true;
     });
 
 
@@ -82,7 +87,7 @@ export function PresupuestoRutasTab({ presupuestoId, items, companyId, esEditabl
 
     const handleUpdateStepComment = async (itemIndex: number, stepId: string, comment: string | null) => {
         try {
-            const { error } = await supabase
+            const { error } = await (supabase as any)
                 .from('presupuestos_items_rutas')
                 .update({ comentario_vendedor: comment } as any)
                 .eq('id', stepId);
@@ -146,7 +151,7 @@ export function PresupuestoRutasTab({ presupuestoId, items, companyId, esEditabl
     const handleAddStepToDb = async (item: any, step: any, orderIndex: number) => {
         if (!companyId) return;
 
-        const { error } = await supabase.from('presupuestos_items_rutas').insert({
+        const { error } = await (supabase as any).from('presupuestos_items_rutas').insert({
             company_id: companyId,
             presupuesto_item_id: item.id,
             tipo_etapa: step.etapa,
@@ -177,7 +182,7 @@ export function PresupuestoRutasTab({ presupuestoId, items, companyId, esEditabl
             return;
         }
 
-        const { error } = await supabase.from('presupuestos_items_rutas').delete().eq('id', stepId);
+        const { error } = await (supabase as any).from('presupuestos_items_rutas').delete().eq('id', stepId);
         if (error) {
             console.error('Error deleting step:', error);
             alert('Error al eliminar paso');

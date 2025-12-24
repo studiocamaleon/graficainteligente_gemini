@@ -114,6 +114,33 @@ export function usePresupuesto(id: string | undefined) {
         .select('*', { count: 'exact', head: true })
         .eq('presupuesto_id', id);
 
+      // Obtener servicios
+      const { data: servicios, error: serviciosError } = await (supabase as any)
+        .from('presupuestos_servicios')
+        .select('*')
+        .eq('presupuesto_id', id);
+
+      if (serviciosError) console.error('Error fetching servicios:', serviciosError);
+
+      const mappedServicios = ((servicios as any[]) || []).map(s => ({
+        id: s.id,
+        presupuesto_id: id,
+        tipo_item: 'item_personalizado' as const,
+        producto_nombre: s.descripcion,
+        producto_categoria: 'Servicio Adicional',
+        configuracion: {},
+        cantidad: Number(s.cantidad),
+        precio_base: 0,
+        precio_servicios: 0,
+        precio_acabados: 0,
+        precio_unitario_final: Number(s.precio_unitario),
+        precio_total: Number(s.subtotal),
+        descripcion: s.descripcion,
+        created_at: s.created_at,
+        updated_at: s.created_at,
+        rutas_generadas: []
+      }));
+
       // Mapear rutas a los items
       const itemsWithRoutes = ((items as any[]) || []).map(item => ({
         ...item,
@@ -133,8 +160,8 @@ export function usePresupuesto(id: string | undefined) {
 
       setPresupuesto({
         ...(data as any),
-        items: itemsWithRoutes,
-        items_count: items?.length || 0,
+        items: [...itemsWithRoutes, ...mappedServicios],
+        items_count: (items?.length || 0) + mappedServicios.length,
         archivos_count: archivosCount || 0,
       });
     } catch (err: any) {
@@ -152,7 +179,7 @@ export function usePresupuesto(id: string | undefined) {
     try {
       setError(null);
 
-      const { error: updateError } = await supabase
+      const { error: updateError } = await (supabase as any)
         .from('presupuestos')
         .update(data as any)
         .eq('id', id);
