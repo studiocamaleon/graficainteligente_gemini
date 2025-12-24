@@ -1571,6 +1571,17 @@ export interface CentroCopiadoPrecioImpresion {
   updated_at: string;
 }
 
+export interface CentroCopiadoPloteoCADPrecio {
+  id: string;
+  company_id: string;
+  tipo_papel: string;
+  ancho_cm: 60 | 90;
+  precio_metro_lineal: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface CentroCopiadoOrden {
   id: string;
   company_id: string;
@@ -1608,6 +1619,10 @@ export interface CentroCopiadoOrdenItem {
   cantidad_unidades: number;
   precio_unitario: number;
   subtotal: number;
+  es_ploteo_cad?: boolean;
+  ploteo_cad_tipo_papel?: string | null;
+  ploteo_cad_ancho_rollo?: number | null;
+  ploteo_cad_metros_lineales?: number | null;
   descripcion: string | null;
   created_at: string;
   updated_at: string;
@@ -1997,6 +2012,11 @@ export interface Database {
         Row: CentroCopiadoPrecioImpresion;
         Insert: Omit<CentroCopiadoPrecioImpresion, 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Omit<CentroCopiadoPrecioImpresion, 'id' | 'created_at' | 'company_id'>>;
+      };
+      centro_copiado_ploteo_cad_precios: {
+        Row: CentroCopiadoPloteoCADPrecio;
+        Insert: Omit<CentroCopiadoPloteoCADPrecio, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<CentroCopiadoPloteoCADPrecio, 'id' | 'created_at' | 'company_id'>>;
       };
       centro_copiado_ordenes: {
         Row: CentroCopiadoOrden;

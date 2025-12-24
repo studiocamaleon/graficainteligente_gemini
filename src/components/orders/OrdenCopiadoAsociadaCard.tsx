@@ -20,21 +20,23 @@ const getEstadoBadge = (estado: EstadoOrdenCopiado) => {
     pendiente: { variant: 'warning' as const, label: 'Pendiente' },
     en_proceso: { variant: 'primary' as const, label: 'En Proceso' },
     finalizada: { variant: 'success' as const, label: 'Finalizada' },
-    entregada: { variant: 'secondary' as const, label: 'Entregada' },
+    entregada: { variant: 'default' as const, label: 'Entregada' },
     cancelada: { variant: 'danger' as const, label: 'Cancelada' },
   };
 
-  const estilo = estilos[estado] || { variant: 'secondary' as const, label: estado };
+  const estilo = estilos[estado] || { variant: 'default' as const, label: estado };
   return <Badge variant={estilo.variant}>{estilo.label}</Badge>;
 };
 
-const getTipoItemLabel = (tipo: string) => {
+const getTipoItemLabel = (item: any) => {
+  if (item.es_ploteo_cad) return 'Ploteo CAD';
+
   const labels: Record<string, string> = {
     impresion: 'Impresión',
     anillado: 'Anillado',
     plastificado: 'Plastificado',
   };
-  return labels[tipo] || tipo;
+  return labels[item.tipo_item] || item.tipo_item;
 };
 
 export function OrdenCopiadoAsociadaCard({
@@ -156,12 +158,12 @@ export function OrdenCopiadoAsociadaCard({
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <Badge variant="secondary">#{index + 1}</Badge>
+                            <Badge variant="default">#{index + 1}</Badge>
                             <span className="text-sm font-medium text-gray-900">
-                              {getTipoItemLabel(item.tipo_item)}
+                              {getTipoItemLabel(item)}
                             </span>
                           </div>
-                          {item.tipo_item === 'impresion' && (
+                          {item.tipo_item === 'impresion' && !item.es_ploteo_cad && (
                             <p className="text-xs text-gray-600">
                               {item.tamanio_papel?.nombre || 'N/A'}
                               {' - '}
@@ -169,6 +171,14 @@ export function OrdenCopiadoAsociadaCard({
                               {item.papel?.variante_nombre && item.papel?.material?.nombre && ` ${item.papel.variante_nombre}`}
                               {' • '}
                               {item.cantidad_hojas} hojas × {item.cantidad_unidades} copias
+                            </p>
+                          )}
+                          {item.es_ploteo_cad && (
+                            <p className="text-xs text-gray-600">
+                              Ploteo CAD • {item.ploteo_cad_tipo_papel || 'N/A'} • Ancho {item.ploteo_cad_ancho_rollo}cm
+                              {' • '}
+                              {item.ploteo_cad_metros_lineales}ml
+                              {item.cantidad_unidades > 1 && ` × ${item.cantidad_unidades} copias`}
                             </p>
                           )}
                         </div>

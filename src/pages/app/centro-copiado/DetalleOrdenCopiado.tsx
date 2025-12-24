@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Switch } from '../../../components/ui/Switch';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Calendar, User, FileText, DollarSign, AlertCircle, Download, ExternalLink, Edit } from 'lucide-react';
@@ -21,7 +21,7 @@ import { useCentroCopiadoOrdenArchivos } from '../../../hooks/useCentroCopiadoOr
 import { OrdenPagosTab } from '../../../components/orders/OrdenPagosTab';
 import { PagoFormModal } from '../../../components/orders/PagoFormModal';
 import { ChannelBadge } from '../../../components/orders/ChannelBadge';
-import type { EstadoOrdenCopiado, TipoItemCopiado, CanalVenta } from '../../../types/database'; // Added CanalVenta type
+import type { EstadoOrdenCopiado, TipoItemCopiado } from '../../../types/database';
 import { useAuth } from '../../../hooks/useAuth';
 
 export function DetalleOrdenCopiado() {
@@ -36,7 +36,6 @@ export function DetalleOrdenCopiado() {
 
   const { orden, loading, error, refetch, updateOrden } = useCentroCopiadoOrden(id);
   const { updateEstado } = useCentroCopiadoOrdenes({ enabled: false });
-  const [updating, setUpdating] = useState(false);
 
   // ... (previous code)
 
@@ -57,8 +56,6 @@ export function DetalleOrdenCopiado() {
     }
 
     try {
-      setUpdating(true);
-
       // Calcular subtotal real sumando items
       const subtotal = orden.items?.reduce((acc, item) => acc + (Number(item.subtotal) || 0), 0) || 0;
       const iva = checked ? subtotal * 0.21 : 0;
@@ -71,8 +68,6 @@ export function DetalleOrdenCopiado() {
 
     } catch (err) {
       console.error(err);
-    } finally {
-      setUpdating(false);
     }
   };
 
@@ -96,7 +91,7 @@ export function DetalleOrdenCopiado() {
       cancelada: { variant: 'danger' as const, label: 'Cancelada' },
     };
 
-    const estilo = estilos[estado] || { variant: 'secondary' as const, label: estado };
+    const estilo = estilos[estado] || { variant: 'default' as const, label: estado };
     return <Badge variant={estilo.variant}>{estilo.label}</Badge>;
   };
 
@@ -139,19 +134,19 @@ export function DetalleOrdenCopiado() {
     setMotivoCancelacion('');
   };
 
-  const getTipoItemLabel = (tipo: TipoItemCopiado) => {
-    const labels = {
+  const getTipoItemLabel = (item: any) => {
+    if (item.es_ploteo_cad) return 'Ploteo CAD';
+
+    const labels: Record<string, string> = {
       impresion: 'Impresión',
       anillado: 'Anillado',
       plastificado: 'Plastificado',
       guillotinado: 'Guillotinado',
     };
-    return labels[tipo] || tipo;
+    return labels[item.tipo_item] || item.tipo_item;
   };
 
-  const getArchivoParaItem = (itemId: string) => {
-    return archivos.find(archivo => archivo.item_generado_id === itemId);
-  };
+
 
   const handleDescargarArchivo = async (archivoId: string) => {
     setDescargandoId(archivoId);
@@ -486,18 +481,36 @@ export function DetalleOrdenCopiado() {
                     {
                       key: 'numero',
                       header: '#',
-                      render: (item, index) => <Badge variant="secondary">{index + 1}</Badge>,
+                      render: (item, index) => <Badge variant="default">{index + 1}</Badge>,
                     },
                     {
                       key: 'tipo',
                       header: 'Tipo',
-                      render: (item) => <span className="font-medium">{getTipoItemLabel(item.tipo_item)}</span>,
+                      render: (item) => <span className="font-medium">{getTipoItemLabel(item)}</span>,
                     },
                     {
                       key: 'descripcion',
                       header: 'Descripción',
                       render: (item) => {
                         if (item.tipo_item === 'impresion') {
+                          if (item.es_ploteo_cad) {
+                            return (
+                              <div className="text-sm">
+                                <div className="font-medium text-gray-900">
+                                  Ploteo CAD - {item.ploteo_cad_tipo_papel}
+                                </div>
+                                <div className="text-gray-500">
+                                  {item.ploteo_cad_ancho_rollo}cm (Ancho) × {item.ploteo_cad_metros_lineales}ml (Largo)
+                                </div>
+                                {item.descripcion && (
+                                  <div className="mt-1 text-xs text-gray-500 italic border-t border-gray-100 pt-1">
+                                    Nota: {item.descripcion}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          }
+
                           return (
                             <div className="text-sm">
                               <div>
@@ -510,7 +523,7 @@ export function DetalleOrdenCopiado() {
                               </div>
                               {item.descripcion && (
                                 <div className="mt-1 text-xs text-gray-500 italic border-t border-gray-100 pt-1">
-                                  Note: {item.descripcion}
+                                  Nota: {item.descripcion}
                                 </div>
                               )}
                             </div>
@@ -606,7 +619,13 @@ export function DetalleOrdenCopiado() {
           <div className="p-6">
             <OrdenPagosTab
               totales={totales}
-              pagos={pagos}
+              pagos={pagos.map(p => ({
+                ...p,
+                referencia_pago: p.referencia_pago || undefined,
+                notas: p.notas || undefined,
+                comision_aplicada: p.comision_aplicada || undefined,
+                fecha_liberacion_estimada: p.fecha_liberacion_estimada || undefined
+              }))}
               onAgregarPago={handleAgregarPago}
               onEditarPago={handleEditarPago}
               onEliminarPago={handleEliminarPago}
@@ -764,7 +783,7 @@ export function DetalleOrdenCopiado() {
         title={confirmDialogState.title}
         message={confirmDialogState.message}
         onConfirm={handleConfirm}
-        onCancel={closeConfirmDialog}
+        onClose={closeConfirmDialog}
       />
 
       <InfoDialog

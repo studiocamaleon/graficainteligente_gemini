@@ -195,7 +195,12 @@ export function CrearOrdenCopiado() {
               tipo: dbItem.tipo_plastificado,
               todas_hojas: true, // Default to true as we're not tracking partials yet
             } : undefined,
-            guillotinado: dbItem.con_guillotinado ? { cantidad_hojas: dbItem.cantidad_hojas || 0 } : undefined
+            guillotinado: dbItem.con_guillotinado ? { cantidad_hojas: dbItem.cantidad_hojas || 0 } : undefined,
+            // Ploteo CAD Fields
+            modo_item: dbItem.es_ploteo_cad ? 'ploteo_cad' : 'hojas',
+            ploteo_cad_tipo_papel: dbItem.ploteo_cad_tipo_papel || undefined,
+            ploteo_cad_ancho_rollo: (dbItem.ploteo_cad_ancho_rollo as 60 | 90) || undefined,
+            ploteo_cad_metros_lineales: dbItem.ploteo_cad_metros_lineales || undefined,
           };
 
           return {
@@ -357,12 +362,24 @@ export function CrearOrdenCopiado() {
 
     const itemsCompletos = items.filter(
       (item) =>
-        item.config.tamanio_papel_id &&
-        item.config.papel_id &&
-        item.config.tipo_tinta &&
-        item.config.cara_impresa &&
-        item.config.cantidad_hojas &&
-        item.config.cantidad_copias
+        (item) => {
+          if (item.config.modo_item === 'ploteo_cad') {
+            return (
+              item.config.ploteo_cad_tipo_papel &&
+              item.config.ploteo_cad_ancho_rollo &&
+              item.config.ploteo_cad_metros_lineales &&
+              item.config.cantidad_copias
+            );
+          }
+          return (
+            item.config.tamanio_papel_id &&
+            item.config.papel_id &&
+            item.config.tipo_tinta &&
+            item.config.cara_impresa &&
+            item.config.cantidad_hojas &&
+            item.config.cantidad_copias
+          );
+        }
     );
 
     if (itemsCompletos.length === 0) {
@@ -381,7 +398,8 @@ export function CrearOrdenCopiado() {
     setGuardando(true);
 
     try {
-      const fechaEntregaCompleta = `${fechaEntrega}T00:00:00`;
+      // Use T12:00:00 to avoid timezone issues shifting the date to previous day
+      const fechaEntregaCompleta = `${fechaEntrega}T12:00:00`;
 
       // 1. Crear orden real
       const datosOrden = {
@@ -434,32 +452,56 @@ export function CrearOrdenCopiado() {
       // 3. Crear items
       for (const item of items) {
         const config = item.config;
-        if (
-          !config.tamanio_papel_id ||
-          !config.papel_id ||
-          !config.tipo_tinta ||
-          !config.cara_impresa ||
-          !config.cantidad_hojas ||
-          !config.cantidad_copias
-        ) {
-          continue;
+        const esPloteoCad = config.modo_item === 'ploteo_cad';
+
+        // Validation based on item type
+        if (esPloteoCad) {
+          if (
+            !config.ploteo_cad_tipo_papel ||
+            !config.ploteo_cad_ancho_rollo ||
+            !config.ploteo_cad_metros_lineales ||
+            !config.cantidad_copias
+          ) {
+            continue;
+          }
+        } else {
+          // Standard validation
+          if (
+            !config.tamanio_papel_id ||
+            !config.papel_id ||
+            !config.tipo_tinta ||
+            !config.cara_impresa ||
+            !config.cantidad_hojas ||
+            !config.cantidad_copias
+          ) {
+            continue;
+          }
         }
 
         const datosItem = {
           orden_copiado_id: ordenIdFinal,
-          tamanio_papel_id: config.tamanio_papel_id,
-          papel_id: config.papel_id,
-          tipo_tinta: config.tipo_tinta,
-          cara_impresa: config.cara_impresa,
-          cantidad_hojas: config.cantidad_hojas,
+          // Common
           cantidad_unidades: config.cantidad_copias,
-          tipo_anillado: config.anillado?.tipo,
-          tipo_plastificado: config.plastificado?.tipo,
-
-          con_guillotinado: !!config.guillotinado,
           precio_unitario: (item.precio || 0) / (config.cantidad_copias || 1),
           subtotal: item.precio || 0,
           descripcion: item.descripcion || undefined,
+
+          // Imprimir / Standard Fields (Null if CAD)
+          // Imprimir / Standard Fields (Null if CAD)
+          tamanio_papel_id: !esPloteoCad ? config.tamanio_papel_id : undefined,
+          papel_id: !esPloteoCad ? config.papel_id : undefined,
+          tipo_tinta: !esPloteoCad ? config.tipo_tinta : undefined,
+          cara_impresa: !esPloteoCad ? config.cara_impresa : undefined,
+          cantidad_hojas: !esPloteoCad ? config.cantidad_hojas : undefined,
+          tipo_anillado: !esPloteoCad ? config.anillado?.tipo : undefined,
+          tipo_plastificado: !esPloteoCad ? config.plastificado?.tipo : undefined,
+          con_guillotinado: !esPloteoCad ? !!config.guillotinado : false,
+
+          // Ploteo CAD fields
+          es_ploteo_cad: esPloteoCad,
+          ploteo_cad_tipo_papel: esPloteoCad ? config.ploteo_cad_tipo_papel : undefined,
+          ploteo_cad_ancho_rollo: esPloteoCad ? config.ploteo_cad_ancho_rollo : undefined,
+          ploteo_cad_metros_lineales: esPloteoCad ? config.ploteo_cad_metros_lineales : undefined,
         };
 
         const itemCreado = await createItemImpresion(datosItem);

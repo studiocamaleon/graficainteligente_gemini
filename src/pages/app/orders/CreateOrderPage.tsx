@@ -1,5 +1,13 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+const ARGENTINA_TIMEZONE = 'America/Argentina/Buenos_Aires';
 import {
   ArrowLeft, Save, Loader2
 } from 'lucide-react';
@@ -419,7 +427,7 @@ export function CreateOrderPage() {
       if (!fechaEntrega) {
         errores.fechaEntrega = 'La fecha de entrega es obligatoria';
       } else {
-        const hoy = new Date().toISOString().split('T')[0];
+        const hoy = dayjs().tz(ARGENTINA_TIMEZONE).format('YYYY-MM-DD');
         if (!isEditing && fechaEntrega < hoy) {
           errores.fechaEntrega = 'La fecha de entrega no puede ser anterior a hoy';
         }
@@ -602,7 +610,7 @@ export function CreateOrderPage() {
     const ordenData = {
       cliente_id: clienteId,
       canal_venta: canalVenta,
-      fecha_estimada_entrega: fechaEntrega ? `${fechaEntrega}T12:00:00` : undefined,
+      fecha_estimada_entrega: fechaEntrega ? `${fechaEntrega}T12:00:00-03:00` : undefined,
       notas_internas: notasInternas || undefined,
       subtotal: totales.subtotal,
       total_descuentos: totales.descuentoAplicado,

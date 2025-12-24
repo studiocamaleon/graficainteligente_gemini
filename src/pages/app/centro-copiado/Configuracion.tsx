@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { Settings2, FileText, Plus, Edit2, Trash2, ArrowUp, ArrowDown, GitBranch } from 'lucide-react';
+import { Settings2, FileText, Plus, Edit2, Trash2, ArrowUp, ArrowDown, GitBranch, Printer } from 'lucide-react';
 import { Card } from '../../../components/ui/card';
 import { Tabs } from '../../../components/ui/Tabs';
 import { Button } from '../../../components/ui/Button';
@@ -16,6 +16,7 @@ import { useCentroCopiadoPapeles } from '../../../hooks/useCentroCopiadoPapeles'
 import { TamanioPapelForm } from '../../../components/centro-copiado/TamanioPapelForm';
 import { PapelForm } from '../../../components/centro-copiado/PapelForm';
 import { RutasConfigTab } from '../../../components/centro-copiado/RutasConfigTab';
+import { PloteoCADConfigTab } from '../../../components/centro-copiado/PloteoCADConfigTab';
 import type { CentroCopiadoTamanioPapel, CentroCopiadoPapel } from '../../../types/database';
 
 interface PapelWithMaterial extends CentroCopiadoPapel {
@@ -25,7 +26,7 @@ interface PapelWithMaterial extends CentroCopiadoPapel {
   };
 }
 
-type TabType = 'tamanios' | 'papeles' | 'rutas';
+type TabType = 'tamanios' | 'papeles' | 'rutas' | 'ploteo_cad';
 
 export function Configuracion() {
   const [activeTab, setActiveTab] = useState<TabType>('tamanios');
@@ -90,6 +91,7 @@ export function Configuracion() {
   const tabs = [
     { id: 'tamanios', name: 'Tamaños de Papel', icon: FileText },
     { id: 'papeles', name: 'Tipos de Papel', icon: Settings2 },
+    { id: 'ploteo_cad', name: 'Ploteo CAD', icon: Printer },
     { id: 'rutas', name: 'Rutas de Producción', icon: GitBranch },
   ];
 
@@ -224,7 +226,7 @@ export function Configuracion() {
                 key: 'dimensiones',
                 header: 'Dimensiones (mm)',
                 render: (tamanio: CentroCopiadoTamanioPapel) => (
-                  <Badge variant="secondary">
+                  <Badge variant="default">
                     {tamanio.ancho_mm} × {tamanio.alto_mm} mm
                   </Badge>
                 )
@@ -355,7 +357,7 @@ export function Configuracion() {
                 key: 'espesor',
                 header: 'Espesor',
                 render: (papel: PapelWithMaterial) => papel.espesor ? (
-                  <Badge variant="secondary">
+                  <Badge variant="default">
                     {papel.espesor} {papel.unidad_espesor}
                   </Badge>
                 ) : (
@@ -399,6 +401,8 @@ export function Configuracion() {
         return renderPapelesTab();
       case 'rutas':
         return <RutasConfigTab />;
+      case 'ploteo_cad':
+        return <PloteoCADConfigTab />;
       default:
         return null;
     }
@@ -406,7 +410,7 @@ export function Configuracion() {
 
   return (
     <div className="space-y-6">
-      <Card padding="none">
+      <Card className="p-0">
         <Tabs tabs={tabs} activeTab={activeTab} onTabChange={(tabId) => setActiveTab(tabId as TabType)} />
       </Card>
 
@@ -439,7 +443,7 @@ export function Configuracion() {
         title={dialogState.title}
         message={dialogState.message}
         onConfirm={handleConfirm}
-        onCancel={closeDialog}
+        onClose={closeDialog}
         isLoading={isConfirmLoading}
       />
     </div>

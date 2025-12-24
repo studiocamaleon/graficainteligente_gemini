@@ -104,7 +104,43 @@ export function ItemConfigRenderer({ config, tipoItem, rutasGeneradas }: ItemCon
     };
 
     // --- Lógica Centro de Copiado ---
-    if (tipoItem === 'centro_copiado' || (config.cantidad_copias && config.cantidad_hojas)) {
+    if (tipoItem === 'centro_copiado' || (config.cantidad_copias && config.cantidad_hojas) || config.es_ploteo_cad || config.modo_item === 'ploteo_cad') {
+
+        // Lógica específica para Ploteo CAD
+        const esPloteoCad = config.es_ploteo_cad || config.modo_item === 'ploteo_cad';
+
+        if (esPloteoCad) {
+            return (
+                <div className="space-y-1 text-sm text-gray-600">
+                    <div className="flex items-center gap-2">
+                        <span className="font-semibold text-blue-800">Ploteo CAD</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2 text-xs">
+                        <Badge variant="default">{config.ploteo_cad_tipo_papel || config.tipo_papel || 'Papel Estándar'}</Badge>
+                        {config.ploteo_cad_ancho_rollo && (
+                            <Badge variant="default">
+                                {config.ploteo_cad_ancho_rollo}cm (Ancho)
+                            </Badge>
+                        )}
+                        {config.ploteo_cad_metros_lineales && (
+                            <Badge variant="default">
+                                {config.ploteo_cad_metros_lineales} ml
+                            </Badge>
+                        )}
+                    </div>
+
+                    {/* Terminaciones comunes si las hubiera */}
+                    {(config.corte || config.dobladillo || config.doblado) && (
+                        <div className="flex flex-wrap gap-2 mt-1">
+                            {config.corte && <Badge variant="warning" size="sm">Corte</Badge>}
+                            {config.dobladillo && <Badge variant="warning" size="sm">Dobladillo</Badge>}
+                            {config.doblado && <Badge variant="warning" size="sm">Dobladillo</Badge>}
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
         return (
             <div className="space-y-1 text-sm text-gray-600">
                 {/* Info Copias/Hojas */}

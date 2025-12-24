@@ -73,15 +73,24 @@ export function CentroCopiadoResumenOrden({
     };
   }, [containerRef]);
 
-  const itemsCompletos = items.filter(
-    (item) =>
+  const itemsCompletos = items.filter((item) => {
+    if (item.config.modo_item === 'ploteo_cad') {
+      return (
+        item.config.ploteo_cad_tipo_papel &&
+        item.config.ploteo_cad_ancho_rollo &&
+        item.config.ploteo_cad_metros_lineales &&
+        item.config.cantidad_copias
+      );
+    }
+    return (
       item.config.tamanio_papel_id &&
       item.config.papel_id &&
       item.config.tipo_tinta &&
       item.config.cara_impresa &&
       item.config.cantidad_hojas &&
       item.config.cantidad_copias
-  );
+    );
+  });
 
   const subtotal = items.reduce((sum, item) => sum + (item.precio || 0), 0);
   const montoDescuento = descuento > 0 ? (subtotal * descuento) / 100 : 0;
@@ -139,6 +148,20 @@ export function CentroCopiadoResumenOrden({
 
     if (config.guillotinado) {
       partes.push(`Guill.`);
+    }
+
+    if (config.modo_item === 'ploteo_cad') {
+      const parts = [
+        'Ploteo CAD',
+        config.ploteo_cad_tipo_papel,
+        `Ancho ${config.ploteo_cad_ancho_rollo}cm`,
+        `${config.ploteo_cad_metros_lineales}ml`
+      ];
+
+      if (config.cantidad_copias && config.cantidad_copias > 1) {
+        parts.push(`x${config.cantidad_copias}`);
+      }
+      return parts.filter(Boolean).join(' • ');
     }
 
     return partes.join(' • ') || 'Sin configurar';

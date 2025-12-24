@@ -367,41 +367,79 @@ export function useCentroCopiadoOrdenes(params: UseCentroCopiadoOrdenesParams = 
         for (const item of items) {
           const config = item.config;
 
+          const esPloteoCad = config.modo_item === 'ploteo_cad';
+
           // Validar config mínima necesaria
-          if (
-            !config.tamanio_papel_id ||
-            !config.papel_id ||
-            !config.tipo_tinta ||
-            !config.cara_impresa ||
-            !config.cantidad_hojas ||
-            !config.cantidad_copias
-          ) {
-            continue;
+          if (esPloteoCad) {
+            if (
+              !config.ploteo_cad_tipo_papel ||
+              !config.ploteo_cad_ancho_rollo ||
+              !config.ploteo_cad_metros_lineales ||
+              !config.cantidad_copias
+            ) {
+              continue;
+            }
+          } else {
+            if (
+              !config.tamanio_papel_id ||
+              !config.papel_id ||
+              !config.tipo_tinta ||
+              !config.cara_impresa ||
+              !config.cantidad_hojas ||
+              !config.cantidad_copias
+            ) {
+              continue;
+            }
           }
 
           const itemData = {
             orden_copiado_id: ordenId,
-            tipo_item: 'impresion',
-            tamanio_papel_id: config.tamanio_papel_id,
-            papel_id: config.papel_id,
-            tipo_tinta: config.tipo_tinta,
-            cara_impresa: config.cara_impresa,
-            cantidad_hojas: config.cantidad_hojas,
+            // Common
             cantidad_unidades: config.cantidad_copias,
-            tipo_anillado: config.anillado?.tipo || null,
-            tipo_plastificado: config.plastificado?.tipo || null,
-
-            con_guillotinado: !!config.guillotinado,
             precio_unitario: (item.precio || 0) / (config.cantidad_copias || 1),
             subtotal: item.precio || 0,
             descripcion: item.descripcion || null,
+
+            // Imprimir / Standard Fields (Null if CAD)
+            tipo_item: esPloteoCad ? null : 'impresion', // Or handled by DB default? Usually 'impresion' by default but we added 'es_ploteo_cad'. 
+            // Actually existing table has tipo_item enum. Does it have 'ploteo_cad'? No. 
+            // Logic: if es_ploteo_cad is true, tipo_item might be null or we reuse 'impresion'?
+            // Looking at migration, we added `es_ploteo_cad` column. The `tipo_item` enum was likely not modified.
+            // Let's check `types/database.ts`. TipoItemCopiado = 'impresion' | 'anillado' | 'plastificado'.
+            // So if it is Ploteo CAD, we probably should set `tipo_item` to null or keep it as 'impresion' but ignore it?
+            // "Impresión de Planos" is technically printing.
+            // Let's set it to 'impresion' for now, or null if allowed.
+            // The constraint might require a value.
+            // In `CrearOrdenCopiado.tsx` I didn't set `tipo_item` explicitely for Ploteo CAD in my previous edit?
+            // Wait, I might have missed `tipo_item` in `CrearOrdenCopiado.tsx`?
+            // Let's check `CrearOrdenCopiado.tsx`.
+            // Line 448 in ORIGINAL code (before my edit) didn't set `tipo_item`.
+            // Oh, checking `useCentroCopiadoOrdenItems.ts` line 98: `tipo_item: 'impresion'`.
+            // So I should stick to 'impresion' or check if constraint allows null.
+            // Given I am not modifying the enum, keeping 'impresion' is safest, but `es_ploteo_cad` flag distinguishes it.
+
+            tipo_item: 'impresion', // Defaulting to impresion as it is printing
+            tamanio_papel_id: !esPloteoCad ? config.tamanio_papel_id : null,
+            papel_id: !esPloteoCad ? config.papel_id : null,
+            tipo_tinta: !esPloteoCad ? config.tipo_tinta : null,
+            cara_impresa: !esPloteoCad ? config.cara_impresa : null,
+            cantidad_hojas: !esPloteoCad ? config.cantidad_hojas : null,
+            tipo_anillado: !esPloteoCad ? config.anillado?.tipo || null : null,
+            tipo_plastificado: !esPloteoCad ? config.plastificado?.tipo || null : null,
+            con_guillotinado: !esPloteoCad ? !!config.guillotinado : false,
+
+            // Ploteo CAD fields
+            es_ploteo_cad: esPloteoCad,
+            ploteo_cad_tipo_papel: esPloteoCad ? config.ploteo_cad_tipo_papel : null,
+            ploteo_cad_ancho_rollo: esPloteoCad ? config.ploteo_cad_ancho_rollo : null,
+            ploteo_cad_metros_lineales: esPloteoCad ? config.ploteo_cad_metros_lineales : null,
           };
 
           if (item.id.startsWith('temp_')) {
             // INSERTAR NUEVO ITEM
             const { data: newItem, error: insertError } = await supabase
               .from('centro_copiado_ordenes_items')
-              .insert(itemData)
+              .insert(itemData as any)
               .select()
               .single();
 
@@ -418,7 +456,7 @@ export function useCentroCopiadoOrdenes(params: UseCentroCopiadoOrdenesParams = 
             // ACTUALIZAR ITEM EXISTENTE
             const { error: updateItemError } = await supabase
               .from('centro_copiado_ordenes_items')
-              .update(itemData)
+              .update(itemData as any)
               .eq('id', item.id);
 
             if (updateItemError) throw updateItemError;

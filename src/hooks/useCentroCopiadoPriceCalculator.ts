@@ -35,6 +35,13 @@ export interface ConfiguracionGuillotinado {
   cantidad_copias: number;
 }
 
+export interface ConfiguracionPloteoCAD {
+  tipo_papel: string;
+  ancho_rollo: 60 | 90;
+  metros_lineales: number;
+  cantidad_copias: number;
+}
+
 interface DesglosePrecios {
   precio_impresion_unitario: number;
   precio_impresion_total: number;
@@ -44,6 +51,8 @@ interface DesglosePrecios {
   precio_plastificado_total: number;
   precio_guillotinado_unitario: number;
   precio_guillotinado_total: number;
+  precio_ploteo_cad_unitario: number;
+  precio_ploteo_cad_total: number;
   subtotal_item: number;
   total_copias: number;
 }
@@ -293,20 +302,71 @@ export function useCentroCopiadoPriceCalculator() {
     [profile?.company_id]
   );
 
+  const calcularPrecioPloteoCAD = useCallback(
+    async (config: ConfiguracionPloteoCAD): Promise<number> => {
+      if (!profile?.company_id) {
+        throw new Error('No se pudo obtener la información del usuario');
+      }
+
+      if (!config.metros_lineales || !config.cantidad_copias) {
+        return 0;
+      }
+
+      try {
+        const { data: precioConfig, error } = await supabase
+          .from('centro_copiado_ploteo_cad_precios')
+          .select('precio_metro_lineal')
+          .eq('company_id', profile.company_id)
+          .eq('tipo_papel', config.tipo_papel)
+          .eq('ancho_cm', config.ancho_rollo)
+          .eq('is_active', true)
+          .maybeSingle();
+
+        if (error) throw error;
+
+        if (!precioConfig) {
+          throw new Error(`No hay precio configurado para ${config.tipo_papel} ${config.ancho_rollo}cm.`);
+        }
+
+        const precioTotal = precioConfig.precio_metro_lineal * config.metros_lineales * config.cantidad_copias;
+        return precioTotal;
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Error al calcular precio de Ploteo CAD';
+        setError(errorMessage);
+        throw err;
+      }
+    },
+    [profile?.company_id]
+  );
+
 
 
   const calcularPrecioCompleto = useCallback(
     async (
-      configImpresion: ConfiguracionImpresion,
+      configImpresion?: ConfiguracionImpresion,
       configAnillado?: ConfiguracionAnillado,
       configPlastificado?: ConfiguracionPlastificado,
-      configGuillotinado?: ConfiguracionGuillotinado
+      configGuillotinado?: ConfiguracionGuillotinado,
+      configPloteoCAD?: ConfiguracionPloteoCAD
     ): Promise<DesglosePrecios> => {
       try {
         setCalculating(true);
         setError(null);
 
-        const preciosImpresion = await calcularPrecioImpresion(configImpresion);
+        let preciosImpresion = { precio_impresion_total: 0, precio_impresion_unitario: 0 };
+
+        // Mode: Impresion de Hojas
+        if (configImpresion) {
+          preciosImpresion = await calcularPrecioImpresion(configImpresion);
+        }
+
+        // Mode: Ploteo CAD
+        let precioPloteoTotal = 0;
+        let precioPloteoUnitario = 0;
+        if (configPloteoCAD) {
+          precioPloteoTotal = await calcularPrecioPloteoCAD(configPloteoCAD);
+          precioPloteoUnitario = precioPloteoTotal / configPloteoCAD.cantidad_copias;
+        }
 
         let precioAnilladoTotal = 0;
         let precioAnilladoUnitario = 0;
@@ -334,9 +394,12 @@ export function useCentroCopiadoPriceCalculator() {
 
         const subtotal =
           preciosImpresion.precio_impresion_total +
+          precioPloteoTotal +
           precioAnilladoTotal +
           precioPlastificadoTotal +
           precioGuillotinadoTotal;
+
+        const totalCopias = configImpresion?.cantidad_copias || configPloteoCAD?.cantidad_copias || 1;
 
         return {
           precio_impresion_unitario: preciosImpresion.precio_impresion_unitario,
@@ -347,8 +410,10 @@ export function useCentroCopiadoPriceCalculator() {
           precio_plastificado_total: precioPlastificadoTotal,
           precio_guillotinado_unitario: precioGuillotinadoUnitario,
           precio_guillotinado_total: precioGuillotinadoTotal,
+          precio_ploteo_cad_unitario: precioPloteoUnitario,
+          precio_ploteo_cad_total: precioPloteoTotal,
           subtotal_item: subtotal,
-          total_copias: configImpresion.cantidad_copias,
+          total_copias: totalCopias,
         };
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Error al calcular precio completo';
@@ -358,7 +423,7 @@ export function useCentroCopiadoPriceCalculator() {
         setCalculating(false);
       }
     },
-    [calcularPrecioImpresion, calcularPrecioAnillado, calcularPrecioPlastificado, calcularPrecioGuillotinado]
+    [calcularPrecioImpresion, calcularPrecioAnillado, calcularPrecioPlastificado, calcularPrecioGuillotinado, calcularPrecioPloteoCAD]
   );
 
   return {
@@ -368,6 +433,7 @@ export function useCentroCopiadoPriceCalculator() {
     calcularPrecioAnillado,
     calcularPrecioPlastificado,
     calcularPrecioGuillotinado,
+    calcularPrecioPloteoCAD,
     calcularPrecioCompleto,
   };
 }

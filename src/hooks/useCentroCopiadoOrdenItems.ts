@@ -28,11 +28,11 @@ interface OrdenItemWithRelations extends CentroCopiadoOrdenItem {
 
 interface CreateItemImpresionData {
   orden_copiado_id: string;
-  tamanio_papel_id: string;
-  papel_id: string;
-  tipo_tinta: TipoTintaCopiado;
-  cara_impresa: CaraImpresaCopiado;
-  cantidad_hojas: number;
+  tamanio_papel_id?: string;
+  papel_id?: string;
+  tipo_tinta?: TipoTintaCopiado;
+  cara_impresa?: CaraImpresaCopiado;
+  cantidad_hojas?: number;
   cantidad_unidades: number;
   tipo_anillado?: TipoAnillado;
   tipo_plastificado?: TipoPlastificado;
@@ -41,6 +41,12 @@ interface CreateItemImpresionData {
   precio_unitario: number;
   subtotal: number;
   descripcion?: string;
+
+  // Ploteo CAD Fields
+  es_ploteo_cad?: boolean;
+  ploteo_cad_tipo_papel?: string;
+  ploteo_cad_ancho_rollo?: number;
+  ploteo_cad_metros_lineales?: number;
 }
 
 export function useCentroCopiadoOrdenItems(ordenCopiadoId?: string) {
@@ -108,11 +114,15 @@ export function useCentroCopiadoOrdenItems(ordenCopiadoId?: string) {
           precio_unitario: data.precio_unitario,
           subtotal: data.subtotal,
           descripcion: data.descripcion || null,
+          es_ploteo_cad: data.es_ploteo_cad || false,
+          ploteo_cad_tipo_papel: data.ploteo_cad_tipo_papel || null,
+          ploteo_cad_ancho_rollo: data.ploteo_cad_ancho_rollo || null,
+          ploteo_cad_metros_lineales: data.ploteo_cad_metros_lineales || null,
         };
 
         const { data: newItem, error: insertError } = await supabase
           .from('centro_copiado_ordenes_items')
-          .insert(itemData)
+          .insert(itemData as any)
           .select()
           .single();
 
@@ -158,7 +168,7 @@ export function useCentroCopiadoOrdenItems(ordenCopiadoId?: string) {
 
         const { data: newItem, error: insertError } = await supabase
           .from('centro_copiado_ordenes_items')
-          .insert(itemData)
+          .insert(itemData as any)
           .select()
           .single();
 
@@ -204,7 +214,7 @@ export function useCentroCopiadoOrdenItems(ordenCopiadoId?: string) {
 
         const { data: newItem, error: insertError } = await supabase
           .from('centro_copiado_ordenes_items')
-          .insert(itemData)
+          .insert(itemData as any)
           .select()
           .single();
 
@@ -235,7 +245,7 @@ export function useCentroCopiadoOrdenItems(ordenCopiadoId?: string) {
 
         const { error: updateError } = await supabase
           .from('centro_copiado_ordenes_items')
-          .update(updates)
+          .update(updates as any)
           .eq('id', itemId);
 
         if (updateError) throw updateError;
@@ -295,11 +305,11 @@ export function useCentroCopiadoOrdenItems(ordenCopiadoId?: string) {
         .eq('orden_copiado_id', ordenId);
 
       if (items) {
-        const total = items.reduce((sum, item) => sum + Number(item.subtotal), 0);
+        const total = (items as any[]).reduce((sum, item) => sum + Number(item.subtotal), 0);
 
         await supabase
           .from('centro_copiado_ordenes')
-          .update({ total })
+          .update({ total } as any)
           .eq('id', ordenId);
       }
     } catch (err) {

@@ -64,7 +64,12 @@ export function AsociarOrdenCopiadoModal({
               tipo: item.tipo_plastificado,
               todas_hojas: true // Asunción por defecto si viene de DB antiguo
             } : undefined,
-            guillotinado: item.con_guillotinado ? { cantidad_hojas: item.cantidad_hojas } : undefined
+            guillotinado: item.con_guillotinado ? { cantidad_hojas: item.cantidad_hojas } : undefined,
+            // Ploteo CAD fields
+            modo_item: item.es_ploteo_cad ? 'ploteo_cad' : 'hojas',
+            ploteo_cad_tipo_papel: item.ploteo_cad_tipo_papel,
+            ploteo_cad_ancho_rollo: item.ploteo_cad_ancho_rollo,
+            ploteo_cad_metros_lineales: item.ploteo_cad_metros_lineales,
           }
         };
       });
