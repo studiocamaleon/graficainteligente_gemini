@@ -594,15 +594,29 @@ async function getPrecioGranFormato(
   if (!data || data.length === 0) return null;
 
   // Calcular cantidad bases según tipo de venta
+  // Calcular cantidad bases según tipo de venta
   const factorCantidad = config.tipo_venta_real === 'mt_lineal'
     ? (config.medida_alto ? config.medida_alto / 100 : 1)
     : (config.medida_ancho && config.medida_alto ? (config.medida_ancho / 100) * (config.medida_alto / 100) : 1);
+
+  // Determine quantity to compare against range
+  // If selling by meter/m2, the range is usually defined in total meters/m2
+  const cantidadParaRango = (config.tipo_venta_real === 'mt_lineal' || config.tipo_venta_real === 'mt2')
+    ? config.cantidad * factorCantidad
+    : config.cantidad;
+
+  console.log('[GranFormato] Range Lookup:', {
+    qty: config.cantidad,
+    factor: factorCantidad,
+    total: cantidadParaRango,
+    tipo: config.tipo_venta_real
+  });
 
   // Buscar en qué rango cae
   const precioEnRango = data.find((p: any) => {
     const min = p.rango_precio_min;
     const max = p.rango_precio_max;
-    return max === null ? config.cantidad >= min : (config.cantidad >= min && config.cantidad <= max);
+    return max === null ? cantidadParaRango >= min : (cantidadParaRango >= min && cantidadParaRango <= max);
   });
 
   return precioEnRango ? precioEnRango.precio * factorCantidad : null;
