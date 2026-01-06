@@ -169,7 +169,7 @@ export function CashflowDashboard() {
                                         <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                         <XAxis dataKey="fecha" tickFormatter={(str) => dayjs(str).format('DD/MM')} minTickGap={30} />
                                         <YAxis tickFormatter={(val) => `$${val / 1000}k`} />
-                                        <Tooltip formatter={(val: number) => formatMoney(val)} labelFormatter={(label) => dayjs(label).format('DD MMMM YYYY')} />
+                                        <Tooltip formatter={(val: number) => formatMoney(val)} labelFormatter={(label) => dayjs(label).format('DD MMMM YYYY')} wrapperStyle={{ zIndex: 1000 }} />
                                         <ReferenceLine y={0} stroke="#ef4444" strokeDasharray="3 3" />
                                         <Area type="monotone" dataKey="saldo_acumulado" stroke="#3b82f6" fillOpacity={1} fill="url(#colorSaldo)" name="Saldo Proyectado" />
                                     </AreaChart>
@@ -191,18 +191,33 @@ export function CashflowDashboard() {
                                         <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                         <XAxis dataKey="fecha" tickFormatter={(str) => dayjs(str).format('DD/MM')} minTickGap={30} />
                                         <YAxis tickFormatter={(val) => `$${val / 1000}k`} />
-                                        <Tooltip formatter={(val: number) => formatMoney(val)} labelFormatter={(label) => dayjs(label).format('DD MMMM')} />
+                                        <Tooltip formatter={(val: number) => formatMoney(val)} labelFormatter={(label) => dayjs(label).format('DD MMMM')} wrapperStyle={{ zIndex: 1000 }} />
                                         <Legend />
+
                                         {/* Ingresos */}
+                                        <Bar dataKey="total_ingreso_vencido" name="Cobros Vencidos" stackId="a" fill="#047857" />
+                                        {/* Note: We are plotting total category amounts which INCLUDE overdue. 
+                                            To avoid visual double counting height, we'd need to subtract. 
+                                            But since we don't have breakdown of overdue-per-category in the hook result (only totals), 
+                                            we will plot Vencidos separately and use the 'category' bars for FUTURE amounts only? 
+                                            No, that requires math. For now, let's plot distinct categories as is, and user understands 'Vencidos' is a highlight?
+                                            Actually, let's treat 'Vencidos' as a separate visual block on TOP of today axis.
+                                            Ideally, we should subtract `total_ingreso_vencido` from the others, but we don't know the share.
+                                            
+                                            BETTER APPROACH: Plot the categories normally. The USER asked to see "Vencidos" separated.
+                                            If we just list it in the separate Tooltip, that solves the "hover" request.
+                                            If we want it in the BAR, we'd need to trust the total height.
+                                            
+                                            Let's start by adding it to the Tooltip extensively and maybe a separate bar stack 
+                                            IF (item.fecha === TODAY), which is where all overdue are mapped.
+                                        */}
+
                                         <Bar dataKey="ingreso_cheques" name="Ingreso Cheques" stackId="a" fill={COLORS_ING.cheques} />
                                         <Bar dataKey="ingreso_liquidaciones" name="Ingreso Cuentas" stackId="a" fill={COLORS_ING.liqui} />
                                         <Bar dataKey="ingreso_wip" name="Ingreso Producción" stackId="a" fill={COLORS_ING.wip} />
-                                        {/* Egresos (negative values handled by chart logic if data is positive? No, need to verify. Usually better to keep positive and stack separately or use negative values. Here I have separate 'egreso' columns which are positive numbers. I should make them negative for visualization or just stack them downwards? Stacked bars with mixed signs can be tricky in Recharts. Simplest is two charts or one chart where egresos are negative. Let's make them negative in the map or just show positive bars on a separate chart. Let's try mirroring them by calculating negative in render or changing data. I'll use a ReferenceLine and multiply by -1 in datakey? No, recharts needs value. Let's stick to positive stacks for now, maybe side by side? Or just show net?
-                                    Actually, user wants breakdown. I will create a SyncId chart below. Or just keep them positive and user compares height.
-                                    Let's use negative values for Egresos in a "net flow" chart.
-                                    Wait, the previous chart was Area of Balance.
-                                    Let's do a Stacked Bar of "Movements". I'll pass negative values in the chart data transformation slightly inside the component.
-                                    */}
+
+                                        <Bar dataKey={(d) => -d.total_egreso_vencido} name="Deudas Vencidas" stackId="a" fill="#991b1b" />
+
                                         <Bar dataKey={(d) => -d.egreso_cheques} name="Egreso Cheques" stackId="a" fill={COLORS_EGR.cheques} />
                                         <Bar dataKey={(d) => -d.egreso_compras} name="Egreso Proveedores" stackId="a" fill={COLORS_EGR.compras} />
                                         <Bar dataKey={(d) => -d.egreso_tarjetas} name="Egreso Tarjetas" stackId="a" fill={COLORS_EGR.tarjetas} />
@@ -309,6 +324,7 @@ export function CashflowDashboard() {
                         {
                             key: 'ingresos', header: 'Ingresos', width: '30%', render: (item) => (
                                 <div className="space-y-1 text-xs">
+                                    {item.total_ingreso_vencido > 0 && <div className="text-green-800 font-bold bg-green-100 px-1 rounded flex justify-between"><span>A RECUPERAR:</span> <span>{formatMoney(item.total_ingreso_vencido)}</span></div>}
                                     {item.ingreso_cheques > 0 && <div className="text-green-600 flex justify-between"><span>Cheques:</span> <span>{formatMoney(item.ingreso_cheques)}</span></div>}
                                     {item.ingreso_liquidaciones > 0 && <div className="text-blue-600 flex justify-between"><span>Cuentantes:</span> <span>{formatMoney(item.ingreso_liquidaciones)}</span></div>}
                                     {item.ingreso_wip > 0 && <div className="text-purple-600 flex justify-between"><span>Producción:</span> <span>{formatMoney(item.ingreso_wip)}</span></div>}
@@ -319,6 +335,7 @@ export function CashflowDashboard() {
                         {
                             key: 'egresos', header: 'Egresos', width: '30%', render: (item) => (
                                 <div className="space-y-1 text-xs">
+                                    {item.total_egreso_vencido > 0 && <div className="text-red-800 font-bold bg-red-100 px-1 rounded flex justify-between"><span>VENCIDOS:</span> <span>{formatMoney(item.total_egreso_vencido)}</span></div>}
                                     {item.egreso_cheques > 0 && <div className="text-red-600 flex justify-between"><span>Cheques:</span> <span>{formatMoney(item.egreso_cheques)}</span></div>}
                                     {item.egreso_compras > 0 && <div className="text-pink-600 flex justify-between"><span>Proveedores:</span> <span>{formatMoney(item.egreso_compras)}</span></div>}
                                     {item.egreso_tarjetas > 0 && <div className="text-orange-600 flex justify-between"><span>Tarjetas:</span> <span>{formatMoney(item.egreso_tarjetas)}</span></div>}

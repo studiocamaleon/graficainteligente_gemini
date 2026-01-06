@@ -24,6 +24,7 @@ interface RegistrarEgresoModalProps {
   tipoEgresoId?: string;
   lockedCajaId?: string; // New prop
   lockedMedioPago?: 'efectivo'; // New prop, currently only supporting cash for this flow
+  chequePagadoId?: string; // ID del cheque que estamos pagando (si aplica)
   initialData?: Partial<CreateEgresoData>;
 }
 
@@ -38,6 +39,7 @@ export function RegistrarEgresoModal({
   tipoEgresoId,
   lockedCajaId,
   lockedMedioPago,
+  chequePagadoId,
   initialData
 }: RegistrarEgresoModalProps) {
   const { showSuccess, showError } = useToast();
@@ -56,6 +58,7 @@ export function RegistrarEgresoModal({
     cuotas: 1,
     medio_pago: lockedMedioPago || initialData?.medio_pago || undefined,
     recurrente_id: recurrenteId,
+    cheque_pagado_id: chequePagadoId,
     periodo_devengado: periodoDevengado,
     proveedor_id: proveedorId
   });
@@ -74,12 +77,13 @@ export function RegistrarEgresoModal({
         cuotas: 1,
         medio_pago: lockedMedioPago || initialData?.medio_pago || undefined,
         recurrente_id: recurrenteId,
+        cheque_pagado_id: chequePagadoId,
         periodo_devengado: periodoDevengado,
         proveedor_id: proveedorId
       });
       setErrors({});
     }
-  }, [isOpen, lockedCajaId, lockedMedioPago, initialData, recurrenteId, periodoDevengado, proveedorId, tipoEgresoId]);
+  }, [isOpen, lockedCajaId, lockedMedioPago, initialData, recurrenteId, chequePagadoId, periodoDevengado, proveedorId, tipoEgresoId]);
 
   const selectedCaja = cajas.find(c => c.id === formData.caja_id);
   const saldoSuficiente = selectedCaja ? selectedCaja.saldo_actual >= formData.monto : false;

@@ -14,6 +14,9 @@ export interface CashflowPoint {
     egreso_tarjetas: number;
     egreso_recurrentes: number;
     egreso_compras: number;
+    // Overdue
+    total_ingreso_vencido: number;
+    total_egreso_vencido: number;
     // Totals
     total_ingresos: number;
     total_egresos: number;
@@ -45,6 +48,8 @@ export function useCashflow(daysToProject: number = 90) {
                 // Map RPC data to interface (ensure all fields exist)
                 const mappedData = (rpcData as any[]).map(d => ({
                     ...d,
+                    total_ingreso_vencido: d.total_ingreso_vencido || 0,
+                    total_egreso_vencido: d.total_egreso_vencido || 0,
                     ingresos: d.total_ingresos, // Map for compatibility
                     egresos: d.total_egresos   // Map for compatibility
                 }));
@@ -63,35 +68,35 @@ export function useCashflow(daysToProject: number = 90) {
 
             const saldoInicial = cajas?.reduce((sum, c) => sum + (c.saldo_actual || 0), 0) || 0;
 
-            // Fetch Cheques
+            const today = dayjs();
+            const todayStr = today.format('YYYY-MM-DD');
+
+            // Fetch Cheques (Include Overdue)
             const { data: cheques } = await supabase
-                .from('cheques')
+                .from('cheques_cartera')
                 .select('fecha_pago, monto, direction, estado')
                 .eq('company_id', company.id)
-                .eq('estado', 'pendiente')
-                .gte('fecha_pago', dayjs().format('YYYY-MM-DD')) as {
+                .in('estado', ['pendiente']) as {
                     data: { fecha_pago: string; monto: number; direction: 'emitido' | 'recibido'; }[] | null,
                     error: any
                 };
 
-            // Fetch Tarjetas
+            // Fetch Tarjetas (Include Overdue)
             const { data: tarjetas } = await supabase
                 .from('tarjetas_resumenes')
                 .select('fecha_vencimiento, total_consumos, total_pagado, estado')
                 .eq('company_id', company.id)
-                .neq('estado', 'pagado')
-                .gte('fecha_vencimiento', dayjs().format('YYYY-MM-DD')) as {
+                .neq('estado', 'pagado') as {
                     data: { fecha_vencimiento: string; total_consumos: number; total_pagado: number; }[] | null,
                     error: any
                 };
 
-            // Fetch Compras (Pending Bills)
+            // Fetch Compras (Pending Bills - Include Overdue)
             const { data: compras } = await supabase
                 .from('compras_proveedores')
                 .select('fecha_vencimiento, monto_total, id')
                 .eq('company_id', company.id)
-                .neq('estado', 'pagado')
-                .gte('fecha_vencimiento', dayjs().format('YYYY-MM-DD')) as {
+                .neq('estado', 'pagado') as {
                     data: { fecha_vencimiento: string; monto_total: number; id: string; }[] | null,
                     error: any
                 };
@@ -102,7 +107,8 @@ export function useCashflow(daysToProject: number = 90) {
             // Build Timeline
             const timeline: Record<string, {
                 ing_cheques: number, ing_liqui: number, ing_wip: number,
-                egr_cheques: number, egr_tarjetas: number, egr_recurrentes: number, egr_compras: number
+                egr_cheques: number, egr_tarjetas: number, egr_recurrentes: number, egr_compras: number,
+                vencido_ing: number, vencido_egr: number
             }> = {};
 
             const startDate = dayjs();
@@ -111,36 +117,48 @@ export function useCashflow(daysToProject: number = 90) {
                 const dateStr = startDate.add(i, 'day').format('YYYY-MM-DD');
                 timeline[dateStr] = {
                     ing_cheques: 0, ing_liqui: 0, ing_wip: 0,
-                    egr_cheques: 0, egr_tarjetas: 0, egr_recurrentes: 0, egr_compras: 0
+                    egr_cheques: 0, egr_tarjetas: 0, egr_recurrentes: 0, egr_compras: 0,
+                    vencido_ing: 0, vencido_egr: 0
                 };
             }
 
+            // Helper to get safe date key (Map overdue to today)
+            const getSafeDate = (dateStr: string) => {
+                const d = dayjs(dateStr);
+                if (d.isBefore(today, 'day')) return { date: todayStr, isOverdue: true };
+                return { date: d.format('YYYY-MM-DD'), isOverdue: false };
+            };
+
             // Add Cheques
             cheques?.forEach(c => {
-                const date = dayjs(c.fecha_pago).format('YYYY-MM-DD');
+                const { date, isOverdue } = getSafeDate(c.fecha_pago);
                 if (timeline[date]) {
                     if (c.direction === 'recibido') {
                         timeline[date].ing_cheques += c.monto;
+                        if (isOverdue) timeline[date].vencido_ing += c.monto;
                     } else {
                         timeline[date].egr_cheques += c.monto;
+                        if (isOverdue) timeline[date].vencido_egr += c.monto;
                     }
                 }
             });
 
             // Add Tarjetas
             tarjetas?.forEach(t => {
-                const date = dayjs(t.fecha_vencimiento).format('YYYY-MM-DD');
+                const { date, isOverdue } = getSafeDate(t.fecha_vencimiento);
                 if (timeline[date]) {
                     const deuda = (t.total_consumos || 0) - (t.total_pagado || 0);
                     timeline[date].egr_tarjetas += deuda;
+                    if (isOverdue) timeline[date].vencido_egr += deuda;
                 }
             });
 
             // Add Compras
             compras?.forEach(c => {
-                const date = dayjs(c.fecha_vencimiento).format('YYYY-MM-DD');
+                const { date, isOverdue } = getSafeDate(c.fecha_vencimiento);
                 if (timeline[date]) {
                     timeline[date].egr_compras += c.monto_total; // Assuming full amount for fallback simplicity
+                    if (isOverdue) timeline[date].vencido_egr += c.monto_total;
                 }
             });
 
@@ -163,6 +181,8 @@ export function useCashflow(daysToProject: number = 90) {
                     egreso_tarjetas: values.egr_tarjetas,
                     egreso_recurrentes: values.egr_recurrentes,
                     egreso_compras: values.egr_compras,
+                    total_ingreso_vencido: values.vencido_ing,
+                    total_egreso_vencido: values.vencido_egr,
                     total_ingresos,
                     total_egresos,
                     ingresos: total_ingresos, // Compat

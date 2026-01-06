@@ -74,6 +74,7 @@ export interface CreateEgresoData {
   recurrente_id?: string;
   periodo_devengado?: string;
   cerrar_recurrente?: boolean;
+  cheque_pagado_id?: string;
 }
 
 export interface UpdateEgresoData {

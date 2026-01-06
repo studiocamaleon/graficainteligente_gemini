@@ -129,6 +129,7 @@ export function useEgresos(filters?: FetchEgresosFilters) {
     delete dbData.destinatario;
     delete dbData.tarjeta_id; // tarjeta_id is actually in egresos? Let's check type. Yes, but optional.
     delete dbData.cerrar_recurrente;
+    delete dbData.cheque_pagado_id;
 
     // Logic for caja_id:
     // - Tarjeta: caja_id = null (Deferred via resumen)
@@ -164,6 +165,16 @@ export function useEgresos(filters?: FetchEgresosFilters) {
         }, { onConflict: 'recurring_id, periodo' });
 
       if (closureError) console.error('Error closing recurring period:', closureError);
+    }
+
+    // Handle Cheque Debit Status Update
+    if (data.cheque_pagado_id) {
+      const { error: chequeError } = await supabase
+        .from('cheques_cartera')
+        .update({ estado: 'pagado' })
+        .eq('id', data.cheque_pagado_id);
+
+      if (chequeError) console.error('Error updating cheque status:', chequeError);
     }
 
     await fetchEgresos();

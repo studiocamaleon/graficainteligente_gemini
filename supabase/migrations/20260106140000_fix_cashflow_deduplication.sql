@@ -1,0 +1,261 @@
+-- Migration: Fix Cashflow Deduplication
+-- Description: Updates fn_get_cashflow_projection to ensure overdue items are NOT counted in the specific category columns (e.g. egreso_cheques) to avoid duplication in UI stacking. They will only appear in total_egreso_vencido.
+
+DROP FUNCTION IF EXISTS fn_get_cashflow_projection(UUID, INTEGER);
+
+CREATE OR REPLACE FUNCTION fn_get_cashflow_projection(
+    p_company_id UUID,
+    p_days_to_project INTEGER DEFAULT 90
+)
+RETURNS TABLE (
+    fecha DATE,
+    -- INGRESO BREAKDOWN (Now Exclusive of Overdue)
+    ingreso_cheques NUMERIC,
+    ingreso_liquidaciones NUMERIC,
+    ingreso_wip NUMERIC,
+    -- EGRESO BREAKDOWN (Now Exclusive of Overdue)
+    egreso_cheques NUMERIC,
+    egreso_tarjetas NUMERIC,
+    egreso_recurrentes NUMERIC,
+    egreso_compras NUMERIC,
+    -- OVERDUE METRICS (Everything < TODAY)
+    total_ingreso_vencido NUMERIC,
+    total_egreso_vencido NUMERIC,
+    -- TOTALS (Sum of Exclusive + Overdue)
+    total_ingresos NUMERIC,
+    total_egresos NUMERIC,
+    saldo_diario NUMERIC,
+    saldo_acumulado NUMERIC
+) 
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_saldo_inicial NUMERIC;
+    v_end_date DATE;
+    v_window_start_recurring DATE := CURRENT_DATE - INTERVAL '6 months';
+BEGIN
+    -- 1. Get Initial Balance
+    SELECT COALESCE(SUM(saldo_actual), 0)
+    INTO v_saldo_inicial
+    FROM cajas
+    WHERE company_id = p_company_id;
+
+    v_end_date := CURRENT_DATE + p_days_to_project;
+
+    RETURN QUERY
+    WITH calendar AS (
+        SELECT i::date as fecha, 
+               EXTRACT(DOW FROM i::date) as dow,
+               EXTRACT(DAY FROM i::date) as dom
+        FROM generate_series(CURRENT_DATE, v_end_date, '1 day'::interval) i
+    ),
+    movements AS (
+        -- [INGRESO] Cheques Recibidos
+        SELECT 
+            GREATEST(fecha_pago::date, CURRENT_DATE) as fecha,
+            monto as monto,
+            'cheque_in' as type,
+            (fecha_pago::date < CURRENT_DATE) as is_overdue
+        FROM cheques_cartera
+        WHERE company_id = p_company_id
+          AND direction = 'recibido'
+          AND estado IN ('pendiente')
+
+        UNION ALL
+        
+        -- [EGRESO] Cheques Emitidos
+        SELECT 
+            GREATEST(fecha_pago::date, CURRENT_DATE) as fecha,
+            monto as monto,
+            'cheque_out' as type,
+            (fecha_pago::date < CURRENT_DATE) as is_overdue
+        FROM cheques_cartera
+        WHERE company_id = p_company_id
+          AND direction = 'emitido'
+          AND estado IN ('pendiente')
+
+        UNION ALL
+
+        -- [EGRESO] Tarjetas Resumenes
+        SELECT 
+            GREATEST(fecha_vencimiento::date, CURRENT_DATE) as fecha,
+            (total_consumos - total_pagado) as monto,
+            'tarjeta_out' as type,
+            (fecha_vencimiento::date < CURRENT_DATE) as is_overdue
+        FROM tarjetas_resumenes
+        WHERE company_id = p_company_id
+          AND estado != 'pagado'
+
+        UNION ALL
+
+        -- [EGRESO] Facturas de Compra
+        SELECT 
+            GREATEST(cp.fecha_vencimiento::date, CURRENT_DATE) as fecha,
+            (cp.monto_total - COALESCE((SELECT SUM(e.monto) FROM egresos e WHERE e.compra_id = cp.id), 0)) as monto,
+            'compra_out' as type,
+            (cp.fecha_vencimiento::date < CURRENT_DATE) as is_overdue
+        FROM compras_proveedores cp
+        WHERE company_id = p_company_id
+          AND cp.estado != 'pagado'
+        
+        UNION ALL
+
+        -- [EGRESO] Gastos Recurrentes (Future Only)
+        SELECT 
+            c.fecha,
+            re.amount as monto,
+            'recurring_out' as type,
+            false as is_overdue
+        FROM recurring_expenses re
+        CROSS JOIN calendar c
+        WHERE re.company_id = p_company_id
+          AND re.is_active = true
+          AND c.fecha >= re.start_date
+          AND (re.end_date IS NULL OR c.fecha <= re.end_date)
+          AND (
+            (re.frequency = 'weekly' AND EXTRACT(DOW FROM c.fecha) = re.day_of_week) OR
+            (re.frequency = 'biweekly' AND MOD(EXTRACT(WEEK FROM c.fecha)::int, 2) = 0 AND EXTRACT(DOW FROM c.fecha) = re.day_of_week) OR
+            (re.frequency = 'monthly' AND EXTRACT(DAY FROM c.fecha) = re.day_of_month) OR
+            (re.frequency = 'quarterly' AND EXTRACT(DAY FROM c.fecha) = re.day_of_month AND MOD(EXTRACT(MONTH FROM c.fecha)::int - 1, 3) = 0) OR
+            (re.frequency = 'yearly' AND EXTRACT(DAY FROM c.fecha) = re.day_of_month AND EXTRACT(MONTH FROM c.fecha) = EXTRACT(MONTH FROM re.start_date))
+          )
+          AND NOT EXISTS (
+              SELECT 1 FROM recurring_executions rex 
+              WHERE rex.recurring_id = re.id 
+              AND rex.periodo = c.fecha 
+              AND rex.estado = 'cerrado'
+          )
+
+        UNION ALL
+
+        -- [EGRESO] Gastos Recurrentes (OVERDUE - Ghost Debt)
+        SELECT
+            CURRENT_DATE as fecha,
+            re.amount as monto,
+            'recurring_out' as type,
+            true as is_overdue
+        FROM recurring_expenses re
+        CROSS JOIN LATERAL (
+            SELECT d::date as fecha
+            FROM generate_series(GREATEST(re.start_date, v_window_start_recurring), CURRENT_DATE - INTERVAL '1 day', '1 day'::interval) d
+            WHERE 
+                (re.frequency = 'weekly' AND EXTRACT(DOW FROM d) = re.day_of_week) OR
+                (re.frequency = 'biweekly' AND MOD(EXTRACT(WEEK FROM d)::int, 2) = 0 AND EXTRACT(DOW FROM d) = re.day_of_week) OR
+                (re.frequency = 'monthly' AND EXTRACT(DAY FROM d) = re.day_of_month) OR
+                (re.frequency = 'quarterly' AND EXTRACT(DAY FROM d) = re.day_of_month AND MOD(EXTRACT(MONTH FROM d)::int - 1, 3) = 0) OR
+                (re.frequency = 'yearly' AND EXTRACT(DAY FROM d) = re.day_of_month AND EXTRACT(MONTH FROM d) = EXTRACT(MONTH FROM re.start_date))
+        ) c
+        WHERE re.company_id = p_company_id
+          AND re.is_active = true
+          AND NOT EXISTS (
+              SELECT 1 FROM egresos e
+              WHERE e.recurrente_id = re.id
+              AND (
+                  (re.frequency IN ('monthly', 'quarterly', 'yearly') AND 
+                   EXTRACT(MONTH FROM e.fecha) = EXTRACT(MONTH FROM c.fecha) AND 
+                   EXTRACT(YEAR FROM e.fecha) = EXTRACT(YEAR FROM c.fecha))
+                  OR
+                  (re.frequency NOT IN ('monthly', 'quarterly', 'yearly') AND e.fecha = c.fecha)
+              )
+          )
+          AND NOT EXISTS (
+              SELECT 1 FROM recurring_executions rex 
+              WHERE rex.recurring_id = re.id 
+              AND rex.periodo = c.fecha 
+              AND rex.estado = 'cerrado'
+          )
+
+        UNION ALL
+
+        -- [INGRESO] Liquidaciones
+        SELECT 
+            GREATEST(fecha_vencimiento::date, CURRENT_DATE) as fecha,
+            saldo_pendiente as monto,
+            'liquidacion_in' as type,
+            (fecha_vencimiento::date < CURRENT_DATE) as is_overdue
+        FROM liquidaciones
+        WHERE company_id = p_company_id
+          AND estado IN ('pendiente', 'pagada_parcial', 'vencida')
+
+        UNION ALL
+
+        -- [INGRESO] WIP Orders (Ordenes Trabajo)
+        SELECT 
+            GREATEST(COALESCE(fecha_estimada_entrega, CURRENT_DATE)::date, CURRENT_DATE) as fecha,
+            GREATEST(0, (total - COALESCE((SELECT SUM(monto) FROM ordenes_trabajo_pagos WHERE orden_id = ot.id), 0))) as monto,
+            'wip_in' as type,
+            (COALESCE(fecha_estimada_entrega, CURRENT_DATE)::date < CURRENT_DATE) as is_overdue
+        FROM ordenes_trabajo ot
+        WHERE company_id = p_company_id
+          AND estado NOT IN ('borrador', 'cotizacion', 'cancelada')
+          AND NOT EXISTS (
+              SELECT 1 FROM clients c 
+              WHERE c.id = ot.cliente_id 
+              AND c.tiene_cuenta_corriente = true
+          )
+        
+        UNION ALL
+
+        -- [INGRESO] WIP Orders (Centro Copiado)
+        SELECT 
+            GREATEST(COALESCE(fecha_entrega_estimada, CURRENT_DATE)::date, CURRENT_DATE) as fecha,
+            GREATEST(0, (total - COALESCE((SELECT SUM(monto) FROM centro_copiado_ordenes_pagos WHERE orden_copiado_id = cco.id), 0))) as monto,
+            'wip_in' as type,
+            (COALESCE(fecha_entrega_estimada, CURRENT_DATE)::date < CURRENT_DATE) as is_overdue
+        FROM centro_copiado_ordenes cco
+        WHERE company_id = p_company_id
+          AND estado NOT IN ('cancelada')
+          AND orden_trabajo_id IS NULL 
+          AND NOT EXISTS (
+              SELECT 1 FROM clients c 
+              WHERE c.id = cco.cliente_id 
+              AND c.tiene_cuenta_corriente = true
+          )
+    ),
+    daily_agg AS (
+        SELECT 
+            c.fecha,
+            -- Totals by Category (EXCLUSIVE of Overdue - only Today/Future)
+            COALESCE(SUM(CASE WHEN m.type = 'cheque_in' AND NOT m.is_overdue THEN m.monto ELSE 0 END), 0) as ingreso_cheques,
+            COALESCE(SUM(CASE WHEN m.type = 'liquidacion_in' AND NOT m.is_overdue THEN m.monto ELSE 0 END), 0) as ingreso_liquidaciones,
+            COALESCE(SUM(CASE WHEN m.type = 'wip_in' AND NOT m.is_overdue THEN m.monto ELSE 0 END), 0) as ingreso_wip,
+            COALESCE(SUM(CASE WHEN m.type = 'cheque_out' AND NOT m.is_overdue THEN m.monto ELSE 0 END), 0) as egreso_cheques,
+            COALESCE(SUM(CASE WHEN m.type = 'tarjeta_out' AND NOT m.is_overdue THEN m.monto ELSE 0 END), 0) as egreso_tarjetas,
+            COALESCE(SUM(CASE WHEN m.type = 'recurring_out' AND NOT m.is_overdue THEN m.monto ELSE 0 END), 0) as egreso_recurrentes,
+            COALESCE(SUM(CASE WHEN m.type = 'compra_out' AND NOT m.is_overdue THEN m.monto ELSE 0 END), 0) as egreso_compras,
+            
+            -- Overdue Metrics (All Past)
+            COALESCE(SUM(CASE WHEN m.is_overdue AND m.type IN ('cheque_in', 'liquidacion_in', 'wip_in') THEN m.monto ELSE 0 END), 0) as total_ingreso_vencido,
+            COALESCE(SUM(CASE WHEN m.is_overdue AND m.type IN ('cheque_out', 'tarjeta_out', 'compra_out', 'recurring_out') THEN m.monto ELSE 0 END), 0) as total_egreso_vencido
+        FROM calendar c
+        LEFT JOIN movements m ON m.fecha = c.fecha
+        GROUP BY c.fecha
+    ),
+    running_balance AS (
+        SELECT 
+            da.fecha,
+            da.ingreso_cheques,
+            da.ingreso_liquidaciones,
+            da.ingreso_wip,
+            da.egreso_cheques,
+            da.egreso_tarjetas,
+            da.egreso_recurrentes,
+            da.egreso_compras,
+            da.total_ingreso_vencido,
+            da.total_egreso_vencido,
+            
+            -- Totals must re-sum everything to determine balance
+            (da.ingreso_cheques + da.ingreso_liquidaciones + da.ingreso_wip + da.total_ingreso_vencido) as total_ingresos,
+            (da.egreso_cheques + da.egreso_tarjetas + da.egreso_recurrentes + da.egreso_compras + da.total_egreso_vencido) as total_egresos,
+            
+            ((da.ingreso_cheques + da.ingreso_liquidaciones + da.ingreso_wip + da.total_ingreso_vencido) - 
+            (da.egreso_cheques + da.egreso_tarjetas + da.egreso_recurrentes + da.egreso_compras + da.total_egreso_vencido)) as saldo_diario,
+            
+            SUM((da.ingreso_cheques + da.ingreso_liquidaciones + da.ingreso_wip + da.total_ingreso_vencido) - 
+            (da.egreso_cheques + da.egreso_tarjetas + da.egreso_recurrentes + da.egreso_compras + da.total_egreso_vencido)) OVER (ORDER BY da.fecha) + v_saldo_inicial as saldo_acumulado
+        FROM daily_agg da
+    )
+    SELECT * FROM running_balance rb ORDER BY rb.fecha;
+END;
+$$;

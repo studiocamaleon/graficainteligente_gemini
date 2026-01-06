@@ -29,6 +29,7 @@ export function VencimientosList({ vencimientos, onRefresh }: VencimientosListPr
             const payload = {
                 ...data,
                 recurrente_id: selectedVencimiento.origen === 'recurrente' ? selectedVencimiento.id_origen : undefined,
+                cheque_pagado_id: selectedVencimiento.origen === 'cheque' ? selectedVencimiento.id_origen : undefined,
                 // For 'recurrente', periodo_devengado implies the month intended. 
                 // We use fecha_vencimiento as the reference for the period.
                 periodo_devengado: selectedVencimiento.origen === 'recurrente' ? selectedVencimiento.fecha_vencimiento : undefined
@@ -146,6 +147,7 @@ export function VencimientosList({ vencimientos, onRefresh }: VencimientosListPr
                     periodoDevengado={selectedVencimiento.origen === 'recurrente' ? selectedVencimiento.fecha_vencimiento : undefined}
                     proveedorId={selectedVencimiento.proveedor_id || undefined}
                     tipoEgresoId={selectedVencimiento.tipo_egreso_id || undefined}
+                    chequePagadoId={selectedVencimiento.origen === 'cheque' ? selectedVencimiento.id_origen : undefined}
                 />
             )}
         </div>
