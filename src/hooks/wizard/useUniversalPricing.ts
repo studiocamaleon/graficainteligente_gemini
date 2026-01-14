@@ -573,7 +573,7 @@ async function getPrecioGranFormato(
   productId: string,
   config: SelectedConfiguration
 ): Promise<number | null> {
-  if (!config.tinta) {
+  if (!config.tinta || !config.tecnologia_id) {
     return null;
   }
 
@@ -582,6 +582,7 @@ async function getPrecioGranFormato(
     .from('productos_gran_formato_precios')
     .select('precio, rango_precio_min, rango_precio_max')
     .eq('producto_gran_formato_id', productId)
+    .eq('tecnologia_id', config.tecnologia_id)
     .eq('tinta', config.tinta);
 
   const data = (rawData as any[]) || [];
