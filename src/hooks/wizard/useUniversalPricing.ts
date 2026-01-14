@@ -1197,12 +1197,13 @@ export async function determinarPrecioPorUnidadRango(
 
     switch (categoria) {
       case 'Impresion Gran Formato': {
-        if (!baseConfig.tinta) return null;
+        if (!baseConfig.tinta || !baseConfig.tecnologia_id) return null;
 
         const { data, error } = await supabase
           .from('productos_gran_formato_precios')
           .select('precio, rango_precio_min, rango_precio_max')
           .eq('producto_gran_formato_id', productId)
+          .eq('tecnologia_id', baseConfig.tecnologia_id)
           .eq('tinta', baseConfig.tinta);
 
         if (error || !data || data.length === 0) return null;
@@ -1455,7 +1456,7 @@ async function getPrecioGranFormatoLine(
   precioPorUnidadRango?: number,
   factorAjuste?: number
 ): Promise<number | null> {
-  if (!config.tinta) return null;
+  if (!config.tinta || !config.tecnologia_id) return null;
 
   // Si se proporciona precio del rango correcto (calculado con totales acumulados), usarlo
   if (precioPorUnidadRango !== undefined && precioPorUnidadRango !== null) {
@@ -1477,6 +1478,7 @@ async function getPrecioGranFormatoLine(
     .from('productos_gran_formato_precios')
     .select('precio, rango_precio_min, rango_precio_max')
     .eq('producto_gran_formato_id', productId)
+    .eq('tecnologia_id', config.tecnologia_id)
     .eq('tinta', config.tinta);
 
   if (error || !data || data.length === 0) return null;
