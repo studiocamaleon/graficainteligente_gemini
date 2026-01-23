@@ -30,6 +30,7 @@ import { OrdenHistorialTab } from '../../../components/orders/OrdenHistorialTab'
 import { OrdenAdjuntosSection } from '../../../components/orders/OrdenAdjuntosSection';
 import { OrdenFooterTotales } from '../../../components/orders/OrdenFooterTotales';
 import { PagoFormModal } from '../../../components/orders/PagoFormModal';
+import { sendWatiMessage } from '../../../lib/wati';
 
 import type { CanalVenta } from '../../../types/database';
 import { usePresupuestos } from '../../../hooks/usePresupuestos';
@@ -718,10 +719,30 @@ export function CreateOrderPage() {
           setOrdenCreadaId(result.id);
           showSuccess('Orden creada exitosamente');
 
-          // Notificacion WhatsApp
-          supabase.functions.invoke('enviar-notificacion-orden', {
-            body: { orden_id: result.id, company_id: profile.company_id, tipo: 'nueva_orden_trabajo', orden_tipo: 'trabajo' }
-          }).catch(console.error);
+          // Notificacion WhatsApp (Wati Template)
+          if (profile?.company_id && clienteSeleccionado?.whatsapp) {
+            // Need to ensure we have result data passed correctly.
+            // result is OrdenTrabajoFull. 
+            sendWatiMessage({
+              companyId: profile.company_id,
+              phone: clienteSeleccionado.whatsapp,
+              template_name: 'nueva_orden_v3',
+              parameters: [
+                { name: 'nombre_cliente', value: clienteSeleccionado.nombre_fantasia || clienteSeleccionado.razon_social },
+                { name: 'numero_orden', value: result.numero_orden },
+                { name: 'fecha_entrega', value: fechaEntrega ? new Date(fechaEntrega).toLocaleDateString('es-AR') : 'A confirmar' },
+                { name: 'subtotal', value: totales.subtotal.toLocaleString('es-AR') },
+                { name: 'total_iva', value: totales.total.toLocaleString('es-AR') }, // User requested naming this Total FINAL
+                { name: 'url_tracking', value: `https://www.grafica.ar/tracking/${(result as any).tracking_token}` },
+                { name: 'nombre_empresa', value: 'Gráfica Inteligente' },
+                { name: '1', value: (result as any).tracking_token }
+              ],
+              metadata: {
+                tipo: 'nueva_orden_trabajo',
+                orden_trabajo_id: result.id
+              }
+            }).catch(err => console.error('Error sending Wati New Order:', err));
+          }
 
           setTimeout(() => navigate('/app/orders/ordenes'), 500);
         } else {

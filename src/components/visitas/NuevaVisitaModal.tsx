@@ -10,8 +10,10 @@ import { VisitasConfig, Visita } from '../../types/database';
 import { format, addMinutes, startOfDay, addDays, setHours, setMinutes, isSameDay, isWithinInterval, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Clock, MapPin, User, Building, Search, Phone, Users, Calendar as CalendarIcon, ChevronLeft } from 'lucide-react';
-import { notificarNuevaVisita } from '../../lib/whatsappVisitas';
+
 import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../hooks/useAuth';
+import { sendWatiMessage } from '../../lib/wati';
 
 interface NuevaVisitaModalProps {
     isOpen: boolean;
@@ -24,6 +26,7 @@ interface NuevaVisitaModalProps {
 export function NuevaVisitaModal({ isOpen, onClose, onSuccess, initialDate, initialTime }: NuevaVisitaModalProps) {
     // Hooks
     const { createVisita, loadConfig, loadVisitas } = useVisitas();
+    const { profile } = useAuth();
 
     // Client Search State (with Debounce)
     const [searchTerm, setSearchTerm] = useState('');
@@ -271,8 +274,21 @@ export function NuevaVisitaModal({ isOpen, onClose, onSuccess, initialDate, init
             });
 
             if (newVisita) {
-                console.log('Sending notifications for visit:', newVisita.id);
-                notificarNuevaVisita(newVisita.id);
+                console.log('Visit created:', newVisita.id);
+                // Send Wati Notification if client has whatsapp
+                if (clienteWhatsapp && profile?.company_id) {
+                    sendWatiMessage({
+                        companyId: profile.company_id,
+                        phone: clienteWhatsapp,
+                        message: `Hola ${clienteNombre}, se ha agendado una visita técnica para el ${format(selectedDate, "d 'de' MMMM 'a las' HH:mm", { locale: es })} hs. Título: ${titulo}.`,
+                        metadata: {
+                            tipo: 'nueva_visita',
+                            visita_id: newVisita.id
+                        }
+                    }).catch(err => {
+                        console.error('Error sending Wati notification for visit:', err);
+                    });
+                }
             }
 
             onSuccess();

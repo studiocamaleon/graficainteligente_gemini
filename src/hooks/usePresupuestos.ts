@@ -285,13 +285,7 @@ export function usePresupuestos(
   const enviarPresupuesto = async (id: string): Promise<boolean> => {
     const resultado = await cambiarEstado(id, 'enviado');
 
-    if (resultado) {
-      try {
-        await enviarNotificacionPresupuesto(id, 'presupuesto_listo');
-      } catch (err) {
-        console.warn('Error enviando notificación de respaldo:', err);
-      }
-    }
+
 
     return resultado;
   };
@@ -357,42 +351,7 @@ export function usePresupuestos(
     }
   };
 
-  const enviarNotificacionPresupuesto = async (
-    presupuestoId: string,
-    tipoNotificacion: 'presupuesto_listo' | 'presupuesto_aprobado' | 'presupuesto_vencido'
-  ): Promise<boolean> => {
-    try {
-      setError(null);
 
-      if (!profile?.company_id) {
-        throw new Error('No se encontró información de la empresa');
-      }
-
-      const { data, error: functionError } = await supabase.functions.invoke(
-        'notify-presupuesto',
-        {
-          body: {
-            presupuesto_id: presupuestoId,
-            company_id: profile.company_id,
-            tipo_notificacion: tipoNotificacion,
-            frontend_origin: window.location.origin,
-          },
-        }
-      );
-
-      if (functionError) throw functionError;
-
-      if (!data?.success) {
-        throw new Error(data?.error || data?.message || 'Error desconocido al enviar notificación');
-      }
-
-      return true;
-    } catch (err: any) {
-      console.error('Error enviando notificación:', err);
-      toast.error(`Error de notificación: ${err.message}`);
-      return false;
-    }
-  };
 
   const convertirAOrden = async (
     presupuestoId: string,
@@ -450,7 +409,7 @@ export function usePresupuestos(
     enviarPresupuesto,
     aprobarPresupuesto,
     rechazarPresupuesto,
-    enviarNotificacionPresupuesto,
+
     convertirAOrden,
   };
 }

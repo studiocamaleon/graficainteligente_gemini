@@ -26,7 +26,7 @@ export default function DetallePresupuesto() {
   const { showConfirm, dialogState, closeDialog } = useConfirmDialog();
 
   const { presupuesto, loading, error, refetch } = usePresupuesto(id || '');
-  const { deletePresupuesto, duplicarPresupuesto, enviarPresupuesto, enviarNotificacionPresupuesto, convertirAOrden } = usePresupuestos();
+  const { deletePresupuesto, duplicarPresupuesto, enviarPresupuesto, convertirAOrden } = usePresupuestos();
   const { company } = useCompany();
 
   usePageHeader(presupuesto ? `Presupuesto ${presupuesto.numero_presupuesto}` : 'Cargando presupuesto...');
@@ -149,26 +149,7 @@ export default function DetallePresupuesto() {
     }
   };
 
-  const handleReenviar = async () => {
-    if (!presupuesto) return;
 
-    const confirmed = await showConfirm({
-      title: 'Reenviar notificación',
-      message: `¿Deseas reenviar la notificación por WhatsApp para el presupuesto "${presupuesto.numero_presupuesto}"?`,
-      confirmText: 'Reenviar',
-      cancelText: 'Cancelar',
-    });
-
-    if (confirmed) {
-      // Usamos enviarNotificacionPresupuesto directamente
-      const success = await enviarNotificacionPresupuesto(presupuesto.id, 'presupuesto_listo');
-      if (success) {
-        showSuccess('Notificación reenviada correctamente.');
-      } else {
-        // El error ya se muestra en el hook con toast
-      }
-    }
-  };
 
   if (loading) {
     return (
@@ -231,7 +212,7 @@ export default function DetallePresupuesto() {
         onDelete={handleDelete}
         onDuplicate={handleDuplicate}
         onEnviar={handleEnviar}
-        onReenviar={handleReenviar}
+
         onGenerarPDF={handleGenerarPDF}
         onConvertir={() => setShowConvertirModal(true)}
       />

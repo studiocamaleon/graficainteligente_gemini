@@ -26,6 +26,7 @@ import { InfoDialog } from '../../../components/ui/InfoDialog';
 import { QuickClientModal } from '../../../components/clients/QuickClientModal';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../hooks/useAuth';
+import { sendWatiMessage } from '../../../lib/wati';
 import type { CanalVenta } from '../../../types/database';
 
 interface ItemWithId {
@@ -529,29 +530,31 @@ export function CrearOrdenCopiado() {
       // 5. Obtener información de la orden para mostrar en el diálogo
       const { data: ordenFinal } = await supabase
         .from('centro_copiado_ordenes')
-        .select('numero_orden')
+        .select('numero_orden, tracking_token')
         .eq('id', ordenIdFinal)
-        .single();
+        .single() as { data: any, error: any };
 
       // Enviar notificación solo si es orden independiente (no asociada a orden de trabajo)
       if (profile?.company_id && clienteId && !ordenTrabajoIdParam) {
-        supabase.functions.invoke('enviar-notificacion-orden', {
-          body: {
-            orden_id: ordenIdFinal,
-            company_id: profile.company_id,
+        sendWatiMessage({
+          companyId: profile.company_id,
+          phone: clienteSeleccionado?.whatsapp || '', // Should check this before calling
+          template_name: 'nueva_orden_v3',
+          parameters: [
+            { name: 'nombre_cliente', value: clienteSeleccionado?.nombre_fantasia || clienteSeleccionado?.razon_social || 'Cliente' },
+            { name: 'numero_orden', value: ordenFinal?.numero_orden || '' },
+            { name: 'fecha_entrega', value: fechaEntrega ? new Date(fechaEntrega).toLocaleDateString('es-AR') : 'A confirmar' },
+            { name: 'subtotal', value: totales.subtotal.toLocaleString('es-AR') },
+            { name: 'total_iva', value: totales.total.toLocaleString('es-AR') },
+            { name: 'url_tracking', value: `https://www.grafica.ar/tracking/${(ordenFinal as any)?.tracking_token}` }, // Verify if ordenFinal has tracking_token
+            { name: 'nombre_empresa', value: 'Gráfica Inteligente' },
+            { name: '1', value: (ordenFinal as any)?.tracking_token || '' }
+          ],
+          metadata: {
             tipo: 'nueva_orden_copiado',
-            orden_tipo: 'copiado',
-            frontend_origin: window.location.origin
+            orden_copiado_id: ordenIdFinal
           }
-        }).then(({ data, error }) => {
-          if (error) {
-            console.error('[CrearOrdenCopiado] Error al enviar notificación:', error);
-          } else if (data?.success) {
-            console.log('[CrearOrdenCopiado] Notificación enviada exitosamente');
-          }
-        }).catch((err) => {
-          console.error('[CrearOrdenCopiado] Error al invocar Edge Function:', err);
-        });
+        }).catch(err => console.error('Error sending Wati Copy Order:', err));
       }
 
       openDialog(

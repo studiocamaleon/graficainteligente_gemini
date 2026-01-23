@@ -17,7 +17,7 @@ import { ProductionPage } from './pages/app/production/ProductionPage';
 import Finanzas from './pages/app/Finanzas';
 import { Team } from './pages/app/Team';
 import { Integrations } from './pages/app/Integrations';
-import { WhatsAppIntegration } from './pages/app/integrations/WhatsAppIntegration';
+import WatiIntegration from './pages/app/integrations/WatiIntegration';
 import { SystemSettings } from './pages/app/SystemSettings';
 import { Locations } from './pages/app/settings/Locations';
 import MediosCobro from './pages/app/settings/MediosCobro';
@@ -419,7 +419,7 @@ function AppRoutes() {
                   path="integrations/whatsapp"
                   element={
                     <ProtectedModuleRoute moduleId="integrations-whatsapp">
-                      <WhatsAppIntegration />
+                      <WatiIntegration />
                     </ProtectedModuleRoute>
                   }
                 />

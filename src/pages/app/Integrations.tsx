@@ -9,11 +9,11 @@ export function Integrations() {
 
   const integrations = [
     {
-      id: 'whatsapp',
-      name: 'WhatsApp',
-      description: 'Conecta tu WhatsApp Business para enviar mensajes automatizados a tus clientes',
+      id: 'wati',
+      name: 'Wati',
+      description: 'Conecta tu cuenta de Wati para enviar notificaciones automáticas a tus clientes',
       icon: MessageSquare,
-      path: '/app/integrations/whatsapp',
+      path: '/app/integrations/wati',
       color: 'text-green-600',
       bgColor: 'bg-green-50',
       borderColor: 'border-green-200',

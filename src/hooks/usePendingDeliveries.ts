@@ -9,8 +9,10 @@ export interface PendingDelivery {
     cliente: {
         id: string;
         nombre_fantasia: string;
+        razon_social: string;
         numero_documento: string;
-        tiene_cuenta_corriente: boolean; // Added
+        tiene_cuenta_corriente: boolean;
+        whatsapp: string | null;
     } | null;
     fecha_solicitud: string;
     fecha_entrega_estimada: string | null;
@@ -20,6 +22,7 @@ export interface PendingDelivery {
     total_pagado: number;
     saldo_pendiente: number;
     requiere_despacho?: boolean;
+    tracking_token?: string;
 }
 
 export function usePendingDeliveries() {
@@ -46,7 +49,8 @@ export function usePendingDeliveries() {
           total,
           estado,
           requiere_despacho,
-          cliente:clients(id, nombre_fantasia, numero_documento, tiene_cuenta_corriente),
+          tracking_token,
+          cliente:clients(id, nombre_fantasia, razon_social, numero_documento, tiene_cuenta_corriente, whatsapp),
           pagos:ordenes_trabajo_pagos(monto)
         `)
                 .eq('company_id', profile.company_id)
@@ -64,7 +68,8 @@ export function usePendingDeliveries() {
           fecha_entrega_estimada,
           total,
           estado,
-          cliente:clients(id, nombre_fantasia, numero_documento, tiene_cuenta_corriente),
+          tracking_token,
+          cliente:clients(id, nombre_fantasia, razon_social, numero_documento, tiene_cuenta_corriente, whatsapp),
           pagos:centro_copiado_ordenes_pagos(monto)
         `)
                 .eq('company_id', profile.company_id)
@@ -89,7 +94,8 @@ export function usePendingDeliveries() {
                     estado: o.estado,
                     total_pagado: totalPagado,
                     saldo_pendiente: o.total - totalPagado,
-                    requiere_despacho: o.requiere_despacho
+                    requiere_despacho: o.requiere_despacho,
+                    tracking_token: o.tracking_token
                 };
             });
 
@@ -105,7 +111,8 @@ export function usePendingDeliveries() {
                     total: o.total,
                     estado: o.estado,
                     total_pagado: totalPagado,
-                    saldo_pendiente: o.total - totalPagado
+                    saldo_pendiente: o.total - totalPagado,
+                    tracking_token: o.tracking_token
                 };
             });
             // Merge and Sort by Date (Oldest First)
