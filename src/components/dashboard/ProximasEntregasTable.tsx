@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { Calendar, AlertCircle, Clock, Package } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '../ui/card';
 import {
@@ -11,6 +12,7 @@ import {
   TableRow
 } from '../ui/shadcn-table';
 import { Badge } from '../ui/Badge';
+import { Button } from '../ui/Button';
 import { ProximaEntrega, UrgenciaConfig } from '../../types/dashboard';
 
 interface ProximasEntregasTableProps {
@@ -47,6 +49,13 @@ const urgenciaConfig: Record<string, UrgenciaConfig> = {
 
 export function ProximasEntregasTable({ entregas, loading }: ProximasEntregasTableProps) {
   const navigate = useNavigate();
+  const INITIAL_VISIBLE_ROWS = 10;
+  const LOAD_MORE_STEP = 10;
+  const [visibleRows, setVisibleRows] = useState(INITIAL_VISIBLE_ROWS);
+
+  useEffect(() => {
+    setVisibleRows(INITIAL_VISIBLE_ROWS);
+  }, [entregas]);
 
   if (loading) {
     return (
@@ -100,7 +109,7 @@ export function ProximasEntregasTable({ entregas, loading }: ProximasEntregasTab
               </TableRow>
             </TableHeader>
             <TableBody>
-              {entregas.map((entrega) => {
+              {entregas.slice(0, visibleRows).map((entrega) => {
                 const urgencia = urgenciaConfig[entrega.nivel_urgencia];
 
                 return (
@@ -151,6 +160,18 @@ export function ProximasEntregasTable({ entregas, loading }: ProximasEntregasTab
               })}
             </TableBody>
           </Table>
+        )}
+
+        {entregas.length > visibleRows && (
+          <div className="mt-4 flex justify-center">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setVisibleRows((prev) => Math.min(prev + LOAD_MORE_STEP, entregas.length))}
+            >
+              Ver más
+            </Button>
+          </div>
         )}
       </CardContent>
     </Card>

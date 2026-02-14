@@ -13,7 +13,7 @@ export function Integrations() {
       name: 'Wati',
       description: 'Conecta tu cuenta de Wati para enviar notificaciones automáticas a tus clientes',
       icon: MessageSquare,
-      path: '/app/integrations/wati',
+      path: '/app/integrations/whatsapp',
       color: 'text-green-600',
       bgColor: 'bg-green-50',
       borderColor: 'border-green-200',

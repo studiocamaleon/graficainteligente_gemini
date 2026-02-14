@@ -582,7 +582,7 @@ Deno.serve(async (req: Request) => {
 
     if (tipo_notificacion === 'nueva_orden_trabajo') {
       // Generar tracking URL
-      const trackingUrl = `${Deno.env.get('SUPABASE_URL')?.replace('/rest/v1', '')}/tracking/${orden.tracking_token}`;
+      const trackingUrl = `${Deno.env.get('SUPABASE_URL')?.replace('/rest/v1', '')}/track/${orden.tracking_token}`;
       mensaje = generateNuevaOrdenTrabajoMessage(orden, cliente, company, trackingUrl);
     } else {
       // Mensaje de orden finalizada (default)

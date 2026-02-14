@@ -7,12 +7,13 @@ import { StationSelector } from '../../../components/production/StationSelector'
 import { JobExecutionModal } from '../../../components/production/JobExecutionModal';
 import { EmptyState } from '../../../components/ui/EmptyState';
 import { Button } from '../../../components/ui/Button';
-import { RefreshCw, Radio, Boxes, CheckCircle2, Clock } from 'lucide-react';
+import { RefreshCw, Radio, Boxes, CheckCircle2, Clock, ArrowUpDown, CalendarClock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import type { EstadoOrdenItem } from '../../../types/database';
 
 export function StationsView() {
   const [selectedStationId, setSelectedStationId] = useState<string | null>(null);
+  const [deliverySort, setDeliverySort] = useState<'none' | 'asc' | 'desc'>('none');
   const { stations, loading, error, refreshStations, isUpdating } = useProductionStations({
     estacionId: selectedStationId,
   });
@@ -43,6 +44,33 @@ export function StationsView() {
   const handleCloseModal = () => {
     setShowExecutionModal(false);
     setSelectedStep(null);
+  };
+
+  const handleToggleDeliverySort = () => {
+    setDeliverySort((prev) => {
+      if (prev === 'none') return 'asc';
+      if (prev === 'asc') return 'desc';
+      return 'none';
+    });
+  };
+
+  const parseDeliveryDate = (value: string | null | undefined) => {
+    if (!value) return null;
+    const time = new Date(value).getTime();
+    return Number.isNaN(time) ? null : time;
+  };
+
+  const sortStepsByDelivery = (steps: StationStep[]) => {
+    if (deliverySort === 'none') return steps;
+    return [...steps].sort((a, b) => {
+      const dateA = parseDeliveryDate(a.fecha_estimada_entrega);
+      const dateB = parseDeliveryDate(b.fecha_estimada_entrega);
+
+      if (dateA === null && dateB === null) return 0;
+      if (dateA === null) return 1;
+      if (dateB === null) return -1;
+      return deliverySort === 'asc' ? dateA - dateB : dateB - dateA;
+    });
   };
 
   const renderGroupedSteps = (steps: StationStep[]) => {
@@ -116,8 +144,21 @@ export function StationsView() {
   }
 
   const totalActivePasos = stations.reduce((sum, station) => sum + station.total_pasos_activos, 0);
+  const displayedStations = deliverySort === 'none'
+    ? stations
+    : [...stations].sort((a, b) => {
+      const earliestA = sortStepsByDelivery(a.pasos)[0];
+      const earliestB = sortStepsByDelivery(b.pasos)[0];
+      const dateA = parseDeliveryDate(earliestA?.fecha_estimada_entrega);
+      const dateB = parseDeliveryDate(earliestB?.fecha_estimada_entrega);
+
+      if (dateA === null && dateB === null) return 0;
+      if (dateA === null) return 1;
+      if (dateB === null) return -1;
+      return deliverySort === 'asc' ? dateA - dateB : dateB - dateA;
+    });
   const selectedStation = selectedStationId
-    ? stations.find((s) => s.estacion_id === selectedStationId)
+    ? displayedStations.find((s) => s.estacion_id === selectedStationId)
     : null;
 
   return (
@@ -144,10 +185,22 @@ export function StationsView() {
             </div>
           )}
         </div>
-        <Button onClick={refreshStations} variant="outline" size="sm">
-          <RefreshCw className="w-4 h-4 mr-2" />
-          Actualizar
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={handleToggleDeliverySort} variant={deliverySort === 'none' ? 'outline' : 'primary'} size="sm">
+            {deliverySort === 'none' ? (
+              <ArrowUpDown className="w-4 h-4 mr-2" />
+            ) : (
+              <CalendarClock className="w-4 h-4 mr-2" />
+            )}
+            {deliverySort === 'none' && 'Ordenar por Entrega'}
+            {deliverySort === 'asc' && 'Entrega: Próximas'}
+            {deliverySort === 'desc' && 'Entrega: Lejanas'}
+          </Button>
+          <Button onClick={refreshStations} variant="outline" size="sm">
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Actualizar
+          </Button>
+        </div>
       </div>
 
       {!selectedStationId ? (
@@ -160,7 +213,7 @@ export function StationsView() {
             />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {stations.map((station) => (
+              {displayedStations.map((station) => (
                 <StationCard
                   key={station.estacion_id}
                   estacion_id={station.estacion_id}
@@ -226,7 +279,7 @@ export function StationsView() {
                       </span>
                     </div>
                     <div className="space-y-3">
-                      {renderGroupedSteps(selectedStation.pasos.filter((paso) => paso.estado_paso === 'pausado'))}
+                      {renderGroupedSteps(sortStepsByDelivery(selectedStation.pasos.filter((paso) => paso.estado_paso === 'pausado')))}
                       {selectedStation.pasos_pausados === 0 && (
                         <div className="text-center py-8 text-gray-500">
                           No hay pasos pausados
@@ -247,7 +300,7 @@ export function StationsView() {
                       </span>
                     </div>
                     <div className="space-y-3">
-                      {renderGroupedSteps(selectedStation.pasos.filter((paso) => paso.estado_paso === 'en_proceso'))}
+                      {renderGroupedSteps(sortStepsByDelivery(selectedStation.pasos.filter((paso) => paso.estado_paso === 'en_proceso')))}
                       {selectedStation.pasos_en_proceso === 0 && (
                         <div className="text-center py-8 text-gray-500">
                           No hay pasos en proceso
@@ -268,7 +321,7 @@ export function StationsView() {
                       </span>
                     </div>
                     <div className="space-y-3">
-                      {renderGroupedSteps(selectedStation.pasos.filter((paso) => paso.estado_paso === 'pendiente'))}
+                      {renderGroupedSteps(sortStepsByDelivery(selectedStation.pasos.filter((paso) => paso.estado_paso === 'pendiente')))}
                       {selectedStation.pasos_pendientes === 0 && (
                         <div className="text-center py-8 text-gray-500">
                           No hay pasos pendientes
@@ -303,6 +356,7 @@ export function StationsView() {
             producto_nombre: selectedStep.producto_nombre,
             cantidad: selectedStep.cantidad,
             fecha_creacion: selectedStep.fecha_creacion_orden,
+            fecha_estimada_entrega: selectedStep.fecha_estimada_entrega,
             estado: 'en_proceso' as EstadoOrdenItem,
             producto_categoria: null,
             total_pasos: 0,

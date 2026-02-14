@@ -32,6 +32,7 @@ export interface OrdenTrabajoWithRelations extends OrdenTrabajo {
 
 interface OrdenesMetrics {
   totalOrdenes: number;
+  totalOrdenesMes: number;
   totalFacturado: number;
   ordenesPendientes: number;
   ordenesEnProduccion: number;
@@ -44,6 +45,7 @@ export function useOrdenesTrabajo(params: UseOrdenesTrabajoParams = {}) {
   const [totalCount, setTotalCount] = useState(0);
   const [metrics, setMetrics] = useState<OrdenesMetrics>({
     totalOrdenes: 0,
+    totalOrdenesMes: 0,
     totalFacturado: 0,
     ordenesPendientes: 0,
     ordenesEnProduccion: 0,
@@ -68,20 +70,22 @@ export function useOrdenesTrabajo(params: UseOrdenesTrabajoParams = {}) {
     if (!profile?.company_id) return;
 
     try {
-      const startOfMonth = new Date();
-      startOfMonth.setDate(1);
-      startOfMonth.setHours(0, 0, 0, 0);
-
       const { data, error: metricsError } = await supabase
         .from('ordenes_trabajo')
-        .select('estado, total')
-        .eq('company_id', profile.company_id)
-        .gte('fecha_creacion', startOfMonth.toISOString());
+        .select('estado, total, fecha_creacion')
+        .eq('company_id', profile.company_id);
 
       if (metricsError) throw metricsError;
 
       if (data) {
+        const startOfMonth = new Date();
+        startOfMonth.setDate(1);
+        startOfMonth.setHours(0, 0, 0, 0);
+
         const totalOrdenes = data.length;
+        const totalOrdenesMes = data.filter(
+          (o) => new Date(o.fecha_creacion).getTime() >= startOfMonth.getTime()
+        ).length;
         const totalFacturado = data
           .filter((o) => o.estado !== 'cancelada')
           .reduce((sum, o) => sum + Number(o.total), 0);
@@ -93,6 +97,7 @@ export function useOrdenesTrabajo(params: UseOrdenesTrabajoParams = {}) {
 
         setMetrics({
           totalOrdenes,
+          totalOrdenesMes,
           totalFacturado,
           ordenesPendientes,
           ordenesEnProduccion,
@@ -115,11 +120,12 @@ export function useOrdenesTrabajo(params: UseOrdenesTrabajoParams = {}) {
       let count: number | null = 0;
 
       // START OF SEARCH LOGIC
-      if (searchTerm && searchTerm.length > 0) {
+      const normalizedSearchTerm = searchTerm.trim();
+      if (normalizedSearchTerm.length > 0) {
         // Use RPC for search
         const { data: searchData, error: searchError } = await supabase
           .rpc('fn_search_ordenes_trabajo', {
-            p_search_term: searchTerm,
+            p_search_term: normalizedSearchTerm,
             p_company_id: profile.company_id,
             p_limit: itemsPerPage,
             p_offset: (page - 1) * itemsPerPage
@@ -194,7 +200,7 @@ export function useOrdenesTrabajo(params: UseOrdenesTrabajoParams = {}) {
 
         const mappedData = await Promise.all(data.map(async (item: any) => {
           // If RPC source, we have flat fields. If Standard source, we have nested objects.
-          const isRpc = !!item.cliente_nombre; // Detection
+          const isRpc = Object.prototype.hasOwnProperty.call(item, 'full_count');
 
           if (isRpc) {
             return {
@@ -205,11 +211,11 @@ export function useOrdenesTrabajo(params: UseOrdenesTrabajoParams = {}) {
               total: item.total,
               company_id: profile.company_id, // Implied
               // Reconstruct relationships
-              cliente: {
+              cliente: item.cliente_id ? {
                 id: item.cliente_id,
-                nombre_fantasia: item.cliente_nombre,
-                numero_documento: item.cliente_documento
-              },
+                nombre_fantasia: item.cliente_nombre || 'Sin cliente',
+                numero_documento: item.cliente_documento || ''
+              } : undefined,
               items_count: item.items_count,
               total_pagado: item.total_pagado,
               // Some fields might be missing in RPC return, fill defaults or fetch if critical

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Search, List, LayoutGrid, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
@@ -18,6 +18,9 @@ export function OrdersListPage() {
 
   const canCreate = hasPermission('orders', 'create');
   const canViewFinancials = profile?.role !== 'operador_taller';
+  const metricsGridClass = canViewFinancials
+    ? 'grid grid-cols-1 md:grid-cols-6 gap-4'
+    : 'grid grid-cols-1 md:grid-cols-5 gap-4';
 
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
   const [page, setPage] = useState(1);
@@ -30,7 +33,7 @@ export function OrdersListPage() {
   });
 
   // Reset page when search changes
-  useMemo(() => {
+  useEffect(() => {
     setPage(1);
   }, [searchTerm]);
 
@@ -50,11 +53,17 @@ export function OrdersListPage() {
 
   return (
     <div className="space-y-6">
-      <div className={`grid grid-cols-1 md:grid-cols-${canViewFinancials ? '5' : '4'} gap-4`}>
+      <div className={metricsGridClass}>
         <Card>
           <div className="p-4">
-            <div className="text-xs text-gray-600 mb-1">Total Órdenes (Mes)</div>
+            <div className="text-xs text-gray-600 mb-1">Total Órdenes</div>
             <div className="text-2xl font-bold text-gray-900">{metrics.totalOrdenes}</div>
+          </div>
+        </Card>
+        <Card>
+          <div className="p-4">
+            <div className="text-xs text-gray-600 mb-1">Órdenes del Mes</div>
+            <div className="text-2xl font-bold text-indigo-600">{metrics.totalOrdenesMes}</div>
           </div>
         </Card>
 
@@ -98,7 +107,7 @@ export function OrdersListPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
-                placeholder="Buscar por cliente o número..."
+                placeholder="Buscar por orden, cliente, razón social, teléfono o CUIT/DNI..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"

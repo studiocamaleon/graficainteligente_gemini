@@ -13,7 +13,6 @@ import { Clock, MapPin, User, Building, Search, Phone, Users, Calendar as Calend
 
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
-import { sendWatiMessage } from '../../lib/wati';
 
 interface NuevaVisitaModalProps {
     isOpen: boolean;
@@ -275,20 +274,9 @@ export function NuevaVisitaModal({ isOpen, onClose, onSuccess, initialDate, init
 
             if (newVisita) {
                 console.log('Visit created:', newVisita.id);
-                // Send Wati Notification if client has whatsapp
-                if (clienteWhatsapp && profile?.company_id) {
-                    sendWatiMessage({
-                        companyId: profile.company_id,
-                        phone: clienteWhatsapp,
-                        message: `Hola ${clienteNombre}, se ha agendado una visita técnica para el ${format(selectedDate, "d 'de' MMMM 'a las' HH:mm", { locale: es })} hs. Título: ${titulo}.`,
-                        metadata: {
-                            tipo: 'nueva_visita',
-                            visita_id: newVisita.id
-                        }
-                    }).catch(err => {
-                        console.error('Error sending Wati notification for visit:', err);
-                    });
-                }
+                // Wati solo permite plantillas aprobadas por Meta.
+                // Por ahora no enviamos WhatsApp automático para visitas
+                // porque no existe plantilla aprobada para este evento.
             }
 
             onSuccess();

@@ -16,6 +16,7 @@ import { ShippingModal, ShippingData } from '../../../components/orders/Shipping
 
 import { useAuth } from '../../../hooks/useAuth';
 import { sendWatiMessage } from '../../../lib/wati';
+import { buildTrackingUrl } from '../../../lib/trackingUrl';
 
 export function PendingDeliveriesPage() {
     const navigate = useNavigate();
@@ -96,12 +97,12 @@ export function PendingDeliveriesPage() {
                 sendWatiMessage({
                     companyId: profile.company_id,
                     phone: selectedDelivery.cliente.whatsapp,
-                    template_name: 'orden_finalizada_v1',
+                    template_name: 'orden_finalizada_v2',
                     parameters: [
                         { name: 'nombre_cliente', value: selectedDelivery.cliente.nombre_fantasia || selectedDelivery.cliente.razon_social },
                         { name: 'numero_orden', value: selectedDelivery.numero_orden },
                         { name: 'saldo_pendiente', value: selectedDelivery.saldo_pendiente.toLocaleString('es-AR') },
-                        { name: 'url_tracking', value: `https://www.grafica.ar/tracking/${selectedDelivery.tracking_token}` },
+                        { name: 'url_tracking', value: buildTrackingUrl(selectedDelivery.tracking_token || '') },
                         { name: 'nombre_empresa', value: 'Gráfica Inteligente' },
                         { name: '1', value: selectedDelivery.tracking_token || '' }
                     ],

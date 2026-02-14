@@ -57,14 +57,32 @@ export default function WatiIntegration() {
         e.preventDefault();
         if (!profile?.company_id) return;
 
+        const normalizedEndpoint = endpoint.trim();
+        const normalizedToken = accessToken.trim();
+
+        if (enabled && (!normalizedEndpoint || !normalizedToken)) {
+            showError('Para habilitar Wati debes completar endpoint y access token');
+            return;
+        }
+
+        if (enabled) {
+            try {
+                // Validates structure (protocol + host) before persisting config.
+                new URL(normalizedEndpoint);
+            } catch {
+                showError('El endpoint de Wati no tiene un formato de URL válido');
+                return;
+            }
+        }
+
         setIsLoading(true);
         try {
             const { error } = await supabase
                 .from('companies')
                 .update({
                     wati_enabled: enabled,
-                    wati_api_endpoint: endpoint,
-                    wati_access_token: accessToken,
+                    wati_api_endpoint: normalizedEndpoint,
+                    wati_access_token: normalizedToken,
                 })
                 .eq('id', profile.company_id);
 

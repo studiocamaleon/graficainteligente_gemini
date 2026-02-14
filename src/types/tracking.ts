@@ -30,6 +30,9 @@ export interface TrackingItem {
   producto_nombre: string;
   producto_categoria: string | null;
   cantidad: number;
+  precio_unitario?: number | null;
+  precio_total?: number | null;
+  detalle?: Record<string, unknown> | null;
   estado: 'pendiente' | 'en_proceso' | 'finalizado';
   pasos: TrackingPaso[];
 }

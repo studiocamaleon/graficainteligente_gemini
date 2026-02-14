@@ -8,8 +8,7 @@ interface WatiParameter {
 interface SendWatiMessageParams {
     companyId: string;
     phone: string;
-    message?: string;        // Optional if using template
-    template_name?: string;  // Optional if using session message
+    template_name: 'nueva_orden_v4' | 'orden_finalizada_v2';
     parameters?: WatiParameter[];
     metadata?: {
         tipo?: string;
@@ -21,15 +20,14 @@ interface SendWatiMessageParams {
 
 /**
  * Envia un mensaje de WhatsApp via Wati.
- * Puede ser un mensaje de sesión (texto libre) o una plantilla.
+ * Solo admite plantillas aprobadas por Meta.
  */
-export async function sendWatiMessage({ companyId, phone, message, template_name, parameters, metadata }: SendWatiMessageParams) {
+export async function sendWatiMessage({ companyId, phone, template_name, parameters, metadata }: SendWatiMessageParams) {
     try {
         const { data, error } = await supabase.functions.invoke('send-wati-message', {
             body: {
                 company_id: companyId,
                 phone,
-                message,
                 template_name,
                 parameters,
                 metadata

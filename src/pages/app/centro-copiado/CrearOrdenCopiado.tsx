@@ -27,6 +27,7 @@ import { QuickClientModal } from '../../../components/clients/QuickClientModal';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../hooks/useAuth';
 import { sendWatiMessage } from '../../../lib/wati';
+import { buildTrackingUrl } from '../../../lib/trackingUrl';
 import type { CanalVenta } from '../../../types/database';
 
 interface ItemWithId {
@@ -539,14 +540,14 @@ export function CrearOrdenCopiado() {
         sendWatiMessage({
           companyId: profile.company_id,
           phone: clienteSeleccionado?.whatsapp || '', // Should check this before calling
-          template_name: 'nueva_orden_v3',
+          template_name: 'nueva_orden_v4',
           parameters: [
             { name: 'nombre_cliente', value: clienteSeleccionado?.nombre_fantasia || clienteSeleccionado?.razon_social || 'Cliente' },
             { name: 'numero_orden', value: ordenFinal?.numero_orden || '' },
             { name: 'fecha_entrega', value: fechaEntrega ? new Date(fechaEntrega).toLocaleDateString('es-AR') : 'A confirmar' },
             { name: 'subtotal', value: totales.subtotal.toLocaleString('es-AR') },
             { name: 'total_iva', value: totales.total.toLocaleString('es-AR') },
-            { name: 'url_tracking', value: `https://www.grafica.ar/tracking/${(ordenFinal as any)?.tracking_token}` }, // Verify if ordenFinal has tracking_token
+            { name: 'url_tracking', value: buildTrackingUrl((ordenFinal as any)?.tracking_token || '') },
             { name: 'nombre_empresa', value: 'Gráfica Inteligente' },
             { name: '1', value: (ordenFinal as any)?.tracking_token || '' }
           ],
