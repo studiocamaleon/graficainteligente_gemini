@@ -232,7 +232,7 @@ export function useDashboardData() {
         .in('estado', ['pendiente', 'en_proceso'])
         .not('fecha_estimada_entrega', 'is', null)
         .order('fecha_estimada_entrega', { ascending: true })
-        .limit(10);
+        .limit(50);
 
       if (error) {
         console.error('Error loading próximas entregas:', error);

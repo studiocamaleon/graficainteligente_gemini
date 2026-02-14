@@ -3,7 +3,7 @@ import { JobsKanbanBoard } from '../../../components/production/JobsKanbanBoard'
 import { JobExecutionModal } from '../../../components/production/JobExecutionModal';
 import { useProductionJobs } from '../../../hooks/useProductionJobs';
 import type { JobItem } from '../../../hooks/useProductionJobs';
-import { RefreshCw, Radio, Monitor, Search } from 'lucide-react';
+import { RefreshCw, Radio, Monitor, Search, ArrowUpDown, CalendarClock } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
 import { useAuth } from '../../../hooks/useAuth';
@@ -16,8 +16,30 @@ export function JobsView() {
   const [selectedJob, setSelectedJob] = useState<JobItem | null>(null);
   const [showExecutionModal, setShowExecutionModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [deliverySort, setDeliverySort] = useState<'none' | 'asc' | 'desc'>('none');
 
   const filteredJobsByEstado = useMemo(() => {
+    const parseDeliveryDate = (job: JobItem) => {
+      if (!job.fecha_estimada_entrega) return null;
+      const time = new Date(job.fecha_estimada_entrega).getTime();
+      return Number.isNaN(time) ? null : time;
+    };
+
+    const sortByDelivery = (jobs: JobItem[]) => {
+      if (deliverySort === 'none') return jobs;
+
+      return [...jobs].sort((a, b) => {
+        const dateA = parseDeliveryDate(a);
+        const dateB = parseDeliveryDate(b);
+
+        if (dateA === null && dateB === null) return 0;
+        if (dateA === null) return 1;
+        if (dateB === null) return -1;
+
+        return deliverySort === 'asc' ? dateA - dateB : dateB - dateA;
+      });
+    };
+
     if (!searchTerm.trim()) return jobsByEstado;
 
     const term = searchTerm.toLowerCase();
@@ -26,12 +48,55 @@ export function JobsView() {
       (job.cliente_razon_social?.toLowerCase() || '').includes(term) ||
       job.numero_orden.toLowerCase().includes(term);
 
-    return {
+    const filtered = {
       pendiente: jobsByEstado.pendiente.filter(filterFn),
       en_proceso: jobsByEstado.en_proceso.filter(filterFn),
       finalizado: jobsByEstado.finalizado.filter(filterFn),
     };
-  }, [jobsByEstado, searchTerm]);
+
+    return {
+      pendiente: sortByDelivery(filtered.pendiente),
+      en_proceso: sortByDelivery(filtered.en_proceso),
+      finalizado: sortByDelivery(filtered.finalizado),
+    };
+  }, [jobsByEstado, searchTerm, deliverySort]);
+
+  const sortedJobsByEstado = useMemo(() => {
+    if (deliverySort === 'none') return filteredJobsByEstado;
+
+    const parseDeliveryDate = (job: JobItem) => {
+      if (!job.fecha_estimada_entrega) return null;
+      const time = new Date(job.fecha_estimada_entrega).getTime();
+      return Number.isNaN(time) ? null : time;
+    };
+
+    const sortByDelivery = (jobs: JobItem[]) => {
+      return [...jobs].sort((a, b) => {
+        const dateA = parseDeliveryDate(a);
+        const dateB = parseDeliveryDate(b);
+
+        if (dateA === null && dateB === null) return 0;
+        if (dateA === null) return 1;
+        if (dateB === null) return -1;
+
+        return deliverySort === 'asc' ? dateA - dateB : dateB - dateA;
+      });
+    };
+
+    return {
+      pendiente: sortByDelivery(filteredJobsByEstado.pendiente),
+      en_proceso: sortByDelivery(filteredJobsByEstado.en_proceso),
+      finalizado: sortByDelivery(filteredJobsByEstado.finalizado),
+    };
+  }, [filteredJobsByEstado, deliverySort]);
+
+  const handleToggleDeliverySort = () => {
+    setDeliverySort((prev) => {
+      if (prev === 'none') return 'asc';
+      if (prev === 'asc') return 'desc';
+      return 'none';
+    });
+  };
 
   const handleJobClick = (job: JobItem) => {
     setSelectedJob(job);
@@ -112,6 +177,16 @@ export function JobsView() {
           )}
         </div>
         <div className="flex items-center gap-2">
+          <Button onClick={handleToggleDeliverySort} variant={deliverySort === 'none' ? 'outline' : 'primary'} size="sm">
+            {deliverySort === 'none' ? (
+              <ArrowUpDown className="w-4 h-4 mr-2" />
+            ) : (
+              <CalendarClock className="w-4 h-4 mr-2" />
+            )}
+            {deliverySort === 'none' && 'Ordenar por Entrega'}
+            {deliverySort === 'asc' && 'Entrega: Próximas'}
+            {deliverySort === 'desc' && 'Entrega: Lejanas'}
+          </Button>
           <Button onClick={handleCopyMonitorUrl} variant="outline" size="sm">
             <Monitor className="w-4 h-4 mr-2" />
             Copiar URL Monitor
@@ -124,7 +199,7 @@ export function JobsView() {
       </div>
 
       <JobsKanbanBoard
-        jobsByEstado={filteredJobsByEstado}
+        jobsByEstado={sortedJobsByEstado}
         onJobClick={handleJobClick}
         recentlyUpdatedJobs={recentlyUpdatedJobs}
       />

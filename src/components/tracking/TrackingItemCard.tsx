@@ -46,10 +46,6 @@ export function TrackingItemCard({ item, index }: TrackingItemCardProps) {
               </div>
 
               <div className="flex flex-wrap items-center gap-3">
-                <span className="text-sm text-gray-300">
-                  <span className="font-medium">Cantidad:</span> {item.cantidad} unidades
-                </span>
-
                 <div className={`px-3 py-1 rounded-full text-xs font-medium border ${getEstadoColor()}`}>
                   {item.estado === 'finalizado'
                     ? 'Finalizado'

@@ -25,6 +25,7 @@ import { useConfirmDialog } from '../../hooks/useConfirmDialog';
 import { useToast } from '../../contexts/ToastContext';
 import { supabase } from '../../lib/supabase';
 import type { Client } from '../../types/database';
+import type { ClientWithLtv } from '../../hooks/useClients';
 
 export function Clients() {
   const { profile } = useAuth();
@@ -36,6 +37,7 @@ export function Clients() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [statusAprobacionFilter, setStatusAprobacionFilter] = useState<string>('all');
   const [cuentaCorrienteFilter, setCuentaCorrienteFilter] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<'created_at_desc' | 'ltv_desc' | 'name_asc'>('created_at_desc');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(25);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -83,11 +85,12 @@ export function Clients() {
   const hasCuentaCorrienteFilter = cuentaCorrienteFilter === 'all' ? null : cuentaCorrienteFilter === 'yes';
   const statusAprobacionFilterValue = statusAprobacionFilter === 'all' ? null : (statusAprobacionFilter as 'pending' | 'approved' | 'rejected');
 
-  const { clients, totalCount, loading, refetch } = useClients({
+  const { clients, totalCount, avgLtv, totalLtv, loading, refetch } = useClients({
     searchTerm: debouncedSearch,
     isActive: isActiveFilter,
     hasCuentaCorriente: hasCuentaCorrienteFilter,
     statusAprobacion: statusAprobacionFilterValue,
+    sortBy,
     page: currentPage,
     itemsPerPage,
   });
@@ -272,6 +275,16 @@ export function Clients() {
       ),
     },
     {
+      key: 'ltv_total',
+      header: 'LTV',
+      render: (client: ClientWithLtv) => (
+        <div className="text-sm font-semibold text-emerald-700">
+          ${Number(client.ltv_total || 0).toLocaleString('es-AR')}
+        </div>
+      ),
+      width: '140px',
+    },
+    {
       key: 'documento',
       header: 'CUIT/DNI',
       render: (client: Client) => (
@@ -453,8 +466,29 @@ export function Clients() {
               ]}
             />
 
+            <Select
+              value={sortBy}
+              onChange={(value) => {
+                setSortBy(value as 'created_at_desc' | 'ltv_desc' | 'name_asc');
+                setCurrentPage(1);
+              }}
+              options={[
+                { value: 'created_at_desc', label: 'Orden: más recientes' },
+                { value: 'ltv_desc', label: 'Orden: mayor LTV' },
+                { value: 'name_asc', label: 'Orden: nombre A-Z' },
+              ]}
+            />
+
             <div className="text-sm text-gray-600">
               Total: <span className="font-semibold">{totalCount}</span> clientes
+            </div>
+
+            <div className="text-sm text-gray-600">
+              LTV Promedio: <span className="font-semibold text-emerald-700">${avgLtv.toLocaleString('es-AR')}</span>
+            </div>
+
+            <div className="text-sm text-gray-600">
+              Total Vendido: <span className="font-semibold text-emerald-700">${totalLtv.toLocaleString('es-AR')}</span>
             </div>
 
             <div className="ml-auto flex gap-2">

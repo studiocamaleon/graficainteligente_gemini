@@ -14,6 +14,7 @@ export interface JobItem {
   orden_id: string;
   numero_orden: string;
   fecha_creacion: string;
+  fecha_estimada_entrega?: string | null;
   updated_at: string;
   cliente_nombre: string;
   cliente_razon_social?: string;
@@ -111,6 +112,7 @@ export function useProductionJobs() {
             id,
             numero_orden,
             fecha_creacion,
+            fecha_estimada_entrega,
             estado,
             cliente:clients!inner(
               id,
@@ -188,6 +190,7 @@ export function useProductionJobs() {
           orden_id: item.orden.id,
           numero_orden: item.orden.numero_orden,
           fecha_creacion: item.orden.fecha_creacion,
+          fecha_estimada_entrega: item.orden.fecha_estimada_entrega,
           updated_at: item.updated_at,
           cliente_nombre: item.orden.cliente?.nombre_fantasia || 'Sin cliente',
           cliente_razon_social: item.orden.cliente?.razon_social || '',
@@ -258,6 +261,7 @@ export function useProductionJobs() {
               id,
               numero_orden,
               fecha_creacion,
+              fecha_estimada_entrega,
               estado,
               cliente:clients!inner(
                 id,
@@ -300,6 +304,7 @@ export function useProductionJobs() {
           orden_id: (itemDataAny.orden as any).id,
           numero_orden: (itemDataAny.orden as any).numero_orden,
           fecha_creacion: (itemDataAny.orden as any).fecha_creacion,
+          fecha_estimada_entrega: (itemDataAny.orden as any).fecha_estimada_entrega,
           updated_at: itemDataAny.updated_at,
           cliente_nombre: (itemDataAny.orden as any).cliente?.nombre_fantasia || 'Sin cliente',
           cliente_razon_social: (itemDataAny.orden as any).cliente?.razon_social || '',

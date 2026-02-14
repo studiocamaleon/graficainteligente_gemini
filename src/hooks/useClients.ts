@@ -8,8 +8,13 @@ interface UseClientsParams {
   isActive?: boolean | null;
   hasCuentaCorriente?: boolean | null;
   statusAprobacion?: 'pending' | 'approved' | 'rejected' | null;
+  sortBy?: 'created_at_desc' | 'ltv_desc' | 'name_asc';
   page?: number;
   itemsPerPage?: number;
+}
+
+export interface ClientWithLtv extends Client {
+  ltv_total: number;
 }
 
 export function useClients({
@@ -17,12 +22,16 @@ export function useClients({
   isActive = null,
   hasCuentaCorriente = null,
   statusAprobacion = null,
+  sortBy = 'created_at_desc',
   page = 1,
   itemsPerPage = 25,
 }: UseClientsParams = {}) {
   const { profile } = useAuth();
-  const [clients, setClients] = useState<Client[]>([]);
+  const [clients, setClients] = useState<ClientWithLtv[]>([]);
   const [totalCount, setTotalCount] = useState(0);
+  const [avgLtv, setAvgLtv] = useState(0);
+  const [avgLtvGlobal, setAvgLtvGlobal] = useState(0);
+  const [totalLtv, setTotalLtv] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,47 +42,35 @@ export function useClients({
       setLoading(true);
       setError(null);
 
-      let query = supabase
-        .from('clients')
-        .select('*', { count: 'exact' })
-        .eq('company_id', profile.company_id);
-
-      if (isActive !== null) {
-        query = query.eq('is_active', isActive);
-      }
-
-      if (hasCuentaCorriente !== null) {
-        query = query.eq('tiene_cuenta_corriente', hasCuentaCorriente);
-      }
-
-      if (statusAprobacion !== null) {
-        query = query.eq('status_aprobacion', statusAprobacion);
-      }
-
-      if (searchTerm) {
-        query = query.or(
-          `nombre_fantasia.ilike.%${searchTerm}%,razon_social.ilike.%${searchTerm}%,numero_documento.ilike.%${searchTerm}%`
-        );
-      }
-
-      const from = (page - 1) * itemsPerPage;
-      const to = from + itemsPerPage - 1;
-
-      query = query.order('created_at', { ascending: false }).range(from, to);
-
-      const { data, error: fetchError, count } = await query;
+      const { data, error: fetchError } = await supabase.rpc(
+        'fn_list_clients_with_ltv',
+        {
+          p_company_id: profile.company_id,
+          p_search_term: searchTerm || null,
+          p_is_active: isActive,
+          p_has_cuenta_corriente: hasCuentaCorriente,
+          p_status_aprobacion: statusAprobacion,
+          p_sort_by: sortBy,
+          p_limit: itemsPerPage,
+          p_offset: (page - 1) * itemsPerPage,
+        }
+      );
 
       if (fetchError) throw fetchError;
 
-      setClients(data || []);
-      setTotalCount(count || 0);
+      const rows = (data || []) as Array<ClientWithLtv & { full_count: number; avg_ltv: number; avg_ltv_global: number; total_ltv: number }>;
+      setClients(rows);
+      setTotalCount(rows.length > 0 ? Number(rows[0].full_count || 0) : 0);
+      setAvgLtv(rows.length > 0 ? Number(rows[0].avg_ltv || 0) : 0);
+      setAvgLtvGlobal(rows.length > 0 ? Number(rows[0].avg_ltv_global || 0) : 0);
+      setTotalLtv(rows.length > 0 ? Number(rows[0].total_ltv || 0) : 0);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al cargar clientes');
       console.error('Error fetching clients:', err);
     } finally {
       setLoading(false);
     }
-  }, [profile?.company_id, searchTerm, isActive, hasCuentaCorriente, statusAprobacion, page, itemsPerPage]);
+  }, [profile?.company_id, searchTerm, isActive, hasCuentaCorriente, statusAprobacion, sortBy, page, itemsPerPage]);
 
   useEffect(() => {
     fetchClients();
@@ -86,6 +83,9 @@ export function useClients({
   return {
     clients,
     totalCount,
+    avgLtv,
+    avgLtvGlobal,
+    totalLtv,
     loading,
     error,
     refetch,

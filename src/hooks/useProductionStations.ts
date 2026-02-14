@@ -19,6 +19,7 @@ export interface StationStep {
   cantidad: number;
   fecha_inicio: string | null;
   fecha_creacion_orden: string;
+  fecha_estimada_entrega: string | null;
   orden_id: string;
   pausa_activa?: {
     motivo_nombre: string;
@@ -96,6 +97,7 @@ export function useProductionStations(params: UseProductionStationsParams = {}) 
               id,
               numero_orden,
               fecha_creacion,
+              fecha_estimada_entrega,
               estado,
               cliente:clients!inner(
                 id,
@@ -246,6 +248,7 @@ export function useProductionStations(params: UseProductionStationsParams = {}) 
             cantidad: ruta.orden_item.cantidad,
             fecha_inicio: ruta.fecha_inicio,
             fecha_creacion_orden: ruta.orden_item.orden.fecha_creacion,
+            fecha_estimada_entrega: ruta.orden_item.orden.fecha_estimada_entrega,
             orden_id: ruta.orden_item.orden.id,
             pausa_activa: ruta.pausa_activa || null,
             tiempo_pausado_total: tiempoPausadoTotalMap.get(ruta.id) || 0,

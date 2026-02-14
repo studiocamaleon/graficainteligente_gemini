@@ -24,7 +24,7 @@ interface PresupuestoHeaderProps {
   onDelete: () => void;
   onDuplicate: () => void;
   onEnviar: () => void;
-  onReenviar?: () => void;
+
   onGenerarPDF: () => void;
   onConvertir?: () => void;
 }
@@ -34,7 +34,7 @@ export function PresupuestoHeader({
   onDelete,
   onDuplicate,
   onEnviar,
-  onReenviar,
+
   onGenerarPDF,
   onConvertir,
 }: PresupuestoHeaderProps) {
@@ -141,18 +141,7 @@ export function PresupuestoHeader({
               </div>
             )}
 
-            {presupuesto.estado === 'enviado' && onReenviar && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={onReenviar}
-                className="text-indigo-600 border-indigo-200 hover:bg-indigo-50"
-                title="Reenviar notificación por WhatsApp"
-              >
-                <Send className="w-4 h-4 mr-2" />
-                Reenviar WhatsApp
-              </Button>
-            )}
+
 
             <div className="h-6 w-px bg-gray-200 mx-1 hidden md:block"></div>
 

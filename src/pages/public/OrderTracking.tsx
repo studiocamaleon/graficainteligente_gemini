@@ -5,6 +5,7 @@ import { TrackingError } from '../../components/tracking/TrackingError';
 import { TrackingHeader } from '../../components/tracking/TrackingHeader';
 import { TrackingStatusMessage } from '../../components/tracking/TrackingStatusMessage';
 import { TrackingItemCard } from '../../components/tracking/TrackingItemCard';
+import { TrackingOrderDetailsPanel } from '../../components/tracking/TrackingOrderDetailsPanel';
 import { TrackingFooter } from '../../components/tracking/TrackingFooter';
 import { TrackingWhatsAppButton } from '../../components/tracking/TrackingWhatsAppButton';
 import { Radio } from 'lucide-react';
@@ -59,35 +60,39 @@ export function OrderTracking() {
           />
         </div>
 
-        <div className="mt-8">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <h2 className="text-2xl font-bold text-white flex items-center">
-                <div className="w-1 h-8 bg-gradient-to-b from-cyan-500 to-blue-500 rounded-full mr-3" />
-                Items de la Orden
-              </h2>
-              {isUpdating && (
-                <div className="flex items-center gap-1.5 text-xs text-cyan-400 bg-cyan-500/10 px-3 py-1.5 rounded-full border border-cyan-500/30 animate-pulse">
-                  <Radio className="w-3 h-3 animate-pulse" />
-                  <span>Sincronizando...</span>
-                </div>
-              )}
-            </div>
-
-
+        <div className="mt-8 grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="lg:col-span-5">
+            <TrackingOrderDetailsPanel items={data.items} />
           </div>
 
-          {data.items.length === 0 ? (
-            <div className="bg-[#1A1F3A] border border-gray-700 rounded-xl p-8 text-center">
-              <p className="text-gray-400">No hay items en esta orden</p>
+          <div className="lg:col-span-7">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <h2 className="text-2xl font-bold text-white flex items-center">
+                  <div className="w-1 h-8 bg-gradient-to-b from-cyan-500 to-blue-500 rounded-full mr-3" />
+                  Proceso de Producción
+                </h2>
+                {isUpdating && (
+                  <div className="flex items-center gap-1.5 text-xs text-cyan-400 bg-cyan-500/10 px-3 py-1.5 rounded-full border border-cyan-500/30 animate-pulse">
+                    <Radio className="w-3 h-3 animate-pulse" />
+                    <span>Sincronizando...</span>
+                  </div>
+                )}
+              </div>
             </div>
-          ) : (
-            <div className="space-y-4">
-              {data.items.map((item, index) => (
-                <TrackingItemCard key={item.id} item={item} index={index} />
-              ))}
-            </div>
-          )}
+
+            {data.items.length === 0 ? (
+              <div className="bg-[#1A1F3A] border border-gray-700 rounded-xl p-8 text-center">
+                <p className="text-gray-400">No hay items en esta orden</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {data.items.map((item, index) => (
+                  <TrackingItemCard key={item.id} item={item} index={index} />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="mt-6 text-center space-y-2">

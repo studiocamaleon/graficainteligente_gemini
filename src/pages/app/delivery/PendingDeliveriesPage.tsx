@@ -13,8 +13,10 @@ import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
 import { useInfoDialog } from '../../../hooks/useInfoDialog';
 import { InfoDialog } from '../../../components/ui/InfoDialog';
 import { ShippingModal, ShippingData } from '../../../components/orders/ShippingModal';
-import { enviarNotificacion } from '../../../lib/whatsappNotifications';
+
 import { useAuth } from '../../../hooks/useAuth';
+import { sendWatiMessage } from '../../../lib/wati';
+import { buildTrackingUrl } from '../../../lib/trackingUrl';
 
 export function PendingDeliveriesPage() {
     const navigate = useNavigate();
@@ -91,20 +93,29 @@ export function PendingDeliveriesPage() {
             setShowShippingModal(false);
 
             // Send WhatsApp Notification
-            if (selectedDelivery.tipo === 'orden_trabajo' && profile?.company_id && selectedDelivery.cliente?.id) {
-                try {
-                    await enviarNotificacion({
-                        companyId: profile.company_id,
-                        clienteId: selectedDelivery.cliente.id,
-                        ordenId: selectedDelivery.id,
+            if (selectedDelivery.tipo === 'orden_trabajo' && profile?.company_id && selectedDelivery.cliente?.id && selectedDelivery.cliente?.whatsapp) {
+                sendWatiMessage({
+                    companyId: profile.company_id,
+                    phone: selectedDelivery.cliente.whatsapp,
+                    template_name: 'orden_finalizada_v2',
+                    parameters: [
+                        { name: 'nombre_cliente', value: selectedDelivery.cliente.nombre_fantasia || selectedDelivery.cliente.razon_social },
+                        { name: 'numero_orden', value: selectedDelivery.numero_orden },
+                        { name: 'saldo_pendiente', value: selectedDelivery.saldo_pendiente.toLocaleString('es-AR') },
+                        { name: 'url_tracking', value: buildTrackingUrl(selectedDelivery.tracking_token || '') },
+                        { name: 'nombre_empresa', value: 'Gráfica Inteligente' },
+                        { name: '1', value: selectedDelivery.tracking_token || '' }
+                    ],
+                    metadata: {
                         tipo: 'orden_despachada',
-                        ordenTipo: 'trabajo'
-                    });
+                        orden_trabajo_id: selectedDelivery.id
+                    }
+                }).then(() => {
                     openInfoDialog('Éxito', 'La orden ha sido despachada y se envió la notificación al cliente.');
-                } catch (error) {
-                    console.error('Error sending notification:', error);
-                    openInfoDialog('Éxito', 'La orden ha sido despachada, pero hubo un error al enviar la notificación.');
-                }
+                }).catch((err) => {
+                    console.error('Error sending WhatsApp:', err);
+                    openInfoDialog('Éxito', 'La orden ha sido despachada, pero hubo un error al enviar la notificación por WhatsApp.');
+                });
             } else {
                 openInfoDialog('Éxito', 'La orden ha sido despachada y se ha registrado el envío.');
             }

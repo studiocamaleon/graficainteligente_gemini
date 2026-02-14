@@ -10,8 +10,9 @@ import { VisitasConfig, Visita } from '../../types/database';
 import { format, addMinutes, startOfDay, addDays, setHours, setMinutes, isSameDay, isWithinInterval, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Clock, MapPin, User, Building, Search, Phone, Users, Calendar as CalendarIcon, ChevronLeft } from 'lucide-react';
-import { notificarNuevaVisita } from '../../lib/whatsappVisitas';
+
 import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../hooks/useAuth';
 
 interface NuevaVisitaModalProps {
     isOpen: boolean;
@@ -24,6 +25,7 @@ interface NuevaVisitaModalProps {
 export function NuevaVisitaModal({ isOpen, onClose, onSuccess, initialDate, initialTime }: NuevaVisitaModalProps) {
     // Hooks
     const { createVisita, loadConfig, loadVisitas } = useVisitas();
+    const { profile } = useAuth();
 
     // Client Search State (with Debounce)
     const [searchTerm, setSearchTerm] = useState('');
@@ -271,8 +273,10 @@ export function NuevaVisitaModal({ isOpen, onClose, onSuccess, initialDate, init
             });
 
             if (newVisita) {
-                console.log('Sending notifications for visit:', newVisita.id);
-                notificarNuevaVisita(newVisita.id);
+                console.log('Visit created:', newVisita.id);
+                // Wati solo permite plantillas aprobadas por Meta.
+                // Por ahora no enviamos WhatsApp automático para visitas
+                // porque no existe plantilla aprobada para este evento.
             }
 
             onSuccess();

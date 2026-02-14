@@ -25,8 +25,11 @@ jobs:
       - name: Link to Supabase Project
         run: supabase link --project-ref $SUPABASE_PROJECT_ID --password $SUPABASE_DB_PASSWORD
 
+      - name: Validate Migrations (Dry Run)
+        run: supabase db push --include-all --dry-run
+
       - name: Apply Migrations
-        run: supabase db push
+        run: supabase db push --include-all
 
       - name: Deploy Edge Functions
         run: supabase functions deploy --no-verify-jwt
