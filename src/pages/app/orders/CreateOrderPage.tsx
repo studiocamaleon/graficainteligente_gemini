@@ -59,7 +59,7 @@ export function CreateOrderPage() {
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
 
-  const { profile } = useAuth();
+  const { profile, company } = useAuth();
   const { createOrdenConItems, updateOrdenCompleta, getOrdenById, error: ordenError } = useOrdenTrabajo();
 
   const isBudget = location.pathname.includes('/presupuestos/');
@@ -735,7 +735,7 @@ export function CreateOrderPage() {
                 { name: 'subtotal', value: totales.subtotal.toLocaleString('es-AR') },
                 { name: 'total_iva', value: totales.total.toLocaleString('es-AR') }, // User requested naming this Total FINAL
                 { name: 'url_tracking', value: buildTrackingUrl((result as any).tracking_token) },
-                { name: 'nombre_empresa', value: 'Gráfica Inteligente' },
+                { name: 'nombre_empresa', value: company?.name || 'Tu empresa' },
                 { name: '1', value: (result as any).tracking_token }
               ],
               metadata: {

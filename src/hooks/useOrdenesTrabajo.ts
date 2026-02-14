@@ -36,7 +36,13 @@ interface OrdenesMetrics {
   totalFacturado: number;
   ordenesPendientes: number;
   ordenesEnProduccion: number;
+  ordenesFinalizadas: number;
   ordenesEntregadas: number;
+  ordenesCanceladas: number;
+  totalOrdenesOt: number;
+  totalOrdenesCopiado: number;
+  totalFacturadoOt: number;
+  totalFacturadoCopiado: number;
 }
 
 export function useOrdenesTrabajo(params: UseOrdenesTrabajoParams = {}) {
@@ -49,7 +55,13 @@ export function useOrdenesTrabajo(params: UseOrdenesTrabajoParams = {}) {
     totalFacturado: 0,
     ordenesPendientes: 0,
     ordenesEnProduccion: 0,
+    ordenesFinalizadas: 0,
     ordenesEntregadas: 0,
+    ordenesCanceladas: 0,
+    totalOrdenesOt: 0,
+    totalOrdenesCopiado: 0,
+    totalFacturadoOt: 0,
+    totalFacturadoCopiado: 0,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -70,40 +82,71 @@ export function useOrdenesTrabajo(params: UseOrdenesTrabajoParams = {}) {
     if (!profile?.company_id) return;
 
     try {
-      const { data, error: metricsError } = await supabase
-        .from('ordenes_trabajo')
-        .select('estado, total, fecha_creacion')
-        .eq('company_id', profile.company_id);
+      const [{ data: ordenesOt, error: otError }, { data: ordenesCopiado, error: ccError }] = await Promise.all([
+        supabase
+          .from('ordenes_trabajo')
+          .select('estado, total, fecha_creacion')
+          .eq('company_id', profile.company_id),
+        supabase
+          .from('centro_copiado_ordenes')
+          .select('estado, total, created_at')
+          .eq('company_id', profile.company_id),
+      ]);
 
-      if (metricsError) throw metricsError;
+      if (otError) throw otError;
+      if (ccError) throw ccError;
 
-      if (data) {
-        const startOfMonth = new Date();
-        startOfMonth.setDate(1);
-        startOfMonth.setHours(0, 0, 0, 0);
+      const otRows = ordenesOt || [];
+      const ccRows = ordenesCopiado || [];
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
 
-        const totalOrdenes = data.length;
-        const totalOrdenesMes = data.filter(
-          (o) => new Date(o.fecha_creacion).getTime() >= startOfMonth.getTime()
-        ).length;
-        const totalFacturado = data
-          .filter((o) => o.estado !== 'cancelada')
-          .reduce((sum, o) => sum + Number(o.total), 0);
-        const ordenesPendientes = data.filter(
-          (o) => o.estado === 'pendiente'
-        ).length;
-        const ordenesEnProduccion = data.filter((o) => o.estado === 'en_proceso').length;
-        const ordenesEntregadas = data.filter((o) => o.estado === 'entregada').length;
+      const totalOrdenesOt = otRows.length;
+      const totalOrdenesCopiado = ccRows.length;
+      const totalOrdenes = totalOrdenesOt + totalOrdenesCopiado;
 
-        setMetrics({
-          totalOrdenes,
-          totalOrdenesMes,
-          totalFacturado,
-          ordenesPendientes,
-          ordenesEnProduccion,
-          ordenesEntregadas,
-        });
-      }
+      const totalOrdenesMesOt = otRows.filter(
+        (o) => new Date(o.fecha_creacion).getTime() >= startOfMonth.getTime()
+      ).length;
+      const totalOrdenesMesCopiado = ccRows.filter(
+        (o) => new Date(o.created_at).getTime() >= startOfMonth.getTime()
+      ).length;
+      const totalOrdenesMes = totalOrdenesMesOt + totalOrdenesMesCopiado;
+
+      const totalFacturadoOt = otRows
+        .filter((o) => o.estado !== 'cancelada')
+        .reduce((sum, o) => sum + Number(o.total), 0);
+      const totalFacturadoCopiado = ccRows
+        .filter((o) => o.estado !== 'cancelada')
+        .reduce((sum, o) => sum + Number(o.total), 0);
+      const totalFacturado = totalFacturadoOt + totalFacturadoCopiado;
+
+      const ordenesPendientes = otRows.filter((o) => o.estado === 'pendiente').length
+        + ccRows.filter((o) => o.estado === 'pendiente').length;
+      const ordenesEnProduccion = otRows.filter((o) => o.estado === 'en_proceso').length
+        + ccRows.filter((o) => o.estado === 'en_proceso').length;
+      const ordenesFinalizadas = otRows.filter((o) => o.estado === 'finalizada').length
+        + ccRows.filter((o) => o.estado === 'finalizada').length;
+      const ordenesEntregadas = otRows.filter((o) => o.estado === 'entregada').length
+        + ccRows.filter((o) => o.estado === 'entregada').length;
+      const ordenesCanceladas = otRows.filter((o) => o.estado === 'cancelada').length
+        + ccRows.filter((o) => o.estado === 'cancelada').length;
+
+      setMetrics({
+        totalOrdenes,
+        totalOrdenesMes,
+        totalFacturado,
+        ordenesPendientes,
+        ordenesEnProduccion,
+        ordenesFinalizadas,
+        ordenesEntregadas,
+        ordenesCanceladas,
+        totalOrdenesOt,
+        totalOrdenesCopiado,
+        totalFacturadoOt,
+        totalFacturadoCopiado,
+      });
     } catch (err) {
       console.error('Error fetching metrics:', err);
     }
