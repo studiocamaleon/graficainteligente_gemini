@@ -19,8 +19,8 @@ export function OrdersListPage() {
   const canCreate = hasPermission('orders', 'create');
   const canViewFinancials = profile?.role !== 'operador_taller';
   const metricsGridClass = canViewFinancials
-    ? 'grid grid-cols-1 md:grid-cols-6 gap-4'
-    : 'grid grid-cols-1 md:grid-cols-5 gap-4';
+    ? 'grid grid-cols-1 md:grid-cols-4 xl:grid-cols-8 gap-4'
+    : 'grid grid-cols-1 md:grid-cols-4 xl:grid-cols-7 gap-4';
 
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
   const [page, setPage] = useState(1);
@@ -58,6 +58,9 @@ export function OrdersListPage() {
           <div className="p-4">
             <div className="text-xs text-gray-600 mb-1">Total Órdenes</div>
             <div className="text-2xl font-bold text-gray-900">{metrics.totalOrdenes}</div>
+            <div className="text-xs text-gray-500 mt-1">
+              OT: {metrics.totalOrdenesOt} | Copiado: {metrics.totalOrdenesCopiado}
+            </div>
           </div>
         </Card>
         <Card>
@@ -73,6 +76,9 @@ export function OrdersListPage() {
               <div className="text-xs text-gray-600 mb-1">Total Facturado</div>
               <div className="text-2xl font-bold text-green-600">
                 ${metrics.totalFacturado.toLocaleString('es-AR')}
+              </div>
+              <div className="text-xs text-gray-500 mt-1">
+                OT: ${metrics.totalFacturadoOt.toLocaleString('es-AR')} | Copiado: ${metrics.totalFacturadoCopiado.toLocaleString('es-AR')}
               </div>
             </div>
           </Card>
@@ -94,8 +100,22 @@ export function OrdersListPage() {
 
         <Card>
           <div className="p-4">
+            <div className="text-xs text-gray-600 mb-1">Finalizadas</div>
+            <div className="text-2xl font-bold text-violet-600">{metrics.ordenesFinalizadas}</div>
+          </div>
+        </Card>
+
+        <Card>
+          <div className="p-4">
             <div className="text-xs text-gray-600 mb-1">Entregadas</div>
             <div className="text-2xl font-bold text-teal-600">{metrics.ordenesEntregadas}</div>
+          </div>
+        </Card>
+
+        <Card>
+          <div className="p-4">
+            <div className="text-xs text-gray-600 mb-1">Canceladas</div>
+            <div className="text-2xl font-bold text-rose-600">{metrics.ordenesCanceladas}</div>
           </div>
         </Card>
       </div>

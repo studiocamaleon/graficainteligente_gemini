@@ -21,7 +21,7 @@ import { buildTrackingUrl } from '../../../lib/trackingUrl';
 export function PendingDeliveriesPage() {
     const navigate = useNavigate();
     usePageHeader('Entregas Pendientes de Despacho');
-    const { profile } = useAuth();
+    const { profile, company } = useAuth();
 
     const { deliveries, loading, error, refresh, deliverOrder, addPayment } = usePendingDeliveries();
     const [searchTerm, setSearchTerm] = useState('');
@@ -103,7 +103,7 @@ export function PendingDeliveriesPage() {
                         { name: 'numero_orden', value: selectedDelivery.numero_orden },
                         { name: 'saldo_pendiente', value: selectedDelivery.saldo_pendiente.toLocaleString('es-AR') },
                         { name: 'url_tracking', value: buildTrackingUrl(selectedDelivery.tracking_token || '') },
-                        { name: 'nombre_empresa', value: 'Gráfica Inteligente' },
+                        { name: 'nombre_empresa', value: company?.name || 'Tu empresa' },
                         { name: '1', value: selectedDelivery.tracking_token || '' }
                     ],
                     metadata: {

@@ -51,7 +51,7 @@ interface PagoTemporal {
 
 export function CrearOrdenCopiado() {
   const navigate = useNavigate();
-  const { profile } = useAuth();
+  const { profile, company } = useAuth();
   const [searchParams] = useSearchParams();
   const { id } = useParams();
   const isEditing = !!id;
@@ -548,7 +548,7 @@ export function CrearOrdenCopiado() {
             { name: 'subtotal', value: totales.subtotal.toLocaleString('es-AR') },
             { name: 'total_iva', value: totales.total.toLocaleString('es-AR') },
             { name: 'url_tracking', value: buildTrackingUrl((ordenFinal as any)?.tracking_token || '') },
-            { name: 'nombre_empresa', value: 'Gráfica Inteligente' },
+            { name: 'nombre_empresa', value: company?.name || 'Tu empresa' },
             { name: '1', value: (ordenFinal as any)?.tracking_token || '' }
           ],
           metadata: {
