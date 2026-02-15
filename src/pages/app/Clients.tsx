@@ -25,7 +25,7 @@ import { useConfirmDialog } from '../../hooks/useConfirmDialog';
 import { useToast } from '../../contexts/ToastContext';
 import { supabase } from '../../lib/supabase';
 import type { Client } from '../../types/database';
-import type { ClientWithLtv } from '../../hooks/useClients';
+import type { ClientWithCommercialMetrics } from '../../hooks/useClients';
 
 export function Clients() {
   const { profile } = useAuth();
@@ -37,7 +37,11 @@ export function Clients() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [statusAprobacionFilter, setStatusAprobacionFilter] = useState<string>('all');
   const [cuentaCorrienteFilter, setCuentaCorrienteFilter] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<'created_at_desc' | 'ltv_desc' | 'name_asc'>('created_at_desc');
+  const [riesgoComercialFilter, setRiesgoComercialFilter] = useState<string>('all');
+  const [sinCompraFilter, setSinCompraFilter] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<
+    'created_at_desc' | 'ltv_desc' | 'name_asc' | 'recency_desc' | 'frequency_90d_desc' | 'ticket_promedio_desc'
+  >('created_at_desc');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(25);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -84,12 +88,16 @@ export function Clients() {
   const isActiveFilter = statusFilter === 'all' ? null : statusFilter === 'active';
   const hasCuentaCorrienteFilter = cuentaCorrienteFilter === 'all' ? null : cuentaCorrienteFilter === 'yes';
   const statusAprobacionFilterValue = statusAprobacionFilter === 'all' ? null : (statusAprobacionFilter as 'pending' | 'approved' | 'rejected');
+  const riesgoComercialFilterValue = riesgoComercialFilter === 'all' ? null : (riesgoComercialFilter as 'alto' | 'medio' | 'bajo');
+  const sinCompraDiasMin = sinCompraFilter === 'gt_60' ? 60 : null;
 
   const { clients, totalCount, avgLtv, totalLtv, loading, refetch } = useClients({
     searchTerm: debouncedSearch,
     isActive: isActiveFilter,
     hasCuentaCorriente: hasCuentaCorrienteFilter,
     statusAprobacion: statusAprobacionFilterValue,
+    riesgoComercial: riesgoComercialFilterValue,
+    sinCompraDiasMin,
     sortBy,
     page: currentPage,
     itemsPerPage,
@@ -277,12 +285,70 @@ export function Clients() {
     {
       key: 'ltv_total',
       header: 'LTV',
-      render: (client: ClientWithLtv) => (
+      render: (client: ClientWithCommercialMetrics) => (
         <div className="text-sm font-semibold text-emerald-700">
           ${Number(client.ltv_total || 0).toLocaleString('es-AR')}
         </div>
       ),
       width: '140px',
+    },
+    {
+      key: 'recencia',
+      header: 'Recencia',
+      render: (client: ClientWithCommercialMetrics) => (
+        <div className="text-sm text-gray-700">
+          {client.dias_sin_comprar === null ? 'Sin compras' : `${client.dias_sin_comprar} días`}
+        </div>
+      ),
+      width: '120px',
+    },
+    {
+      key: 'ordenes_90d',
+      header: 'Órdenes 90d',
+      render: (client: ClientWithCommercialMetrics) => (
+        <div className="text-sm font-medium text-blue-700">{client.ordenes_90d || 0}</div>
+      ),
+      width: '110px',
+    },
+    {
+      key: 'ticket_promedio',
+      header: 'Ticket Prom.',
+      render: (client: ClientWithCommercialMetrics) => (
+        <div className="text-sm text-gray-700">
+          ${Number(client.ticket_promedio || 0).toLocaleString('es-AR')}
+        </div>
+      ),
+      width: '130px',
+    },
+    {
+      key: 'canal_preferido',
+      header: 'Canal',
+      render: (client: ClientWithCommercialMetrics) => (
+        <div className="text-sm text-gray-700">{client.canal_preferido || '-'}</div>
+      ),
+      width: '140px',
+    },
+    {
+      key: 'mix',
+      header: 'Mix OT/CC',
+      render: (client: ClientWithCommercialMetrics) => (
+        <div className="text-xs text-gray-700">
+          {Number(client.mix_ot_pct || 0).toFixed(0)}% OT / {Number(client.mix_copiado_pct || 0).toFixed(0)}% CC
+        </div>
+      ),
+      width: '130px',
+    },
+    {
+      key: 'riesgo_comercial',
+      header: 'Riesgo',
+      render: (client: ClientWithCommercialMetrics) => {
+        const riesgo = client.riesgo_comercial || 'bajo';
+        const variant: 'danger' | 'warning' | 'success' =
+          riesgo === 'alto' ? 'danger' : riesgo === 'medio' ? 'warning' : 'success';
+        const label = riesgo.charAt(0).toUpperCase() + riesgo.slice(1);
+        return <Badge variant={variant} size="sm">{label}</Badge>;
+      },
+      width: '100px',
     },
     {
       key: 'documento',
@@ -469,13 +535,42 @@ export function Clients() {
             <Select
               value={sortBy}
               onChange={(value) => {
-                setSortBy(value as 'created_at_desc' | 'ltv_desc' | 'name_asc');
+                setSortBy(value as 'created_at_desc' | 'ltv_desc' | 'name_asc' | 'recency_desc' | 'frequency_90d_desc' | 'ticket_promedio_desc');
                 setCurrentPage(1);
               }}
               options={[
                 { value: 'created_at_desc', label: 'Orden: más recientes' },
                 { value: 'ltv_desc', label: 'Orden: mayor LTV' },
+                { value: 'recency_desc', label: 'Orden: más días sin compra' },
+                { value: 'frequency_90d_desc', label: 'Orden: más órdenes (90d)' },
+                { value: 'ticket_promedio_desc', label: 'Orden: mayor ticket promedio' },
                 { value: 'name_asc', label: 'Orden: nombre A-Z' },
+              ]}
+            />
+
+            <Select
+              value={riesgoComercialFilter}
+              onChange={(value) => {
+                setRiesgoComercialFilter(value);
+                setCurrentPage(1);
+              }}
+              options={[
+                { value: 'all', label: 'Riesgo: todos' },
+                { value: 'alto', label: 'Riesgo alto' },
+                { value: 'medio', label: 'Riesgo medio' },
+                { value: 'bajo', label: 'Riesgo bajo' },
+              ]}
+            />
+
+            <Select
+              value={sinCompraFilter}
+              onChange={(value) => {
+                setSinCompraFilter(value);
+                setCurrentPage(1);
+              }}
+              options={[
+                { value: 'all', label: 'Recencia: todas' },
+                { value: 'gt_60', label: 'Sin compra > 60 días' },
               ]}
             />
 
