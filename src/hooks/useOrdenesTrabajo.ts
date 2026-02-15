@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
 import type { OrdenTrabajo, EstadoOrdenTrabajo, CanalVenta } from '../types/database';
+import { clampZeroMoney, roundMoney, toMoney } from '../utils/money';
 
 interface UseOrdenesTrabajoParams {
   searchTerm?: string;
@@ -116,10 +117,10 @@ export function useOrdenesTrabajo(params: UseOrdenesTrabajoParams = {}) {
 
       const totalFacturadoOt = otRows
         .filter((o) => o.estado !== 'cancelada')
-        .reduce((sum, o) => sum + Number(o.total), 0);
+        .reduce((sum, o) => sum + roundMoney(toMoney(o.total)), 0);
       const totalFacturadoCopiado = ccRows
         .filter((o) => o.estado !== 'cancelada')
-        .reduce((sum, o) => sum + Number(o.total), 0);
+        .reduce((sum, o) => sum + roundMoney(toMoney(o.total)), 0);
       const totalFacturado = totalFacturadoOt + totalFacturadoCopiado;
 
       const ordenesPendientes = otRows.filter((o) => o.estado === 'pendiente').length
