@@ -78,7 +78,7 @@ export function usePendingDeliveries() {
             if (copyError) throw copyError;
 
             // Helper to sum payments
-            const sumPayments = (pagos: any[]) => pagos?.reduce((sum, p) => sum + (p.monto || 0), 0) || 0;
+            const sumPayments = (pagos: any[]) => pagos?.reduce((sum, p) => sum + Number(p.monto || 0), 0) || 0;
 
             // Map and merge
             const mappedWorkOrders: PendingDelivery[] = (workOrders as any[] || []).map(o => {

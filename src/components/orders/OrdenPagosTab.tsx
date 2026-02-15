@@ -9,6 +9,7 @@ import { formatDateDisplay } from '../../utils/dates';
 import { PaymentMethodIcon } from './PaymentMethodIcon';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import type { CentroCopiadoOrdenResumida } from '../../types/database';
+import { clampZeroMoney, roundMoney, toMoney } from '../../utils/money';
 
 interface Totales {
   subtotal: number;
@@ -52,8 +53,8 @@ export function OrdenPagosTab({
   const { mediosCobro } = useMediosCobro();
   const { showConfirm, dialogState, closeDialog, handleConfirm, isLoading: isConfirmLoading } = useConfirmDialog();
 
-  const totalPagado = pagos.reduce((sum, p) => sum + p.monto, 0);
-  const saldoPendiente = totales.total - totalPagado;
+  const totalPagado = roundMoney(pagos.reduce((sum, p) => sum + toMoney(p.monto), 0));
+  const saldoPendiente = clampZeroMoney(roundMoney(totales.total) - roundMoney(totalPagado));
 
   const getMedioCobro = (medioId?: string) => {
     if (!medioId) return null;
@@ -177,7 +178,7 @@ export function OrdenPagosTab({
         <>
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-900">Pagos Registrados</h3>
-            <Button onClick={onAgregarPago} disabled={saldoPendiente <= 0}>
+            <Button onClick={onAgregarPago} disabled={saldoPendiente <= 0.01}>
               <Plus className="w-4 h-4" />
               Registrar Pago
             </Button>
