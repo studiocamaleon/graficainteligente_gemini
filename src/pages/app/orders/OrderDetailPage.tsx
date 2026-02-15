@@ -42,6 +42,7 @@ import { OrdenCopiadoAsociadaCard } from '../../../components/orders/OrdenCopiad
 import { useToast } from '../../../contexts/ToastContext';
 import { descargarFactura } from '../../../utils/facturaHelpers';
 import { ItemConfigRenderer } from '../../../components/orders/ItemConfigRenderer';
+import { clampZeroMoney, roundMoney, toMoney } from '../../../utils/money';
 
 type TabKey = 'items' | 'ruta' | 'adjuntos' | 'pagos' | 'historial';
 
@@ -315,12 +316,12 @@ export function OrderDetailPage() {
 
   const totalPagado = useMemo(() => {
     if (!orden?.pagos) return 0;
-    return orden.pagos.reduce((sum: number, pago: any) => sum + Number(pago.monto), 0);
+    return roundMoney(orden.pagos.reduce((sum: number, pago: any) => sum + toMoney(pago.monto), 0));
   }, [orden]);
 
   const saldoPendiente = useMemo(() => {
     if (!orden) return 0;
-    return Number(orden.total) - totalPagado;
+    return clampZeroMoney(roundMoney(toMoney(orden.total)) - roundMoney(totalPagado));
   }, [orden, totalPagado]);
 
   if (loadingData) {

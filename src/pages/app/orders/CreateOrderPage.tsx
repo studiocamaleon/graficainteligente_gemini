@@ -32,6 +32,7 @@ import { OrdenFooterTotales } from '../../../components/orders/OrdenFooterTotale
 import { PagoFormModal } from '../../../components/orders/PagoFormModal';
 import { sendWatiMessage } from '../../../lib/wati';
 import { buildTrackingUrl } from '../../../lib/trackingUrl';
+import { clampZeroMoney, roundMoney, toMoney } from '../../../utils/money';
 
 import type { CanalVenta } from '../../../types/database';
 import { usePresupuestos } from '../../../hooks/usePresupuestos';
@@ -60,7 +61,15 @@ export function CreateOrderPage() {
   const searchParams = new URLSearchParams(location.search);
 
   const { profile, company } = useAuth();
-  const { createOrdenConItems, updateOrdenCompleta, getOrdenById, error: ordenError } = useOrdenTrabajo();
+  const {
+    createOrdenConItems,
+    updateOrdenCompleta,
+    getOrdenById,
+    addPago: addPagoDb,
+    updatePago: updatePagoDb,
+    deletePago: deletePagoDb,
+    error: ordenError,
+  } = useOrdenTrabajo();
 
   const isBudget = location.pathname.includes('/presupuestos/');
   const pageTitle = isEditing
@@ -380,8 +389,8 @@ export function CreateOrderPage() {
 
   const calcularSaldoPendiente = () => {
     const totales = calcularTotales();
-    const totalPagado = pagos.reduce((sum, p) => sum + p.monto, 0);
-    return totales.total - totalPagado;
+    const totalPagado = pagos.reduce((sum, p) => sum + toMoney(p.monto), 0);
+    return clampZeroMoney(roundMoney(totales.total) - roundMoney(totalPagado));
   };
 
   // --- Pagos ---
@@ -390,7 +399,34 @@ export function CreateOrderPage() {
     setShowPagoForm(true);
   };
 
-  const handleGuardarPago = (data: Omit<PagoTemporal, 'id'>) => {
+  const handleGuardarPago = async (data: Omit<PagoTemporal, 'id'>) => {
+    // Edit flow: persist immediately so payments are not lost.
+    if (isEditing && id) {
+      const pagoData = {
+        fecha_pago: data.fecha_pago,
+        monto: roundMoney(data.monto),
+        medio_cobro_id: data.medio_cobro_id,
+        referencia_pago: data.referencia_pago || null,
+        notas: data.notas || null,
+      };
+
+      const ok = editingPago
+        ? await updatePagoDb(editingPago.id, id, pagoData as any)
+        : await addPagoDb(id, pagoData as any);
+
+      if (ok) {
+        showSuccess(editingPago ? 'Pago actualizado correctamente' : 'Pago registrado correctamente');
+        await loadOrden();
+      } else {
+        showError(editingPago ? 'Error al actualizar el pago' : 'Error al registrar el pago');
+      }
+
+      setShowPagoForm(false);
+      setEditingPago(undefined);
+      return;
+    }
+
+    // Create flow: keep payments locally until order exists.
     if (editingPago) {
       setPagos(prev => prev.map(p => p.id === editingPago.id ? { ...data, id: editingPago.id } : p));
       showSuccess('Pago actualizado correctamente');
@@ -408,8 +444,19 @@ export function CreateOrderPage() {
     setShowPagoForm(true);
   };
 
-  const handleEliminarPago = (id: string) => {
-    setPagos(prev => prev.filter(p => p.id !== id));
+  const handleEliminarPago = async (pagoId: string) => {
+    if (isEditing && id) {
+      const ok = await deletePagoDb(pagoId, id);
+      if (ok) {
+        showSuccess('Pago eliminado correctamente');
+        await loadOrden();
+      } else {
+        showError('Error al eliminar el pago');
+      }
+      return;
+    }
+
+    setPagos(prev => prev.filter(p => p.id !== pagoId));
     showSuccess('Pago eliminado correctamente');
   };
 
@@ -920,7 +967,7 @@ export function CreateOrderPage() {
           iva={totales.iva}
           total={totales.total}
           requiereFactura={requiereFactura}
-          totalPagado={pagos.reduce((sum, p) => sum + p.monto, 0)}
+          totalPagado={pagos.reduce((sum, p) => sum + toMoney(p.monto), 0)}
           mostrarSaldo={pagos.length > 0}
           subtotalItems={items.reduce((sum, item) => sum + item.precio_total, 0)}
           subtotalOrdenesCopiado={ordenesCopiadoAsociadas.reduce((sum, oc) => sum + oc.total, 0)}

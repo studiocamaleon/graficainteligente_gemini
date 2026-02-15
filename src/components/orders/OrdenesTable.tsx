@@ -11,6 +11,7 @@ import { Badge } from '../ui/Badge';
 import { OrderStatusBadge } from './OrderStatusBadge';
 import type { OrdenTrabajoWithRelations } from '../../hooks/useOrdenesTrabajo';
 import dayjs from 'dayjs';
+import { clampZeroMoney, roundMoney, toMoney } from '../../utils/money';
 
 interface OrdenesTableProps {
     ordenes: OrdenTrabajoWithRelations[];
@@ -47,10 +48,10 @@ export function OrdenesTable({ ordenes }: OrdenesTableProps) {
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                         {ordenes.map((orden) => {
-                            const porcentajePagado = orden.total > 0
-                                ? ((orden.total_pagado || 0) / orden.total) * 100
-                                : 0;
-                            const estadoPago = porcentajePagado >= 100 ? 'pagado' : porcentajePagado > 0 ? 'parcial' : 'pendiente';
+                            const total = roundMoney(toMoney(orden.total));
+                            const pagado = roundMoney(toMoney(orden.total_pagado || 0));
+                            const saldo = clampZeroMoney(total - pagado);
+                            const estadoPago = saldo <= 0.01 ? 'pagado' : pagado > 0.01 ? 'parcial' : 'pendiente';
 
                             return (
                                 <tr key={orden.id} className="hover:bg-gray-50 transition-colors">

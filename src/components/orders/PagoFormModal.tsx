@@ -6,6 +6,7 @@ import { useMediosCobro } from '../../hooks/useMediosCobro';
 import { useBanks } from '../../hooks/useBanks'; // Added import
 import { MedioCobroSelector } from '../medios-cobro/MedioCobroSelector';
 import { getArgentinaDateString, isDateInFuture } from '../../utils/dates';
+import { clampZeroMoney, roundMoney, toMoney } from '../../utils/money';
 
 export interface PagoFormData {
   fecha_pago: string;
@@ -113,7 +114,7 @@ export function PagoFormModal({
     ? calcularComisionYLiberacion(formData.medio_cobro_id, formData.monto)
     : null;
 
-  const saldoRestante = saldoPendiente - formData.monto;
+  const saldoRestante = clampZeroMoney(roundMoney(toMoney(saldoPendiente)) - roundMoney(toMoney(formData.monto)));
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -126,8 +127,8 @@ export function PagoFormModal({
 
     if (!formData.monto || formData.monto <= 0) {
       newErrors.monto = 'El monto debe ser mayor a 0';
-    } else if (formData.monto > (Number(saldoPendiente.toFixed(2)) + 0.01)) {
-      newErrors.monto = `El monto no puede exceder el saldo pendiente ($${saldoPendiente.toFixed(2)})`;
+    } else if (roundMoney(formData.monto) > (roundMoney(saldoPendiente) + 0.01)) {
+      newErrors.monto = `El monto no puede exceder el saldo pendiente ($${roundMoney(saldoPendiente).toFixed(2)})`;
     }
 
     if (!formData.medio_cobro_id) {
@@ -353,7 +354,7 @@ export function PagoFormModal({
             </div>
           )}
 
-          {saldoRestante > 0 && (
+          {saldoRestante > 0.01 && (
             <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm">
               <AlertCircle className="w-4 h-4 text-amber-600" />
               <span>Quedará un saldo pendiente de <strong>${saldoRestante.toFixed(2)}</strong></span>
