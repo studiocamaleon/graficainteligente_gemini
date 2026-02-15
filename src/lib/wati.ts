@@ -8,7 +8,7 @@ interface WatiParameter {
 interface SendWatiMessageParams {
     companyId: string;
     phone: string;
-    template_name: 'nueva_orden_v4' | 'orden_finalizada_v2';
+    template_name: 'nueva_orden_v4' | 'orden_finalizada_v3';
     parameters?: WatiParameter[];
     metadata?: {
         tipo?: string;
