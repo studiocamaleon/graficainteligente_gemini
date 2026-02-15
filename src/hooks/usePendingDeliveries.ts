@@ -15,6 +15,8 @@ export interface PendingDelivery {
         whatsapp: string | null;
     } | null;
     fecha_solicitud: string;
+    // ISO string of when the order was finalized (or null if unknown/historical)
+    fecha_finalizada: string | null;
     fecha_entrega_estimada: string | null;
     tipo: 'orden_trabajo' | 'centro_copiado';
     total: number;
@@ -45,6 +47,7 @@ export function usePendingDeliveries() {
           id,
           numero_orden,
           created_at,
+          fecha_completado,
           fecha_estimada_entrega,
           total,
           estado,
@@ -65,6 +68,7 @@ export function usePendingDeliveries() {
           id,
           numero_orden,
           fecha_solicitud,
+          fecha_completado,
           fecha_entrega_estimada,
           total,
           estado,
@@ -83,42 +87,50 @@ export function usePendingDeliveries() {
             // Map and merge
             const mappedWorkOrders: PendingDelivery[] = (workOrders as any[] || []).map(o => {
                 const totalPagado = sumPayments(o.pagos);
+                const saldoPendiente = Math.max(0, (o.total || 0) - totalPagado);
+                const fechaFinalizada = o.fecha_completado ?? null;
                 return {
                     id: o.id,
                     numero_orden: o.numero_orden,
                     cliente: o.cliente,
                     fecha_solicitud: o.created_at,
+                    fecha_finalizada: fechaFinalizada,
                     fecha_entrega_estimada: o.fecha_estimada_entrega,
                     tipo: 'orden_trabajo',
                     total: o.total,
                     estado: o.estado,
                     total_pagado: totalPagado,
-                    saldo_pendiente: o.total - totalPagado,
+                    saldo_pendiente: saldoPendiente,
                     requiere_despacho: o.requiere_despacho,
-                    tracking_token: o.tracking_token
+                    tracking_token: o.tracking_token,
                 };
             });
 
             const mappedCopyOrders: PendingDelivery[] = (copyOrders as any[] || []).map(o => {
                 const totalPagado = sumPayments(o.pagos);
+                const saldoPendiente = Math.max(0, (o.total || 0) - totalPagado);
+                const fechaFinalizada = o.fecha_completado ?? null;
                 return {
                     id: o.id,
                     numero_orden: o.numero_orden,
                     cliente: o.cliente,
                     fecha_solicitud: o.fecha_solicitud,
+                    fecha_finalizada: fechaFinalizada,
                     fecha_entrega_estimada: o.fecha_entrega_estimada,
                     tipo: 'centro_copiado',
                     total: o.total,
                     estado: o.estado,
                     total_pagado: totalPagado,
-                    saldo_pendiente: o.total - totalPagado,
-                    tracking_token: o.tracking_token
+                    saldo_pendiente: saldoPendiente,
+                    tracking_token: o.tracking_token,
                 };
             });
             // Merge and Sort by Date (Oldest First)
-            const allDeliveries = [...mappedWorkOrders, ...mappedCopyOrders].sort((a, b) =>
-                new Date(a.fecha_solicitud).getTime() - new Date(b.fecha_solicitud).getTime()
-            );
+            const allDeliveries = [...mappedWorkOrders, ...mappedCopyOrders].sort((a, b) => {
+                const aDate = new Date(a.fecha_finalizada ?? a.fecha_solicitud).getTime();
+                const bDate = new Date(b.fecha_finalizada ?? b.fecha_solicitud).getTime();
+                return aDate - bDate;
+            });
 
             setDeliveries(allDeliveries);
 

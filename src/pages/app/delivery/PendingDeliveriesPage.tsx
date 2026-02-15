@@ -37,10 +37,50 @@ export function PendingDeliveriesPage() {
         const lowerTerm = searchTerm.toLowerCase();
         return deliveries.filter(d =>
             d.numero_orden.toLowerCase().includes(lowerTerm) ||
-            d.cliente?.nombre_fantasia.toLowerCase().includes(lowerTerm) ||
-            d.cliente?.numero_documento.includes(lowerTerm)
+            (d.cliente?.nombre_fantasia || d.cliente?.razon_social || '').toLowerCase().includes(lowerTerm) ||
+            (d.cliente?.numero_documento || '').includes(lowerTerm)
         );
     }, [deliveries, searchTerm]);
+
+    const headerMetrics = useMemo(() => {
+        const count = filteredDeliveries.length;
+
+        let sumSaldo = 0;
+        let sumCobrar = 0;
+        let sumCuentaCorriente = 0;
+        let countDespacho = 0;
+        let oldestTs: number | null = null;
+
+        for (const d of filteredDeliveries) {
+            const saldo = Math.max(0, Number(d.saldo_pendiente || 0));
+            sumSaldo += saldo;
+
+            if (saldo > 0) {
+                if (d.cliente?.tiene_cuenta_corriente) sumCuentaCorriente += saldo;
+                else sumCobrar += saldo;
+            }
+
+            if (d.tipo === 'orden_trabajo' && d.requiere_despacho) countDespacho += 1;
+
+            const fechaBase = d.fecha_finalizada ?? d.fecha_solicitud;
+            const ts = fechaBase ? new Date(fechaBase).getTime() : NaN;
+            if (!Number.isNaN(ts)) {
+                oldestTs = oldestTs === null ? ts : Math.min(oldestTs, ts);
+            }
+        }
+
+        const oldestDays =
+            oldestTs === null ? null : Math.max(0, Math.floor((Date.now() - oldestTs) / 86400000));
+
+        return {
+            count,
+            sumSaldo,
+            sumCobrar,
+            sumCuentaCorriente,
+            countDespacho,
+            oldestDays,
+        };
+    }, [filteredDeliveries]);
 
     const handleDeliverClick = (delivery: PendingDelivery) => {
         // Validation: Must be fully paid OR Client has Current Account
@@ -227,6 +267,82 @@ export function PendingDeliveriesPage() {
                         </div>
                     </div>
 
+                    {error && (
+                        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 flex items-center justify-between gap-4">
+                            <div>
+                                <div className="font-semibold">Error al cargar entregas</div>
+                                <div className="mt-1">{error}</div>
+                            </div>
+                            <Button variant="outline" onClick={refresh}>
+                                Actualizar lista
+                            </Button>
+                        </div>
+                    )}
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-3 mb-6">
+                        <Card className="p-4">
+                            <div className="flex items-center justify-between">
+                                <div className="text-sm text-gray-600">Órdenes</div>
+                                <Package className="w-4 h-4 text-gray-500" />
+                            </div>
+                            <div className="mt-2 text-2xl font-semibold text-gray-900">{headerMetrics.count}</div>
+                            <div className="mt-1 text-xs text-gray-500">Pendientes (según filtro)</div>
+                        </Card>
+
+                        <Card className="p-4">
+                            <div className="flex items-center justify-between">
+                                <div className="text-sm text-gray-600">Deuda total</div>
+                                <DollarSign className="w-4 h-4 text-gray-500" />
+                            </div>
+                            <div className="mt-2 text-2xl font-semibold text-gray-900">
+                                ${headerMetrics.sumSaldo.toLocaleString('es-AR')}
+                            </div>
+                            <div className="mt-1 text-xs text-gray-500">Saldo pendiente acumulado</div>
+                        </Card>
+
+                        <Card className="p-4">
+                            <div className="flex items-center justify-between">
+                                <div className="text-sm text-gray-600">A cobrar</div>
+                                <DollarSign className="w-4 h-4 text-orange-600" />
+                            </div>
+                            <div className="mt-2 text-2xl font-semibold text-gray-900">
+                                ${headerMetrics.sumCobrar.toLocaleString('es-AR')}
+                            </div>
+                            <div className="mt-1 text-xs text-gray-500">Sin cuenta corriente</div>
+                        </Card>
+
+                        <Card className="p-4">
+                            <div className="flex items-center justify-between">
+                                <div className="text-sm text-gray-600">A c/c</div>
+                                <DollarSign className="w-4 h-4 text-emerald-600" />
+                            </div>
+                            <div className="mt-2 text-2xl font-semibold text-gray-900">
+                                ${headerMetrics.sumCuentaCorriente.toLocaleString('es-AR')}
+                            </div>
+                            <div className="mt-1 text-xs text-gray-500">Con cuenta corriente</div>
+                        </Card>
+
+                        <Card className="p-4">
+                            <div className="flex items-center justify-between">
+                                <div className="text-sm text-gray-600">Despacho</div>
+                                <Truck className="w-4 h-4 text-gray-500" />
+                            </div>
+                            <div className="mt-2 text-2xl font-semibold text-gray-900">{headerMetrics.countDespacho}</div>
+                            <div className="mt-1 text-xs text-gray-500">Requieren despacho</div>
+                        </Card>
+
+                        <Card className="p-4">
+                            <div className="flex items-center justify-between">
+                                <div className="text-sm text-gray-600">Antigüedad</div>
+                                <Clock className="w-4 h-4 text-gray-500" />
+                            </div>
+                            <div className="mt-2 text-2xl font-semibold text-gray-900">
+                                {headerMetrics.oldestDays === null ? '-' : `${headerMetrics.oldestDays}d`}
+                            </div>
+                            <div className="mt-1 text-xs text-gray-500">Más antigua (según filtro)</div>
+                        </Card>
+                    </div>
+
                     {loading ? (
                         <div className="flex justify-center py-12">
                             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -254,7 +370,9 @@ export function PendingDeliveriesPage() {
                                     render: (item) => (
                                         <div>
                                             <span className="font-bold text-gray-900">{item.numero_orden}</span>
-                                            <div className="text-xs text-gray-500">{formatDate(item.fecha_solicitud)}</div>
+                                            <div className="text-xs text-gray-500">
+                                                Finalizada: {formatDate(item.fecha_finalizada ?? item.fecha_solicitud)}
+                                            </div>
                                         </div>
                                     ),
                                 },
