@@ -949,6 +949,8 @@ export function useOrdenTrabajo() {
       return null;
     }
 
+    let createdOrdenId: string | null = null;
+
     try {
       setLoading(true);
       setError(null);
@@ -984,6 +986,7 @@ export function useOrdenTrabajo() {
         .select()
         .single();
       if (ordenError) throw ordenError;
+      createdOrdenId = newOrden.id;
 
       // 2. Insertar items
       if (data.items.length > 0) {
@@ -1175,6 +1178,18 @@ export function useOrdenTrabajo() {
       return await getOrdenById(newOrden.id);
     } catch (err) {
       console.error('Error creating orden con items:', err);
+      // Evitar "órdenes fantasma" (se creó el header pero falló en items/rutas/servicios).
+      if (createdOrdenId) {
+        try {
+          await supabase
+            .from('ordenes_trabajo')
+            .delete()
+            .eq('id', createdOrdenId)
+            .eq('company_id', profile.company_id);
+        } catch (cleanupErr) {
+          console.error('Error limpiando orden parcial:', cleanupErr);
+        }
+      }
       setError(err instanceof Error ? err.message : 'Error al crear orden');
       return null;
     } finally {

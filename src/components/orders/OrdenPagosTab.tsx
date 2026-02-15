@@ -68,6 +68,8 @@ export function OrdenPagosTab({
     if (!companyId || readOnly || pagoIds.length === 0) return;
 
     let canceled = false;
+    let interval: number | null = null;
+    let attempts = 0;
 
     const run = async () => {
       // Buscar recibos vinculados a estos pagos (OT o Copiado).
@@ -91,11 +93,28 @@ export function OrdenPagosTab({
         next[pagoId] = { token: r.token_corto, ready: Boolean(r.pdf_storage_path) };
       });
       setRecibosByPagoId(next);
+
+      // Si hay recibos sin PDF, reintentar un par de veces para que el UI pase de "Generando..." a "Ver recibo"
+      // sin necesidad de refrescar la página.
+      const hasPending = Object.values(next).some((r) => r && !r.ready);
+      if (hasPending && interval == null) {
+        interval = window.setInterval(async () => {
+          if (canceled) return;
+          attempts += 1;
+          if (attempts > 12) {
+            if (interval != null) window.clearInterval(interval);
+            interval = null;
+            return;
+          }
+          await run();
+        }, 5000);
+      }
     };
 
     run();
     return () => {
       canceled = true;
+      if (interval != null) window.clearInterval(interval);
     };
   }, [profile?.company_id, readOnly, pagoIds]);
 
