@@ -18,7 +18,10 @@ interface RequestBody {
   };
 }
 
-const ALLOWED_TEMPLATES = new Set(['nueva_orden_v4', 'orden_finalizada_v2']);
+// Transitional allow-list:
+// - App/DB will send orden_finalizada_v3 going forward.
+// - Keep orden_finalizada_v2 allowed to avoid failures if any env still sends v2 during rollout.
+const ALLOWED_TEMPLATES = new Set(['nueva_orden_v4', 'orden_finalizada_v2', 'orden_finalizada_v3']);
 
 function getCorsHeaders(req: Request) {
   const configuredOrigins = (Deno.env.get('ALLOWED_ORIGINS') ?? '')

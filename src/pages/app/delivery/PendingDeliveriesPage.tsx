@@ -97,7 +97,7 @@ export function PendingDeliveriesPage() {
                 sendWatiMessage({
                     companyId: profile.company_id,
                     phone: selectedDelivery.cliente.whatsapp,
-                    template_name: 'orden_finalizada_v2',
+                    template_name: 'orden_finalizada_v3',
                     parameters: [
                         { name: 'nombre_cliente', value: selectedDelivery.cliente.nombre_fantasia || selectedDelivery.cliente.razon_social },
                         { name: 'numero_orden', value: selectedDelivery.numero_orden },
