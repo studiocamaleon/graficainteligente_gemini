@@ -32,6 +32,16 @@ export interface ClientWithCommercialMetrics extends Client {
   riesgo_comercial: 'alto' | 'medio' | 'bajo';
 }
 
+interface RpcAggregateMeta {
+  full_count: number;
+  avg_ltv: number;
+  total_ltv: number;
+}
+
+interface LegacyClientWithLtv extends Client, RpcAggregateMeta {
+  ltv_total: number;
+}
+
 export function useClients({
   searchTerm = '',
   isActive = null,
@@ -58,35 +68,73 @@ export function useClients({
       setLoading(true);
       setError(null);
 
-      const { data, error: fetchError } = await supabase.rpc(
+      const commercialParams = {
+        p_company_id: profile.company_id,
+        p_search_term: searchTerm || null,
+        p_is_active: isActive,
+        p_has_cuenta_corriente: hasCuentaCorriente,
+        p_status_aprobacion: statusAprobacion,
+        p_riesgo_comercial: riesgoComercial,
+        p_sin_compra_dias: sinCompraDiasMin,
+        p_sort_by: sortBy,
+        p_limit: itemsPerPage,
+        p_offset: (page - 1) * itemsPerPage,
+      };
+
+      const { data: commercialData, error: commercialError } = await supabase.rpc(
         'fn_list_clients_commercial_metrics',
+        commercialParams
+      );
+
+      if (!commercialError) {
+        const rows = (commercialData || []) as Array<ClientWithCommercialMetrics & RpcAggregateMeta>;
+        setClients(rows);
+        setTotalCount(rows.length > 0 ? Number(rows[0].full_count || 0) : 0);
+        setAvgLtv(rows.length > 0 ? Number(rows[0].avg_ltv || 0) : 0);
+        setTotalLtv(rows.length > 0 ? Number(rows[0].total_ltv || 0) : 0);
+        return;
+      }
+
+      if (commercialError.code !== 'PGRST202') {
+        throw commercialError;
+      }
+
+      const legacySortBy = sortBy === 'name_asc' || sortBy === 'ltv_desc' || sortBy === 'created_at_desc'
+        ? sortBy
+        : 'created_at_desc';
+
+      const { data: legacyData, error: legacyError } = await supabase.rpc(
+        'fn_list_clients_with_ltv',
         {
           p_company_id: profile.company_id,
           p_search_term: searchTerm || null,
           p_is_active: isActive,
           p_has_cuenta_corriente: hasCuentaCorriente,
           p_status_aprobacion: statusAprobacion,
-          p_riesgo_comercial: riesgoComercial,
-          p_sin_compra_dias: sinCompraDiasMin,
-          p_sort_by: sortBy,
+          p_sort_by: legacySortBy,
           p_limit: itemsPerPage,
           p_offset: (page - 1) * itemsPerPage,
         }
       );
 
-      if (fetchError) throw fetchError;
+      if (legacyError) throw legacyError;
 
-      const rows = (data || []) as Array<
-        ClientWithCommercialMetrics & {
-          full_count: number;
-          avg_ltv: number;
-          total_ltv: number;
-        }
-      >;
-      setClients(rows);
-      setTotalCount(rows.length > 0 ? Number(rows[0].full_count || 0) : 0);
-      setAvgLtv(rows.length > 0 ? Number(rows[0].avg_ltv || 0) : 0);
-      setTotalLtv(rows.length > 0 ? Number(rows[0].total_ltv || 0) : 0);
+      const legacyRows = (legacyData || []) as LegacyClientWithLtv[];
+      const mappedRows: ClientWithCommercialMetrics[] = legacyRows.map((row) => ({
+        ...row,
+        dias_sin_comprar: null,
+        ordenes_90d: 0,
+        ticket_promedio: 0,
+        canal_preferido: null,
+        mix_ot_pct: 0,
+        mix_copiado_pct: 0,
+        riesgo_comercial: 'bajo',
+      }));
+
+      setClients(mappedRows);
+      setTotalCount(legacyRows.length > 0 ? Number(legacyRows[0].full_count || 0) : 0);
+      setAvgLtv(legacyRows.length > 0 ? Number(legacyRows[0].avg_ltv || 0) : 0);
+      setTotalLtv(legacyRows.length > 0 ? Number(legacyRows[0].total_ltv || 0) : 0);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al cargar clientes');
       console.error('Error fetching clients:', err);
