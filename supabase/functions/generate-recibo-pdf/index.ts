@@ -16,9 +16,27 @@ function formatMoney(value: number): string {
 }
 
 function formatDate(value: string | Date): string {
+  // Importante: Supabase/Edge suele correr en UTC.
+  // - Para columnas `date` (ej: '2026-02-16') evitamos parsear con Date() para no corrernos de día.
+  // - Para timestamptz, formateamos en la zona horaria de Argentina.
+  const AR_TZ = 'America/Argentina/Buenos_Aires';
+
+  if (typeof value === 'string') {
+    const s = value.trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+      const [yyyy, mm, dd] = s.split('-');
+      return `${dd}/${mm}/${yyyy}`;
+    }
+  }
+
   const d = typeof value === 'string' ? new Date(value) : value;
   if (Number.isNaN(d.getTime())) return '-';
-  return new Intl.DateTimeFormat('es-AR', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+  return new Intl.DateTimeFormat('es-AR', {
+    timeZone: AR_TZ,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(d);
 }
 
 async function tryFetchImageBytes(url: string): Promise<{ bytes: Uint8Array; contentType: string } | null> {
