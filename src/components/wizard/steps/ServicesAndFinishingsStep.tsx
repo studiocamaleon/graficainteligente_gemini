@@ -254,7 +254,7 @@ export function ServicesAndFinishingsStep({
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <Wrench className="w-5 h-5 text-blue-600" />
-            <h3 className="text-lg font-semibold text-gray-900">Servicios Adicionales</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Extras</h3>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -442,10 +442,10 @@ export function ServicesAndFinishingsStep({
         </div>
       )}
 
-      {(!config.acabados || config.acabados.length === 0) && (!config.servicios || config.servicios.length === 0) && (
+      {(!config.acabados || config.acabados.length === 0) && (hideServices || !config.servicios || config.servicios.length === 0) && (
         <Card className="p-8">
           <p className="text-center text-gray-500">
-            Este producto no tiene servicios ni acabados disponibles
+            Este producto no tiene acabados disponibles
           </p>
         </Card>
       )}

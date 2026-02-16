@@ -135,7 +135,7 @@ export function ServicesStep({
     return (
       <div className="text-center py-8">
         <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-gray-200 border-t-blue-600" />
-        <p className="mt-2 text-gray-600">Cargando servicios...</p>
+        <p className="mt-2 text-gray-600">Cargando extras...</p>
       </div>
     );
   }
@@ -143,16 +143,16 @@ export function ServicesStep({
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Servicios</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Extras</h2>
         <p className="text-gray-600">
-          Seleccione servicios adicionales (opcional)
+          Seleccione extras (opcional)
         </p>
       </div>
 
       {servicios.length === 0 ? (
         <div className="text-center py-12 bg-gray-50 rounded-lg">
           <Wrench className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-          <p className="text-gray-600">No hay servicios disponibles para esta categoría</p>
+          <p className="text-gray-600">No hay extras disponibles para esta categoría</p>
         </div>
       ) : (
         <div className="space-y-4">

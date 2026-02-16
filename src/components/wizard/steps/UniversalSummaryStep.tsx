@@ -81,7 +81,7 @@ export function UniversalSummaryStep({
           <Card className="p-6">
             <div className="flex items-center gap-2 mb-4">
               <Wrench className="w-5 h-5 text-blue-600" />
-              <h3 className="text-lg font-semibold text-gray-900">Servicios Adicionales</h3>
+              <h3 className="text-lg font-semibold text-gray-900">Extras</h3>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {selectedServicios.map((s, idx) => (
@@ -186,12 +186,12 @@ export function UniversalSummaryStep({
         </div>
       </Card>
 
-      {/* Servicios Globales */}
+      {/* Extras (se aplican fuera del wizard via "Aplicar Servicio") */}
       {selectedServicios.length > 0 && (
         <Card className="p-6">
           <div className="flex items-center gap-2 mb-4">
             <Wrench className="w-5 h-5 text-blue-600" />
-            <h3 className="text-lg font-semibold text-gray-900">Servicios Globales</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Extras</h3>
           </div>
           <div className="space-y-2">
             {selectedServicios.map((servicio, index) => (

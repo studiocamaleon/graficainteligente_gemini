@@ -74,7 +74,7 @@ export function SummaryPricingSidebar({
                         </div>
 
                         <div className="text-[10px] text-slate-400 italic bg-slate-900/50 p-3 rounded-xl border border-slate-800">
-                            * El precio final puede variar según servicios extra no cotizados en este paso.
+                            * El precio final puede variar por extras no cotizados en este paso.
                         </div>
                     </div>
                 </div>
@@ -140,7 +140,7 @@ export function SummaryPricingSidebar({
 
                                     {precioServicios > 0 && (
                                         <div className="flex justify-between items-center text-xs">
-                                            <span className="text-slate-400">Servicios:</span>
+                                            <span className="text-slate-400">Extras:</span>
                                             <span className="text-slate-200 font-mono tracking-tighter font-medium">+{formatCurrency(precioServicios)}</span>
                                         </div>
                                     )}
