@@ -92,10 +92,29 @@ export function useCentroCopiadoOrdenPagos(ordenCopiadoId?: string) {
         const { data: newPago, error: insertError } = await supabase
           .from('centro_copiado_ordenes_pagos')
           .insert(pagoData)
-          .select()
+          .select('id')
           .single();
 
         if (insertError) throw insertError;
+
+        // Generar recibo PDF (JWT). No bloquea el alta del pago.
+        if (newPago?.id) {
+          try {
+            const { data: recibo, error: reciboErr } = await supabase
+              .from('recibos_pagos' as any)
+              .select('id')
+              .eq('pago_copiado_id', newPago.id)
+              .maybeSingle();
+
+            if (!reciboErr && recibo?.id) {
+              await supabase.functions.invoke('generate-recibo-pdf', {
+                body: { recibo_id: recibo.id },
+              });
+            }
+          } catch (genErr) {
+            console.warn('[Recibos] No se pudo generar PDF automáticamente (copiado):', genErr);
+          }
+        }
 
         await fetchPagos();
         return newPago;

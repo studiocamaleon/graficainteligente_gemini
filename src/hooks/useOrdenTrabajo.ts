@@ -609,13 +609,17 @@ export function useOrdenTrabajo() {
       // For now, let's just create the cheque. Linking is implicit via description or we can add metadata in notes?
       // Actually, let's append cheque info to notes if possible or just rely on 'Cheque' method.
 
-      const { error: pagoError } = await supabase.from('ordenes_trabajo_pagos').insert([
+      const { data: insertedPago, error: pagoError } = await supabase
+        .from('ordenes_trabajo_pagos')
+        .insert([
         {
           orden_id: ordenId,
           ...dbPagoData,
           created_by: profile?.id || null,
         },
-      ]);
+        ])
+        .select('id')
+        .single();
 
       if (pagoError) throw pagoError;
 
@@ -626,6 +630,25 @@ export function useOrdenTrabajo() {
         metodo_pago: pagoData.metodo_pago,
         cheque_id: chequeId
       });
+
+      // Generar recibo PDF (JWT del usuario logueado). No bloquea el registro del pago.
+      if (insertedPago?.id) {
+        try {
+          const { data: recibo, error: reciboErr } = await supabase
+            .from('recibos_pagos' as any)
+            .select('id')
+            .eq('pago_ot_id', insertedPago.id)
+            .maybeSingle();
+
+          if (!reciboErr && recibo?.id) {
+            await supabase.functions.invoke('generate-recibo-pdf', {
+              body: { recibo_id: recibo.id },
+            });
+          }
+        } catch (genErr) {
+          console.warn('[Recibos] No se pudo generar PDF automáticamente:', genErr);
+        }
+      }
 
       return true;
     } catch (err) {

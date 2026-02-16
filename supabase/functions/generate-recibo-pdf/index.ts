@@ -43,15 +43,6 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const triggerSecret = Deno.env.get('TRIGGER_SECRET_TOKEN') ?? '';
-    const providedSecret = req.headers.get('X-Trigger-Secret') ?? '';
-    if (!triggerSecret || providedSecret !== triggerSecret) {
-      return new Response(JSON.stringify({ success: false, error: 'No autorizado' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
     const body = (await req.json()) as GenerateBody;
     const reciboId = body.recibo_id;
     if (!reciboId) {
@@ -63,9 +54,77 @@ Deno.serve(async (req) => {
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, serviceRoleKey);
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
-    const { data: recibo, error: reciboError } = await supabase
+    // Auth:
+    // - A) Usuario logueado (JWT) de la misma empresa del recibo
+    // - B) Caller interno opcional via trigger secret (compatibilidad / jobs)
+    const triggerSecret = Deno.env.get('TRIGGER_SECRET_TOKEN') ?? '';
+    const providedSecret = req.headers.get('X-Trigger-Secret') ?? '';
+    const isInternalCall = Boolean(triggerSecret && providedSecret && providedSecret === triggerSecret);
+
+    if (!isInternalCall) {
+      const authHeader = req.headers.get('Authorization');
+      if (!authHeader?.startsWith('Bearer ')) {
+        return new Response(JSON.stringify({ success: false, error: 'No autorizado' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const supabaseAuth = createClient(supabaseUrl, anonKey, {
+        global: { headers: { Authorization: authHeader } },
+      });
+
+      const {
+        data: { user },
+        error: authError,
+      } = await supabaseAuth.auth.getUser();
+
+      if (authError || !user) {
+        return new Response(JSON.stringify({ success: false, error: 'Token inválido o expirado' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Traer recibo mínimo para validar tenant antes de generar el PDF
+      const { data: reciboMin, error: reciboMinError } = await supabaseAdmin
+        .from('recibos_pagos')
+        .select('company_id')
+        .eq('id', reciboId)
+        .maybeSingle();
+
+      if (reciboMinError || !reciboMin?.company_id) {
+        return new Response(JSON.stringify({ success: false, error: 'Recibo no encontrado' }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const { data: profile, error: profileError } = await supabaseAdmin
+        .from('profiles')
+        .select('company_id')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (profileError || !profile?.company_id) {
+        return new Response(JSON.stringify({ success: false, error: 'No se pudo validar la empresa del usuario' }), {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      if (profile.company_id !== reciboMin.company_id) {
+        return new Response(JSON.stringify({ success: false, error: 'No autorizado para esta empresa' }), {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
+    const { data: recibo, error: reciboError } = await supabaseAdmin
       .from('recibos_pagos')
       .select(
         `
@@ -108,10 +167,10 @@ Deno.serve(async (req) => {
 
     let ordenNumero: string | null = null;
     if (recibo.orden_trabajo_id) {
-      const { data: ot } = await supabase.from('ordenes_trabajo').select('numero_orden').eq('id', recibo.orden_trabajo_id).maybeSingle();
+      const { data: ot } = await supabaseAdmin.from('ordenes_trabajo').select('numero_orden').eq('id', recibo.orden_trabajo_id).maybeSingle();
       ordenNumero = ot?.numero_orden ?? null;
     } else if (recibo.orden_copiado_id) {
-      const { data: cco } = await supabase
+      const { data: cco } = await supabaseAdmin
         .from('centro_copiado_ordenes')
         .select('numero_orden')
         .eq('id', recibo.orden_copiado_id)
@@ -121,7 +180,7 @@ Deno.serve(async (req) => {
 
     let medioCobroNombre: string | null = null;
     if (recibo.medio_cobro_id) {
-      const { data: mc } = await supabase.from('medios_cobro').select('nombre').eq('id', recibo.medio_cobro_id).maybeSingle();
+      const { data: mc } = await supabaseAdmin.from('medios_cobro').select('nombre').eq('id', recibo.medio_cobro_id).maybeSingle();
       medioCobroNombre = mc?.nombre ?? null;
     }
 
@@ -224,7 +283,7 @@ Deno.serve(async (req) => {
     const pdfBytes = await pdf.save();
 
     const path = `${recibo.company_id}/${recibo.token_corto}.pdf`;
-    const { error: uploadError } = await supabase.storage.from('recibos').upload(path, pdfBytes, {
+    const { error: uploadError } = await supabaseAdmin.storage.from('recibos').upload(path, pdfBytes, {
       contentType: 'application/pdf',
       upsert: true,
     });
@@ -236,7 +295,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { error: updateError } = await supabase
+    const { error: updateError } = await supabaseAdmin
       .from('recibos_pagos')
       .update({ pdf_storage_path: path, pdf_generated_at: new Date().toISOString() })
       .eq('id', recibo.id);
