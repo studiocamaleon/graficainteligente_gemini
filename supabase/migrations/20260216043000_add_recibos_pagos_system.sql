@@ -14,8 +14,8 @@
 -- 1) Storage bucket: recibos (privado)
 -- =====================================================
 
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('recibos', 'recibos', false)
+INSERT INTO storage.buckets (id, name)
+VALUES ('recibos', 'recibos')
 ON CONFLICT (id) DO NOTHING;
 
 -- =====================================================
@@ -408,4 +408,3 @@ CREATE TRIGGER trigger_crear_recibo_por_pago_copiado
   AFTER INSERT ON public.centro_copiado_ordenes_pagos
   FOR EACH ROW
   EXECUTE FUNCTION public.fn_trigger_crear_recibo_por_pago_copiado();
-

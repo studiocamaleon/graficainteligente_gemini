@@ -114,11 +114,10 @@ CREATE POLICY "Users can delete gi archivos from their company"
 -- 3. STORAGE BUCKET
 -- =====================================================
 
-INSERT INTO storage.buckets (id, name, public)
+INSERT INTO storage.buckets (id, name)
 VALUES (
   'ordenes-trabajo-archivos',
-  'ordenes-trabajo-archivos',
-  false
+  'ordenes-trabajo-archivos'
 )
 ON CONFLICT (id) DO NOTHING;
 
