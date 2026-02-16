@@ -16,6 +16,7 @@ import type {
 import { getArgentinaDateString } from '../utils/dates';
 import { generateProductionRoutes, normalizarEtapa } from '../utils/generateProductionRoutes';
 import { distribuirPagosProporcional, validarDesvinculacion } from '../utils/ordenesConsolidadas';
+import { sendWatiMessage } from '../lib/wati';
 
 export interface OrdenTrabajoServicio {
   id: string;
@@ -636,14 +637,51 @@ export function useOrdenTrabajo() {
         try {
           const { data: recibo, error: reciboErr } = await supabase
             .from('recibos_pagos' as any)
-            .select('id')
+            .select('id, token_corto')
             .eq('pago_ot_id', insertedPago.id)
             .maybeSingle();
 
-          if (!reciboErr && recibo?.id) {
+          if (!reciboErr && recibo?.id && recibo?.token_corto) {
             await supabase.functions.invoke('generate-recibo-pdf', {
               body: { recibo_id: recibo.id },
             });
+
+            // Envío Wati (fallará hasta que la plantilla esté aprobada; lo dejamos listo).
+            try {
+              const { data: ordenInfo } = await supabase
+                .from('ordenes_trabajo')
+                .select('numero_orden, cliente:clients(whatsapp)')
+                .eq('id', ordenId)
+                .maybeSingle();
+
+              const phone = (ordenInfo as any)?.cliente?.whatsapp as string | null;
+              const numeroOrden = (ordenInfo as any)?.numero_orden as string | null;
+
+              if (profile?.company_id && phone && numeroOrden) {
+                const montoText = Number(pagoData.monto).toLocaleString('es-AR', {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                });
+                const path = `${profile.company_id}/recibos/${recibo.token_corto}`;
+
+                await sendWatiMessage({
+                  companyId: profile.company_id,
+                  phone,
+                  template_name: 'recibo_pago_v1',
+                  parameters: [
+                    { name: 'monto_pagado', value: montoText },
+                    { name: 'numero_orden', value: numeroOrden },
+                    { name: '1', value: path },
+                  ],
+                  metadata: {
+                    tipo: 'recibo_pago',
+                    orden_trabajo_id: ordenId,
+                  },
+                });
+              }
+            } catch (watiErr) {
+              console.warn('[Wati] No se pudo enviar recibo por WhatsApp (probablemente plantilla no aprobada aún):', watiErr);
+            }
           }
         } catch (genErr) {
           console.warn('[Recibos] No se pudo generar PDF automáticamente:', genErr);
