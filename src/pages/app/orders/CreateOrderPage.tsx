@@ -399,7 +399,7 @@ export function CreateOrderPage() {
     setShowPagoForm(true);
   };
 
-  const handleGuardarPago = async (data: Omit<PagoTemporal, 'id'>) => {
+  const handleGuardarPago = async (data: Omit<PagoTemporal, 'id'>): Promise<boolean> => {
     // Edit flow: persist immediately so payments are not lost.
     if (isEditing && id) {
       const pagoData = {
@@ -421,9 +421,7 @@ export function CreateOrderPage() {
         showError(editingPago ? 'Error al actualizar el pago' : 'Error al registrar el pago');
       }
 
-      setShowPagoForm(false);
-      setEditingPago(undefined);
-      return;
+      return ok;
     }
 
     // Create flow: keep payments locally until order exists.
@@ -435,8 +433,7 @@ export function CreateOrderPage() {
       setPagos(prev => [...prev, nuevoPago]);
       showSuccess('Pago registrado correctamente');
     }
-    setShowPagoForm(false);
-    setEditingPago(undefined);
+    return true;
   };
 
   const handleEditarPago = (pago: PagoTemporal) => {
@@ -806,18 +803,18 @@ export function CreateOrderPage() {
     }
   };
 
-  const handlePagoSubmit = async (data: any) => {
+  const handlePagoSubmit = async (data: any): Promise<boolean> => {
     if (!ordenCreadaId) return;
     setIsLoading(true);
     const success = await addPago(ordenCreadaId, data);
     if (success) {
       showSuccess('Pago registrado');
-      setShowPagoModal(false);
       setTimeout(() => navigate('/app/orders/ordenes'), 500);
     } else {
       showError('Error al registrar pago');
     }
     setIsLoading(false);
+    return success;
   };
 
   // --- Render ---

@@ -632,16 +632,29 @@ export function useOrdenTrabajo() {
         cheque_id: chequeId
       });
 
-      // Generar recibo PDF (JWT del usuario logueado). No bloquea el registro del pago.
+      // Generar recibo PDF (JWT del usuario logueado).
+      // Importante: no bloqueamos el registro del pago ni la respuesta al usuario.
       if (insertedPago?.id) {
-        try {
-          const { data: recibo, error: reciboErr } = await supabase
-            .from('recibos_pagos' as any)
-            .select('id, token_corto')
-            .eq('pago_ot_id', insertedPago.id)
-            .maybeSingle();
+        void (async () => {
+          try {
+            // El trigger crea el recibo; a veces puede tardar un instante en estar visible.
+            let recibo: any = null;
+            for (let i = 0; i < 5; i++) {
+              const { data, error: reciboErr } = await supabase
+                .from('recibos_pagos' as any)
+                .select('id, token_corto')
+                .eq('pago_ot_id', insertedPago.id)
+                .maybeSingle();
 
-          if (!reciboErr && recibo?.id && recibo?.token_corto) {
+              if (!reciboErr && data?.id && data?.token_corto) {
+                recibo = data;
+                break;
+              }
+              await new Promise((r) => setTimeout(r, 400));
+            }
+
+            if (!recibo?.id || !recibo?.token_corto) return;
+
             await supabase.functions.invoke('generate-recibo-pdf', {
               body: { recibo_id: recibo.id },
             });
@@ -682,10 +695,10 @@ export function useOrdenTrabajo() {
             } catch (watiErr) {
               console.warn('[Wati] No se pudo enviar recibo por WhatsApp (probablemente plantilla no aprobada aún):', watiErr);
             }
+          } catch (genErr) {
+            console.warn('[Recibos] No se pudo generar PDF automáticamente:', genErr);
           }
-        } catch (genErr) {
-          console.warn('[Recibos] No se pudo generar PDF automáticamente:', genErr);
-        }
+        })();
       }
 
       return true;
@@ -727,6 +740,21 @@ export function useOrdenTrabajo() {
       setLoading(true);
       setError(null);
 
+      // Si el pago está aplicado a una liquidación, el FK es RESTRICT y no se puede borrar.
+      try {
+        const { data: liqPago, error: liqErr } = await supabase
+          .from('liquidaciones_pagos')
+          .select('liquidacion_id')
+          .eq('pago_id', pagoId)
+          .limit(1);
+        if (!liqErr && (liqPago?.length ?? 0) > 0) {
+          setError('No se puede eliminar este pago porque está aplicado a una liquidación. Quitalo de la liquidación primero.');
+          return false;
+        }
+      } catch {
+        // Ignorar; si falla el check, intentamos el delete igualmente.
+      }
+
       const { error: deleteError } = await supabase
         .from('ordenes_trabajo_pagos')
         .delete()
@@ -739,7 +767,15 @@ export function useOrdenTrabajo() {
       return true;
     } catch (err) {
       console.error('Error deleting pago:', err);
-      setError(err instanceof Error ? err.message : 'Error al eliminar pago');
+      const anyErr: any = err;
+      const code = anyErr?.code ? String(anyErr.code) : null;
+      if (code === '23503') {
+        setError('No se puede eliminar este pago porque está relacionado a otros registros (por ejemplo liquidaciones).');
+      } else if (code === '42501') {
+        setError('No tenés permisos para eliminar pagos con tu rol actual.');
+      } else {
+        setError(err instanceof Error ? err.message : 'Error al eliminar pago');
+      }
       return false;
     } finally {
       setLoading(false);

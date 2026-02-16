@@ -98,16 +98,28 @@ export function useCentroCopiadoOrdenPagos(ordenCopiadoId?: string) {
 
         if (insertError) throw insertError;
 
-        // Generar recibo PDF (JWT). No bloquea el alta del pago.
+        // Generar recibo PDF (JWT).
+        // Importante: no bloqueamos el alta del pago ni la respuesta al usuario.
         if (newPago?.id) {
-          try {
-            const { data: recibo, error: reciboErr } = await supabase
-              .from('recibos_pagos' as any)
-              .select('id, token_corto')
-              .eq('pago_copiado_id', newPago.id)
-              .maybeSingle();
+          void (async () => {
+            try {
+              let recibo: any = null;
+              for (let i = 0; i < 5; i++) {
+                const { data: r, error: reciboErr } = await supabase
+                  .from('recibos_pagos' as any)
+                  .select('id, token_corto')
+                  .eq('pago_copiado_id', newPago.id)
+                  .maybeSingle();
 
-            if (!reciboErr && recibo?.id && recibo?.token_corto) {
+                if (!reciboErr && r?.id && r?.token_corto) {
+                  recibo = r;
+                  break;
+                }
+                await new Promise((res) => setTimeout(res, 400));
+              }
+
+              if (!recibo?.id || !recibo?.token_corto) return;
+
               await supabase.functions.invoke('generate-recibo-pdf', {
                 body: { recibo_id: recibo.id },
               });
@@ -148,10 +160,10 @@ export function useCentroCopiadoOrdenPagos(ordenCopiadoId?: string) {
               } catch (watiErr) {
                 console.warn('[Wati] No se pudo enviar recibo por WhatsApp (copiado):', watiErr);
               }
+            } catch (genErr) {
+              console.warn('[Recibos] No se pudo generar PDF automáticamente (copiado):', genErr);
             }
-          } catch (genErr) {
-            console.warn('[Recibos] No se pudo generar PDF automáticamente (copiado):', genErr);
-          }
+          })();
         }
 
         await fetchPagos();
@@ -238,7 +250,13 @@ export function useCentroCopiadoOrdenPagos(ordenCopiadoId?: string) {
         return true;
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Error al eliminar pago';
-        setError(errorMessage);
+        const anyErr: any = err;
+        const code = anyErr?.code ? String(anyErr.code) : null;
+        if (code === '42501') {
+          setError('No tenés permisos para eliminar pagos con tu rol actual.');
+        } else {
+          setError(errorMessage);
+        }
         console.error('Error deleting pago:', err);
         return false;
       }

@@ -26,7 +26,7 @@ export interface PagoFormData {
 interface PagoFormModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: PagoFormData) => void;
+  onSubmit: (data: PagoFormData) => Promise<boolean> | boolean;
   saldoPendiente: number;
   pago?: PagoFormData & { id: string };
   clientName?: string;
@@ -54,6 +54,8 @@ export function PagoFormModal({
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   useEffect(() => {
     if (pago) {
@@ -74,6 +76,8 @@ export function PagoFormModal({
       });
     }
     setErrors({});
+    setSubmitError(null);
+    setIsSubmitting(false);
   }, [pago, isOpen]);
 
   useEffect(() => {
@@ -145,10 +149,13 @@ export function PagoFormModal({
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!validate()) return;
+
+    setIsSubmitting(true);
+    setSubmitError(null);
 
     const submitData: any = {
       ...formData
@@ -158,25 +165,54 @@ export function PagoFormModal({
       submitData.cheque_data = chequeData;
     }
 
-    onSubmit(submitData);
-    onClose();
+    try {
+      const result = await Promise.resolve(onSubmit(submitData));
+      if (result === false) {
+        setSubmitError('No se pudo registrar el pago. Revisá los datos e intentá nuevamente.');
+        return;
+      }
+      onClose();
+    } catch (err: any) {
+      setSubmitError(err?.message ? String(err.message) : 'No se pudo registrar el pago.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (!isOpen) return null;
 
   return (
     <div className={`fixed inset-0 z-50 flex items-center justify-center ${!isOpen ? 'hidden' : ''}`}>
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => !isSubmitting && onClose()} />
       <div className="relative bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
             <DollarSign className="w-5 h-5 text-blue-600" />
             {pago ? 'Editar Pago' : 'Registrar Pago'}
           </h2>
-          <Button variant="ghost" size="sm" onClick={onClose}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => !isSubmitting && onClose()}
+            disabled={isSubmitting}
+          >
             <X className="w-4 h-4" />
           </Button>
         </div>
+
+        {isSubmitting && (
+          <div className="flex items-center gap-2 p-3 mb-4 bg-blue-50 border border-blue-200 rounded-lg text-blue-800 text-sm">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+            <span>Registrando pago y actualizando la orden...</span>
+          </div>
+        )}
+
+        {submitError && (
+          <div className="flex items-center gap-2 p-3 mb-4 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm">
+            <AlertCircle className="w-4 h-4 text-red-600" />
+            <span>{submitError}</span>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -386,11 +422,11 @@ export function PagoFormModal({
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
               Cancelar
             </Button>
-            <Button type="submit">
-              {pago ? 'Actualizar Pago' : 'Registrar Pago'}
+            <Button type="submit" isLoading={isSubmitting} disabled={isSubmitting}>
+              {isSubmitting ? 'Procesando...' : (pago ? 'Actualizar Pago' : 'Registrar Pago')}
             </Button>
           </div>
         </form>

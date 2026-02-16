@@ -50,7 +50,18 @@ export function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { profile } = useAuth();
-  const { getOrdenById, deleteOrden, changeEstado, addPago, updatePago, deletePago, desvincularOrdenCopiado, updateOrden, loading } = useOrdenTrabajo();
+  const {
+    getOrdenById,
+    deleteOrden,
+    changeEstado,
+    addPago,
+    updatePago,
+    deletePago,
+    desvincularOrdenCopiado,
+    updateOrden,
+    loading,
+    error: ordenTrabajoError,
+  } = useOrdenTrabajo();
   const { showSuccess, showError } = useToast();
   const {
     dialogState,
@@ -260,7 +271,7 @@ export function OrderDetailPage() {
     setShowPagoModal(true);
   };
 
-  const handleSubmitPago = async (pagoData: any) => {
+  const handleSubmitPago = async (pagoData: any): Promise<boolean> => {
     if (!id) return;
 
     try {
@@ -269,21 +280,24 @@ export function OrderDetailPage() {
         if (success) {
           showSuccess('Pago actualizado correctamente');
           await loadOrden();
-        } else {
-          showError('Error al actualizar el pago');
+          return true;
         }
+        showError('Error al actualizar el pago');
+        return false;
       } else {
         const success = await addPago(id, pagoData);
         if (success) {
           showSuccess('Pago registrado correctamente');
           await loadOrden();
-        } else {
-          showError('Error al registrar el pago');
+          return true;
         }
+        showError('Error al registrar el pago');
+        return false;
       }
     } catch (error) {
       console.error('Error en pago:', error);
       showError(error instanceof Error ? error.message : 'Error al procesar el pago');
+      return false;
     }
   };
 
@@ -295,7 +309,7 @@ export function OrderDetailPage() {
       showSuccess('Pago eliminado correctamente');
       await loadOrden();
     } else {
-      showError('Error al eliminar el pago');
+      showError(ordenTrabajoError || 'Error al eliminar el pago');
     }
   };
 

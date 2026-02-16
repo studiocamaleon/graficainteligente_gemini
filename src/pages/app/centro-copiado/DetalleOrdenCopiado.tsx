@@ -72,7 +72,7 @@ export function DetalleOrdenCopiado() {
   };
 
   const { archivos, descargarArchivo, descargarTodosArchivos } = useCentroCopiadoOrdenArchivos(id);
-  const { pagos, createPago, updatePago, deletePago, calcularTotales } = useCentroCopiadoOrdenPagos(id);
+  const { pagos, createPago, updatePago, deletePago, calcularTotales, error: pagosError } = useCentroCopiadoOrdenPagos(id);
   const { dialogState: confirmDialogState, closeDialog: closeConfirmDialog, handleConfirm, openConfirm } = useConfirmDialog();
   const { dialogState: infoDialogState, closeDialog: closeInfoDialog, openDialog: openInfoDialog } = useInfoDialog();
   const [descargandoId, setDescargandoId] = useState<string | null>(null);
@@ -164,7 +164,7 @@ export function DetalleOrdenCopiado() {
     setShowPagoModal(true);
   };
 
-  const handleSubmitPago = async (data: any) => {
+  const handleSubmitPago = async (data: any): Promise<boolean> => {
     if (!orden) return;
 
     try {
@@ -181,14 +181,15 @@ export function DetalleOrdenCopiado() {
       }
 
       if (success) {
-        setShowPagoModal(false);
-        setPagoEditando(null);
         openInfoDialog('Éxito', pagoEditando ? 'Pago actualizado correctamente' : 'Pago registrado correctamente');
+        return true;
       } else {
         openInfoDialog('Error', 'No se pudo guardar el pago');
+        return false;
       }
     } catch (error) {
       openInfoDialog('Error', error instanceof Error ? error.message : 'Error al guardar pago');
+      return false;
     }
   };
 
@@ -197,7 +198,7 @@ export function DetalleOrdenCopiado() {
     if (success) {
       openInfoDialog('Éxito', 'Pago eliminado correctamente');
     } else {
-      openInfoDialog('Error', 'No se pudo eliminar el pago');
+      openInfoDialog('Error', pagosError || 'No se pudo eliminar el pago');
     }
   };
 
