@@ -1,10 +1,16 @@
 import { EstadoOrdenTrabajo, TipoEventoHistorial, TasaCumplimiento } from './database';
 
 export interface DashboardStats {
+  // Ordenes de Trabajo (OT)
   ordenesPendientes: number;
   ordenesEnProceso: number;
   entregasHoy: number;
   visitasHoy: number;
+
+  // Centro de Copiado (CC)
+  copiadoPendientes: number;
+  copiadoEnProceso: number;
+  copiadoEntregasHoy: number;
 }
 
 export interface ProximaEntrega {

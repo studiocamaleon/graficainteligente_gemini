@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Package, Clock, TrendingUp, AlertCircle, RefreshCw, Truck, Calendar } from 'lucide-react';
+import { Package, Clock, TrendingUp, AlertCircle, RefreshCw, Truck, Calendar, FileText } from 'lucide-react';
 import { usePageHeader } from '../../hooks/usePageHeader';
 import { useDashboardData } from '../../hooks/useDashboardData';
 import { DashboardStatCard } from '../../components/dashboard/DashboardStatCard';
@@ -14,7 +14,7 @@ import { WelcomeIntro } from '../../components/dashboard/WelcomeIntro';
 export function Dashboard() {
   const navigate = useNavigate();
   usePageHeader('Centro de Control');
-  const { loading, stats, tasaCumplimiento, proximasEntregas, actividadReciente, ordenesPorDia, refresh } = useDashboardData();
+  const { loading, error, stats, tasaCumplimiento, proximasEntregas, actividadReciente, ordenesPorDia, refresh } = useDashboardData();
 
   const getTasaColor = () => {
     if (!tasaCumplimiento) return 'text-gray-600';
@@ -34,10 +34,10 @@ export function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <WelcomeIntro stats={stats} loading={loading} />
+      <WelcomeIntro loading={loading} />
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-slate-500">
             {new Date().toLocaleDateString('es-ES', {
               weekday: 'long',
               year: 'numeric',
@@ -67,49 +67,90 @@ export function Dashboard() {
         </div>
       </div>
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-6">
-        <DashboardStatCard
-          label="Visitas Hoy"
-          value={stats.visitasHoy}
-          icon={Calendar}
-          color="text-purple-600"
-          bgColor="bg-purple-100"
-          loading={loading}
-          onClick={() => navigate('/app/presupuestos/visitas')}
-        />
-        <DashboardStatCard
-          label="Órdenes Pendientes"
-          value={stats.ordenesPendientes}
-          icon={Package}
-          color="text-blue-600"
-          bgColor="bg-blue-100"
-          loading={loading}
-        />
-        <DashboardStatCard
-          label="Órdenes en Proceso"
-          value={stats.ordenesEnProceso}
-          icon={Clock}
-          color="text-orange-600"
-          bgColor="bg-orange-100"
-          loading={loading}
-        />
-        <DashboardStatCard
-          label="Tasa de Cumplimiento"
-          value={tasaCumplimiento ? `${Number(tasaCumplimiento.tasa_cumplimiento).toFixed(1)}%` : '0%'}
-          icon={TrendingUp}
-          color={getTasaColor()}
-          bgColor={getTasaBgColor()}
-          loading={loading}
-        />
-        <DashboardStatCard
-          label="Entregas Hoy"
-          value={stats.entregasHoy}
-          icon={AlertCircle}
-          color="text-red-600"
-          bgColor="bg-red-100"
-          loading={loading}
-        />
-      </div>
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
+      <section className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Órdenes de Trabajo</h3>
+        </div>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          <DashboardStatCard
+            label="Visitas Hoy"
+            value={stats.visitasHoy}
+            icon={Calendar}
+            color="text-slate-700"
+            bgColor="bg-slate-100"
+            loading={loading}
+            onClick={() => navigate('/app/presupuestos/visitas')}
+          />
+          <DashboardStatCard
+            label="Pendientes"
+            value={stats.ordenesPendientes}
+            icon={Package}
+            color="text-slate-700"
+            bgColor="bg-slate-100"
+            loading={loading}
+          />
+          <DashboardStatCard
+            label="En Proceso"
+            value={stats.ordenesEnProceso}
+            icon={Clock}
+            color="text-slate-700"
+            bgColor="bg-slate-100"
+            loading={loading}
+          />
+          <DashboardStatCard
+            label="Cumplimiento"
+            value={tasaCumplimiento ? `${Number(tasaCumplimiento.tasa_cumplimiento).toFixed(1)}%` : '0%'}
+            icon={TrendingUp}
+            color={getTasaColor()}
+            bgColor={getTasaBgColor()}
+            loading={loading}
+          />
+          <DashboardStatCard
+            label="Entregas Hoy"
+            value={stats.entregasHoy}
+            icon={AlertCircle}
+            color="text-slate-700"
+            bgColor="bg-slate-100"
+            loading={loading}
+          />
+        </div>
+      </section>
+
+      <section className="space-y-3">
+        <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Centro de Copiado</h3>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <DashboardStatCard
+            label="Pendientes"
+            value={stats.copiadoPendientes}
+            icon={FileText}
+            color="text-slate-700"
+            bgColor="bg-slate-100"
+            loading={loading}
+          />
+          <DashboardStatCard
+            label="En Proceso"
+            value={stats.copiadoEnProceso}
+            icon={Clock}
+            color="text-slate-700"
+            bgColor="bg-slate-100"
+            loading={loading}
+          />
+          <DashboardStatCard
+            label="Entregas Hoy"
+            value={stats.copiadoEntregasHoy}
+            icon={AlertCircle}
+            color="text-slate-700"
+            bgColor="bg-slate-100"
+            loading={loading}
+          />
+        </div>
+      </section>
 
       <div className="grid lg:grid-cols-7 gap-6">
         <div className="lg:col-span-4 space-y-6">
