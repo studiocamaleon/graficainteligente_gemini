@@ -84,7 +84,7 @@ export interface DashboardKpisV2 {
 export interface DashboardSeriesPoint {
   date: string;
   label: string;
-  value: number;
+  value: number | null;
 }
 
 export interface DashboardBacklogBucket {
@@ -107,6 +107,7 @@ export interface DashboardProximaEntregaV2 {
   fecha_estimada_entrega: string;
   dias_restantes: number;
   estado: string;
+  progreso_porcentaje?: number | null;
   nivel_urgencia: NivelUrgencia;
 }
 

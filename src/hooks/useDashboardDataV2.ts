@@ -151,17 +151,17 @@ export function useDashboardDataV2({
         creadas: toArray<DashboardSeriesPoint>(s.series_creadas).map((x) => ({
           date: String(x.date || ''),
           label: String(x.label || ''),
-          value: toNumber(x.value),
+          value: x.value === null || x.value === undefined ? null : toNumber(x.value),
         })),
         finalizadas: toArray<DashboardSeriesPoint>(s.series_finalizadas).map((x) => ({
           date: String(x.date || ''),
           label: String(x.label || ''),
-          value: toNumber(x.value),
+          value: x.value === null || x.value === undefined ? null : toNumber(x.value),
         })),
         cumplimiento: toArray<DashboardSeriesPoint>(s.series_cumplimiento).map((x) => ({
           date: String(x.date || ''),
           label: String(x.label || ''),
-          value: toNumber(x.value),
+          value: x.value === null || x.value === undefined ? null : toNumber(x.value),
         })),
         backlogAging: toArray<{ bucket: string; value: number }>(s.backlog_aging).map((x) => ({
           bucket: String(x.bucket || ''),
@@ -170,7 +170,13 @@ export function useDashboardDataV2({
       });
 
       setOperativo({
-        proximasEntregas: toArray(o.proximas_entregas),
+        proximasEntregas: toArray<any>(o.proximas_entregas).map((x) => ({
+          ...x,
+          progreso_porcentaje:
+            x?.progreso_porcentaje === null || x?.progreso_porcentaje === undefined
+              ? null
+              : toNumber(x.progreso_porcentaje),
+        })),
         actividadReciente: toArray<DashboardActividadV2>(o.actividad_reciente),
       });
 

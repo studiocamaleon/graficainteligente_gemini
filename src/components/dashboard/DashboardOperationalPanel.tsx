@@ -59,6 +59,17 @@ export function DashboardOperationalPanel({
                   <div className="min-w-0">
                     <p className="font-medium text-slate-900">{item.numero_orden}</p>
                     <p className="truncate text-sm text-slate-500">{item.cliente_nombre}</p>
+                    <div className="mt-1.5 flex items-center gap-2">
+                      <div className="h-1.5 w-24 overflow-hidden rounded-full bg-slate-200">
+                        <div
+                          className="h-full rounded-full bg-slate-600"
+                          style={{ width: `${Math.max(0, Math.min(100, item.progreso_porcentaje ?? 0))}%` }}
+                        />
+                      </div>
+                      <span className="text-xs font-medium text-slate-600">
+                        {item.progreso_porcentaje ?? 0}%
+                      </span>
+                    </div>
                   </div>
                   <div className="text-right">
                     <p className="text-sm text-slate-700">

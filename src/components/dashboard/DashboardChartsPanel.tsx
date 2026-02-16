@@ -21,7 +21,7 @@ interface DashboardChartsPanelProps {
 export function DashboardChartsPanel({ series, loading }: DashboardChartsPanelProps) {
   const createdVsDone = series.creadas.map((p, idx) => ({
     label: p.label,
-    creadas: p.value,
+    creadas: p.value ?? 0,
     finalizadas: series.finalizadas[idx]?.value ?? 0,
   }));
 
@@ -55,8 +55,8 @@ export function DashboardChartsPanel({ series, loading }: DashboardChartsPanelPr
 
       <Card className="border-slate-200 shadow-sm">
         <CardHeader>
-          <CardTitle>Backlog por Antigüedad</CardTitle>
-          <CardDescription>Órdenes abiertas por tramo</CardDescription>
+          <CardTitle>Órdenes Abiertas por Antigüedad</CardTitle>
+          <CardDescription>Cantidad de órdenes abiertas según días desde creación</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="h-[280px] w-full">
@@ -80,7 +80,7 @@ export function DashboardChartsPanel({ series, loading }: DashboardChartsPanelPr
       <Card className="xl:col-span-3 border-slate-200 shadow-sm">
         <CardHeader>
           <CardTitle>Cumplimiento Diario</CardTitle>
-          <CardDescription>Porcentaje de finalizadas a tiempo por día</CardDescription>
+          <CardDescription>% de órdenes finalizadas en fecha (días sin datos quedan vacíos)</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="h-[240px] w-full">
@@ -92,8 +92,17 @@ export function DashboardChartsPanel({ series, loading }: DashboardChartsPanelPr
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="label" tickLine={false} axisLine={false} />
                   <YAxis domain={[0, 100]} tickLine={false} axisLine={false} />
-                  <Tooltip />
-                  <Line type="monotone" dataKey="value" stroke="#1d4ed8" strokeWidth={2.5} dot={false} />
+                  <Tooltip
+                    formatter={(value: any) => (value === null || value === undefined ? 'Sin datos' : `${Number(value).toFixed(0)}%`)}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="value"
+                    stroke="#1d4ed8"
+                    strokeWidth={2.5}
+                    dot={false}
+                    connectNulls={false}
+                  />
                 </LineChart>
               </ResponsiveContainer>
             )}
