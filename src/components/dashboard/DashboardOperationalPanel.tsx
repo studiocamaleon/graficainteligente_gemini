@@ -9,6 +9,7 @@ interface DashboardOperationalPanelProps {
   loading?: boolean;
   onOpenOrder: (orderId: string, tipo: 'ot' | 'copiado') => void;
   onViewMore?: () => void;
+  canViewMore?: boolean;
 }
 
 function formatUrgency(value: DashboardProximaEntregaV2['nivel_urgencia']) {
@@ -31,6 +32,7 @@ export function DashboardOperationalPanel({
   loading,
   onOpenOrder,
   onViewMore,
+  canViewMore = false,
 }: DashboardOperationalPanelProps) {
   return (
     <div className="grid gap-4 xl:grid-cols-3">
@@ -40,9 +42,11 @@ export function DashboardOperationalPanel({
             <CalendarClock className="h-5 w-5 text-slate-500" />
             Próximas Entregas
           </CardTitle>
-          <Button variant="outline" size="sm" onClick={onViewMore}>
-            Ver más
-          </Button>
+          {onViewMore && canViewMore ? (
+            <Button variant="outline" size="sm" onClick={onViewMore} disabled={loading}>
+              Ver más
+            </Button>
+          ) : null}
         </CardHeader>
         <CardContent>
           {loading ? (

@@ -41,6 +41,7 @@ export function Dashboard() {
     error,
     scope,
     period,
+    entregasLimit,
     kpis,
     series,
     operativo,
@@ -48,6 +49,7 @@ export function Dashboard() {
     isRealtimeConnected,
     setScope,
     setPeriod,
+    setEntregasLimit,
     refresh,
   } = useDashboardDataV2({
     initialScope,
@@ -121,7 +123,8 @@ export function Dashboard() {
         actividad={operativo.actividadReciente}
         loading={loading}
         onOpenOrder={handleOpenOrder}
-        onViewMore={() => navigate('/app/pending-deliveries')}
+        canViewMore={operativo.proximasEntregas.length >= entregasLimit}
+        onViewMore={() => setEntregasLimit((prev) => prev + 10)}
       />
     </div>
   );

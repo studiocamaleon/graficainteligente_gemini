@@ -84,6 +84,7 @@ export function useDashboardDataV2({
 
   const [scope, setScope] = useState<DashboardScope>(initialScope);
   const [period, setPeriod] = useState<DashboardPeriod>(initialPeriod);
+  const [entregasLimit, setEntregasLimit] = useState(10);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -121,7 +122,7 @@ export function useDashboardDataV2({
           p_company_id: companyId,
           p_scope: scope,
           p_period: period,
-          p_limit_entregas: 10,
+          p_limit_entregas: entregasLimit,
           p_limit_actividad: 15,
           p_tz: tz,
         }),
@@ -188,7 +189,7 @@ export function useDashboardDataV2({
       refreshInFlightRef.current = false;
       setLoading(false);
     }
-  }, [companyId, period, scope, tz]);
+  }, [companyId, entregasLimit, period, scope, tz]);
 
   const debouncedRefresh = useCallback(() => {
     if (refreshDebounceRef.current) {
@@ -251,6 +252,7 @@ export function useDashboardDataV2({
       error,
       scope,
       period,
+      entregasLimit,
       kpis,
       series,
       operativo,
@@ -258,6 +260,7 @@ export function useDashboardDataV2({
       isRealtimeConnected,
       setScope,
       setPeriod,
+      setEntregasLimit,
       refresh,
     }),
     [
@@ -268,6 +271,7 @@ export function useDashboardDataV2({
       loading,
       operativo,
       period,
+      entregasLimit,
       refresh,
       scope,
       series,
