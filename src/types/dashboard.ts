@@ -56,3 +56,74 @@ export interface UrgenciaConfig {
   textColor: string;
   label: string;
 }
+
+// -----------------------------
+// Dashboard v2 (operativo)
+// -----------------------------
+export type DashboardScope = 'ot' | 'copiado';
+export type DashboardPeriod = '7d' | '30d' | '90d' | 'mes_actual';
+export type DashboardTrend = 'up' | 'down' | 'flat';
+
+export interface DashboardKpiValue {
+  value: number;
+  prev: number;
+  deltaAbs: number;
+  deltaPct: number;
+  trend: DashboardTrend;
+}
+
+export interface DashboardKpisV2 {
+  pendientes: DashboardKpiValue;
+  enProceso: DashboardKpiValue;
+  vencidas: DashboardKpiValue;
+  finalizadasPeriodo: DashboardKpiValue;
+  cumplimiento: DashboardKpiValue;
+  updatedAt: string | null;
+}
+
+export interface DashboardSeriesPoint {
+  date: string;
+  label: string;
+  value: number;
+}
+
+export interface DashboardBacklogBucket {
+  bucket: '0-2d' | '3-7d' | '8-14d' | '+14d' | string;
+  value: number;
+}
+
+export interface DashboardSeriesV2 {
+  creadas: DashboardSeriesPoint[];
+  finalizadas: DashboardSeriesPoint[];
+  cumplimiento: DashboardSeriesPoint[];
+  backlogAging: DashboardBacklogBucket[];
+}
+
+export interface DashboardProximaEntregaV2 {
+  id: string;
+  tipo_orden: DashboardScope;
+  numero_orden: string;
+  cliente_nombre: string;
+  fecha_estimada_entrega: string;
+  dias_restantes: number;
+  estado: string;
+  nivel_urgencia: NivelUrgencia;
+}
+
+export interface DashboardActividadV2 {
+  id: string;
+  tipo: 'orden' | 'produccion';
+  tipo_orden?: DashboardScope;
+  tipo_evento: TipoEventoHistorial | TipoEventoProduccion | string;
+  descripcion: string;
+  orden_numero: string;
+  orden_id: string;
+  usuario_nombre: string | null;
+  created_at: string;
+  detalle_extra?: string | null;
+}
+
+export interface DashboardOperativoV2 {
+  proximasEntregas: DashboardProximaEntregaV2[];
+  actividadReciente: DashboardActividadV2[];
+}
