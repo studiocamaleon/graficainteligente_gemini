@@ -8,7 +8,6 @@ on:
 jobs:
   process:
     runs-on: ubuntu-latest
-    if: ${{ secrets.SUPABASE_PROJECT_ID != '' && secrets.TRIGGER_SECRET_TOKEN != '' }}
 
     env:
       SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
@@ -17,7 +16,12 @@ jobs:
     steps:
       - name: Call processor edge function
         run: |
-          curl -sS -X POST \
+          if [ -z "${SUPABASE_PROJECT_ID}" ] || [ -z "${TRIGGER_SECRET_TOKEN}" ]; then
+            echo "Skipping: missing SUPABASE_PROJECT_ID and/or TRIGGER_SECRET_TOKEN secrets."
+            exit 0
+          fi
+
+          curl -sS -f -X POST \
             "https://${SUPABASE_PROJECT_ID}.supabase.co/functions/v1/process-wati-contact-attributes" \
             -H "Content-Type: application/json" \
             -H "X-Trigger-Secret: ${TRIGGER_SECRET_TOKEN}" \
