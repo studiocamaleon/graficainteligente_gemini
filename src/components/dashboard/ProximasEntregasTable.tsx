@@ -47,6 +47,13 @@ const urgenciaConfig: Record<string, UrgenciaConfig> = {
   },
 };
 
+function formatDiasEntrega(dias: number) {
+  if (dias < 0) return `Atrasada ${Math.abs(dias)}d`;
+  if (dias === 0) return 'Hoy';
+  if (dias === 1) return 'En 1 día';
+  return `En ${dias} días`;
+}
+
 export function ProximasEntregasTable({ entregas, loading }: ProximasEntregasTableProps) {
   const navigate = useNavigate();
   const INITIAL_VISIBLE_ROWS = 10;
@@ -132,7 +139,7 @@ export function ProximasEntregasTable({ entregas, loading }: ProximasEntregasTab
                           {new Date(entrega.fecha_estimada_entrega).toLocaleDateString()}
                         </span>
                         <span className={`text-xs w-fit px-1.5 py-0.5 rounded-full mt-1 ${urgencia.bgColor} ${urgencia.textColor}`}>
-                          {entrega.dias_restantes} días
+                          {formatDiasEntrega(entrega.dias_restantes)}
                         </span>
                       </div>
                     </TableCell>

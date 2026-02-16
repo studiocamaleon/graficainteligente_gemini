@@ -18,6 +18,13 @@ function formatUrgency(value: DashboardProximaEntregaV2['nivel_urgencia']) {
   return 'bg-emerald-100 text-emerald-700';
 }
 
+function formatDiasEntrega(dias: number) {
+  if (dias < 0) return `Atrasada ${Math.abs(dias)}d`;
+  if (dias === 0) return 'Hoy';
+  if (dias === 1) return 'En 1 día';
+  return `En ${dias} días`;
+}
+
 export function DashboardOperationalPanel({
   entregas,
   actividad,
@@ -76,7 +83,7 @@ export function DashboardOperationalPanel({
                       {new Date(item.fecha_estimada_entrega).toLocaleDateString('es-AR')}
                     </p>
                     <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${formatUrgency(item.nivel_urgencia)}`}>
-                      {item.dias_restantes} días
+                      {formatDiasEntrega(item.dias_restantes)}
                     </span>
                   </div>
                 </button>
