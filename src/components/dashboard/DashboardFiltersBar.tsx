@@ -14,6 +14,7 @@ interface DashboardFiltersBarProps {
   onScopeChange: (scope: DashboardScope) => void;
   onPeriodChange: (period: DashboardPeriod) => void;
   onRefresh: () => void;
+  onOpenPendingDeliveries?: () => void;
 }
 
 function formatLastUpdated(date: Date | null): string {
@@ -34,6 +35,7 @@ export function DashboardFiltersBar({
   onScopeChange,
   onPeriodChange,
   onRefresh,
+  onOpenPendingDeliveries,
 }: DashboardFiltersBarProps) {
   const [, setTicker] = useState(0);
 
@@ -74,6 +76,12 @@ export function DashboardFiltersBar({
               ]}
             />
           </div>
+
+          {onOpenPendingDeliveries ? (
+            <Button variant="outline" size="sm" onClick={onOpenPendingDeliveries}>
+              Gestionar entregas
+            </Button>
+          ) : null}
 
           <Button variant="outline" size="sm" onClick={onRefresh} disabled={loading}>
             <Clock3 className="mr-2 h-4 w-4" />

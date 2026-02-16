@@ -100,6 +100,7 @@ export function Dashboard() {
         onScopeChange={handleScopeChange}
         onPeriodChange={handlePeriodChange}
         onRefresh={refresh}
+        onOpenPendingDeliveries={() => navigate('/app/pending-deliveries')}
       />
 
       {error && (
