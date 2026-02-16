@@ -71,7 +71,7 @@ export function PriceSummaryPanel({
 
         {precioServicios > 0 && (
           <div className="flex justify-between items-center">
-            <span className="text-gray-600">Servicios:</span>
+            <span className="text-gray-600">Extras:</span>
             <span className="font-medium text-green-600">
               + {formatCurrency(precioServicios)}
             </span>

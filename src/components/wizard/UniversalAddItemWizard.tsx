@@ -1118,9 +1118,9 @@ export function UniversalAddItemWizard({
             config={config}
             selectedAcabados={selectedAcabados}
             onAcabadosChange={setSelectedAcabados}
-            selectedServicios={selectedServicios}
-            onServiciosChange={setSelectedServicios}
-            hideServices={selectedProduct?.categoria_id === 'centro_copiado'}
+            // Los servicios se aplican despues de crear el item (via "Aplicar Servicio"),
+            // para evitar confusiones en el wizard.
+            hideServices={true}
           />
         );
       case 'summary':
@@ -1246,4 +1246,3 @@ export function UniversalAddItemWizard({
     </Modal>
   );
 }
-

@@ -35,7 +35,7 @@ const initialSteps: WizardStep[] = [
   { name: 'quantity', title: 'Cantidad', isValid: false, isCompleted: false },
   { name: 'size', title: 'Medida', isValid: false, isCompleted: false },
   { name: 'print_config', title: 'Configuración', isValid: false, isCompleted: false },
-  { name: 'services', title: 'Servicios', isValid: true, isCompleted: false },
+  { name: 'services', title: 'Extras', isValid: true, isCompleted: false },
   { name: 'finishings', title: 'Acabados', isValid: true, isCompleted: false },
   { name: 'summary', title: 'Resumen', isValid: false, isCompleted: false },
 ];

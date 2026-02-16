@@ -111,7 +111,7 @@ export function SummaryStep({ config }: SummaryStepProps) {
             </div>
             {config.precio_servicios > 0 && (
               <div className="flex justify-between">
-                <span className="text-gray-600">Servicios:</span>
+                <span className="text-gray-600">Extras:</span>
                 <span className="font-medium text-green-600">
                   +{formatCurrency(config.precio_servicios)}
                 </span>
@@ -149,7 +149,7 @@ export function SummaryStep({ config }: SummaryStepProps) {
         <Card className="p-6">
           <div className="flex items-center gap-2 mb-4">
             <Wrench className="w-5 h-5 text-blue-600" />
-            <h3 className="font-semibold text-gray-900">Servicios Seleccionados</h3>
+            <h3 className="font-semibold text-gray-900">Extras Seleccionados</h3>
           </div>
           <div className="space-y-2">
             {config.servicios_seleccionados.map((servicio, idx) => (
