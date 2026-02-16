@@ -14,6 +14,9 @@ export function useDashboardData() {
     ordenesEnProceso: 0,
     entregasHoy: 0,
     visitasHoy: 0,
+    copiadoPendientes: 0,
+    copiadoEnProceso: 0,
+    copiadoEntregasHoy: 0,
   });
   const [ordenesPorDia, setOrdenesPorDia] = useState<{ fecha: string; date: string; creadas: number; finalizadas: number }[]>([]);
   const [tasaCumplimiento, setTasaCumplimiento] = useState<TasaCumplimiento | null>(null);
@@ -63,42 +66,71 @@ export function useDashboardData() {
       const manana = new Date(hoy);
       manana.setDate(manana.getDate() + 1);
 
-      const { count: pendientesCount } = await supabase
-        .from('ordenes_trabajo')
-        .select('*', { count: 'exact', head: true })
-        .eq('company_id', companyId)
-        .eq('estado', 'pendiente');
-
-      const { count: enProcesoCount } = await supabase
-        .from('ordenes_trabajo')
-        .select('*', { count: 'exact', head: true })
-        .eq('company_id', companyId)
-        .eq('estado', 'en_proceso');
-
-      const { count: entregasHoyCount } = await supabase
-        .from('ordenes_trabajo')
-        .select('*', { count: 'exact', head: true })
-        .eq('company_id', companyId)
-        .in('estado', ['pendiente', 'en_proceso'])
-        .gte('fecha_estimada_entrega', hoy.toISOString())
-        .lt('fecha_estimada_entrega', manana.toISOString());
-
-      const { count: visitasHoyCount } = await supabase
-        .from('visitas')
-        .select('*', { count: 'exact', head: true })
-        .eq('company_id', companyId)
-        .neq('estado', 'cancelada')
-        .gte('fecha_inicio', hoy.toISOString())
-        .lt('fecha_inicio', manana.toISOString());
+      // Ejecutar en paralelo para reducir latencia.
+      const [
+        { count: pendientesCount },
+        { count: enProcesoCount },
+        { count: entregasHoyCount },
+        { count: visitasHoyCount },
+        { count: copiadoPendientesCount },
+        { count: copiadoEnProcesoCount },
+        { count: copiadoEntregasHoyCount },
+      ] = await Promise.all([
+        supabase
+          .from('ordenes_trabajo')
+          .select('id', { count: 'exact', head: true })
+          .eq('company_id', companyId)
+          .eq('estado', 'pendiente'),
+        supabase
+          .from('ordenes_trabajo')
+          .select('id', { count: 'exact', head: true })
+          .eq('company_id', companyId)
+          .eq('estado', 'en_proceso'),
+        supabase
+          .from('ordenes_trabajo')
+          .select('id', { count: 'exact', head: true })
+          .eq('company_id', companyId)
+          .in('estado', ['pendiente', 'en_proceso'])
+          .gte('fecha_estimada_entrega', hoy.toISOString())
+          .lt('fecha_estimada_entrega', manana.toISOString()),
+        supabase
+          .from('visitas')
+          .select('id', { count: 'exact', head: true })
+          .eq('company_id', companyId)
+          .neq('estado', 'cancelada')
+          .gte('fecha_inicio', hoy.toISOString())
+          .lt('fecha_inicio', manana.toISOString()),
+        supabase
+          .from('centro_copiado_ordenes')
+          .select('id', { count: 'exact', head: true })
+          .eq('company_id', companyId)
+          .eq('estado', 'pendiente'),
+        supabase
+          .from('centro_copiado_ordenes')
+          .select('id', { count: 'exact', head: true })
+          .eq('company_id', companyId)
+          .eq('estado', 'en_proceso'),
+        supabase
+          .from('centro_copiado_ordenes')
+          .select('id', { count: 'exact', head: true })
+          .eq('company_id', companyId)
+          .in('estado', ['pendiente', 'en_proceso'])
+          .gte('fecha_entrega_estimada', hoy.toISOString())
+          .lt('fecha_entrega_estimada', manana.toISOString()),
+      ]);
 
       setStats({
         ordenesPendientes: pendientesCount || 0,
         ordenesEnProceso: enProcesoCount || 0,
         entregasHoy: entregasHoyCount || 0,
         visitasHoy: visitasHoyCount || 0,
+        copiadoPendientes: copiadoPendientesCount || 0,
+        copiadoEnProceso: copiadoEnProcesoCount || 0,
+        copiadoEntregasHoy: copiadoEntregasHoyCount || 0,
       });
     } catch (err) {
       console.error('Error loading stats:', err);
+      setError('Error al cargar estadísticas');
     }
   }, [companyId]);
 

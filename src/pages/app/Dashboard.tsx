@@ -1,127 +1,130 @@
-import { useNavigate } from 'react-router-dom';
-import { Package, Clock, TrendingUp, AlertCircle, RefreshCw, Truck, Calendar } from 'lucide-react';
+import { useEffect, useMemo } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { AlertCircle } from 'lucide-react';
 import { usePageHeader } from '../../hooks/usePageHeader';
-import { useDashboardData } from '../../hooks/useDashboardData';
-import { DashboardStatCard } from '../../components/dashboard/DashboardStatCard';
-import { TasaCumplimientoCard } from '../../components/dashboard/TasaCumplimientoCard';
-import { ProximasEntregasTable } from '../../components/dashboard/ProximasEntregasTable';
-import { ActividadRecienteList } from '../../components/dashboard/ActividadRecienteList';
-import { OrdenesPorDiaChart } from '../../components/dashboard/OrdenesPorDiaChart';
-import { Button } from '../../components/ui/Button';
-
 import { WelcomeIntro } from '../../components/dashboard/WelcomeIntro';
+import { DashboardFiltersBar } from '../../components/dashboard/DashboardFiltersBar';
+import { DashboardKpiGrid } from '../../components/dashboard/DashboardKpiGrid';
+import { DashboardChartsPanel } from '../../components/dashboard/DashboardChartsPanel';
+import { DashboardOperationalPanel } from '../../components/dashboard/DashboardOperationalPanel';
+import { useDashboardDataV2 } from '../../hooks/useDashboardDataV2';
+import type { DashboardPeriod, DashboardScope } from '../../types/dashboard';
+
+const VALID_SCOPES: DashboardScope[] = ['ot', 'copiado'];
+const VALID_PERIODS: DashboardPeriod[] = ['7d', '30d', '90d', 'mes_actual'];
+
+function parseScope(value: string | null): DashboardScope {
+  if (value && VALID_SCOPES.includes(value as DashboardScope)) {
+    return value as DashboardScope;
+  }
+  return 'ot';
+}
+
+function parsePeriod(value: string | null): DashboardPeriod {
+  if (value && VALID_PERIODS.includes(value as DashboardPeriod)) {
+    return value as DashboardPeriod;
+  }
+  return '7d';
+}
 
 export function Dashboard() {
   const navigate = useNavigate();
-  usePageHeader('Centro de Control');
-  const { loading, stats, tasaCumplimiento, proximasEntregas, actividadReciente, ordenesPorDia, refresh } = useDashboardData();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const getTasaColor = () => {
-    if (!tasaCumplimiento) return 'text-gray-600';
-    const tasa = Number(tasaCumplimiento.tasa_cumplimiento);
-    if (tasa >= 95) return 'text-green-600';
-    if (tasa >= 85) return 'text-yellow-600';
-    return 'text-red-600';
+  usePageHeader('Centro de Control');
+
+  const initialScope = useMemo(() => parseScope(searchParams.get('scope')), [searchParams]);
+  const initialPeriod = useMemo(() => parsePeriod(searchParams.get('period')), [searchParams]);
+
+  const {
+    loading,
+    error,
+    scope,
+    period,
+    kpis,
+    series,
+    operativo,
+    lastUpdated,
+    isRealtimeConnected,
+    setScope,
+    setPeriod,
+    refresh,
+  } = useDashboardDataV2({
+    initialScope,
+    initialPeriod,
+  });
+
+  useEffect(() => {
+    const nextScope = parseScope(searchParams.get('scope'));
+    const nextPeriod = parsePeriod(searchParams.get('period'));
+    if (nextScope !== scope) setScope(nextScope);
+    if (nextPeriod !== period) setPeriod(nextPeriod);
+  }, [period, scope, searchParams, setPeriod, setScope]);
+
+  const handleScopeChange = (nextScope: DashboardScope) => {
+    setScope(nextScope);
+    const next = new URLSearchParams(searchParams);
+    next.set('scope', nextScope);
+    next.set('period', period);
+    setSearchParams(next, { replace: true });
   };
 
-  const getTasaBgColor = () => {
-    if (!tasaCumplimiento) return 'bg-gray-100';
-    const tasa = Number(tasaCumplimiento.tasa_cumplimiento);
-    if (tasa >= 95) return 'bg-green-100';
-    if (tasa >= 85) return 'bg-yellow-100';
-    return 'bg-red-100';
+  const handlePeriodChange = (nextPeriod: DashboardPeriod) => {
+    setPeriod(nextPeriod);
+    const next = new URLSearchParams(searchParams);
+    next.set('scope', scope);
+    next.set('period', nextPeriod);
+    setSearchParams(next, { replace: true });
+  };
+
+  const handleOpenOrder = (orderId: string, tipo: 'ot' | 'copiado') => {
+    if (tipo === 'copiado') {
+      navigate(`/app/centro-copiado/ordenes/${orderId}`);
+      return;
+    }
+    navigate(`/app/orders/${orderId}`);
   };
 
   return (
     <div className="space-y-6">
-      <WelcomeIntro stats={stats} loading={loading} />
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm text-muted-foreground">
-            {new Date().toLocaleDateString('es-ES', {
-              weekday: 'long',
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric'
-            })}
-          </p>
-        </div>
-        <div className="flex gap-3">
-          <Button
-            onClick={() => navigate('/app/pending-deliveries')}
-            variant="success"
-            size="sm"
-          >
-            <Truck className="w-4 h-4 mr-2" />
-            Gestionar Entregas
-          </Button>
-          <Button
-            onClick={refresh}
-            variant="outline"
-            size="sm"
-            disabled={loading}
-          >
-            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Actualizar
-          </Button>
-        </div>
-      </div>
+      <WelcomeIntro loading={loading} />
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-6">
-        <DashboardStatCard
-          label="Visitas Hoy"
-          value={stats.visitasHoy}
-          icon={Calendar}
-          color="text-purple-600"
-          bgColor="bg-purple-100"
-          loading={loading}
-          onClick={() => navigate('/app/presupuestos/visitas')}
-        />
-        <DashboardStatCard
-          label="Órdenes Pendientes"
-          value={stats.ordenesPendientes}
-          icon={Package}
-          color="text-blue-600"
-          bgColor="bg-blue-100"
-          loading={loading}
-        />
-        <DashboardStatCard
-          label="Órdenes en Proceso"
-          value={stats.ordenesEnProceso}
-          icon={Clock}
-          color="text-orange-600"
-          bgColor="bg-orange-100"
-          loading={loading}
-        />
-        <DashboardStatCard
-          label="Tasa de Cumplimiento"
-          value={tasaCumplimiento ? `${Number(tasaCumplimiento.tasa_cumplimiento).toFixed(1)}%` : '0%'}
-          icon={TrendingUp}
-          color={getTasaColor()}
-          bgColor={getTasaBgColor()}
-          loading={loading}
-        />
-        <DashboardStatCard
-          label="Entregas Hoy"
-          value={stats.entregasHoy}
-          icon={AlertCircle}
-          color="text-red-600"
-          bgColor="bg-red-100"
-          loading={loading}
-        />
-      </div>
+      <DashboardFiltersBar
+        scope={scope}
+        period={period}
+        loading={loading}
+        lastUpdated={lastUpdated}
+        isRealtimeConnected={isRealtimeConnected}
+        onScopeChange={handleScopeChange}
+        onPeriodChange={handlePeriodChange}
+        onRefresh={refresh}
+      />
 
-      <div className="grid lg:grid-cols-7 gap-6">
-        <div className="lg:col-span-4 space-y-6">
-          <OrdenesPorDiaChart data={ordenesPorDia} />
-          <ProximasEntregasTable entregas={proximasEntregas} loading={loading} />
+      {error && (
+        <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <AlertCircle className="h-4 w-4" />
+          {error}
         </div>
+      )}
 
-        <div className="lg:col-span-3 space-y-6">
-          <TasaCumplimientoCard data={tasaCumplimiento} loading={loading} />
-          <ActividadRecienteList actividades={actividadReciente} loading={loading} />
-        </div>
-      </div>
+      <DashboardKpiGrid
+        scope={scope}
+        kpis={kpis}
+        loading={loading}
+        onOpenRoute={(path) => navigate(path)}
+      />
+
+      <DashboardChartsPanel series={series} loading={loading} />
+
+      <DashboardOperationalPanel
+        entregas={operativo.proximasEntregas}
+        actividad={operativo.actividadReciente}
+        loading={loading}
+        onOpenOrder={handleOpenOrder}
+        onViewMore={() =>
+          navigate(scope === 'copiado' ? '/app/centro-copiado/ordenes' : '/app/orders/ordenes')
+        }
+      />
     </div>
   );
 }
