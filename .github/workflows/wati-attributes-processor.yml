@@ -2,12 +2,13 @@ name: Wati Attributes Processor
 
 on:
   schedule:
-    - cron: "*/10 * * * *"
+    - cron: "*/5 * * * *"
   workflow_dispatch:
 
 jobs:
   process:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
 
     env:
       SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
@@ -21,7 +22,7 @@ jobs:
             exit 0
           fi
 
-          curl -sS -f -X POST \
+          curl -sS -f --retry 2 --retry-delay 5 -X POST \
             "https://${SUPABASE_PROJECT_ID}.supabase.co/functions/v1/process-wati-contact-attributes" \
             -H "Content-Type: application/json" \
             -H "X-Trigger-Secret: ${TRIGGER_SECRET_TOKEN}" \
