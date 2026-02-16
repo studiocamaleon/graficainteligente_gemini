@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
 import { useMediosCobro } from './useMediosCobro';
 import type { CentroCopiadoOrdenPago } from '../types/database';
+import { sendWatiMessage } from '../lib/wati';
 
 interface CreatePagoData {
   orden_copiado_id: string;
@@ -92,10 +93,66 @@ export function useCentroCopiadoOrdenPagos(ordenCopiadoId?: string) {
         const { data: newPago, error: insertError } = await supabase
           .from('centro_copiado_ordenes_pagos')
           .insert(pagoData)
-          .select()
+          .select('id')
           .single();
 
         if (insertError) throw insertError;
+
+        // Generar recibo PDF (JWT). No bloquea el alta del pago.
+        if (newPago?.id) {
+          try {
+            const { data: recibo, error: reciboErr } = await supabase
+              .from('recibos_pagos' as any)
+              .select('id, token_corto')
+              .eq('pago_copiado_id', newPago.id)
+              .maybeSingle();
+
+            if (!reciboErr && recibo?.id && recibo?.token_corto) {
+              await supabase.functions.invoke('generate-recibo-pdf', {
+                body: { recibo_id: recibo.id },
+              });
+
+              // Envío Wati (fallará hasta aprobación de plantilla).
+              try {
+                const { data: ordenInfo } = await supabase
+                  .from('centro_copiado_ordenes')
+                  .select('numero_orden, cliente:clients(whatsapp)')
+                  .eq('id', data.orden_copiado_id)
+                  .maybeSingle();
+
+                const phone = (ordenInfo as any)?.cliente?.whatsapp as string | null;
+                const numeroOrden = (ordenInfo as any)?.numero_orden as string | null;
+
+                if (profile?.company_id && phone && numeroOrden) {
+                  const montoText = Number(data.monto).toLocaleString('es-AR', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  });
+                  const path = `${profile.company_id}/recibos/${recibo.token_corto}`;
+
+                  await sendWatiMessage({
+                    companyId: profile.company_id,
+                    phone,
+                    template_name: 'recibo_pago_v1',
+                    parameters: [
+                      { name: 'monto_pagado', value: montoText },
+                      { name: 'numero_orden', value: numeroOrden },
+                      { name: '1', value: path },
+                    ],
+                    metadata: {
+                      tipo: 'recibo_pago',
+                      orden_copiado_id: data.orden_copiado_id,
+                    },
+                  });
+                }
+              } catch (watiErr) {
+                console.warn('[Wati] No se pudo enviar recibo por WhatsApp (copiado):', watiErr);
+              }
+            }
+          } catch (genErr) {
+            console.warn('[Recibos] No se pudo generar PDF automáticamente (copiado):', genErr);
+          }
+        }
 
         await fetchPagos();
         return newPago;

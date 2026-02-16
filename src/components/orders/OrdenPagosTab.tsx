@@ -1,10 +1,13 @@
 import { Plus, DollarSign, AlertCircle, Edit2, Trash2, CheckCircle, CreditCard, FileText, ExternalLink, Info } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
 import { Button } from '../ui/Button';
 import { EmptyState } from '../ui/EmptyState';
 import { Card } from '../ui/card';
 import { useMediosCobro } from '../../hooks/useMediosCobro';
 import { useConfirmDialog } from '../../hooks/useConfirmDialog';
+import { useAuth } from '../../hooks/useAuth';
+import { supabase } from '../../lib/supabase';
 import { formatDateDisplay } from '../../utils/dates';
 import { PaymentMethodIcon } from './PaymentMethodIcon';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
@@ -52,9 +55,68 @@ export function OrdenPagosTab({
 }: OrdenPagosTabProps) {
   const { mediosCobro } = useMediosCobro();
   const { showConfirm, dialogState, closeDialog, handleConfirm, isLoading: isConfirmLoading } = useConfirmDialog();
+  const { profile } = useAuth();
+  const [recibosByPagoId, setRecibosByPagoId] = useState<Record<string, { token: string; ready: boolean }>>({});
 
   const totalPagado = roundMoney(pagos.reduce((sum, p) => sum + toMoney(p.monto), 0));
   const saldoPendiente = clampZeroMoney(roundMoney(totales.total) - roundMoney(totalPagado));
+
+  const pagoIds = useMemo(() => pagos.map((p) => p.id).filter(Boolean), [pagos]);
+
+  useEffect(() => {
+    const companyId = profile?.company_id;
+    if (!companyId || readOnly || pagoIds.length === 0) return;
+
+    let canceled = false;
+    let interval: number | null = null;
+    let attempts = 0;
+
+    const run = async () => {
+      // Buscar recibos vinculados a estos pagos (OT o Copiado).
+      const idsList = pagoIds.join(',');
+      const { data, error } = await supabase
+        .from('recibos_pagos' as any)
+        .select('token_corto,pdf_storage_path,pago_ot_id,pago_copiado_id')
+        .eq('company_id', companyId)
+        .or(`pago_ot_id.in.(${idsList}),pago_copiado_id.in.(${idsList})`);
+
+      if (canceled) return;
+      if (error) {
+        // No bloquear UI si el feature aún no está deployado en el entorno.
+        return;
+      }
+
+      const next: Record<string, { token: string; ready: boolean }> = {};
+      (data || []).forEach((r: any) => {
+        const pagoId = r.pago_ot_id || r.pago_copiado_id;
+        if (!pagoId) return;
+        next[pagoId] = { token: r.token_corto, ready: Boolean(r.pdf_storage_path) };
+      });
+      setRecibosByPagoId(next);
+
+      // Si hay recibos sin PDF, reintentar un par de veces para que el UI pase de "Generando..." a "Ver recibo"
+      // sin necesidad de refrescar la página.
+      const hasPending = Object.values(next).some((r) => r && !r.ready);
+      if (hasPending && interval == null) {
+        interval = window.setInterval(async () => {
+          if (canceled) return;
+          attempts += 1;
+          if (attempts > 12) {
+            if (interval != null) window.clearInterval(interval);
+            interval = null;
+            return;
+          }
+          await run();
+        }, 5000);
+      }
+    };
+
+    run();
+    return () => {
+      canceled = true;
+      if (interval != null) window.clearInterval(interval);
+    };
+  }, [profile?.company_id, readOnly, pagoIds]);
 
   const getMedioCobro = (medioId?: string) => {
     if (!medioId) return null;
@@ -200,6 +262,11 @@ export function OrdenPagosTab({
             <div className="space-y-2">
               {pagos.map(pago => {
                 const medio = getMedioCobro(pago.medio_cobro_id);
+                const recibo = recibosByPagoId[pago.id];
+                const reciboUrl =
+                  recibo?.token && profile?.company_id
+                    ? `/${profile.company_id}/recibos/${recibo.token}`
+                    : null;
 
                 return (
                   <div
@@ -243,6 +310,21 @@ export function OrdenPagosTab({
                         <div className="text-2xl font-bold text-gray-900">
                           ${pago.monto.toFixed(2)}
                         </div>
+                        {reciboUrl && (
+                          <a
+                            href={reciboUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className={`inline-flex items-center gap-1 mt-1 text-xs ${
+                              recibo.ready ? 'text-blue-700 hover:text-blue-800' : 'text-gray-400'
+                            }`}
+                            title={recibo.ready ? 'Ver recibo' : 'Recibo en proceso'}
+                          >
+                            <FileText className="w-3 h-3" />
+                            <span>{recibo.ready ? 'Ver recibo' : 'Generando recibo...'}</span>
+                            {recibo.ready && <ExternalLink className="w-3 h-3" />}
+                          </a>
+                        )}
                         {(pago.comision_aplicada || 0) > 0 && (
                           <div className="text-xs text-orange-600 mt-0.5">
                             -${(pago.comision_aplicada || 0).toFixed(2)} comisión

@@ -1,0 +1,24 @@
+name: Wati Attributes Processor
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  process:
+    runs-on: ubuntu-latest
+    if: ${{ secrets.SUPABASE_PROJECT_ID != '' && secrets.TRIGGER_SECRET_TOKEN != '' }}
+
+    env:
+      SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+      TRIGGER_SECRET_TOKEN: ${{ secrets.TRIGGER_SECRET_TOKEN }}
+
+    steps:
+      - name: Call processor edge function
+        run: |
+          curl -sS -X POST \
+            "https://${SUPABASE_PROJECT_ID}.supabase.co/functions/v1/process-wati-contact-attributes" \
+            -H "Content-Type: application/json" \
+            -H "X-Trigger-Secret: ${TRIGGER_SECRET_TOKEN}" \
+            --data '{"limit":200}'

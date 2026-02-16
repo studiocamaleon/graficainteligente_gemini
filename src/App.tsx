@@ -54,6 +54,7 @@ import { OrderTracking } from './pages/public/OrderTracking';
 import { JobsMonitor } from './pages/public/JobsMonitor';
 import PresupuestoTracking from './pages/public/PresupuestoTracking';
 import { FacturaRedirect } from './pages/public/FacturaRedirect';
+import { ReciboRedirect } from './pages/public/ReciboRedirect';
 import { ClienteRegistro } from './pages/public/ClienteRegistro';
 import { AgendarVisita } from './pages/public/AgendarVisita';
 import { PendingDeliveriesPage } from './pages/app/delivery/PendingDeliveriesPage';
@@ -91,6 +92,7 @@ function AppRoutes() {
       <Route path="/tracking/presupuesto/:token" element={<PresupuestoTracking />} />
       <Route path="/monitor/jobs/:companyId" element={<JobsMonitor />} />
       <Route path="/:companyId/facturas/:token" element={<FacturaRedirect />} />
+      <Route path="/:companyId/recibos/:token" element={<ReciboRedirect />} />
       <Route path="/registro/:companyId" element={<ClienteRegistro />} />
       <Route path="/agenda/:companyId" element={<AgendarVisita />} />
 
