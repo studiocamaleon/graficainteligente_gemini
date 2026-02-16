@@ -188,6 +188,10 @@ export interface Company {
   industry: string | null;
   whatsapp_notifications_enabled?: boolean;
   whatsapp_instance_id?: string | null;
+  wati_enabled?: boolean;
+  wati_api_endpoint?: string | null;
+  wati_access_token?: string | null;
+  wati_channel_number?: string | null;
   created_at: string;
   updated_at: string;
 }

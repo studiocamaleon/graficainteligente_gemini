@@ -21,16 +21,19 @@ export default function WatiIntegration() {
     const [enabled, setEnabled] = useState(false);
     const [endpoint, setEndpoint] = useState('');
     const [accessToken, setAccessToken] = useState('');
+    const [channelNumber, setChannelNumber] = useState('');
 
     // Contact attributes sync
     const [isSyncing, setIsSyncing] = useState(false);
     const [stats, setStats] = useState<{ pending: number; errors: number; lastSentAt: string | null } | null>(null);
     const [singlePhone, setSinglePhone] = useState('');
+    const [recentNotifications, setRecentNotifications] = useState<any[]>([]);
 
     useEffect(() => {
         if (profile?.company_id) {
             loadConfig(profile.company_id);
             loadStats(profile.company_id);
+            loadRecentNotifications(profile.company_id);
         }
     }, [profile?.company_id]);
 
@@ -39,7 +42,7 @@ export default function WatiIntegration() {
             setIsFetching(true);
             const { data, error } = await supabase
                 .from('companies')
-                .select('wati_enabled, wati_api_endpoint, wati_access_token')
+                .select('wati_enabled, wati_api_endpoint, wati_access_token, wati_channel_number')
                 .eq('id', companyId)
                 .single();
 
@@ -51,6 +54,7 @@ export default function WatiIntegration() {
                 setEnabled(companyData.wati_enabled || false);
                 setEndpoint(companyData.wati_api_endpoint || '');
                 setAccessToken(companyData.wati_access_token || '');
+                setChannelNumber(companyData.wati_channel_number || '');
             }
         } catch (err) {
             console.error('Error loading config:', err);
@@ -80,6 +84,23 @@ export default function WatiIntegration() {
         }
     };
 
+    const loadRecentNotifications = async (companyId: string) => {
+        try {
+            const { data, error } = await supabase
+                .from('whatsapp_notificaciones')
+                .select('created_at, estado_envio, tipo_notificacion, telefono_destino, mensaje_enviado, respuesta_backend')
+                .eq('company_id', companyId)
+                .order('created_at', { ascending: false })
+                .limit(10);
+
+            if (error) throw error;
+            setRecentNotifications(data || []);
+        } catch (err) {
+            console.error('Error loading Wati notification logs:', err);
+            setRecentNotifications([]);
+        }
+    };
+
     const handleBulkSync = async () => {
         if (!profile?.company_id) return;
 
@@ -97,6 +118,7 @@ export default function WatiIntegration() {
                 `Sync masivo encolado (${Number(enqCount ?? 0)} contactos). Se procesará automáticamente en los próximos minutos.`,
             );
             await loadStats(profile.company_id);
+            await loadRecentNotifications(profile.company_id);
         } catch (err) {
             console.error('Error bulk syncing Wati contact attributes:', err);
             showError('No se pudo ejecutar el sync masivo de atributos');
@@ -126,6 +148,7 @@ export default function WatiIntegration() {
                 `Cola procesada. Reclamados: ${processed}. Enviados: ${sent}. Sin cambios: ${skipped}. Reintentos: ${retried}. Errores: ${errors}.`,
             );
             await loadStats(profile.company_id);
+            await loadRecentNotifications(profile.company_id);
         } catch (err) {
             console.error('Error processing Wati attributes queue:', err);
             showError('No se pudo procesar la cola de atributos');
@@ -153,6 +176,7 @@ export default function WatiIntegration() {
             showSuccess('Atributos actualizados en Wati para ese contacto');
             console.log('wati-update-contact-attributes result:', data);
             await loadStats(profile.company_id);
+            await loadRecentNotifications(profile.company_id);
         } catch (err) {
             console.error('Error updating single contact attributes:', err);
             showError('No se pudo actualizar ese contacto en Wati');
@@ -167,9 +191,15 @@ export default function WatiIntegration() {
 
         const normalizedEndpoint = endpoint.trim();
         const normalizedToken = accessToken.trim();
+        const normalizedChannelNumber = channelNumber.trim().replace(/[^\d]/g, '');
 
-        if (enabled && (!normalizedEndpoint || !normalizedToken)) {
-            showError('Para habilitar Wati debes completar endpoint y access token');
+        if (enabled && (!normalizedEndpoint || !normalizedToken || !normalizedChannelNumber)) {
+            showError('Para habilitar Wati debes completar endpoint, access token y número emisor');
+            return;
+        }
+
+        if (enabled && (normalizedChannelNumber.length < 10 || normalizedChannelNumber.length > 15)) {
+            showError('El número emisor debe tener entre 10 y 15 dígitos');
             return;
         }
 
@@ -191,11 +221,13 @@ export default function WatiIntegration() {
                     wati_enabled: enabled,
                     wati_api_endpoint: normalizedEndpoint,
                     wati_access_token: normalizedToken,
+                    wati_channel_number: normalizedChannelNumber,
                 })
                 .eq('id', profile.company_id);
 
             if (error) throw error;
             showSuccess('Configuración guardada correctamente');
+            await loadRecentNotifications(profile.company_id);
         } catch (err) {
             console.error('Error saving config:', err);
             showError('Error al guardar la configuración');
@@ -273,6 +305,25 @@ export default function WatiIntegration() {
                                     />
                                 </div>
                             </div>
+
+                            <div className="space-y-2">
+                                <label htmlFor="channelNumber" className="block text-sm font-medium text-gray-700">
+                                    Número emisor (channel number)
+                                </label>
+                                <input
+                                    type="text"
+                                    id="channelNumber"
+                                    value={channelNumber}
+                                    onChange={(e) => setChannelNumber(e.target.value.replace(/[^\d]/g, ''))}
+                                    placeholder="5492902496858"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                                    disabled={!enabled}
+                                    inputMode="numeric"
+                                />
+                                <p className="text-xs text-gray-500">
+                                    Número de WhatsApp emisor configurado en Wati (solo dígitos, con código de país).
+                                </p>
+                            </div>
                         </div>
 
                         <div className="flex items-center justify-between pt-4 border-t border-gray-100">
@@ -291,6 +342,72 @@ export default function WatiIntegration() {
                             </Button>
                         </div>
                     </form>
+                </div>
+            </Card>
+
+            <Card>
+                <div className="p-6">
+                    <div className="flex items-center justify-between mb-4">
+                        <div>
+                            <h2 className="text-lg font-semibold text-gray-900">Logs recientes de envíos</h2>
+                            <p className="text-sm text-gray-600 mt-1">
+                                Últimos 10 intentos guardados en <code>whatsapp_notificaciones</code>.
+                            </p>
+                        </div>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => profile?.company_id && loadRecentNotifications(profile.company_id)}
+                        >
+                            Actualizar
+                        </Button>
+                    </div>
+
+                    {recentNotifications.length === 0 ? (
+                        <div className="text-sm text-gray-500">No hay logs para mostrar.</div>
+                    ) : (
+                        <div className="space-y-3">
+                            {recentNotifications.map((row, idx) => {
+                                const rb = row.respuesta_backend || {};
+                                const errorMessage =
+                                    rb?.error_message ||
+                                    rb?.response_body?.message ||
+                                    rb?.response_body?.error?.message ||
+                                    null;
+                                const statusCode = rb?.response_status || null;
+                                const fbtraceId = rb?.fbtrace_id || rb?.response_body?.error?.fbtrace_id || null;
+
+                                return (
+                                    <div key={`${row.created_at}-${idx}`} className="rounded-lg border border-gray-100 p-3">
+                                        <div className="flex flex-wrap items-center gap-2 text-xs mb-2">
+                                            <Badge variant={row.estado_envio === 'enviado' ? 'success' : 'danger'}>
+                                                {row.estado_envio}
+                                            </Badge>
+                                            <span className="text-gray-500">{formatDate(row.created_at)}</span>
+                                            <span className="text-gray-500">{row.telefono_destino}</span>
+                                            <span className="text-gray-500">{row.tipo_notificacion}</span>
+                                        </div>
+                                        <div className="text-sm text-gray-900">{row.mensaje_enviado}</div>
+
+                                        {(errorMessage || statusCode || fbtraceId) && (
+                                            <div className="mt-2 text-xs text-red-700 bg-red-50 border border-red-100 rounded p-2">
+                                                {statusCode ? `HTTP ${statusCode}` : 'Error'}
+                                                {errorMessage ? ` - ${errorMessage}` : ''}
+                                                {fbtraceId ? ` (fbtrace_id: ${fbtraceId})` : ''}
+                                            </div>
+                                        )}
+
+                                        <details className="mt-2">
+                                            <summary className="cursor-pointer text-xs text-gray-500">Ver respuesta técnica</summary>
+                                            <pre className="mt-2 text-xs bg-gray-50 border border-gray-100 rounded p-2 overflow-auto">
+                                                {JSON.stringify(row.respuesta_backend, null, 2)}
+                                            </pre>
+                                        </details>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
                 </div>
             </Card>
 
