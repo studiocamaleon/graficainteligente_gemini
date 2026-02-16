@@ -91,11 +91,11 @@ export default function WatiIntegration() {
             });
             if (enqError) throw enqError;
 
-            await supabase.functions.invoke('process-wati-contact-attributes', {
-                body: { company_id: profile.company_id, limit: 200 },
-            });
-
-            showSuccess(`Sync masivo encolado (${Number(enqCount ?? 0)} contactos). Procesando cola...`);
+            // Importante: en producción, procesar demasiados contactos desde el browser puede timeoutear (504)
+            // y el navegador lo muestra como error de CORS. El procesador se ejecuta por cron (GitHub Actions).
+            showSuccess(
+                `Sync masivo encolado (${Number(enqCount ?? 0)} contactos). Se procesará automáticamente en los próximos minutos.`,
+            );
             await loadStats(profile.company_id);
         } catch (err) {
             console.error('Error bulk syncing Wati contact attributes:', err);
@@ -111,7 +111,8 @@ export default function WatiIntegration() {
         setIsSyncing(true);
         try {
             const { data, error } = await supabase.functions.invoke('process-wati-contact-attributes', {
-                body: { company_id: profile.company_id, limit: 200 },
+                // Mantener bajo para evitar timeouts desde el browser.
+                body: { company_id: profile.company_id, limit: 25 },
             });
             if (error) throw error;
 

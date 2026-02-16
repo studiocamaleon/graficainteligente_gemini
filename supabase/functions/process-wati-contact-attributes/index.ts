@@ -87,6 +87,10 @@ async function watiUpdateContactAttributesSingle(args: {
   const phone = normalizePhone(args.phone);
   const url = `${endpoint}/api/v1/updateContactAttributes/${phone}`;
 
+  const controller = new AbortController();
+  const timeoutMs = 12_000;
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
   const response = await fetch(url, {
     method: 'POST',
     headers: {
@@ -94,7 +98,9 @@ async function watiUpdateContactAttributesSingle(args: {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ customParams: args.customParams }),
+    signal: controller.signal,
   });
+  clearTimeout(timeout);
 
   const raw = await response.text();
   let parsed: any = null;
@@ -240,8 +246,11 @@ Deno.serve(async (req) => {
     let retried = 0;
     let errors = 0;
 
-    // Process sequentially to keep rate limits predictable.
-    for (const item of items) {
+    // Process with limited concurrency to avoid Edge timeouts.
+    const concurrency = isInternalCall ? 10 : 4;
+    let idx = 0;
+
+    const processOne = async (item: OutboxRow) => {
       const company = companyById.get(item.company_id);
       const phone = normalizePhone(item.phone);
 
@@ -283,13 +292,11 @@ Deno.serve(async (req) => {
 
         const lastHash = (stateRow as any)?.last_payload_hash ?? null;
         if (lastHash && lastHash === payloadHash) {
-          // Nothing changed.
           await supabaseAdmin
             .from('wati_contact_attr_outbox')
             .update({ status: 'sent', last_error: null })
             .eq('id', item.id);
 
-          // Keep state updated for observability.
           await supabaseAdmin
             .from('wati_contact_attr_state')
             .upsert({
@@ -300,7 +307,7 @@ Deno.serve(async (req) => {
             });
 
           skipped++;
-          continue;
+          return;
         }
 
         await watiUpdateContactAttributesSingle({
@@ -355,7 +362,17 @@ Deno.serve(async (req) => {
           retried++;
         }
       }
-    }
+    };
+
+    const workers = Array.from({ length: Math.min(concurrency, items.length) }, async () => {
+      while (true) {
+        const current = idx++;
+        if (current >= items.length) break;
+        await processOne(items[current]);
+      }
+    });
+
+    await Promise.all(workers);
 
     return new Response(
       JSON.stringify({ success: true, processed: items.length, sent, skipped, retried, errors }),
