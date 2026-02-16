@@ -121,9 +121,7 @@ export function Dashboard() {
         actividad={operativo.actividadReciente}
         loading={loading}
         onOpenOrder={handleOpenOrder}
-        onViewMore={() =>
-          navigate(scope === 'copiado' ? '/app/centro-copiado/ordenes' : '/app/orders/ordenes')
-        }
+        onViewMore={() => navigate('/app/pending-deliveries')}
       />
     </div>
   );
