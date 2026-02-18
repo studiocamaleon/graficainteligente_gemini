@@ -31,7 +31,7 @@ export function Dashboard() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  usePageHeader('Centro de Control');
+  usePageHeader('Resumen');
 
   const initialScope = useMemo(() => parseScope(searchParams.get('scope')), [searchParams]);
   const initialPeriod = useMemo(() => parsePeriod(searchParams.get('period')), [searchParams]);

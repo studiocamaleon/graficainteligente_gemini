@@ -35,7 +35,7 @@ export function Talonarios() {
     return undefined;
   }, [activeTab, canCreateProduct]);
 
-  usePageHeader('Gestiona los productos de impresión láser disponibles', headerAction);
+  usePageHeader('Productos: Talonarios', headerAction);
 
   const tabs = [
     { id: 'productos', name: 'Productos', icon: Package },

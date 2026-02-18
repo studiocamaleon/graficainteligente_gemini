@@ -35,7 +35,7 @@ export function MaterialesRigidos() {
     return undefined;
   }, [activeTab, canCreateProduct]);
 
-  usePageHeader('Gestiona los productos de materiales rígidos disponibles', headerAction);
+  usePageHeader('Productos: Materiales Rígidos', headerAction);
 
   const tabs = [
     { id: 'productos', name: 'Productos', icon: Package },

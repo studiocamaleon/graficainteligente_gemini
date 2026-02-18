@@ -19,8 +19,8 @@ interface OrdenGeneralSectionProps {
   clienteId: string;
   setClienteId: (id: string) => void;
   selectedClient?: Client;
-  canalVenta: CanalVenta;
-  setCanalVenta: (canal: CanalVenta) => void;
+  canalVenta: CanalVenta | '';
+  setCanalVenta: (canal: CanalVenta | '') => void;
   fechaEntrega: string;
   setFechaEntrega: (fecha: string) => void;
   requiereDespacho?: boolean;
@@ -253,6 +253,9 @@ export function OrdenGeneralSection({
               );
             })}
           </div>
+          {errors.canalVenta && (
+            <p className="mt-1 text-sm text-red-600">{errors.canalVenta}</p>
+          )}
         </div>
 
         <div>

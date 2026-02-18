@@ -70,7 +70,7 @@ export function Clients() {
     [canEdit, handleOpenCreateModal]
   );
 
-  usePageHeader('Gestiona tus clientes y contactos', headerAction);
+  usePageHeader('Gestión de Clientes', headerAction);
 
   // Manejar parámetros de la URL (ej: /app/clients?filter=pending)
   useEffect(() => {

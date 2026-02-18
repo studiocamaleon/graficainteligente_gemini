@@ -94,7 +94,7 @@ export function CreateOrderPage() {
 
   // Estados del Formulario
   const [clienteId, setClienteId] = useState('');
-  const [canalVenta, setCanalVenta] = useState<CanalVenta>('Mostrador');
+  const [canalVenta, setCanalVenta] = useState<CanalVenta | ''>('');
   const [fechaEntrega, setFechaEntrega] = useState('');
   const [notasInternas, setNotasInternas] = useState('');
   const [requiereFactura, setRequiereFactura] = useState(true);
@@ -224,7 +224,7 @@ export function CreateOrderPage() {
 
       setMode('presupuesto');
       setClienteId(presupuesto.cliente_id);
-      setCanalVenta(presupuesto.canal_venta || 'Mostrador');
+      setCanalVenta(presupuesto.canal_venta || '');
       setPresupuestoValidez(presupuesto.fecha_validez ? presupuesto.fecha_validez.split('T')[0] : '');
       setPresupuestoCondiciones(presupuesto.condiciones_comerciales || '');
       setNotasInternas(presupuesto.notas_internas || '');
@@ -288,7 +288,7 @@ export function CreateOrderPage() {
       }
 
       setClienteId(orden.cliente_id);
-      setCanalVenta(orden.canal_venta || 'Mostrador');
+      setCanalVenta(orden.canal_venta || '');
       setFechaEntrega(orden.fecha_estimada_entrega ? orden.fecha_estimada_entrega.split('T')[0] : '');
       setNotasInternas(orden.notas_internas || '');
       setRequiereFactura(orden.requiere_factura || false);
@@ -481,6 +481,7 @@ export function CreateOrderPage() {
   const validarFormulario = (): boolean => {
     const errores: Record<string, string> = {};
     if (!clienteId) errores.cliente = 'Debe seleccionar un cliente';
+    if (!canalVenta) errores.canalVenta = 'Debe seleccionar un canal de venta';
     if (items.length === 0 && ordenesCopiadoAsociadas.length === 0) {
       errores.items = 'Debe agregar al menos un item o una orden de copiado';
     }
@@ -522,7 +523,7 @@ export function CreateOrderPage() {
         const updated = await updatePresupuesto(presupuestoId, {
           cliente_id: clienteId,
           vendedor_id: profile?.id || '',
-          canal_venta: canalVenta,
+          canal_venta: canalVenta as CanalVenta,
           fecha_validez: presupuestoValidez,
           condiciones_comerciales: presupuestoCondiciones,
           notas_internas: notasInternas,
@@ -540,7 +541,7 @@ export function CreateOrderPage() {
         const nuevo = await createPresupuesto({
           cliente_id: clienteId,
           vendedor_id: profile?.id || '',
-          canal_venta: canalVenta,
+          canal_venta: canalVenta as CanalVenta,
           fecha_validez: presupuestoValidez,
           condiciones_comerciales: presupuestoCondiciones,
           notas_internas: notasInternas,
@@ -672,7 +673,7 @@ export function CreateOrderPage() {
     const totales = calcularTotales();
     const ordenData = {
       cliente_id: clienteId,
-      canal_venta: canalVenta,
+      canal_venta: canalVenta as CanalVenta,
       fecha_estimada_entrega: fechaEntrega ? `${fechaEntrega}T12:00:00-03:00` : undefined,
       notas_internas: notasInternas || undefined,
       subtotal: totales.subtotal,

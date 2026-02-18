@@ -150,7 +150,12 @@ export function DetalleOrdenCopiado() {
 
   const handleDescargarArchivo = async (archivoId: string) => {
     setDescargandoId(archivoId);
-    await descargarArchivo(archivoId);
+    const archivo = archivos.find((a) => a.id === archivoId);
+    if (archivo) {
+      await descargarArchivo(archivo);
+    } else {
+      openInfoDialog('Error', 'No se encontró el archivo para descargar');
+    }
     setDescargandoId(null);
   };
 
@@ -232,9 +237,8 @@ export function DetalleOrdenCopiado() {
 
   const puedeCancelar = orden.estado !== 'cancelada' && orden.estado !== 'entregada';
   const puedeEditar = orden.estado === 'pendiente'; // Sólo permitir editar en estado pendiente
-  const puedeIniciar = orden.estado === 'pendiente';
-  const puedeFinalizar = orden.estado === 'en_proceso';
-  const puedeEntregar = orden.estado === 'finalizada';
+  const puedeFinalizar = orden.estado === 'pendiente' || orden.estado === 'en_proceso';
+  const puedeEntregar = orden.estado === 'finalizada' || orden.estado === 'pendiente';
 
   // Calculate Subtotal from Items Sum to ensure it is Net
   const subtotal = orden.items?.reduce((acc, item) => acc + (Number(item.subtotal) || 0), 0) || 0;
@@ -280,22 +284,6 @@ export function DetalleOrdenCopiado() {
             </Button>
           )}
 
-          {puedeIniciar && (
-            <Button
-              variant="primary"
-              onClick={() => {
-                openConfirm({
-                  title: '¿Iniciar Proceso?',
-                  message: '¿Deseas marcar esta orden como "En Proceso"?',
-                  variant: 'info',
-                  onConfirm: () => handleCambiarEstado('en_proceso')
-                });
-              }}
-            >
-              Iniciar Proceso
-            </Button>
-          )}
-
           {puedeFinalizar && (
             <Button
               variant="success"
@@ -314,7 +302,7 @@ export function DetalleOrdenCopiado() {
 
           {puedeEntregar && (
             <Button
-              variant="success"
+              variant="primary"
               onClick={() => {
                 openConfirm({
                   title: '¿Marcar como Entregada?',
@@ -324,13 +312,13 @@ export function DetalleOrdenCopiado() {
                 });
               }}
             >
-              Marcar Entregada
+              Entregar
             </Button>
           )}
 
           {puedeCancelar && (
             <Button variant="danger" onClick={iniciarCancelacion}>
-              Cancelar Orden
+              Cancelar
             </Button>
           )}
         </div>
@@ -338,83 +326,85 @@ export function DetalleOrdenCopiado() {
 
       <Card>
         <div className="p-6">
-          <div className="flex items-start justify-between mb-6">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">{orden.numero_orden}</h1>
-              <p className="text-sm text-gray-500 mt-1">ID: {orden.id}</p>
+          <div className="flex flex-col gap-4 border-b border-gray-100 pb-5 mb-5 md:flex-row md:items-start md:justify-between">
+            <div className="space-y-2 min-w-0">
+              <div className="flex items-center gap-3 flex-wrap">
+                <h1 className="text-2xl font-semibold text-slate-900 tracking-tight">{orden.numero_orden}</h1>
+                {getEstadoBadge(orden.estado)}
+              </div>
+              <p className="text-sm text-slate-500">Orden de copiado</p>
               {orden.orden_trabajo_id && (
                 <Link
                   to={`/app/orders/${orden.orden_trabajo_id}`}
-                  className="text-sm text-blue-600 hover:text-blue-700 inline-flex items-center gap-1 mt-1"
+                  className="inline-flex items-center gap-1.5 rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100"
                 >
-                  Ver Orden de Trabajo Principal
+                  Orden de trabajo vinculada
                   <ExternalLink className="w-3 h-3" />
                 </Link>
               )}
             </div>
-            {getEstadoBadge(orden.estado)}
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 min-w-[220px]">
+              <p className="text-xs font-medium uppercase tracking-wide text-emerald-700">Total de la orden</p>
+              <p className="mt-1 text-2xl font-bold text-emerald-700">${total.toFixed(2)}</p>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <User className="w-4 h-4 text-gray-400" />
-                <h3 className="text-sm font-medium text-gray-700">Cliente</h3>
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+              <div className="mb-3 flex items-center gap-2">
+                <User className="w-4 h-4 text-slate-500" />
+                <h3 className="text-sm font-semibold text-slate-700">Cliente</h3>
               </div>
-              <p className="text-base font-semibold text-gray-900">
+              <p className="text-base font-semibold text-slate-900">
                 {orden.cliente?.nombre_fantasia || 'N/A'}
               </p>
-              <p className="text-sm text-gray-500">{orden.cliente?.numero_documento}</p>
+              <p className="text-sm text-slate-500">{orden.cliente?.numero_documento}</p>
               {orden.cliente?.whatsapp && (
-                <p className="text-sm text-gray-500">WhatsApp: {orden.cliente.whatsapp}</p>
+                <p className="text-sm text-slate-500">WhatsApp: {orden.cliente.whatsapp}</p>
               )}
               {orden.cliente?.email && (
-                <p className="text-sm text-gray-500">{orden.cliente.email}</p>
+                <p className="text-sm text-slate-500">{orden.cliente.email}</p>
               )}
 
-              <div className="mt-4 pt-4 border-t border-gray-100">
-                <div className="flex items-center gap-2 mb-2">
-                  <h3 className="text-sm font-medium text-gray-700">Canal de Venta</h3>
+              <div className="mt-4 border-t border-slate-200 pt-3">
+                <div className="mb-2 flex items-center gap-2">
+                  <h3 className="text-sm font-medium text-slate-700">Canal de Venta</h3>
                 </div>
                 <ChannelBadge canal={orden.canal_venta || 'Mostrador'} showLabel={true} />
               </div>
             </div>
 
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <Calendar className="w-4 h-4 text-gray-400" />
-                <h3 className="text-sm font-medium text-gray-700">Fechas</h3>
+            <div className="rounded-lg border border-slate-200 bg-white p-4">
+              <div className="mb-3 flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-slate-500" />
+                <h3 className="text-sm font-semibold text-slate-700">Fechas</h3>
               </div>
-              <div className="space-y-1">
-                <p className="text-sm">
-                  <span className="text-gray-600">Solicitud:</span>{' '}
-                  <span className="font-medium">{formatearFecha(orden.fecha_solicitud)}</span>
+              <div className="space-y-2 text-sm">
+                <p className="flex items-center justify-between gap-3">
+                  <span className="text-slate-500">Solicitud</span>
+                  <span className="font-medium text-slate-900">{formatearFecha(orden.fecha_solicitud)}</span>
                 </p>
                 {orden.fecha_entrega_estimada && (
-                  <p className="text-sm">
-                    <span className="text-gray-600">Entrega estimada:</span>{' '}
-                    <span className="font-medium">{formatearFecha(orden.fecha_entrega_estimada)}</span>
+                  <p className="flex items-center justify-between gap-3">
+                    <span className="text-slate-500">Entrega estimada</span>
+                    <span className="font-medium text-slate-900">{formatearFecha(orden.fecha_entrega_estimada)}</span>
                   </p>
                 )}
                 {orden.fecha_entrega_real && (
-                  <p className="text-sm">
-                    <span className="text-gray-600">Entregada:</span>{' '}
-                    <span className="font-medium text-green-600">
-                      {formatearFecha(orden.fecha_entrega_real)}
-                    </span>
+                  <p className="flex items-center justify-between gap-3">
+                    <span className="text-slate-500">Entregada</span>
+                    <span className="font-semibold text-emerald-700">{formatearFecha(orden.fecha_entrega_real)}</span>
                   </p>
                 )}
               </div>
             </div>
 
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <DollarSign className="w-4 h-4 text-gray-400" />
-                <h3 className="text-sm font-medium text-gray-700">Total</h3>
+            <div className="rounded-lg border border-slate-200 bg-white p-4">
+              <div className="mb-3 flex items-center gap-2">
+                <DollarSign className="w-4 h-4 text-slate-500" />
+                <h3 className="text-sm font-semibold text-slate-700">Facturación</h3>
               </div>
-              <p className="text-2xl font-bold text-green-600">${total.toFixed(2)}</p>
-
-              <div className="mt-3">
+              <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
                 <Switch
                   checked={orden.requiere_factura}
                   onChange={handleToggleFactura}
@@ -441,19 +431,19 @@ export function DetalleOrdenCopiado() {
           </div>
 
           {orden.observaciones && (
-            <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+            <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-4">
               <div className="flex items-center gap-2 mb-2">
-                <FileText className="w-4 h-4 text-gray-400" />
-                <h3 className="text-sm font-medium text-gray-700">Observaciones</h3>
+                <FileText className="w-4 h-4 text-slate-500" />
+                <h3 className="text-sm font-medium text-slate-700">Observaciones</h3>
               </div>
-              <p className="text-sm text-gray-900">{orden.observaciones}</p>
+              <p className="text-sm text-slate-900">{orden.observaciones}</p>
             </div>
           )}
 
           {orden.created_by_profile && (
-            <div className="mt-4 pt-4 border-t">
-              <p className="text-xs text-gray-500">
-                Creada por: <span className="font-medium">{orden.created_by_profile.full_name}</span>
+            <div className="mt-5 border-t border-slate-100 pt-4">
+              <p className="text-xs text-slate-500">
+                Creada por: <span className="font-medium text-slate-700">{orden.created_by_profile.full_name}</span>
                 {' el '}
                 {formatearFecha(orden.created_at)}
               </p>

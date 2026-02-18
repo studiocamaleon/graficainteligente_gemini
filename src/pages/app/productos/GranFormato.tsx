@@ -35,7 +35,7 @@ export function GranFormato() {
     return undefined;
   }, [activeTab, canCreateProduct]);
 
-  usePageHeader('Gestiona los productos de impresión gran formato disponibles', headerAction);
+  usePageHeader('Productos: Gran Formato', headerAction);
 
   const tabs = [
     { id: 'productos', name: 'Productos', icon: Package },

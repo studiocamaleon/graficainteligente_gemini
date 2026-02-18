@@ -13,11 +13,13 @@ interface CentroCopiadoResumenOrdenProps {
   descuento: number;
   onDescuentoChange: (descuento: number) => void;
   onGuardar: () => void;
+  onGuardarEntregada?: () => void;
   onCancelar: () => void;
   guardando: boolean;
   containerRef: RefObject<HTMLDivElement>;
   requiereFactura: boolean;
   buttonText?: string;
+  buttonSecondaryText?: string;
 }
 
 export function CentroCopiadoResumenOrden({
@@ -25,11 +27,13 @@ export function CentroCopiadoResumenOrden({
   descuento,
   onDescuentoChange,
   onGuardar,
+  onGuardarEntregada,
   onCancelar,
   guardando,
   containerRef,
   requiereFactura,
   buttonText,
+  buttonSecondaryText,
 }: CentroCopiadoResumenOrdenProps) {
   const { tamanios } = useCentroCopiadoTamanios();
   const { papeles } = useCentroCopiadoPapeles();
@@ -301,13 +305,24 @@ export function CentroCopiadoResumenOrden({
               <div className="mt-4 space-y-2">
                 <Button
                   variant="primary"
-                  onClick={onGuardar}
+                  onClick={() => onGuardar()}
                   disabled={!puedeGuardar}
                   isLoading={guardando}
                   className="w-full"
                 >
                   {guardando ? 'Guardando...' : (buttonText || 'Guardar Orden')}
                 </Button>
+                {onGuardarEntregada && (
+                  <Button
+                    variant="success"
+                    onClick={() => onGuardarEntregada()}
+                    disabled={!puedeGuardar}
+                    isLoading={guardando}
+                    className="w-full"
+                  >
+                    {guardando ? 'Guardando...' : (buttonSecondaryText || 'Guardar y Entregar')}
+                  </Button>
+                )}
                 <Button
                   variant="secondary"
                   onClick={onCancelar}

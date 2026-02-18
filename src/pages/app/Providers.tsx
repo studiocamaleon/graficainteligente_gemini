@@ -46,7 +46,7 @@ export function Providers() {
     [canEdit, handleOpenCreateForm]
   );
 
-  usePageHeader('Administra tus proveedores de materiales e insumos', headerAction);
+  usePageHeader('Gestión de Proveedores', headerAction);
 
   const debouncedSearch = useDebounce(searchTerm, 300);
 

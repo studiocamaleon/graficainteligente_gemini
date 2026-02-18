@@ -3,20 +3,28 @@ import { JobsKanbanBoard } from '../../../components/production/JobsKanbanBoard'
 import { JobExecutionModal } from '../../../components/production/JobExecutionModal';
 import { useProductionJobs } from '../../../hooks/useProductionJobs';
 import type { JobItem } from '../../../hooks/useProductionJobs';
-import { RefreshCw, Radio, Monitor, Search, ArrowUpDown, CalendarClock } from 'lucide-react';
+import { Radio, Monitor, Search, ArrowUpDown, CalendarClock } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
 import { useAuth } from '../../../hooks/useAuth';
 import { useToast } from '../../../contexts/ToastContext';
 
+function normalizeSearchText(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
+}
+
 export function JobsView() {
   const { profile } = useAuth();
   const { showSuccess, showError } = useToast();
-  const { jobsByEstado, loading, error, refreshJobs, isUpdating, recentlyUpdatedJobs } = useProductionJobs();
+  const { jobsByEstado, loading, error, isUpdating, recentlyUpdatedJobs } = useProductionJobs();
   const [selectedJob, setSelectedJob] = useState<JobItem | null>(null);
   const [showExecutionModal, setShowExecutionModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [deliverySort, setDeliverySort] = useState<'none' | 'asc' | 'desc'>('none');
+  const [deliverySort, setDeliverySort] = useState<'none' | 'asc' | 'desc'>('asc');
   const [optimisticPatches, setOptimisticPatches] = useState<Record<string, Partial<JobItem>>>({});
   const optimisticTimeoutsRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
@@ -87,11 +95,21 @@ export function JobsView() {
 
     if (!searchTerm.trim()) return jobsByEstadoOptimistic;
 
-    const term = searchTerm.toLowerCase();
-    const filterFn = (job: JobItem) =>
-      job.cliente_nombre.toLowerCase().includes(term) ||
-      (job.cliente_razon_social?.toLowerCase() || '').includes(term) ||
-      job.numero_orden.toLowerCase().includes(term);
+    const normalizedTerm = normalizeSearchText(searchTerm);
+    const tokens = normalizedTerm.split(/\s+/).filter(Boolean);
+
+    const filterFn = (job: JobItem) => {
+      const searchableText = normalizeSearchText([
+        job.cliente_nombre,
+        job.cliente_razon_social || '',
+        job.numero_orden,
+        job.producto_nombre || '',
+        job.producto_categoria || '',
+        job.paso_relevante?.nombre || '',
+      ].join(' '));
+
+      return tokens.every((token) => searchableText.includes(token));
+    };
 
     const filtered = {
       pendiente: jobsByEstadoOptimistic.pendiente.filter(filterFn),
@@ -187,10 +205,6 @@ export function JobsView() {
       <div className="bg-red-50 border border-red-200 rounded-lg p-6">
         <h3 className="text-red-800 font-semibold mb-2">Error al cargar jobs</h3>
         <p className="text-red-600">{error}</p>
-        <Button onClick={refreshJobs} variant="outline" className="mt-4">
-          <RefreshCw className="w-4 h-4 mr-2" />
-          Reintentar
-        </Button>
       </div>
     );
   }
@@ -208,7 +222,7 @@ export function JobsView() {
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
             <Input
-              placeholder="Buscar cliente o número de orden..."
+              placeholder="Buscar cliente, orden o producto..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10 py-2 h-10"
@@ -235,10 +249,6 @@ export function JobsView() {
           <Button onClick={handleCopyMonitorUrl} variant="outline" size="sm">
             <Monitor className="w-4 h-4 mr-2" />
             Copiar URL Monitor
-          </Button>
-          <Button onClick={refreshJobs} variant="outline" size="sm">
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Actualizar
           </Button>
         </div>
       </div>
