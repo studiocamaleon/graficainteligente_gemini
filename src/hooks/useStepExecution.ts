@@ -115,7 +115,7 @@ export function useStepExecution() {
       // 1. Verificar si es tarea global
       const { data: rutaInfo, error: fetchRutaError } = await supabase
         .from('ordenes_trabajo_items_rutas')
-        .select('global_task_id')
+        .select('global_task_id, fecha_inicio')
         .eq('id', rutaId)
         .single<any>();
 
@@ -135,12 +135,15 @@ export function useStepExecution() {
       }
 
       // CASO NORMAL
+      const nowIso = new Date().toISOString();
       // Completar el paso
       const { data: updatedRuta, error: updateError } = await supabase
         .from('ordenes_trabajo_items_rutas')
         .update({
           estado_paso: 'completado' as EstadoPaso,
-          fecha_fin: new Date().toISOString(),
+          fecha_inicio: rutaInfo?.fecha_inicio || nowIso,
+          fecha_fin: nowIso,
+          responsable_id: profile.id,
           notas: notas || null,
         })
         .eq('id', rutaId)

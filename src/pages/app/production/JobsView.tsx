@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { JobsKanbanBoard } from '../../../components/production/JobsKanbanBoard';
 import { JobExecutionModal } from '../../../components/production/JobExecutionModal';
 import { useProductionJobs } from '../../../hooks/useProductionJobs';
@@ -17,6 +17,51 @@ export function JobsView() {
   const [showExecutionModal, setShowExecutionModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [deliverySort, setDeliverySort] = useState<'none' | 'asc' | 'desc'>('none');
+  const [optimisticPatches, setOptimisticPatches] = useState<Record<string, Partial<JobItem>>>({});
+  const optimisticTimeoutsRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+
+  useEffect(() => {
+    const timeouts = optimisticTimeoutsRef.current;
+    return () => {
+      timeouts.forEach((timeoutId) => clearTimeout(timeoutId));
+      timeouts.clear();
+    };
+  }, []);
+
+  const jobsByEstadoOptimistic = useMemo(() => {
+    const patchJob = (job: JobItem): JobItem => {
+      const patch = optimisticPatches[job.id];
+      return patch ? { ...job, ...patch } : job;
+    };
+
+    return {
+      pendiente: jobsByEstado.pendiente.map(patchJob),
+      en_proceso: jobsByEstado.en_proceso.map(patchJob),
+      finalizado: jobsByEstado.finalizado.map(patchJob),
+    };
+  }, [jobsByEstado, optimisticPatches]);
+
+  const handleOptimisticJobUpdate = useCallback((jobId: string, patch: Partial<JobItem>) => {
+    setOptimisticPatches((prev) => ({ ...prev, [jobId]: { ...(prev[jobId] || {}), ...patch } }));
+
+    if (selectedJob?.id === jobId) {
+      setSelectedJob((prev) => (prev ? { ...prev, ...patch } : prev));
+    }
+
+    const existingTimeout = optimisticTimeoutsRef.current.get(jobId);
+    if (existingTimeout) clearTimeout(existingTimeout);
+
+    const timeoutId = setTimeout(() => {
+      setOptimisticPatches((prev) => {
+        const next = { ...prev };
+        delete next[jobId];
+        return next;
+      });
+      optimisticTimeoutsRef.current.delete(jobId);
+    }, 12000);
+
+    optimisticTimeoutsRef.current.set(jobId, timeoutId);
+  }, [selectedJob?.id]);
 
   const filteredJobsByEstado = useMemo(() => {
     const parseDeliveryDate = (job: JobItem) => {
@@ -40,7 +85,7 @@ export function JobsView() {
       });
     };
 
-    if (!searchTerm.trim()) return jobsByEstado;
+    if (!searchTerm.trim()) return jobsByEstadoOptimistic;
 
     const term = searchTerm.toLowerCase();
     const filterFn = (job: JobItem) =>
@@ -49,9 +94,9 @@ export function JobsView() {
       job.numero_orden.toLowerCase().includes(term);
 
     const filtered = {
-      pendiente: jobsByEstado.pendiente.filter(filterFn),
-      en_proceso: jobsByEstado.en_proceso.filter(filterFn),
-      finalizado: jobsByEstado.finalizado.filter(filterFn),
+      pendiente: jobsByEstadoOptimistic.pendiente.filter(filterFn),
+      en_proceso: jobsByEstadoOptimistic.en_proceso.filter(filterFn),
+      finalizado: jobsByEstadoOptimistic.finalizado.filter(filterFn),
     };
 
     return {
@@ -59,7 +104,7 @@ export function JobsView() {
       en_proceso: sortByDelivery(filtered.en_proceso),
       finalizado: sortByDelivery(filtered.finalizado),
     };
-  }, [jobsByEstado, searchTerm, deliverySort]);
+  }, [jobsByEstadoOptimistic, searchTerm, deliverySort]);
 
   const sortedJobsByEstado = useMemo(() => {
     if (deliverySort === 'none') return filteredJobsByEstado;
@@ -209,7 +254,7 @@ export function JobsView() {
           isOpen={showExecutionModal}
           onClose={handleCloseModal}
           job={selectedJob}
-          onJobUpdated={refreshJobs}
+          onOptimisticUpdate={handleOptimisticJobUpdate}
         />
       )}
     </div>

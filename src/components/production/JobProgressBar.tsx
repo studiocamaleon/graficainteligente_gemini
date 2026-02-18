@@ -30,29 +30,29 @@ export const JobProgressBar = memo(function JobProgressBar({
 
   return (
     <div className="space-y-1">
-      <div className={`w-full bg-gray-200 rounded-full overflow-hidden ${heightClass}`}>
+      <div className={`w-full overflow-hidden rounded-full bg-slate-200 ${heightClass}`}>
         <div className="h-full flex">
           {pasosCompletados > 0 && (
             <div
-              className="bg-green-500 transition-all duration-300"
+              className="bg-emerald-500 transition-all duration-300"
               style={{ width: `${porcentajeCompletado}%` }}
             />
           )}
           {pasosEnProceso > 0 && (
             <div
-              className="bg-blue-500 transition-all duration-300"
+              className="bg-sky-500 transition-all duration-300"
               style={{ width: `${porcentajeEnProceso}%` }}
             />
           )}
         </div>
       </div>
 
-      <div className={`flex items-center justify-between ${textSizeClass} text-gray-600`}>
-        <span className="font-medium">
-          {pasosCompletados}/{totalPasos} pasos
+      <div className={`flex items-center justify-between text-slate-600 ${textSizeClass}`}>
+        <span className="font-medium tabular-nums">
+          {pasosCompletados}/{totalPasos} pasos · {pasosPendientes} pendientes
         </span>
         {showPercentage && (
-          <span className="font-semibold text-gray-700">
+          <span className="font-semibold text-slate-700 tabular-nums">
             {porcentaje}%
           </span>
         )}

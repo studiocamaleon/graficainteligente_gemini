@@ -27,6 +27,9 @@ export interface StationStep {
     fecha_inicio_pausa: string;
   } | null;
   tiempo_pausado_total: number;
+  en_mesa_trabajo: boolean;
+  mesa_owner_user_id: string | null;
+  mesa_owner_name: string | null;
 }
 
 interface RutaConOrden {
@@ -51,6 +54,7 @@ export interface StationWithJobs {
   pasos_pendientes: number;
   pasos_en_proceso: number;
   pasos_pausados: number;
+  pasos_mesa_trabajo: number;
   total_pasos_activos: number;
   pasos: StationStep[];
 }
@@ -61,7 +65,7 @@ interface UseProductionStationsParams {
 
 export function useProductionStations(params: UseProductionStationsParams = {}) {
   const { profile } = useAuth();
-  const { estacionId = null } = params;
+  void params;
 
   const [stations, setStations] = useState<StationWithJobs[]>([]);
   const [loading, setLoading] = useState(false);
@@ -140,6 +144,7 @@ export function useProductionStations(params: UseProductionStationsParams = {}) 
 
       let pausasActivasMap = new Map<string, any>();
       let tiempoPausadoTotalMap = new Map<string, number>();
+      let mesaTrabajoSet = new Set<string>();
 
       if (rutasIds.length > 0) {
         const { data: pausasData } = await supabase
@@ -176,6 +181,51 @@ export function useProductionStations(params: UseProductionStationsParams = {}) 
             }
           });
         }
+
+        const { data: mesaData } = await supabase
+          .from('ordenes_items_mesa_trabajo')
+          .select('ruta_id, assigned_user_id')
+          .eq('company_id', profile.company_id)
+          .in('ruta_id', rutasIds);
+
+        const ownerIds = (mesaData || [])
+          .map((row: any) => row.assigned_user_id)
+          .filter((value: any) => !!value);
+        const uniqueOwnerIds = Array.from(new Set(ownerIds));
+
+        const ownerNameMap = new Map<string, string>();
+        if (uniqueOwnerIds.length > 0) {
+          const { data: ownersData } = await supabase
+            .from('profiles')
+            .select('id, full_name')
+            .in('id', uniqueOwnerIds);
+
+          (ownersData || []).forEach((owner: any) => {
+            ownerNameMap.set(owner.id, owner.full_name || 'Usuario desconocido');
+          });
+        }
+
+        if (mesaData) {
+          mesaTrabajoSet = new Set(
+            mesaData
+              .filter((row: any) => !!row.assigned_user_id)
+              .map((row: any) => row.ruta_id)
+          );
+        }
+
+        const mesaOwnerMap = new Map<string, { ownerId: string | null; ownerName: string | null }>();
+        (mesaData || []).forEach((row: any) => {
+          const ownerId = row.assigned_user_id || null;
+          mesaOwnerMap.set(row.ruta_id, {
+            ownerId,
+            ownerName: ownerId ? ownerNameMap.get(ownerId) || 'Usuario desconocido' : 'Usuario desconocido',
+          });
+        });
+
+        rutasData.forEach((ruta: any) => {
+          const mesaOwner = mesaOwnerMap.get(ruta.id);
+          (ruta as any).__mesa_owner = mesaOwner || { ownerId: null, ownerName: null };
+        });
       }
 
       const rutasPorItem = new Map<string, RutaConOrden[]>();
@@ -253,6 +303,9 @@ export function useProductionStations(params: UseProductionStationsParams = {}) 
             pausa_activa: ruta.pausa_activa || null,
             tiempo_pausado_total: tiempoPausadoTotalMap.get(ruta.id) || 0,
             global_task_id: ruta.global_task_id,
+            en_mesa_trabajo: mesaTrabajoSet.has(ruta.id),
+            mesa_owner_user_id: ruta.__mesa_owner?.ownerId || null,
+            mesa_owner_name: ruta.__mesa_owner?.ownerName || null,
           };
 
           if (!stepsMap.has(estacionId)) {
@@ -291,6 +344,7 @@ export function useProductionStations(params: UseProductionStationsParams = {}) 
           const pasosEnProceso = pasos.filter((p) => p.estado_paso === 'en_proceso').length;
           const pasosPendientes = pasos.filter((p) => p.estado_paso === 'pendiente').length;
           const pasosPausados = pasos.filter((p) => p.estado_paso === 'pausado').length;
+          const pasosMesaTrabajo = pasos.filter((p) => p.en_mesa_trabajo).length;
 
           return {
             estacion_id: estacionId,
@@ -299,6 +353,7 @@ export function useProductionStations(params: UseProductionStationsParams = {}) 
             pasos_en_proceso: pasosEnProceso,
             pasos_pendientes: pasosPendientes,
             pasos_pausados: pasosPausados,
+            pasos_mesa_trabajo: pasosMesaTrabajo,
             total_pasos_activos: pasos.length,
             pasos,
           };
@@ -314,7 +369,7 @@ export function useProductionStations(params: UseProductionStationsParams = {}) 
     } finally {
       setLoading(false);
     }
-  }, [profile?.company_id, estacionId]);
+  }, [profile?.company_id]);
 
   useEffect(() => {
     fetchStations();
@@ -323,6 +378,40 @@ export function useProductionStations(params: UseProductionStationsParams = {}) 
   const refreshStations = useCallback(() => {
     fetchStations();
   }, [fetchStations]);
+
+  const setMesaOwnerForRuta = useCallback((rutaId: string, ownerUserId: string | null, ownerName: string | null) => {
+    setStations((prev) =>
+      prev.map((station) => {
+        let changed = false;
+        const pasos = station.pasos.map((paso) => {
+          if (paso.ruta_id !== rutaId) return paso;
+          changed = true;
+          return {
+            ...paso,
+            en_mesa_trabajo: !!ownerUserId,
+            mesa_owner_user_id: ownerUserId,
+            mesa_owner_name: ownerName,
+          };
+        });
+
+        if (!changed) return station;
+
+        const pasosEnProceso = pasos.filter((p) => p.estado_paso === 'en_proceso').length;
+        const pasosPendientes = pasos.filter((p) => p.estado_paso === 'pendiente').length;
+        const pasosPausados = pasos.filter((p) => p.estado_paso === 'pausado').length;
+        const pasosMesaTrabajo = pasos.filter((p) => !!p.mesa_owner_user_id).length;
+
+        return {
+          ...station,
+          pasos,
+          pasos_en_proceso: pasosEnProceso,
+          pasos_pendientes: pasosPendientes,
+          pasos_pausados: pasosPausados,
+          pasos_mesa_trabajo: pasosMesaTrabajo,
+        };
+      })
+    );
+  }, []);
 
   const updateStationGranular = useCallback(
     async (rutaId: string) => {
@@ -365,12 +454,52 @@ export function useProductionStations(params: UseProductionStationsParams = {}) 
           updateStationGranular(payload.new.id);
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'ordenes_items_mesa_trabajo',
+          filter: `company_id=eq.${profile.company_id}`,
+        },
+        (payload: any) => {
+          const eventType = payload?.eventType;
+          if (eventType === 'DELETE') {
+            const rutaId = payload.old?.ruta_id;
+            if (rutaId) {
+              setMesaOwnerForRuta(rutaId, null, null);
+            }
+            return;
+          }
+
+          const rutaId = payload.new?.ruta_id;
+          const ownerId = payload.new?.assigned_user_id || null;
+          if (!rutaId) return;
+
+          if (!ownerId) {
+            setMesaOwnerForRuta(rutaId, null, null);
+            return;
+          }
+
+          supabase
+            .from('profiles')
+            .select('full_name')
+            .eq('id', ownerId)
+            .single()
+            .then(({ data }) => {
+              setMesaOwnerForRuta(rutaId, ownerId, data?.full_name || 'Usuario desconocido');
+            })
+            .catch(() => {
+              setMesaOwnerForRuta(rutaId, ownerId, 'Usuario desconocido');
+            });
+        }
+      )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [profile?.company_id, updateStationGranular]);
+  }, [profile?.company_id, updateStationGranular, setMesaOwnerForRuta]);
 
   useEffect(() => {
     return () => {
@@ -387,6 +516,7 @@ export function useProductionStations(params: UseProductionStationsParams = {}) 
     loading,
     error,
     refreshStations,
+    setMesaOwnerForRuta,
     totalActivePasos,
     isUpdating,
   };

@@ -460,17 +460,17 @@ export function CreateOrderPage() {
   // --- Gestión Principal (Crear Orden) ---
   const addPago = async (ordenId: string, pagoData: any) => {
     try {
-      const { error } = await supabase.from('ordenes_trabajo_pagos').insert({
-        orden_id: ordenId,
+      // Reusar el flujo centralizado del hook:
+      // - inserta el pago
+      // - genera recibo PDF
+      // - dispara plantilla Wati de recibo
+      return await addPagoDb(ordenId, {
         fecha_pago: pagoData.fecha_pago,
         monto: pagoData.monto,
         medio_cobro_id: pagoData.medio_cobro_id,
         referencia_pago: pagoData.referencia_pago,
         notas: pagoData.notas,
-        created_by: profile?.id
       });
-      if (error) throw error;
-      return true;
     } catch (err: any) {
       console.error("Error adding payment:", err);
       // Fallback para errores comunes, si es necesario

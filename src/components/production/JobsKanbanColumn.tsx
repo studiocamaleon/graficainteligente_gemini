@@ -8,9 +8,6 @@ interface JobsKanbanColumnProps {
   estado: EstadoOrdenItem;
   titulo: string;
   jobs: JobItem[];
-  color: string;
-  bgColor: string;
-  borderColor: string;
   onJobClick?: (job: JobItem) => void;
   recentlyUpdatedJobs?: Set<string>;
 }
@@ -25,26 +22,28 @@ export function JobsKanbanColumn({
   estado,
   titulo,
   jobs,
-  color,
-  bgColor,
-  borderColor,
   onJobClick,
   recentlyUpdatedJobs = new Set(),
 }: JobsKanbanColumnProps) {
+  const badgeTone =
+    estado === 'finalizado'
+      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+      : estado === 'en_proceso'
+      ? 'border-blue-200 bg-blue-50 text-blue-700'
+      : 'border-slate-200 bg-slate-100 text-slate-700';
+
   return (
     <div className="flex flex-col h-full">
-      <div
-        className={`${bgColor} ${borderColor} border-b-4 rounded-t-lg px-4 py-3 flex items-center justify-between sticky top-0 z-10 shadow-sm`}
-      >
-        <h3 className={`text-sm font-bold ${color} uppercase tracking-wide`}>
+      <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-slate-50/95 px-4 py-3 backdrop-blur">
+        <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-700">
           {titulo}
         </h3>
-        <span className={`${color} text-sm font-bold px-2 py-1 bg-white rounded-full`}>
+        <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${badgeTone}`}>
           {jobs.length}
         </span>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50">
+      <div className="flex-1 space-y-3 overflow-y-auto bg-slate-50 p-3">
         {jobs.length > 0 ? (
           jobs.map((job) => (
             <JobCard
