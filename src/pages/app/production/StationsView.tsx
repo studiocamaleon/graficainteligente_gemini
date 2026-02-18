@@ -18,7 +18,7 @@ type StepStatusFilter = 'all' | 'mesa' | 'pendiente';
 
 export function StationsView() {
   const [selectedStationId, setSelectedStationId] = useState<string | null>(null);
-  const [deliverySort, setDeliverySort] = useState<'none' | 'asc' | 'desc'>('none');
+  const [deliverySort, setDeliverySort] = useState<'none' | 'asc' | 'desc'>('asc');
   const { stations, loading, error, refreshStations, isUpdating, setMesaOwnerForRuta } = useProductionStations({
     estacionId: selectedStationId,
   });
@@ -533,10 +533,6 @@ export function StationsView() {
             {deliverySort === 'none' && 'Ordenar por Entrega'}
             {deliverySort === 'asc' && 'Entrega: Próximas'}
             {deliverySort === 'desc' && 'Entrega: Lejanas'}
-          </Button>
-          <Button onClick={refreshStations} variant="outline" size="sm">
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Actualizar
           </Button>
         </div>
       </div>

@@ -35,7 +35,7 @@ export function Sellos() {
     return undefined;
   }, [activeTab, canCreateProduct]);
 
-  usePageHeader('Gestiona los productos de sellos y accesorios disponibles', headerAction);
+  usePageHeader('Productos: Sellos', headerAction);
 
   const tabs = [
     { id: 'productos', name: 'Productos', icon: Package },

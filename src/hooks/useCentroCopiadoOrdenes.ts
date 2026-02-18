@@ -55,6 +55,7 @@ interface CreateOrdenCopiadoData {
   total: number;
   subtotal: number;
   total_descuentos: number;
+  estado?: EstadoOrdenCopiado;
 }
 
 export function useCentroCopiadoOrdenes(params: UseCentroCopiadoOrdenesParams = {}) {
@@ -221,16 +222,19 @@ export function useCentroCopiadoOrdenes(params: UseCentroCopiadoOrdenesParams = 
         const numeroSecuencia = String(nextSequence).padStart(4, '0');
         const numeroOrden = `CC-${dateStr}-${numeroSecuencia}`;
 
+        const estadoInicial: EstadoOrdenCopiado = data.estado || 'pendiente';
+        const fechaEntregaReal = estadoInicial === 'entregada' ? new Date().toISOString() : null;
+
         const ordenData = {
           company_id: profile.company_id,
           numero_orden: numeroOrden,
           cliente_id: data.cliente_id,
           canal_venta: data.origen, // Map origin to expected DB column
           orden_trabajo_id: data.orden_trabajo_id || null,
-          estado: 'pendiente' as EstadoOrdenCopiado,
+          estado: estadoInicial,
           fecha_solicitud: new Date().toISOString(),
           fecha_entrega_estimada: data.fecha_entrega_estimada || null,
-          fecha_entrega_real: null,
+          fecha_entrega_real: fechaEntregaReal,
           total: data.total,
           subtotal: data.subtotal,
           total_descuentos: data.total_descuentos,

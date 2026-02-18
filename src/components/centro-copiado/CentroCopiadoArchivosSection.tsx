@@ -16,12 +16,13 @@ interface FileWithMetadata {
   error?: string;
   selected?: boolean;
   itemGenerado?: boolean;
+  paginasDetectadas?: number | null;
 }
 
 interface CentroCopiadoArchivosSectionProps {
   ordenId?: string;
   ordenTemporalId?: string;
-  onArchivoGenerado?: (archivoId: string, nombreArchivo: string) => void;
+  onArchivoGenerado?: (archivoId: string, nombreArchivo: string, paginasDetectadas?: number | null) => void;
   disabled?: boolean;
 }
 
@@ -38,6 +39,22 @@ export function CentroCopiadoArchivosSection({
   const modoTemporal = !!ordenTemporalId && !ordenId;
 
   const [isProcessing, setIsProcessing] = useState(false);
+
+  const detectPdfPages = async (file: File): Promise<number | null> => {
+    if (file.type !== 'application/pdf') return null;
+    try {
+      const buffer = await file.arrayBuffer();
+      const bytes = new Uint8Array(buffer);
+      const decoder = new TextDecoder('latin1');
+      const content = decoder.decode(bytes);
+      const pageMatches = content.match(/\/Type\s*\/Page([^s]|$)/g);
+      if (!pageMatches || pageMatches.length === 0) return null;
+      return pageMatches.length;
+    } catch (error) {
+      console.warn('No se pudo detectar páginas del PDF:', error);
+      return null;
+    }
+  };
 
   useEffect(() => {
     if (ordenId) {
@@ -85,7 +102,10 @@ export function CentroCopiadoArchivosSection({
         throw new Error('Error al subir archivo');
       }
 
-      // 2. Crear registro en base de datos (sin páginas detectadas)
+      // 2. Detectar páginas (si es PDF) y guardar metadata
+      const paginasDetectadas = await detectPdfPages(fileMetadata.file);
+
+      // 3. Crear registro en base de datos
       const archivo = await createArchivo({
         [modoTemporal ? 'orden_temporal_id' : 'orden_copiado_id']: targetId,
         nombre_archivo: fileMetadata.file.name,
@@ -93,14 +113,14 @@ export function CentroCopiadoArchivosSection({
         tipo_mime: fileMetadata.file.type,
         tamano_bytes: fileMetadata.file.size,
         storage_path: uploadResult.storagePath,
-        paginas_detectadas: null,
+        paginas_detectadas: paginasDetectadas,
       });
 
       if (!archivo) {
         throw new Error('Error al guardar archivo en base de datos');
       }
 
-      // 3. Actualizar estado
+      // 4. Actualizar estado
       setFiles(prev =>
         prev.map(f =>
           f.id === fileMetadata.id
@@ -108,12 +128,27 @@ export function CentroCopiadoArchivosSection({
                 ...f,
                 status: 'completed' as const,
                 archivoId: archivo.id,
+                paginasDetectadas,
               }
             : f
         )
       );
 
-      // Archivo subido correctamente - NO crear item automáticamente
+      // 5. Crear item automáticamente por archivo subido
+      if (archivo.id && onArchivoGenerado) {
+        onArchivoGenerado(archivo.id, fileMetadata.file.name, paginasDetectadas);
+      }
+
+      setFiles(prev =>
+        prev.map(f =>
+          f.id === fileMetadata.id
+            ? {
+                ...f,
+                itemGenerado: true,
+              }
+            : f
+        )
+      );
     } catch (error) {
       console.error('Error processing file:', error);
       const errorMessage = error instanceof Error ? error.message : 'Error al procesar archivo';
@@ -144,7 +179,7 @@ export function CentroCopiadoArchivosSection({
 
     archivosSeleccionados.forEach(file => {
       if (file.archivoId && onArchivoGenerado) {
-        onArchivoGenerado(file.archivoId, file.file.name);
+        onArchivoGenerado(file.archivoId, file.file.name, file.paginasDetectadas);
       }
     });
 
@@ -160,7 +195,7 @@ export function CentroCopiadoArchivosSection({
 
     archivosSinItem.forEach(file => {
       if (file.archivoId && onArchivoGenerado) {
-        onArchivoGenerado(file.archivoId, file.file.name);
+        onArchivoGenerado(file.archivoId, file.file.name, file.paginasDetectadas);
       }
     });
 
@@ -174,7 +209,7 @@ export function CentroCopiadoArchivosSection({
   const handleDescargar = async (fileMetadata: FileWithMetadata) => {
     if (!fileMetadata.archivoId) return;
 
-    const archivo = (await refetch()).archivos?.find(a => a.id === fileMetadata.archivoId);
+    const archivo = archivos.find(a => a.id === fileMetadata.archivoId);
     if (!archivo) return;
 
     await downloadFile(archivo.storage_path, archivo.nombre_archivo);
@@ -183,7 +218,7 @@ export function CentroCopiadoArchivosSection({
   const handleEliminar = async (fileMetadata: FileWithMetadata) => {
     if (!fileMetadata.archivoId) return;
 
-    const archivo = (await refetch()).archivos?.find(a => a.id === fileMetadata.archivoId);
+    const archivo = archivos.find(a => a.id === fileMetadata.archivoId);
     if (!archivo) return;
 
     const confirmacion = window.confirm(

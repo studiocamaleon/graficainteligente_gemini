@@ -7,6 +7,7 @@ import type {
   DashboardKpisV2,
   DashboardOperativoV2,
   DashboardPeriod,
+  DashboardProximaEntregaV2,
   DashboardScope,
   DashboardSeriesPoint,
   DashboardSeriesV2,
@@ -60,6 +61,35 @@ const toArray = <T,>(value: unknown): T[] => {
   return Array.isArray(value) ? (value as T[]) : [];
 };
 
+interface DashboardKpisRpcRow {
+  pendientes_count?: unknown;
+  pendientes_prev?: unknown;
+  en_proceso_count?: unknown;
+  en_proceso_prev?: unknown;
+  vencidas_count?: unknown;
+  vencidas_prev?: unknown;
+  finalizadas_periodo_count?: unknown;
+  finalizadas_periodo_prev?: unknown;
+  updated_at?: string | null;
+}
+
+interface DashboardCumplimientoGeneralRpcRow {
+  cumplimiento_pct?: unknown;
+  cumplimiento_prev?: unknown;
+}
+
+interface DashboardSeriesRpcRow {
+  series_creadas?: unknown;
+  series_finalizadas?: unknown;
+  series_cumplimiento?: unknown;
+  backlog_aging?: unknown;
+}
+
+interface DashboardOperativoRpcRow {
+  proximas_entregas?: unknown;
+  actividad_reciente?: unknown;
+}
+
 const buildKpi = (value: number, prev: number): DashboardKpiValue => {
   const deltaAbs = value - prev;
   const deltaPct = prev === 0 ? (value === 0 ? 0 : 100) : (deltaAbs / prev) * 100;
@@ -105,8 +135,14 @@ export function useDashboardDataV2({
     setError(null);
 
     try {
-      const [kpiRes, seriesRes, operativoRes] = await Promise.all([
+      const [kpiRes, cumplimientoGeneralRes, seriesRes, operativoRes] = await Promise.all([
         supabase.rpc('fn_dashboard_kpis_v2', {
+          p_company_id: companyId,
+          p_scope: scope,
+          p_period: period,
+          p_tz: tz,
+        }),
+        supabase.rpc('fn_dashboard_cumplimiento_general_v2', {
           p_company_id: companyId,
           p_scope: scope,
           p_period: period,
@@ -129,12 +165,14 @@ export function useDashboardDataV2({
       ]);
 
       if (kpiRes.error) throw kpiRes.error;
+      if (cumplimientoGeneralRes.error) throw cumplimientoGeneralRes.error;
       if (seriesRes.error) throw seriesRes.error;
       if (operativoRes.error) throw operativoRes.error;
 
-      const k = (kpiRes.data as any[])?.[0] || {};
-      const s = (seriesRes.data as any[])?.[0] || {};
-      const o = (operativoRes.data as any[])?.[0] || {};
+      const k = (kpiRes.data as DashboardKpisRpcRow[] | null)?.[0] || {};
+      const cg = (cumplimientoGeneralRes.data as DashboardCumplimientoGeneralRpcRow[] | null)?.[0] || {};
+      const s = (seriesRes.data as DashboardSeriesRpcRow[] | null)?.[0] || {};
+      const o = (operativoRes.data as DashboardOperativoRpcRow[] | null)?.[0] || {};
 
       setKpis({
         pendientes: buildKpi(toNumber(k.pendientes_count), toNumber(k.pendientes_prev)),
@@ -144,7 +182,7 @@ export function useDashboardDataV2({
           toNumber(k.finalizadas_periodo_count),
           toNumber(k.finalizadas_periodo_prev)
         ),
-        cumplimiento: buildKpi(toNumber(k.cumplimiento_pct), toNumber(k.cumplimiento_prev)),
+        cumplimiento: buildKpi(toNumber(cg.cumplimiento_pct), toNumber(cg.cumplimiento_prev)),
         updatedAt: k.updated_at || null,
       });
 
@@ -171,7 +209,7 @@ export function useDashboardDataV2({
       });
 
       setOperativo({
-        proximasEntregas: toArray<any>(o.proximas_entregas).map((x) => ({
+        proximasEntregas: toArray<DashboardProximaEntregaV2>(o.proximas_entregas).map((x) => ({
           ...x,
           progreso_porcentaje:
             x?.progreso_porcentaje === null || x?.progreso_porcentaje === undefined

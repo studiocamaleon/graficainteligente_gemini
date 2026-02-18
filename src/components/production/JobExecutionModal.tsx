@@ -80,6 +80,14 @@ const estadoLabel: Record<string, string> = {
   omitido: 'Omitido',
 };
 
+const estadoOrdenLabel: Record<string, string> = {
+  pendiente: 'Pendiente',
+  en_proceso: 'En proceso',
+  finalizada: 'Finalizada',
+  entregada: 'Entregada',
+  cancelada: 'Cancelada',
+};
+
 const estadoColor: Record<string, string> = {
   pendiente: 'bg-slate-100 text-slate-700 border-slate-200',
   en_proceso: 'bg-blue-100 text-blue-700 border-blue-200',
@@ -126,6 +134,14 @@ function bytesToLabel(sizeInBytes: number): string {
   const kb = sizeInBytes / 1024;
   if (kb < 1024) return `${kb.toFixed(1)} KB`;
   return `${(kb / 1024).toFixed(1)} MB`;
+}
+
+function formatOrderStatusLabel(status?: string | null): string {
+  if (!status) return '-';
+  if (estadoOrdenLabel[status]) return estadoOrdenLabel[status];
+  return status
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 function canPreviewAttachment(mimeType: string): boolean {
@@ -398,7 +414,7 @@ export function JobExecutionModal({ isOpen, onClose, job, onOptimisticUpdate }: 
             <div className="grid grid-cols-1 gap-3 text-sm">
               <div className="flex items-center justify-between">
                 <span className="text-slate-500">Estado orden</span>
-                <span className="font-semibold text-slate-800">{orderContext.estado_orden}</span>
+                <span className="font-semibold text-slate-800">{formatOrderStatusLabel(orderContext.estado_orden)}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-slate-500">Entrega estimada</span>
@@ -498,9 +514,12 @@ export function JobExecutionModal({ isOpen, onClose, job, onOptimisticUpdate }: 
         isSidePanelOpen={isSidePanelOpen}
       >
         <div className="space-y-5">
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <div className="mb-4 flex items-start justify-between gap-3">
-              <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Contexto del item</div>
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="mb-4 flex items-start justify-between gap-3 border-b border-slate-100 pb-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Contexto del item</p>
+                <p className="mt-1 text-xs text-slate-400">Información rápida de la orden sin salir del flujo</p>
+              </div>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => handleToggleSidePanel('summary')}
@@ -532,35 +551,63 @@ export function JobExecutionModal({ isOpen, onClose, job, onOptimisticUpdate }: 
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex items-center gap-2">
-                <User className="h-4 w-4 text-slate-600" />
-                <div>
-                  <p className="text-xs text-slate-500">Cliente</p>
-                  <p className="font-semibold text-slate-900">{job.cliente_nombre}</p>
+            <div className="space-y-3">
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                <div className="min-w-[220px] flex-1 rounded-lg border border-slate-200 bg-slate-50/70 p-3">
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-slate-500" />
+                    <p className="text-xs text-slate-500">Cliente</p>
+                  </div>
+                  <p className="mt-1 truncate text-sm font-semibold text-slate-900">{job.cliente_nombre}</p>
+                </div>
+
+                <div className="min-w-[180px] flex-1 rounded-lg border border-slate-200 bg-slate-50/70 p-3">
+                  <div className="flex items-center gap-2">
+                    <Hash className="h-4 w-4 text-slate-500" />
+                    <p className="text-xs text-slate-500">Orden</p>
+                  </div>
+                  <p className="mt-1 truncate text-sm font-semibold text-slate-900">#{job.numero_orden}</p>
+                </div>
+
+                <div className="min-w-[260px] flex-1 rounded-lg border border-slate-200 bg-slate-50/70 p-3">
+                  <div className="flex items-center gap-2">
+                    <Package className="h-4 w-4 text-slate-500" />
+                    <p className="text-xs text-slate-500">Producto</p>
+                  </div>
+                  <p className="mt-1 truncate text-sm font-semibold text-slate-900">{job.producto_nombre}</p>
+                  <p className="mt-1 text-xs text-slate-500">Cantidad: {job.cantidad}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Hash className="h-4 w-4 text-slate-600" />
-                <div>
-                  <p className="text-xs text-slate-500">Orden</p>
-                  <p className="font-semibold text-slate-900">#{job.numero_orden}</p>
+
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                <div className="min-w-[180px] flex-1 rounded-lg border border-slate-200 bg-white p-3">
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-slate-500">Estado orden</p>
+                  <p className="mt-1 truncate text-sm font-semibold text-slate-900">
+                    {orderContextLoading ? 'Cargando...' : formatOrderStatusLabel(orderContext?.estado_orden)}
+                  </p>
+                </div>
+
+                <div className="min-w-[180px] flex-1 rounded-lg border border-slate-200 bg-white p-3">
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-slate-500">Entrega</p>
+                  <div className="mt-1 flex min-w-0 items-center gap-1 text-sm font-semibold text-slate-900">
+                    <CalendarClock className="h-3.5 w-3.5 text-slate-500" />
+                    <span className="truncate">
+                      {orderContextLoading
+                        ? 'Cargando...'
+                        : orderContext?.fecha_estimada_entrega
+                          ? formatDate(orderContext.fecha_estimada_entrega)
+                          : '-'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="min-w-[140px] flex-1 rounded-lg border border-slate-200 bg-white p-3">
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-slate-500">Adjuntos</p>
+                  <p className="mt-1 truncate text-sm font-semibold text-slate-900">
+                    {orderContextLoading ? '...' : orderContext?.adjuntos_count || 0}
+                  </p>
                 </div>
               </div>
-              <div className="col-span-2 flex items-center gap-2">
-                <Package className="h-4 w-4 text-slate-600" />
-                <div>
-                  <p className="text-xs text-slate-500">Producto</p>
-                  <p className="font-semibold text-slate-900">{job.producto_nombre}</p>
-                  <p className="text-xs text-slate-500">Cantidad: {job.cantidad}</p>
-                </div>
-              </div>
-              {orderContext?.fecha_estimada_entrega && (
-                <div className="col-span-2 flex items-center gap-2">
-                  <CalendarClock className="h-4 w-4 text-slate-600" />
-                  <p className="text-xs text-slate-500">Entrega estimada: {formatDate(orderContext.fecha_estimada_entrega)}</p>
-                </div>
-              )}
             </div>
           </div>
 

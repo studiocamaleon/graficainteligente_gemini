@@ -108,6 +108,9 @@ export function CentroCopiadoItemForm({
 
         let configImpresion;
         let configPloteoCAD;
+        let configAnillado;
+        let configPlastificado;
+        let configGuillotinado;
 
         if (isPloteoCAD) {
           configPloteoCAD = {
@@ -117,41 +120,46 @@ export function CentroCopiadoItemForm({
             cantidad_copias: value.cantidad_copias || 1
           };
         } else {
+          const hojasOriginales = value.cantidad_hojas || 0;
+          const hojasFisicas = value.cara_impresa === 'frente_y_dorso'
+            ? Math.ceil(hojasOriginales / 2)
+            : hojasOriginales;
+
           configImpresion = {
             tamanio_papel_id: value.tamanio_papel_id!,
             papel_id: value.papel_id!,
             tipo_tinta: value.tipo_tinta!,
             cara_impresa: value.cara_impresa!,
-            cantidad_hojas: value.cantidad_hojas || 0,
+            cantidad_hojas: hojasFisicas,
             cantidad_copias: value.cantidad_copias || 1,
           };
+        
+          configAnillado = value.anillado?.tipo
+            ? {
+              tipo_anillado: value.anillado.tipo,
+              cantidad_hojas: hojasFisicas,
+              cantidad_copias: value.cantidad_copias || 1,
+            }
+            : undefined;
+
+          configPlastificado = value.plastificado?.tipo
+            ? {
+              tipo_plastificado: value.plastificado.tipo,
+              cantidad_hojas: value.plastificado.todas_hojas ? hojasFisicas : undefined,
+              cantidad_especifica: value.plastificado.todas_hojas
+                ? undefined
+                : value.plastificado.cantidad_especifica,
+              cantidad_copias: value.cantidad_copias || 1,
+            }
+            : undefined;
+
+          configGuillotinado = value.guillotinado
+            ? {
+              cantidad_hojas: hojasFisicas,
+              cantidad_copias: value.cantidad_copias || 1,
+            }
+            : undefined;
         }
-
-        const configAnillado = value.anillado?.tipo
-          ? {
-            tipo_anillado: value.anillado.tipo,
-            cantidad_hojas: value.cantidad_hojas || 0,
-            cantidad_copias: value.cantidad_copias || 1,
-          }
-          : undefined;
-
-        const configPlastificado = value.plastificado?.tipo
-          ? {
-            tipo_plastificado: value.plastificado.tipo,
-            cantidad_hojas: value.plastificado.todas_hojas ? value.cantidad_hojas : undefined,
-            cantidad_especifica: value.plastificado.todas_hojas
-              ? undefined
-              : value.plastificado.cantidad_especifica,
-            cantidad_copias: value.cantidad_copias || 1,
-          }
-          : undefined;
-
-        const configGuillotinado = value.guillotinado
-          ? {
-            cantidad_hojas: value.cantidad_hojas || 0,
-            cantidad_copias: value.cantidad_copias || 1,
-          }
-          : undefined;
 
         const desglose = await calcularPrecioCompleto(
           configImpresion,

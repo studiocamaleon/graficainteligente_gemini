@@ -35,7 +35,7 @@ export function Portabanners() {
     return undefined;
   }, [activeTab, canCreateProduct]);
 
-  usePageHeader('Gestiona los productos de portabanners disponibles', headerAction);
+  usePageHeader('Productos: Portabanners', headerAction);
 
   const tabs = [
     { id: 'productos', name: 'Productos', icon: Package },

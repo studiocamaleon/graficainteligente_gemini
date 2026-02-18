@@ -35,7 +35,7 @@ export function PlotterCorte() {
     return undefined;
   }, [activeTab, canCreateProduct]);
 
-  usePageHeader('Gestiona los productos de plotter de corte disponibles', headerAction);
+  usePageHeader('Productos: Plotter de Corte', headerAction);
 
   const tabs = [
     { id: 'productos', name: 'Productos', icon: Package },

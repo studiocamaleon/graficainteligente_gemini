@@ -28,7 +28,7 @@ import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../hooks/useAuth';
 import { sendWatiMessage } from '../../../lib/wati';
 import { buildTrackingUrl } from '../../../lib/trackingUrl';
-import type { CanalVenta } from '../../../types/database';
+import type { CanalVenta, EstadoOrdenCopiado } from '../../../types/database';
 
 interface ItemWithId {
   id: string;
@@ -69,8 +69,8 @@ export function CrearOrdenCopiado() {
 
   const [activeTab, setActiveTab] = useState('items');
   const [clienteId, setClienteId] = useState<string>(clienteIdParam || '');
-  const [origen, setOrigen] = useState<CanalVenta>('Mostrador');
-  const [requiereFactura, setRequiereFactura] = useState(false);
+  const [origen, setOrigen] = useState<CanalVenta | ''>('');
+  const [requiereFactura, setRequiereFactura] = useState(true);
   const [fechaEntrega, setFechaEntrega] = useState('');
   const [observaciones, setObservaciones] = useState('');
   const [items, setItems] = useState<ItemWithId[]>([]);
@@ -128,7 +128,7 @@ export function CrearOrdenCopiado() {
     }
   }, [items, addedItemId]);
 
-  const handleArchivoGenerado = useCallback((archivoId: string, nombreArchivo: string) => {
+  const handleArchivoGenerado = useCallback((archivoId: string, nombreArchivo: string, paginasDetectadas?: number | null) => {
     // Colapsar todos los items existentes
     setItems((prev) =>
       prev.map(item => ({ ...item, isCollapsed: true }))
@@ -141,6 +141,7 @@ export function CrearOrdenCopiado() {
       id: newItemId,
       config: {
         cantidad_copias: 1,
+        cantidad_hojas: paginasDetectadas && paginasDetectadas > 0 ? paginasDetectadas : 1,
       },
       isCollapsed: false,
       archivoId,
@@ -173,12 +174,12 @@ export function CrearOrdenCopiado() {
       if (isEditing && ordenEditar && archivosOrden) {
         // Hydrate from existing order
         setClienteId(ordenEditar.cliente_id || '');
-        setOrigen((ordenEditar.canal_venta as CanalVenta) || 'Mostrador');
+        setOrigen((ordenEditar.canal_venta as CanalVenta) || '');
         if (ordenEditar.fecha_entrega_estimada) {
           setFechaEntrega(ordenEditar.fecha_entrega_estimada.split('T')[0]);
         }
         setObservaciones(ordenEditar.observaciones || '');
-        setRequiereFactura(ordenEditar.requiere_factura || false);
+        setRequiereFactura(!!ordenEditar.requiere_factura);
 
         // Hydrate Items
         const hydratedItems: ItemWithId[] = ordenEditar.items.map(dbItem => {
@@ -234,8 +235,10 @@ export function CrearOrdenCopiado() {
       } else if (!isEditing) {
         setItems([]);
         setClienteId(clienteIdParam || '');
+        setOrigen('');
         setFechaEntrega('');
         setObservaciones('');
+        setRequiereFactura(true);
         setDescuento(0);
         setInitialized(true);
       }
@@ -350,14 +353,14 @@ export function CrearOrdenCopiado() {
       return false;
     }
 
-    if (!fechaEntrega) {
-      openDialog('Error', 'La fecha de entrega es obligatoria');
+    if (!origen) {
+      openDialog('Error', 'Debes seleccionar un canal de venta');
       return false;
     }
 
-    // Validar que la fecha no sea anterior a hoy
+    // Validar que la fecha no sea anterior a hoy (si fue informada)
     const hoy = new Date().toISOString().split('T')[0];
-    if (fechaEntrega < hoy) {
+    if (fechaEntrega && fechaEntrega < hoy) {
       openDialog('Error', 'La fecha de entrega no puede ser anterior a hoy');
       return false;
     }
@@ -392,21 +395,32 @@ export function CrearOrdenCopiado() {
     return true;
   };
 
-  const guardarOrden = async () => {
+  const guardarOrden = async (estadoInicial: EstadoOrdenCopiado = 'pendiente') => {
     if (!validarFormulario()) {
       return;
+    }
+
+    if (estadoInicial === 'entregada') {
+      const saldoPendiente = Math.max(0, Number(totales.saldoPendiente) || 0);
+      if (saldoPendiente > 0.01) {
+        openDialog(
+          'Pago incompleto',
+          'Para crear y marcar como entregada, la orden debe estar paga al 100%.'
+        );
+        return;
+      }
     }
 
     setGuardando(true);
 
     try {
       // Use T12:00:00 to avoid timezone issues shifting the date to previous day
-      const fechaEntregaCompleta = `${fechaEntrega}T12:00:00`;
+      const fechaEntregaCompleta = fechaEntrega ? `${fechaEntrega}T12:00:00` : undefined;
 
       // 1. Crear orden real
       const datosOrden = {
         cliente_id: clienteId,
-        origen,
+        origen: origen as CanalVenta,
         orden_trabajo_id: ordenTrabajoIdParam || undefined,
         fecha_entrega_estimada: fechaEntregaCompleta,
         observaciones: observaciones || undefined,
@@ -414,6 +428,7 @@ export function CrearOrdenCopiado() {
         total: totales.total,
         subtotal: totales.subtotalConDescuento, // Guardamos el subtotal neto
         total_descuentos: totales.descuentoAplicado,
+        estado: estadoInicial,
       };
 
       if (isEditing && id) {
@@ -560,7 +575,7 @@ export function CrearOrdenCopiado() {
 
       openDialog(
         'Orden Creada',
-        `La orden ${ordenFinal?.numero_orden || ''} ha sido creada exitosamente. Estado: Pendiente.`,
+        `La orden ${ordenFinal?.numero_orden || ''} ha sido creada exitosamente. Estado: ${estadoInicial === 'entregada' ? 'Entregada' : 'Pendiente'}.`,
         () => {
           navigate(`/app/centro-copiado/ordenes/${ordenIdFinal}`);
         }
@@ -571,6 +586,7 @@ export function CrearOrdenCopiado() {
         'Error',
         error instanceof Error ? error.message : 'Ocurrió un error al guardar la orden'
       );
+    } finally {
       setGuardando(false);
     }
   };
@@ -588,7 +604,7 @@ export function CrearOrdenCopiado() {
     navigate('/app/centro-copiado/ordenes');
   };
 
-  const infoGeneralCompleta = clienteId && fechaEntrega;
+  const infoGeneralCompleta = !!clienteId && !!origen;
 
   useEffect(() => {
     if (infoGeneralCompleta) {
@@ -635,8 +651,8 @@ export function CrearOrdenCopiado() {
 
             {!infoGeneralCollapsed && (
               <div className="p-4 pt-0">
-                <div className="space-y-4">
-                  <div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Cliente <span className="text-red-500">*</span>
                     </label>
@@ -688,27 +704,22 @@ export function CrearOrdenCopiado() {
                               type="button"
                               onClick={() => setOrigen(canal.value)}
                               className={`
-                                flex items - center justify - center p - 4 rounded - lg border - 2 transition - all
+                                flex items-center justify-center p-3 md:p-3.5 rounded-lg border-2 transition-all
                                 ${isSelected
-                                  ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                  ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-sm'
                                   : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
                                 }
     `}
                             >
-                              <Icon className="w-6 h-6" />
+                              <Icon className="w-5 h-5 md:w-6 md:h-6" />
                             </button>
                           </Tooltip>
                         );
                       })}
                     </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 mb-4">
-                    <Switch
-                      checked={requiereFactura}
-                      onChange={setRequiereFactura}
-                      label="Requiere Factura (+21% IVA)"
-                    />
+                    {!origen && (
+                      <p className="mt-1 text-xs text-amber-700">Seleccioná un canal antes de guardar.</p>
+                    )}
                   </div>
 
                   <div>
@@ -718,9 +729,17 @@ export function CrearOrdenCopiado() {
                       onChange={(date) => setFechaEntrega(date || '')}
                       minDate={new Date()}
                       placeholder="Seleccionar fecha"
-                      required
                       workloadData={workloadData}
                       workloadThresholds={{ low: 3, medium: 7 }}
+                    />
+                    <p className="mt-1 text-xs text-gray-500">Opcional</p>
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <Switch
+                      checked={requiereFactura}
+                      onChange={setRequiereFactura}
+                      label="Requiere Factura (+21% IVA)"
                     />
                   </div>
                 </div>
@@ -769,7 +788,7 @@ export function CrearOrdenCopiado() {
 
             <div className="space-y-3">
               {items.map((item, index) => (
-                <div key={item.id} id={`item - ${item.id} `}>
+                <div key={item.id} id={`item-${item.id}`}>
                   <CentroCopiadoItemForm
                     itemNumber={index + 1}
                     nombreArchivo={item.nombreArchivo}
@@ -812,10 +831,12 @@ export function CrearOrdenCopiado() {
             onDescuentoChange={setDescuento}
             guardando={guardando}
             onGuardar={guardarOrden}
+            onGuardarEntregada={!isEditing ? () => guardarOrden('entregada') : undefined}
             onCancelar={cancelar}
             containerRef={resumenContainerRef}
             requiereFactura={requiereFactura}
             buttonText={isEditing ? 'Guardar Cambios' : 'Crear Orden'}
+            buttonSecondaryText="Crear y marcar como entregada"
           />
         </div>
       </div >
