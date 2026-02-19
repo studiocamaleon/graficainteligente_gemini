@@ -1,5 +1,5 @@
-import { useState, useMemo, useCallback } from 'react';
-import { Truck, Plus, Edit2, Power, CreditCard, FileText, Banknote, MoreHorizontal, Search, Filter } from 'lucide-react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { Truck, Plus, Edit2, Power, CreditCard, FileText, Banknote, MoreHorizontal } from 'lucide-react';
 import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/Button';
 import { usePageHeader } from '../../hooks/usePageHeader';
@@ -16,6 +16,10 @@ import { useProvider } from '../../hooks/useProvider';
 import { useAuth } from '../../hooks/useAuth';
 import { useDebounce } from '../../hooks/useDebounce';
 import type { Provider, ProviderFormData } from '../../types/database';
+import { supabase } from '../../lib/supabase';
+import { EntityKpiStrip } from '../../components/shared/enterprise/EntityKpiStrip';
+import { EntityToolbar } from '../../components/shared/enterprise/EntityToolbar';
+import { AdvancedFiltersPanel } from '../../components/shared/enterprise/AdvancedFiltersPanel';
 
 export function Providers() {
   const { profile } = useAuth();
@@ -25,10 +29,13 @@ export function Providers() {
   const [pageSize, setPageSize] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [paymentFilter, setPaymentFilter] = useState<'all' | 'transfer' | 'cheque' | 'card' | 'other'>('all');
+  const [sortBy, setSortBy] = useState<'name_asc' | 'name_desc'>('name_asc');
   const [showForm, setShowForm] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
-  const [showFilters, setShowFilters] = useState(false);
+  const [activeProvidersCount, setActiveProvidersCount] = useState(0);
+  const [inactiveProvidersCount, setInactiveProvidersCount] = useState(0);
 
   const handleOpenCreateForm = useCallback(() => {
     setSelectedProvider(null);
@@ -53,16 +60,86 @@ export function Providers() {
   const { providers, loading, error, totalCount, totalPages, refetch } = useProviders({
     searchTerm: debouncedSearch,
     isActive: statusFilter === 'all' ? null : statusFilter === 'active',
+    acceptsTransfers: paymentFilter === 'transfer' ? true : undefined,
+    acceptsChecks: paymentFilter === 'cheque' ? true : undefined,
+    acceptsCreditCards: paymentFilter === 'card' ? true : undefined,
+    acceptsOthers: paymentFilter === 'other' ? true : undefined,
     page,
     pageSize,
   });
 
+  useEffect(() => {
+    if (!profile?.company_id) return;
+
+    const fetchProviderStats = async () => {
+      const [activeRes, inactiveRes] = await Promise.all([
+        supabase
+          .from('providers')
+          .select('*', { count: 'exact', head: true })
+          .eq('company_id', profile.company_id)
+          .eq('is_active', true),
+        supabase
+          .from('providers')
+          .select('*', { count: 'exact', head: true })
+          .eq('company_id', profile.company_id)
+          .eq('is_active', false),
+      ]);
+
+      setActiveProvidersCount(activeRes.count || 0);
+      setInactiveProvidersCount(inactiveRes.count || 0);
+    };
+
+    void fetchProviderStats();
+  }, [profile?.company_id, providers]);
+
   const { createProvider, updateProvider, toggleProviderStatus, loading: formLoading } = useProvider();
 
-  const handleCreate = () => {
-    setSelectedProvider(null);
-    setShowForm(true);
+  const sortedProviders = useMemo(() => {
+    const base = [...providers];
+    return base.sort((a, b) => {
+      const nameA = (a.nombre_fantasia || '').toLowerCase();
+      const nameB = (b.nombre_fantasia || '').toLowerCase();
+      if (sortBy === 'name_desc') return nameB.localeCompare(nameA);
+      return nameA.localeCompare(nameB);
+    });
+  }, [providers, sortBy]);
+
+  const activeAdvancedFiltersCount = useMemo(() => {
+    let count = 0;
+    if (paymentFilter !== 'all') count += 1;
+    if (sortBy !== 'name_asc') count += 1;
+    if (pageSize !== 10) count += 1;
+    return count;
+  }, [pageSize, paymentFilter, sortBy]);
+
+  const resetAdvancedFilters = () => {
+    setPaymentFilter('all');
+    setSortBy('name_asc');
+    setPageSize(10);
+    setPage(1);
   };
+
+  const kpiItems = useMemo(
+    () => [
+      { id: 'total', label: 'Total proveedores', value: totalCount.toLocaleString('es-AR') },
+      { id: 'active', label: 'Activos', value: activeProvidersCount.toLocaleString('es-AR') },
+      { id: 'inactive', label: 'Inactivos', value: inactiveProvidersCount.toLocaleString('es-AR') },
+      {
+        id: 'payments',
+        label: 'Con medios configurados',
+        value: sortedProviders
+          .filter(
+            (provider) =>
+              provider.acepta_transferencias ||
+              provider.acepta_cheques ||
+              provider.acepta_tarjetas_credito ||
+              provider.acepta_otros
+          )
+          .length.toLocaleString('es-AR'),
+      },
+    ],
+    [activeProvidersCount, inactiveProvidersCount, sortedProviders, totalCount]
+  );
 
   const handleEdit = (provider: Provider) => {
     setSelectedProvider(provider);
@@ -111,7 +188,7 @@ export function Providers() {
   const columns = [
     {
       key: 'nombre_fantasia',
-      label: 'Nombre de Fantasía',
+      header: 'Nombre de Fantasía',
       render: (provider: Provider) => (
         <div>
           <div className="font-medium text-slate-900">{provider.nombre_fantasia}</div>
@@ -121,17 +198,18 @@ export function Providers() {
     },
     {
       key: 'documento',
-      label: 'Documento',
+      header: 'Documento',
       render: (provider: Provider) => (
         <div className="text-sm">
           <div className="font-medium text-slate-700">{provider.tipo_documento}</div>
           <div className="text-slate-500">{provider.numero_documento}</div>
         </div>
       ),
+      showFrom: 'md',
     },
     {
       key: 'formas_pago',
-      label: 'Formas de Pago',
+      header: 'Formas de Pago',
       render: (provider: Provider) => {
         const methods = getPaymentMethods(provider);
         return (
@@ -146,26 +224,27 @@ export function Providers() {
               <span className="text-sm text-slate-400">Sin especificar</span>
             )}
             {methods.length > 2 && (
-              <Badge variant="secondary" size="sm">
+              <Badge variant="default" size="sm">
                 +{methods.length - 2}
               </Badge>
             )}
           </div>
         );
       },
+      showFrom: 'lg',
     },
     {
       key: 'status',
-      label: 'Estado',
+      header: 'Estado',
       render: (provider: Provider) => (
-        <Badge variant={provider.is_active ? 'success' : 'secondary'}>
+        <Badge variant={provider.is_active ? 'success' : 'default'}>
           {provider.is_active ? 'Activo' : 'Inactivo'}
         </Badge>
       ),
     },
     {
       key: 'actions',
-      label: '',
+      header: '',
       render: (provider: Provider) => (
         <div className="flex items-center gap-2 justify-end">
           <Button
@@ -203,41 +282,80 @@ export function Providers() {
 
   return (
     <div className="space-y-6">
+      <EntityKpiStrip items={kpiItems} />
+
+      <EntityToolbar
+        primaryControls={
+          <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px]">
+            <SearchInput
+              value={searchTerm}
+              onChange={(value) => {
+                setSearchTerm(value);
+                setPage(1);
+              }}
+              placeholder="Buscar por nombre, razón social o documento..."
+            />
+            <Select
+              value={statusFilter}
+              onChange={(value) => {
+                setStatusFilter(value as typeof statusFilter);
+                setPage(1);
+              }}
+              options={[
+                { value: 'all', label: 'Todos los estados' },
+                { value: 'active', label: 'Solo activos' },
+                { value: 'inactive', label: 'Solo inactivos' },
+              ]}
+            />
+          </div>
+        }
+      />
+
+      <AdvancedFiltersPanel
+        storageKey="providers-filters-collapsed"
+        activeFiltersCount={activeAdvancedFiltersCount}
+        onReset={resetAdvancedFilters}
+      >
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <Select
+            value={paymentFilter}
+            onChange={(value) => {
+              setPaymentFilter(value as typeof paymentFilter);
+              setPage(1);
+            }}
+            options={[
+              { value: 'all', label: 'Medios de pago: todos' },
+              { value: 'transfer', label: 'Con transferencias' },
+              { value: 'cheque', label: 'Con cheques' },
+              { value: 'card', label: 'Con tarjetas' },
+              { value: 'other', label: 'Con otros medios' },
+            ]}
+          />
+          <Select
+            value={sortBy}
+            onChange={(value) => setSortBy(value as typeof sortBy)}
+            options={[
+              { value: 'name_asc', label: 'Orden: nombre A-Z' },
+              { value: 'name_desc', label: 'Orden: nombre Z-A' },
+            ]}
+          />
+          <Select
+            value={String(pageSize)}
+            onChange={(value) => {
+              setPageSize(Number(value));
+              setPage(1);
+            }}
+            options={[
+              { value: '10', label: '10 por página' },
+              { value: '25', label: '25 por página' },
+              { value: '50', label: '50 por página' },
+            ]}
+          />
+        </div>
+      </AdvancedFiltersPanel>
+
       <Card>
         <div className="p-4 space-y-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
-              <SearchInput
-                onChange={setSearchTerm}
-                placeholder="Buscar por nombre, razón social o documento..."
-              />
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setShowFilters(!showFilters)}
-              >
-                <Filter className="w-4 h-4 mr-2" />
-                Filtros
-              </Button>
-            </div>
-          </div>
-
-          {showFilters && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 p-4 bg-slate-50 rounded-lg">
-              <Select
-                label="Estado"
-                value={statusFilter}
-                onChange={(value) => setStatusFilter(value as typeof statusFilter)}
-                options={[
-                  { value: 'all', label: 'Todos' },
-                  { value: 'active', label: 'Activos' },
-                  { value: 'inactive', label: 'Inactivos' },
-                ]}
-              />
-            </div>
-          )}
-
           {error && (
             <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
               {error}
@@ -248,7 +366,7 @@ export function Providers() {
             <div className="flex justify-center items-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
             </div>
-          ) : providers.length === 0 ? (
+          ) : sortedProviders.length === 0 ? (
             <EmptyState
               icon={Truck}
               title={searchTerm ? 'No se encontraron proveedores' : 'No hay proveedores registrados'}
@@ -259,7 +377,7 @@ export function Providers() {
               }
               action={
                 canEdit && !searchTerm ? (
-                  <Button variant="primary" onClick={handleCreate}>
+                  <Button variant="primary" onClick={handleOpenCreateForm}>
                     <Plus className="w-4 h-4 mr-2" />
                     Agregar Proveedor
                   </Button>
@@ -269,22 +387,24 @@ export function Providers() {
           ) : (
             <>
               <div className="text-sm text-slate-600 px-4">
-                Mostrando {providers.length} de {totalCount} proveedores
+                Mostrando {sortedProviders.length} de {totalCount} proveedores
               </div>
 
               <Table
                 columns={columns}
-                data={providers}
+                data={sortedProviders}
                 keyExtractor={(provider) => provider.id}
+                compact
               />
 
               {totalPages > 1 && (
                 <Pagination
                   currentPage={page}
                   totalPages={totalPages}
-                  pageSize={pageSize}
+                  totalItems={totalCount}
+                  itemsPerPage={pageSize}
                   onPageChange={setPage}
-                  onPageSizeChange={(size) => {
+                  onItemsPerPageChange={(size) => {
                     setPageSize(size);
                     setPage(1);
                   }}
@@ -321,7 +441,7 @@ export function Providers() {
               <h3 className="text-xl font-semibold text-slate-900">
                 {selectedProvider.nombre_fantasia}
               </h3>
-              <Badge variant={selectedProvider.is_active ? 'success' : 'secondary'}>
+              <Badge variant={selectedProvider.is_active ? 'success' : 'default'}>
                 {selectedProvider.is_active ? 'Activo' : 'Inactivo'}
               </Badge>
             </div>
