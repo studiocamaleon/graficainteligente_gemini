@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Users, Plus, Eye, Edit2, Power, Check, X as XIcon, CheckCircle2, XCircle, Link as LinkIcon, Copy, QrCode, Download } from 'lucide-react';
+import { Users, Plus, Eye, Edit2, Power, Check, X as XIcon, CheckCircle2, XCircle, Link as LinkIcon, QrCode, Download } from 'lucide-react';
 import QRCode from 'qrcode';
 import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/Button';
@@ -26,6 +26,9 @@ import { useToast } from '../../contexts/ToastContext';
 import { supabase } from '../../lib/supabase';
 import type { Client } from '../../types/database';
 import type { ClientWithCommercialMetrics } from '../../hooks/useClients';
+import { EntityKpiStrip } from '../../components/shared/enterprise/EntityKpiStrip';
+import { EntityToolbar } from '../../components/shared/enterprise/EntityToolbar';
+import { AdvancedFiltersPanel } from '../../components/shared/enterprise/AdvancedFiltersPanel';
 
 export function Clients() {
   const { profile } = useAuth();
@@ -133,11 +136,34 @@ export function Clients() {
 
   const totalPages = Math.ceil(totalCount / itemsPerPage);
 
-  const handleCreate = () => {
-    setSelectedClient(null);
-    setModalMode('create');
-    setIsModalOpen(true);
+  const activeAdvancedFiltersCount = useMemo(() => {
+    let count = 0;
+    if (statusAprobacionFilter !== 'all') count += 1;
+    if (cuentaCorrienteFilter !== 'all') count += 1;
+    if (sortBy !== 'created_at_desc') count += 1;
+    if (riesgoComercialFilter !== 'all') count += 1;
+    if (sinCompraFilter !== 'all') count += 1;
+    return count;
+  }, [cuentaCorrienteFilter, riesgoComercialFilter, sinCompraFilter, sortBy, statusAprobacionFilter]);
+
+  const resetAdvancedFilters = () => {
+    setStatusAprobacionFilter('all');
+    setCuentaCorrienteFilter('all');
+    setSortBy('created_at_desc');
+    setRiesgoComercialFilter('all');
+    setSinCompraFilter('all');
+    setCurrentPage(1);
   };
+
+  const kpiItems = useMemo(
+    () => [
+      { id: 'total', label: 'Total clientes', value: totalCount.toLocaleString('es-AR') },
+      { id: 'pending', label: 'Pendientes', value: pendingCount.toLocaleString('es-AR') },
+      { id: 'avg_ltv', label: 'LTV promedio', value: `$${avgLtv.toLocaleString('es-AR')}` },
+      { id: 'total_ltv', label: 'Total vendido', value: `$${totalLtv.toLocaleString('es-AR')}` },
+    ],
+    [avgLtv, pendingCount, totalCount, totalLtv]
+  );
 
   const handleEdit = (client: Client) => {
     setSelectedClient(client);
@@ -291,6 +317,7 @@ export function Clients() {
         </div>
       ),
       width: '140px',
+      showFrom: 'lg',
     },
     {
       key: 'recencia',
@@ -301,6 +328,7 @@ export function Clients() {
         </div>
       ),
       width: '120px',
+      showFrom: 'xl',
     },
     {
       key: 'ordenes_90d',
@@ -309,6 +337,7 @@ export function Clients() {
         <div className="text-sm font-medium text-blue-700">{client.ordenes_90d || 0}</div>
       ),
       width: '110px',
+      showFrom: 'lg',
     },
     {
       key: 'ticket_promedio',
@@ -319,6 +348,7 @@ export function Clients() {
         </div>
       ),
       width: '130px',
+      showFrom: 'xl',
     },
     {
       key: 'canal_preferido',
@@ -327,6 +357,7 @@ export function Clients() {
         <div className="text-sm text-gray-700">{client.canal_preferido || '-'}</div>
       ),
       width: '140px',
+      showFrom: '2xl',
     },
     {
       key: 'mix',
@@ -337,6 +368,7 @@ export function Clients() {
         </div>
       ),
       width: '130px',
+      showFrom: '2xl',
     },
     {
       key: 'riesgo_comercial',
@@ -359,6 +391,7 @@ export function Clients() {
           <span className="font-mono text-gray-900">{client.numero_documento}</span>
         </div>
       ),
+      showFrom: 'md',
     },
     {
       key: 'status_aprobacion',
@@ -386,17 +419,18 @@ export function Clients() {
       key: 'estado',
       header: 'Estado',
       render: (client: Client) => (
-        <Badge variant={client.is_active ? 'primary' : 'secondary'} size="sm">
+        <Badge variant={client.is_active ? 'primary' : 'default'} size="sm">
           {client.is_active ? 'Activo' : 'Inactivo'}
         </Badge>
       ),
       width: '100px',
+      showFrom: 'md',
     },
     {
       key: 'acciones',
       header: 'Acciones',
       render: (client: Client) => (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-end gap-1">
           <button
             onClick={() => handleViewDetails(client)}
             className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
@@ -455,41 +489,51 @@ export function Clients() {
   ];
 
   return (
-    <div>
-      <Card padding="none">
-        <div className="p-6 border-b border-gray-200 space-y-4">
-          {pendingCount > 0 && (
-            <div className="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-4 flex items-center gap-3">
-              <div className="bg-yellow-100 p-2 rounded-lg">
-                <Users className="h-5 w-5 text-yellow-700" />
+    <div className="space-y-4">
+      <EntityKpiStrip items={kpiItems} />
+
+      {pendingCount > 0 && (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="flex items-center gap-3">
+              <div className="rounded-lg bg-amber-100 p-2">
+                <Users className="h-5 w-5 text-amber-700" />
               </div>
-              <div className="flex-1">
-                <p className="font-semibold text-yellow-900">
+              <div>
+                <p className="font-semibold text-amber-900">
                   {pendingCount} {pendingCount === 1 ? 'cliente pendiente' : 'clientes pendientes'} de aprobación
                 </p>
-                <p className="text-sm text-yellow-700">
-                  Revisa y aprueba los nuevos registros
-                </p>
+                <p className="text-sm text-amber-700">Revisa y aprueba los nuevos registros</p>
               </div>
+            </div>
+            <div className="sm:ml-auto">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setStatusAprobacionFilter('pending')}
-                className="border-yellow-400 text-yellow-700 hover:bg-yellow-100"
+                onClick={() => {
+                  setStatusAprobacionFilter('pending');
+                  setCurrentPage(1);
+                }}
+                className="border-amber-400 text-amber-700 hover:bg-amber-100"
               >
                 Ver pendientes
               </Button>
             </div>
-          )}
+          </div>
+        </div>
+      )}
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="md:col-span-2">
-              <SearchInput
-                onChange={setSearchTerm}
-                placeholder="Buscar por nombre, razón social o documento..."
-              />
-            </div>
-
+      <EntityToolbar
+        primaryControls={
+          <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_240px]">
+            <SearchInput
+              value={searchTerm}
+              onChange={(value) => {
+                setSearchTerm(value);
+                setCurrentPage(1);
+              }}
+              placeholder="Buscar por nombre, razón social, documento o teléfono..."
+            />
             <Select
               value={statusFilter}
               onChange={(value) => {
@@ -503,140 +547,136 @@ export function Clients() {
               ]}
             />
           </div>
+        }
+        actions={
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCopyAutoRegistroLink}
+              className="border-slate-300 bg-slate-50 hover:border-slate-400"
+            >
+              {copiedLink ? (
+                <>
+                  <Check className="h-4 w-4 text-emerald-600" />
+                  Link copiado
+                </>
+              ) : (
+                <>
+                  <LinkIcon className="h-4 w-4 text-slate-600" />
+                  Link autoregistro
+                </>
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDownloadQR}
+              disabled={downloadingQR}
+              className="border-slate-300 bg-slate-50 hover:border-slate-400"
+            >
+              {downloadingQR ? (
+                <>
+                  <Download className="h-4 w-4 animate-pulse text-slate-600" />
+                  Generando...
+                </>
+              ) : (
+                <>
+                  <QrCode className="h-4 w-4 text-slate-600" />
+                  Descargar QR
+                </>
+              )}
+            </Button>
+          </>
+        }
+      />
 
-          <div className="flex flex-wrap items-center gap-4">
-            <Select
-              value={statusAprobacionFilter}
-              onChange={(value) => {
-                setStatusAprobacionFilter(value);
-                setCurrentPage(1);
-              }}
-              options={[
-                { value: 'all', label: 'Todas las aprobaciones' },
-                { value: 'pending', label: 'Pendientes' },
-                { value: 'approved', label: 'Aprobados' },
-                { value: 'rejected', label: 'Rechazados' },
-              ]}
-            />
-
-            <Select
-              value={cuentaCorrienteFilter}
-              onChange={(value) => {
-                setCuentaCorrienteFilter(value);
-                setCurrentPage(1);
-              }}
-              options={[
-                { value: 'all', label: 'Todas las cuentas' },
-                { value: 'yes', label: 'Con cuenta corriente' },
-                { value: 'no', label: 'Sin cuenta corriente' },
-              ]}
-            />
-
-            <Select
-              value={sortBy}
-              onChange={(value) => {
-                setSortBy(value as 'created_at_desc' | 'ltv_desc' | 'name_asc' | 'recency_desc' | 'frequency_90d_desc' | 'ticket_promedio_desc');
-                setCurrentPage(1);
-              }}
-              options={[
-                { value: 'created_at_desc', label: 'Orden: más recientes' },
-                { value: 'ltv_desc', label: 'Orden: mayor LTV' },
-                { value: 'recency_desc', label: 'Orden: más días sin compra' },
-                { value: 'frequency_90d_desc', label: 'Orden: más órdenes (90d)' },
-                { value: 'ticket_promedio_desc', label: 'Orden: mayor ticket promedio' },
-                { value: 'name_asc', label: 'Orden: nombre A-Z' },
-              ]}
-            />
-
-            <Select
-              value={riesgoComercialFilter}
-              onChange={(value) => {
-                setRiesgoComercialFilter(value);
-                setCurrentPage(1);
-              }}
-              options={[
-                { value: 'all', label: 'Riesgo: todos' },
-                { value: 'alto', label: 'Riesgo alto' },
-                { value: 'medio', label: 'Riesgo medio' },
-                { value: 'bajo', label: 'Riesgo bajo' },
-              ]}
-            />
-
-            <Select
-              value={sinCompraFilter}
-              onChange={(value) => {
-                setSinCompraFilter(value);
-                setCurrentPage(1);
-              }}
-              options={[
-                { value: 'all', label: 'Recencia: todas' },
-                { value: 'gt_60', label: 'Sin compra > 60 días' },
-              ]}
-            />
-
-            <div className="text-sm text-gray-600">
-              Total: <span className="font-semibold">{totalCount}</span> clientes
-            </div>
-
-            <div className="text-sm text-gray-600">
-              LTV Promedio: <span className="font-semibold text-emerald-700">${avgLtv.toLocaleString('es-AR')}</span>
-            </div>
-
-            <div className="text-sm text-gray-600">
-              Total Vendido: <span className="font-semibold text-emerald-700">${totalLtv.toLocaleString('es-AR')}</span>
-            </div>
-
-            <div className="ml-auto flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleCopyAutoRegistroLink}
-                className="bg-gradient-to-r from-blue-50 to-cyan-50 border-blue-300 hover:border-blue-400"
-              >
-                {copiedLink ? (
-                  <>
-                    <Check className="w-4 h-4 mr-2 text-green-600" />
-                    <span className="text-green-700">Link copiado</span>
-                  </>
-                ) : (
-                  <>
-                    <LinkIcon className="w-4 h-4 mr-2 text-blue-600" />
-                    <span className="text-blue-700">Link Autoregistro</span>
-                  </>
-                )}
-              </Button>
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleDownloadQR}
-                disabled={downloadingQR}
-                className="bg-gradient-to-r from-violet-50 to-purple-50 border-violet-300 hover:border-violet-400"
-              >
-                {downloadingQR ? (
-                  <>
-                    <Download className="w-4 h-4 mr-2 text-violet-600 animate-pulse" />
-                    <span className="text-violet-700">Generando...</span>
-                  </>
-                ) : (
-                  <>
-                    <QrCode className="w-4 h-4 mr-2 text-violet-600" />
-                    <span className="text-violet-700">Descargar QR</span>
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
+      <AdvancedFiltersPanel
+        storageKey="clients-filters-collapsed"
+        activeFiltersCount={activeAdvancedFiltersCount}
+        onReset={resetAdvancedFilters}
+      >
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <Select
+            value={statusAprobacionFilter}
+            onChange={(value) => {
+              setStatusAprobacionFilter(value);
+              setCurrentPage(1);
+            }}
+            options={[
+              { value: 'all', label: 'Aprobación: todas' },
+              { value: 'pending', label: 'Pendientes' },
+              { value: 'approved', label: 'Aprobados' },
+              { value: 'rejected', label: 'Rechazados' },
+            ]}
+          />
+          <Select
+            value={cuentaCorrienteFilter}
+            onChange={(value) => {
+              setCuentaCorrienteFilter(value);
+              setCurrentPage(1);
+            }}
+            options={[
+              { value: 'all', label: 'Cuenta corriente: todas' },
+              { value: 'yes', label: 'Con cuenta corriente' },
+              { value: 'no', label: 'Sin cuenta corriente' },
+            ]}
+          />
+          <Select
+            value={riesgoComercialFilter}
+            onChange={(value) => {
+              setRiesgoComercialFilter(value);
+              setCurrentPage(1);
+            }}
+            options={[
+              { value: 'all', label: 'Riesgo: todos' },
+              { value: 'alto', label: 'Riesgo alto' },
+              { value: 'medio', label: 'Riesgo medio' },
+              { value: 'bajo', label: 'Riesgo bajo' },
+            ]}
+          />
+          <Select
+            value={sinCompraFilter}
+            onChange={(value) => {
+              setSinCompraFilter(value);
+              setCurrentPage(1);
+            }}
+            options={[
+              { value: 'all', label: 'Recencia: todas' },
+              { value: 'gt_60', label: 'Sin compra > 60 días' },
+            ]}
+          />
+          <Select
+            value={sortBy}
+            onChange={(value) => {
+              setSortBy(value as 'created_at_desc' | 'ltv_desc' | 'name_asc' | 'recency_desc' | 'frequency_90d_desc' | 'ticket_promedio_desc');
+              setCurrentPage(1);
+            }}
+            options={[
+              { value: 'created_at_desc', label: 'Orden: más recientes' },
+              { value: 'ltv_desc', label: 'Orden: mayor LTV' },
+              { value: 'recency_desc', label: 'Orden: más días sin compra' },
+              { value: 'frequency_90d_desc', label: 'Orden: más órdenes (90d)' },
+              { value: 'ticket_promedio_desc', label: 'Orden: mayor ticket promedio' },
+              { value: 'name_asc', label: 'Orden: nombre A-Z' },
+            ]}
+          />
         </div>
+      </AdvancedFiltersPanel>
 
+      <Card className="border-slate-200 shadow-sm">
+        <div className="border-b border-slate-200 px-4 py-3 text-sm text-slate-600">
+          Mostrando <span className="font-semibold text-slate-800">{clients.length}</span> de{' '}
+          <span className="font-semibold text-slate-800">{totalCount}</span> clientes
+        </div>
         <Table
           columns={columns}
           data={clients}
           keyExtractor={(client) => client.id}
           emptyMessage="No se encontraron clientes"
           isLoading={loading}
+          compact
         />
-
         {totalCount > 0 && (
           <Pagination
             currentPage={currentPage}

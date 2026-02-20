@@ -6,6 +6,9 @@ interface Column<T> {
   header: ReactNode;
   render: (item: T, index: number) => ReactNode;
   width?: string;
+  showFrom?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+  headerClassName?: string;
+  cellClassName?: string;
 }
 
 interface TableProps<T> {
@@ -43,6 +46,10 @@ export function Table<T>({
 }: TableProps<T>) {
   const cellPadding = dense ? 'px-4 py-1.5' : compact ? 'px-4 py-2.5' : 'px-6 py-4';
   const headerPadding = dense ? 'px-4 py-2' : compact ? 'px-4 py-2' : 'px-6 py-4';
+  const getVisibilityClass = (showFrom?: Column<T>['showFrom']) => {
+    if (!showFrom) return '';
+    return `hidden ${showFrom}:table-cell`;
+  };
 
   const handleRowClick = (item: T) => {
     if (expandable && onToggleExpand && isRowExpandable && isRowExpandable(item)) {
@@ -61,7 +68,7 @@ export function Table<T>({
                 {columns.map((column) => (
                   <th
                     key={column.key}
-                    className={`${headerPadding} text-left text-xs font-semibold text-gray-600 uppercase tracking-wider`}
+                    className={`${headerPadding} text-left text-xs font-semibold text-gray-600 uppercase tracking-wider ${getVisibilityClass(column.showFrom)} ${column.headerClassName || ''}`}
                     style={{ width: column.width }}
                   >
                     {column.header}
@@ -73,7 +80,7 @@ export function Table<T>({
               {[...Array(5)].map((_, index) => (
                 <tr key={`loading-${index}`} className="animate-pulse">
                   {columns.map((column) => (
-                    <td key={column.key} className={cellPadding}>
+                    <td key={column.key} className={`${cellPadding} ${getVisibilityClass(column.showFrom)} ${column.cellClassName || ''}`}>
                       <div className="h-4 bg-gray-200 rounded w-3/4"></div>
                     </td>
                   ))}
@@ -105,7 +112,7 @@ export function Table<T>({
                 {columns.map((column) => (
                   <th
                     key={column.key}
-                    className={`${headerPadding} text-left text-xs font-semibold text-gray-600 uppercase tracking-wider bg-gray-50`}
+                    className={`${headerPadding} text-left text-xs font-semibold text-gray-600 uppercase tracking-wider bg-gray-50 ${getVisibilityClass(column.showFrom)} ${column.headerClassName || ''}`}
                     style={{ width: column.width }}
                   >
                     {column.header}
@@ -140,7 +147,7 @@ export function Table<T>({
                         </td>
                       )}
                       {columns.map((column) => (
-                        <td key={column.key} className={cellPadding}>
+                        <td key={column.key} className={`${cellPadding} ${getVisibilityClass(column.showFrom)} ${column.cellClassName || ''}`}>
                           {column.render(item, data.indexOf(item))}
                         </td>
                       ))}
@@ -175,7 +182,7 @@ export function Table<T>({
             {columns.map((column) => (
               <th
                 key={column.key}
-                className={`${headerPadding} text-left text-xs font-semibold text-gray-600 uppercase tracking-wider`}
+                className={`${headerPadding} text-left text-xs font-semibold text-gray-600 uppercase tracking-wider ${getVisibilityClass(column.showFrom)} ${column.headerClassName || ''}`}
                 style={{ width: column.width }}
               >
                 {column.header}
@@ -210,7 +217,7 @@ export function Table<T>({
                     </td>
                   )}
                   {columns.map((column) => (
-                    <td key={column.key} className={cellPadding}>
+                    <td key={column.key} className={`${cellPadding} ${getVisibilityClass(column.showFrom)} ${column.cellClassName || ''}`}>
                       {column.render(item, data.indexOf(item))}
                     </td>
                   ))}
