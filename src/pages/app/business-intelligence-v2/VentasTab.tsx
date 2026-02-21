@@ -71,6 +71,23 @@ export function VentasTab({ params }: VentasTabProps) {
     ],
   };
 
+  const categoryTicketOption = {
+    tooltip: { trigger: 'axis' },
+    grid: { left: 12, right: 12, top: 12, bottom: 24, containLabel: true },
+    xAxis: { type: 'value' },
+    yAxis: {
+      type: 'category',
+      data: ventas.data.categorias.slice(0, 8).map((c) => c.categoria_nombre),
+    },
+    series: [
+      {
+        type: 'bar',
+        data: ventas.data.categorias.slice(0, 8).map((c) => c.ticket_promedio),
+        itemStyle: { borderRadius: [0, 6, 6, 0], color: '#6366f1' },
+      },
+    ],
+  };
+
   const heatmapPoints = ventas.data.heatmap.map((h) => [h.hora, h.dia_semana, h.total_ordenes]);
   const maxHeat = Math.max(1, ...ventas.data.heatmap.map((h) => h.total_ordenes));
   const heatOption = {
@@ -119,12 +136,17 @@ export function VentasTab({ params }: VentasTabProps) {
       </BISectionCard>
 
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-12">
-        <div className="xl:col-span-6">
+        <div className="xl:col-span-4">
           <BISectionCard title="Facturación por Categoría" description="Top 8 categorías por ventas">
             <ReactECharts option={categoryOption} style={{ height: 340 }} />
           </BISectionCard>
         </div>
-        <div className="xl:col-span-6">
+        <div className="xl:col-span-4">
+          <BISectionCard title="Ticket promedio por categoría" description="Monto promedio por orden en cada categoría.">
+            <ReactECharts option={categoryTicketOption} style={{ height: 340 }} />
+          </BISectionCard>
+        </div>
+        <div className="xl:col-span-4">
           <BISectionCard title="Heatmap horario/semanal" description="Estacionalidad de demanda por día y hora.">
             <ReactECharts option={heatOption} style={{ height: 340 }} />
             <p className="mt-2 text-[11px] text-slate-500">Más oscuro = mayor cantidad de órdenes en esa franja.</p>

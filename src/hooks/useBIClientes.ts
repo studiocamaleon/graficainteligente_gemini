@@ -21,14 +21,27 @@ export function useBIClientes(params: BIQueryParams): BIHookResult<BIClientesDat
       const resolvedMeta = await resolveBIMeta({ preset, fechaInicio, fechaFin });
       setMeta(resolvedMeta);
 
-      const { data: rpcData, error: rpcError } = await supabase.rpc('fn_bi_clientes_kpis_v2', {
-        p_company_id: company.id,
-        p_fecha_inicio: resolvedMeta.fecha_inicio,
-        p_fecha_fin: resolvedMeta.fecha_fin,
-      });
-      if (rpcError) throw rpcError;
+      const [kpisRes, ltvResumenRes, topLtvRes] = await Promise.all([
+        supabase.rpc('fn_bi_clientes_kpis_v2', {
+          p_company_id: company.id,
+          p_fecha_inicio: resolvedMeta.fecha_inicio,
+          p_fecha_fin: resolvedMeta.fecha_fin,
+        }),
+        supabase.rpc('fn_bi_clientes_ltv_resumen_v2', {
+          p_company_id: company.id,
+        }),
+        supabase.rpc('fn_bi_clientes_top_ltv_v2', {
+          p_company_id: company.id,
+          p_limit: 10,
+        }),
+      ]);
+      if (kpisRes.error) throw kpisRes.error;
+      if (ltvResumenRes.error) throw ltvResumenRes.error;
+      if (topLtvRes.error) throw topLtvRes.error;
 
-      const row = (rpcData?.[0] || null) as Record<string, unknown> | null;
+      const row = (kpisRes.data?.[0] || null) as Record<string, unknown> | null;
+      const ltvResumen = (ltvResumenRes.data?.[0] || null) as Record<string, unknown> | null;
+      const topRows = Array.isArray(topLtvRes.data) ? (topLtvRes.data as Record<string, unknown>[]) : [];
       if (!row) {
         setData({
           clientes_nuevos: 0,
@@ -38,6 +51,10 @@ export function useBIClientes(params: BIQueryParams): BIHookResult<BIClientesDat
           recencia_media_dias: 0,
           concentracion_top10_pct: 0,
           ticket_promedio_cliente: 0,
+          ltv_promedio: 0,
+          ltv_mediano: 0,
+          clientes_con_compras_historicas: 0,
+          top_ltv_clientes: [],
         });
         return;
       }
@@ -50,6 +67,16 @@ export function useBIClientes(params: BIQueryParams): BIHookResult<BIClientesDat
         recencia_media_dias: toNumber(row.recencia_media_dias),
         concentracion_top10_pct: toNumber(row.concentracion_top10_pct),
         ticket_promedio_cliente: toNumber(row.ticket_promedio_cliente),
+        ltv_promedio: toNumber(ltvResumen?.ltv_promedio),
+        ltv_mediano: toNumber(ltvResumen?.ltv_mediano),
+        clientes_con_compras_historicas: toNumber(ltvResumen?.clientes_con_compras),
+        top_ltv_clientes: topRows.map((r) => ({
+          cliente_id: String(r.cliente_id || ''),
+          cliente_nombre: String(r.cliente_nombre || 'Cliente sin nombre'),
+          ltv_total: toNumber(r.ltv_total),
+          total_ordenes: toNumber(r.total_ordenes),
+          ticket_promedio: toNumber(r.ticket_promedio),
+        })),
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al cargar BI Clientes');
