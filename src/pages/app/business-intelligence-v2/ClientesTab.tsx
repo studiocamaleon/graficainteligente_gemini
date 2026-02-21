@@ -36,11 +36,12 @@ export function ClientesTab({ params }: ClientesTabProps) {
 
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
         <KPICard title="Clientes nuevos" value={String(clientes.data.clientes_nuevos)} subtitle="Altas en el período" hint="Clientes que hicieron su primera compra en el rango." icon={UserPlus} tone="cyan" />
         <KPICard title="Clientes activos" value={String(clientes.data.clientes_activos)} subtitle={`Recurrentes ${clientes.data.clientes_recurrentes}`} hint="Clientes con al menos una compra en el período." icon={Users} tone="indigo" />
         <KPICard title="Frecuencia compra" value={clientes.data.frecuencia_compra.toFixed(2)} subtitle="Órdenes por cliente activo" hint="Promedio de compras por cada cliente activo." icon={Activity} tone="emerald" />
         <KPICard title="Concentración top 10" value={`${clientes.data.concentracion_top10_pct.toFixed(1)}%`} subtitle={`Ticket cliente ${money(clientes.data.ticket_promedio_cliente)}`} hint="Qué porcentaje de ventas depende de tus 10 principales clientes." icon={PieChart} tone={clientes.data.concentracion_top10_pct > 60 ? 'amber' : 'emerald'} />
+        <KPICard title="LTV promedio" value={`$${money(clientes.data.ltv_promedio)}`} subtitle={`Mediano $${money(clientes.data.ltv_mediano)}`} hint="Valor de vida histórico por cliente con compras." icon={Users} tone="cyan" />
       </div>
 
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-12">
@@ -70,6 +71,42 @@ export function ClientesTab({ params }: ClientesTabProps) {
           </BISectionCard>
         </div>
       </div>
+
+      <BISectionCard
+        title="Top clientes por LTV"
+        description={`Ranking histórico por facturación acumulada (${clientes.data.clientes_con_compras_historicas} clientes con compras).`}
+        right={<span className="text-[11px] font-medium text-slate-500">Qué es: clientes que más aportan en valor total histórico.</span>}
+      >
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
+                <th className="py-2 pr-3">Cliente</th>
+                <th className="py-2 px-3 text-right">LTV</th>
+                <th className="py-2 px-3 text-right">Órdenes</th>
+                <th className="py-2 pl-3 text-right">Ticket prom.</th>
+              </tr>
+            </thead>
+            <tbody>
+              {clientes.data.top_ltv_clientes.map((row) => (
+                <tr key={row.cliente_id || row.cliente_nombre} className="border-b border-slate-100 last:border-b-0">
+                  <td className="py-2 pr-3 font-medium text-slate-800">{row.cliente_nombre}</td>
+                  <td className="py-2 px-3 text-right font-semibold text-slate-900">${money(row.ltv_total)}</td>
+                  <td className="py-2 px-3 text-right text-slate-700">{row.total_ordenes}</td>
+                  <td className="py-2 pl-3 text-right text-slate-700">${money(row.ticket_promedio)}</td>
+                </tr>
+              ))}
+              {clientes.data.top_ltv_clientes.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="py-6 text-center text-slate-500">
+                    Sin datos de LTV para el período seleccionado.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </BISectionCard>
     </div>
   );
 }

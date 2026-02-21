@@ -103,6 +103,16 @@ export interface BIClientesData {
   recencia_media_dias: number;
   concentracion_top10_pct: number;
   ticket_promedio_cliente: number;
+  ltv_promedio: number;
+  ltv_mediano: number;
+  clientes_con_compras_historicas: number;
+  top_ltv_clientes: {
+    cliente_id: string;
+    cliente_nombre: string;
+    ltv_total: number;
+    total_ordenes: number;
+    ticket_promedio: number;
+  }[];
 }
 
 export interface BIOperacionData {
