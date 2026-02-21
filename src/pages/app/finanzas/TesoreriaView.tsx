@@ -1,10 +1,9 @@
 import { useMemo, useState } from 'react';
-import { Wallet, TrendingUp, TrendingDown, DollarSign, CreditCard, LineChart, HandCoins, Landmark, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Wallet, TrendingUp, TrendingDown, DollarSign, CreditCard, LineChart, HandCoins, Landmark, AlertTriangle, RefreshCw, ListOrdered } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
-import { Tabs } from '../../../components/ui/Tabs';
+import { TabsModern } from '../../../components/ui/TabsModern';
 import { ResumenCajas } from '../../../components/tesoreria/ResumenCajas';
-import { IngresosPanel } from '../../../components/tesoreria/IngresosPanel';
-import { EgresosPanel } from '../../../components/tesoreria/EgresosPanel';
+import { MovimientosPanel } from '../../../components/tesoreria/MovimientosPanel';
 import { RecurringExpensesPanel } from '../../../components/tesoreria/RecurringExpensesPanel';
 import { ChequesPanel } from '../../../components/tesoreria/ChequesPanel';
 import { DineroPorCobrarPanel } from '../../../components/tesoreria/DineroPorCobrarPanel';
@@ -28,19 +27,18 @@ export default function TesoreriaView() {
   const { resumenPorTipo, totalSaldo, loading: cajasLoading, refetch } = useCajas();
 
   const isOperadorDiseno = profile?.role === 'operador_diseno';
-  const [activeTab, setActiveTab] = useState(isOperadorDiseno ? 'cajas' : 'cashflow');
+  const [activeTab, setActiveTab] = useState(isOperadorDiseno ? 'cajas' : 'movimientos');
   const [period, setPeriod] = useState<TesoreriaPeriodo>('30d');
   const [selectedCaja, setSelectedCaja] = useState<CajaConMediosCobro | null>(null);
 
   const { overview, loading: overviewLoading, error: overviewError, range, refetch: refetchOverview } = useTesoreriaOverview(period);
 
   const allTabs = [
+    { id: 'movimientos', label: 'Movimientos', icon: ListOrdered },
     { id: 'cashflow', label: 'Proyección (Cashflow)', icon: LineChart },
     { id: 'cajas', label: 'Cajas y Saldos', icon: Wallet },
     { id: 'cheques', label: 'Cartera Cheques', icon: DollarSign },
     { id: 'tarjetas', label: 'Tarjetas Corp.', icon: CreditCard },
-    { id: 'ingresos', label: 'Ingresos', icon: TrendingUp },
-    { id: 'egresos', label: 'Egresos', icon: TrendingDown },
     { id: 'recurrentes', label: 'Gastos Fijos', icon: RefreshCw },
     { id: 'por-cobrar', label: 'Por Cobrar', icon: DollarSign },
   ];
@@ -164,7 +162,7 @@ export default function TesoreriaView() {
       </div>
 
       {/* Tabs */}
-      <Tabs
+      <TabsModern
         tabs={tabs}
         activeTab={activeTab}
         onTabChange={setActiveTab}
@@ -172,6 +170,8 @@ export default function TesoreriaView() {
 
       {/* Content */}
       <div className="mt-6">
+        {activeTab === 'movimientos' && <MovimientosPanel onMovimientoRegistrado={refetch} />}
+
         {activeTab === 'cashflow' && <CashflowDashboard />}
 
         {activeTab === 'cajas' && (
@@ -190,10 +190,6 @@ export default function TesoreriaView() {
         {activeTab === 'cheques' && <ChequesPanel />}
 
         {activeTab === 'tarjetas' && <TarjetasPanel />}
-
-        {activeTab === 'ingresos' && <IngresosPanel onIngresoRegistrado={refetch} />}
-
-        {activeTab === 'egresos' && <EgresosPanel onEgresoRegistrado={refetch} />}
 
         {activeTab === 'recurrentes' && <RecurringExpensesPanel />}
 

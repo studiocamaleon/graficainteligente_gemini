@@ -13,7 +13,7 @@ import type {
   CentroCopiadoOrdenResumida,
   CentroCopiadoOrdenItem,
 } from '../types/database';
-import { getArgentinaDateString } from '../utils/dates';
+import { formatDateForInput, getArgentinaDateString } from '../utils/dates';
 import { generateProductionRoutes, normalizarEtapa } from '../utils/generateProductionRoutes';
 import { distribuirPagosProporcional, validarDesvinculacion } from '../utils/ordenesConsolidadas';
 import { sendWatiMessage } from '../lib/wati';
@@ -165,6 +165,12 @@ export function useOrdenTrabajo() {
     } catch (err) {
       console.error('Error adding historial event:', err);
     }
+  };
+
+  const normalizeDateOnly = (dateValue?: string | null): string | undefined => {
+    if (!dateValue) return undefined;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) return dateValue;
+    return formatDateForInput(dateValue);
   };
 
   const getOrdenById = async (id: string): Promise<OrdenTrabajoFull | null> => {
@@ -602,6 +608,9 @@ export function useOrdenTrabajo() {
 
       // Handle Cheque Creation if present
       let chequeId = null;
+      const fechaPagoNormalizada = normalizeDateOnly(pagoData.fecha_pago);
+      const fechaChequeNormalizada = normalizeDateOnly(pagoData.cheque_data?.fecha_pago);
+
       if (pagoData.cheque_data && pagoData.medio_cobro_id) {
         const { data: newCheck, error: checkError } = await supabase
           .from('cheques_cartera')
@@ -613,7 +622,7 @@ export function useOrdenTrabajo() {
             numero_cheque: pagoData.cheque_data.numero_cheque,
             banco: pagoData.cheque_data.banco,
             fecha_emision: getArgentinaDateString(), // Use local date
-            fecha_pago: pagoData.cheque_data.fecha_pago, // Maturity
+            fecha_pago: fechaChequeNormalizada || pagoData.cheque_data.fecha_pago, // Maturity
             monto: pagoData.monto,
             destinatario: pagoData.cheque_data.titular || 'Nosotros',
             descripcion: `Pago Orden #${ordenId}`, // Ideally fetch Order Number but ID is fine for link
@@ -629,6 +638,9 @@ export function useOrdenTrabajo() {
       // We remove cheque_data from the payload to ordenes_trabajo_pagos
       const dbPagoData: any = { ...pagoData };
       delete dbPagoData.cheque_data;
+      if (fechaPagoNormalizada) {
+        dbPagoData.fecha_pago = fechaPagoNormalizada;
+      }
 
       // Ensure we insert valid fields (ordenes_trabajo_pagos doesn't have cheque_id field usually, but we could add it? 
       // For now, let's just create the cheque. Linking is implicit via description or we can add metadata in notes?
@@ -748,22 +760,29 @@ export function useOrdenTrabajo() {
 
       if (pagoAnteriorError) throw pagoAnteriorError;
 
+      const pagoDataNormalizado: Record<string, unknown> = { ...pagoData };
+      delete pagoDataNormalizado.cheque_data;
+      const fechaPagoNormalizada = normalizeDateOnly(pagoData.fecha_pago);
+      if (fechaPagoNormalizada) {
+        pagoDataNormalizado.fecha_pago = fechaPagoNormalizada;
+      }
+
       const { error: updateError } = await supabase
         .from('ordenes_trabajo_pagos')
-        .update(pagoData)
+        .update(pagoDataNormalizado)
         .eq('id', pagoId);
 
       if (updateError) throw updateError;
 
-      const camposActualizados = Object.keys(pagoData).filter(
-        key => (pagoData as Record<string, unknown>)[key] !== undefined
+      const camposActualizados = Object.keys(pagoDataNormalizado).filter(
+        key => pagoDataNormalizado[key] !== undefined
       );
 
       await addHistorialEvent(ordenId, 'pago_editado', 'Pago actualizado', {
         pago_id: pagoId,
         campos_actualizados: camposActualizados,
         before: pagoAnterior,
-        after: pagoData,
+        after: pagoDataNormalizado,
       });
 
       return true;
