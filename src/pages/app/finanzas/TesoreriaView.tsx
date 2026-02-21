@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Wallet, TrendingUp, TrendingDown, DollarSign, CreditCard, LineChart, HandCoins, Landmark, AlertTriangle } from 'lucide-react';
+import { Wallet, TrendingUp, TrendingDown, DollarSign, CreditCard, LineChart, HandCoins, Landmark, AlertTriangle, RefreshCw } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { Tabs } from '../../../components/ui/Tabs';
 import { ResumenCajas } from '../../../components/tesoreria/ResumenCajas';
@@ -25,7 +25,7 @@ function formatCurrency(value: number) {
 
 export default function TesoreriaView() {
   const { profile } = useAuth();
-  const { resumenPorTipo, totalSaldo, refetch } = useCajas();
+  const { resumenPorTipo, totalSaldo, loading: cajasLoading, refetch } = useCajas();
 
   const isOperadorDiseno = profile?.role === 'operador_diseno';
   const [activeTab, setActiveTab] = useState(isOperadorDiseno ? 'cajas' : 'cashflow');
@@ -135,8 +135,8 @@ export default function TesoreriaView() {
                 </button>
               ))}
             </div>
-            <Button variant="secondary" onClick={handleRefreshAll}>
-              Actualizar datos
+            <Button variant="secondary" onClick={handleRefreshAll} disabled={cajasLoading || overviewLoading}>
+              {cajasLoading || overviewLoading ? 'Actualizando...' : 'Actualizar datos'}
             </Button>
           </div>
         </div>
@@ -178,6 +178,7 @@ export default function TesoreriaView() {
           <ResumenCajas
             resumenPorTipo={resumenPorTipo}
             totalSaldo={totalSaldo}
+            loading={cajasLoading}
             onCajaClick={(cajaId) => {
               const caja = allCajas.find((item) => item.id === cajaId) || null;
               setSelectedCaja(caja);
@@ -199,11 +200,13 @@ export default function TesoreriaView() {
         {activeTab === 'por-cobrar' && <DineroPorCobrarPanel />}
       </div>
 
-      <CajaMovimientosModal
-        isOpen={!!selectedCaja}
-        onClose={() => setSelectedCaja(null)}
-        caja={selectedCaja}
-      />
+      {selectedCaja && (
+        <CajaMovimientosModal
+          isOpen={!!selectedCaja}
+          onClose={() => setSelectedCaja(null)}
+          caja={selectedCaja}
+        />
+      )}
     </div>
   );
 }

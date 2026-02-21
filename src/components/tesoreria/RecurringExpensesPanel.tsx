@@ -9,12 +9,15 @@ import { CreateRecurringExpenseModal } from './CreateRecurringExpenseModal';
 import { useConfirmDialog } from '../../hooks/useConfirmDialog';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { useToast } from '../../contexts/ToastContext';
+import { useAuth } from '../../hooks/useAuth';
 import type { RecurringExpense } from '../../types/database';
 
 export function RecurringExpensesPanel() {
     const { expenses, loading, createExpense, updateExpense, deleteExpense, refetch } = useRecurringExpenses();
+    const { profile } = useAuth();
     const { showConfirm, dialogState, closeDialog, handleConfirm, isLoading: isConfirmLoading } = useConfirmDialog();
     const { showSuccess, showError } = useToast();
+    const canDeleteRecurring = profile?.role === 'admin' || profile?.role === 'super_admin';
 
     const [showModal, setShowModal] = useState(false);
     const [expenseToEdit, setExpenseToEdit] = useState<RecurringExpense | null>(null);
@@ -122,9 +125,11 @@ export function RecurringExpensesPanel() {
                     <Button variant="ghost" size="sm" onClick={() => handleEdit(item)}>
                         <Edit2 className="w-4 h-4" />
                     </Button>
-                    <Button variant="ghost" size="sm" className="text-red-500" onClick={() => handleDelete(item.id)}>
-                        <Trash2 className="w-4 h-4" />
-                    </Button>
+                    {canDeleteRecurring && (
+                        <Button variant="ghost" size="sm" className="text-red-500" onClick={() => handleDelete(item.id)}>
+                            <Trash2 className="w-4 h-4" />
+                        </Button>
+                    )}
                 </div>
             ),
         },

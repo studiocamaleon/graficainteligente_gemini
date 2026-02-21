@@ -3,6 +3,25 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
 import type { Caja, CajaConMediosCobro, ResumenCajaPorTipo } from '../types/medios-cobro';
 
+interface CajaDashboardStat {
+  id: string;
+  ingresos_hoy: number;
+  egresos_hoy: number;
+  movimientos_hoy: number;
+}
+
+export interface CajaMovimientoListItem {
+  id: string;
+  fecha: string;
+  tipo_movimiento: string;
+  monto: number;
+  concepto: string;
+  notas: string | null;
+  referencia_tipo: string | null;
+  usuario_nombre: string | null;
+  otro_caja_nombre: string | null;
+}
+
 export function useCajas() {
   const { profile } = useAuth();
   const [cajas, setCajas] = useState<CajaConMediosCobro[]>([]);
@@ -16,39 +35,6 @@ export function useCajas() {
     try {
       setLoading(true);
 
-      const { data, error } = await supabase
-        .rpc('fn_get_cajas_dashboard', {
-          p_company_id: profile.company_id,
-          p_date: new Date().toISOString().split('T')[0]
-        });
-
-      if (error) throw error;
-
-      // Transform RPC result to match frontend interface
-      // Note: RPC returns snake_case, JS uses same.
-      // We need to map 'tipo' from string to specific Union type if strictly typed, but let's cast.
-      const mappedCajas: any[] = (data || []).map(c => ({
-        ...c,
-        medios_cobro: [] // RPC doesn't fetch medios_cobro deep, we might need a separate call or fetch relevant ones if needed.
-        // Actually, previous implementation fetched medios_cobro joined.
-        // If UI needs medios_cobro inside caja, we should keep fetching them or improve RPC.
-        // Looking at usage: Dashboard usually just needs totals. RegistrarIngreso needs list.
-        // Let's check if we strictly need medios_cobro nested here.
-      }));
-
-      // WAIT. useCajas is used in Modals where we might need 'medios_cobro' linked to the caja?
-      // Actually useMediosCobro is used for drop downs. 
-      // The previous code did: select `*, medios_cobro(*)`.
-      // Let's see if we can fetch nested in RPC or if we should fetch medios separately.
-      // For now, let's keep the hook returning what it returned before but populated faster.
-      // The RPC above does NOT return medios_cobro. 
-      // Strategy: Fetch dashboard stats via RPC. Fetch medios_cobro via standard query if needed?
-      // Actually, standard query for 'cajas' + 'medios_cobro' is fast. The SLOW part was the loop for 'movimientos'.
-      // So we can:
-      // 1. Fetch Cajas+Medios (lightweight).
-      // 2. Fetch Stats via RPC.
-      // 3. Merge.
-
       const [cajasResponse, statsResponse] = await Promise.all([
         supabase
           .from('cajas')
@@ -60,14 +46,16 @@ export function useCajas() {
           .order('nombre'),
         supabase
           .rpc('fn_get_cajas_dashboard', {
-            p_company_id: profile.company_id
+            p_company_id: profile.company_id,
+            p_date: new Date().toISOString().split('T')[0]
           })
       ]);
 
       if (cajasResponse.error) throw cajasResponse.error;
       if (statsResponse.error) throw statsResponse.error;
 
-      const statsMap = new Map(statsResponse.data.map((s: any) => [s.id, s]));
+      const statsRows = (statsResponse.data || []) as CajaDashboardStat[];
+      const statsMap = new Map(statsRows.map((s) => [s.id, s]));
 
       const cajasCompletas = (cajasResponse.data || []).map(c => {
         const stat = statsMap.get(c.id) || { ingresos_hoy: 0, egresos_hoy: 0, movimientos_hoy: 0 };
@@ -118,7 +106,7 @@ export function useCajas() {
     } finally {
       setLoading(false);
     }
-  }, [profile?.company_id]);
+  }, [profile?.company_id, profile?.role]);
 
   useEffect(() => {
     fetchCajas();
@@ -134,9 +122,9 @@ export function useCajas() {
 }
 
 export function useCajaMovimientos(cajaId: string | null, isOpen: boolean) {
-  const [movimientos, setMovimientos] = useState<any[]>([]);
+  const [movimientos, setMovimientos] = useState<CajaMovimientoListItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const PAGE_SIZE = 20;
@@ -155,20 +143,21 @@ export function useCajaMovimientos(cajaId: string | null, isOpen: boolean) {
       });
 
       if (error) throw error;
+      const rows = (data || []) as CajaMovimientoListItem[];
 
       if (reset) {
-        setMovimientos(data || []);
+        setMovimientos(rows);
         setPage(1);
       } else {
-        setMovimientos(prev => [...prev, ...(data || [])]);
+        setMovimientos(prev => [...prev, ...rows]);
         setPage(prev => prev + 1);
       }
 
-      setHasMore((data?.length || 0) === PAGE_SIZE);
+      setHasMore(rows.length === PAGE_SIZE);
       setError(null);
     } catch (err) {
       console.error('Error fetching movimientos:', err);
-      setError(err);
+      setError(err instanceof Error ? err.message : 'Error al cargar movimientos');
     } finally {
       setLoading(false);
     }
@@ -178,9 +167,12 @@ export function useCajaMovimientos(cajaId: string | null, isOpen: boolean) {
     if (isOpen && cajaId) {
       fetchMovimientos(true);
     } else {
-      setMovimientos([]); // Clear on close
+      setMovimientos([]);
+      setPage(0);
+      setHasMore(true);
+      setError(null);
     }
-  }, [cajaId, isOpen]);
+  }, [cajaId, isOpen, fetchMovimientos]);
 
   return {
     movimientos,

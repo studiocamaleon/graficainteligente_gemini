@@ -1,8 +1,5 @@
-
-import { useNavigate } from 'react-router-dom';
-import { Wallet, DollarSign, TrendingUp, TrendingDown, ClipboardCheck, ArrowRightLeft, Banknote, Landmark, History } from 'lucide-react';
+import { Wallet, TrendingUp, TrendingDown, ClipboardCheck, ArrowRightLeft, Banknote, Landmark, History, MinusCircle } from 'lucide-react';
 import type { CajaConMediosCobro } from '../../types/medios-cobro';
-import { Button } from '../ui/Button';
 
 interface CajaSummaryCardProps {
   caja: CajaConMediosCobro;
@@ -13,134 +10,123 @@ interface CajaSummaryCardProps {
   onRetiro?: (caja: CajaConMediosCobro) => void;
 }
 
-const TIPO_ICONS = {
-  efectivo: Banknote,
-  banco: Landmark,
-  pasarela: Wallet,
-};
-
-const TIPO_COLORS = {
-  efectivo: 'bg-green-50 border-green-200',
-  banco: 'bg-blue-50 border-blue-200',
-  pasarela: 'bg-purple-50 border-purple-200',
-};
+const TIPO_ICONS = { efectivo: Banknote, banco: Landmark, pasarela: Wallet };
+const TIPO_LABELS = { efectivo: 'Efectivo', banco: 'Banco', pasarela: 'Pasarela' };
 
 export function CajaSummaryCard({ caja, onClickArqueo, onTransferir, onHistory, onRetiro }: CajaSummaryCardProps) {
-  const navigate = useNavigate(); // Added useNavigate
-  const Icon = TIPO_ICONS[caja.tipo]; // This line is kept from original, but the new JSX doesn't use it directly for the main icon.
+  const Icon = TIPO_ICONS[caja.tipo] || Wallet;
   const saldo = Number(caja.saldo_actual);
   const ingresosHoy = caja.ingresos_hoy || 0;
   const egresosHoy = caja.egresos_hoy || 0;
-  const colorClass = TIPO_COLORS[caja.tipo]; // This line is kept from original, but the new JSX doesn't use it.
+  const movimientosHoy = caja.movimientos_hoy || 0;
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow p-5">
-      <div className="flex items-start justify-between mb-4">
+    <article className="group rounded-2xl border border-slate-200/90 bg-white p-4 shadow-[0_1px_3px_rgba(15,23,42,0.08)] transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_8px_18px_rgba(15,23,42,0.12)]">
+      <div className="mb-4 flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className={`p - 2.5 rounded - lg ${caja.es_principal ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'} `}>
-            {caja.es_principal ? <Wallet className="w-6 h-6" /> : <DollarSign className="w-6 h-6" />}
+          <div className={`rounded-xl border p-2.5 ${caja.es_principal ? 'border-blue-200 bg-blue-50 text-blue-700' : 'border-slate-200 bg-slate-50 text-slate-700'}`}>
+            {caja.es_principal ? <Wallet className="h-5 w-5" /> : <Icon className="h-5 w-5" />}
           </div>
-          <div>
-            <h3 className="font-bold text-gray-900 text-lg">{caja.nombre}</h3>
-            <p className="text-sm text-gray-500 capitalize">{caja.tipo.replace('_', ' ')}</p>
+          <div className="min-w-0">
+            <h3 className="truncate text-base font-semibold text-slate-900">{caja.nombre}</h3>
+            <div className="mt-1 flex items-center gap-2">
+              <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide text-slate-600">
+                {TIPO_LABELS[caja.tipo]}
+              </span>
+              {caja.es_principal && (
+                <span className="inline-flex rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-700">
+                  Principal
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex items-center gap-1">
           {onTransferir && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200"
+            <button
+              type="button"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
               onClick={(e) => {
                 e.stopPropagation();
                 onTransferir(caja);
               }}
               title="Transferir Fondos"
             >
-              <ArrowRightLeft className="w-4 h-4" />
-            </Button>
+              <ArrowRightLeft className="h-4 w-4" />
+            </button>
           )}
 
           {onClickArqueo && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="gap-2"
+            <button
+              type="button"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700"
               onClick={(e) => {
                 e.stopPropagation();
                 onClickArqueo(caja);
               }}
+              title="Arqueo"
             >
-              <ClipboardCheck className="w-4 h-4" />
-              Arqueo
-            </Button>
+              <ClipboardCheck className="h-4 w-4" />
+            </button>
           )}
 
           {onHistory && (
-            <Button
-              size="sm"
-              variant="ghost"
-              className="text-gray-500 hover:text-gray-700 p-2"
+            <button
+              type="button"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:border-slate-300 hover:bg-slate-100 hover:text-slate-800"
               onClick={(e) => {
                 e.stopPropagation();
                 onHistory(caja);
               }}
               title="Ver Historial"
             >
-              <History className="w-5 h-5" />
-            </Button>
+              <History className="h-4 w-4" />
+            </button>
           )}
 
           {onRetiro && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+            <button
+              type="button"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700"
               onClick={(e) => {
                 e.stopPropagation();
                 onRetiro(caja);
               }}
               title="Registrar Retiro / Gasto"
             >
-              <TrendingDown className="w-4 h-4" />
-            </Button>
+              <MinusCircle className="h-4 w-4" />
+            </button>
           )}
         </div>
       </div>
 
-      {/* Saldo */}
-      <div className="mb-3">
-        <p className="text-xl font-bold text-gray-900">
+      <div className="rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2.5">
+        <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Saldo actual</p>
+        <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">
           ${saldo.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </p>
-        <p className="text-xs text-gray-500 font-medium">{caja.moneda}</p>
+        <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">{caja.moneda}</p>
       </div>
 
-      {/* Movimientos del día */}
-      {(ingresosHoy > 0 || egresosHoy > 0) && (
-        <div className="flex items-center gap-3 pt-3 border-t border-gray-200">
-          {ingresosHoy > 0 && (
-            <div className="flex items-center gap-1 text-xs text-green-600">
-              <TrendingUp className="w-3.5 h-3.5" />
-              <span className="font-medium">+${ingresosHoy.toLocaleString('es-AR')}</span>
-            </div>
-          )}
-          {egresosHoy > 0 && (
-            <div className="flex items-center gap-1 text-xs text-red-600">
-              <TrendingDown className="w-3.5 h-3.5" />
-              <span className="font-medium">-${egresosHoy.toLocaleString('es-AR')}</span>
-            </div>
-          )}
+      <div className="mt-3 grid grid-cols-3 gap-2">
+        <div className="rounded-lg border border-emerald-100 bg-emerald-50 px-2 py-1.5">
+          <p className="text-[10px] uppercase tracking-wide text-emerald-700">Ingresos</p>
+          <p className="mt-0.5 flex items-center gap-1 text-xs font-semibold text-emerald-800">
+            <TrendingUp className="h-3.5 w-3.5" />${ingresosHoy.toLocaleString('es-AR')}
+          </p>
         </div>
-      )}
-
-      {/* Sin movimientos hoy */}
-      {ingresosHoy === 0 && egresosHoy === 0 && (
-        <div className="pt-3 border-t border-gray-200">
-          <p className="text-xs text-gray-400 text-center">Sin movimientos hoy</p>
+        <div className="rounded-lg border border-rose-100 bg-rose-50 px-2 py-1.5">
+          <p className="text-[10px] uppercase tracking-wide text-rose-700">Egresos</p>
+          <p className="mt-0.5 flex items-center gap-1 text-xs font-semibold text-rose-800">
+            <TrendingDown className="h-3.5 w-3.5" />${egresosHoy.toLocaleString('es-AR')}
+          </p>
         </div>
-      )}
-    </div>
+        <div className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5">
+          <p className="text-[10px] uppercase tracking-wide text-slate-600">Mov. hoy</p>
+          <p className="mt-0.5 text-xs font-semibold text-slate-800">{movimientosHoy}</p>
+        </div>
+      </div>
+    </article>
   );
 }
