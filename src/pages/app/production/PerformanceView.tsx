@@ -4,7 +4,9 @@ import { PerformanceKpiRow } from '../../../components/production/performance/Pe
 import { CompletedByUserChart } from '../../../components/production/performance/CompletedByUserChart';
 import { CompletedByStationChart } from '../../../components/production/performance/CompletedByStationChart';
 import { CycleTrendChart } from '../../../components/production/performance/CycleTrendChart';
+import { TasksEvolutionChart } from '../../../components/production/performance/TasksEvolutionChart';
 import { WorktablesGlobalKanban } from '../../../components/production/performance/WorktablesGlobalKanban';
+import { CompletedTasksLogTable } from '../../../components/production/performance/CompletedTasksLogTable';
 import { useProductionPerformance } from '../../../hooks/useProductionPerformance';
 
 export function PerformanceView() {
@@ -18,11 +20,14 @@ export function PerformanceView() {
     seriesByUser,
     seriesByStation,
     cycleTrend,
+    tasksTimeline,
+    timelineUserId,
+    completedTasksLog,
     worktablesByUser,
     setPeriod,
     setEstacionId,
     setUserId,
-    refresh,
+    setTimelineUserId,
     isRealtimeConnected,
     lastUpdated,
   } = useProductionPerformance();
@@ -40,7 +45,6 @@ export function PerformanceView() {
         onPeriodChange={setPeriod}
         onEstacionChange={setEstacionId}
         onUserChange={setUserId}
-        onRefresh={refresh}
       />
 
       {lastUpdated && (
@@ -95,6 +99,16 @@ export function PerformanceView() {
           <CycleTrendChart data={cycleTrend} loading={loading} />
         </div>
       </div>
+
+      <TasksEvolutionChart
+        data={tasksTimeline}
+        users={usuarios}
+        selectedUserId={timelineUserId}
+        loading={loading}
+        onUserChange={setTimelineUserId}
+      />
+
+      <CompletedTasksLogTable data={completedTasksLog} loading={loading} />
 
       <WorktablesGlobalKanban users={usuarios} groups={worktablesByUser} loading={loading} />
     </div>

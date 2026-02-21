@@ -46,6 +46,29 @@ export interface CycleTrendPoint {
   ordenesCompletas: number;
 }
 
+export interface TasksTimelinePoint {
+  dia: string;
+  label: string;
+  tareasTerminadas: number;
+}
+
+export interface CompletedTaskLogEntry {
+  rutaId: string;
+  ordenId: string;
+  numeroOrden: string;
+  ordenItemId: string;
+  itemNombre: string;
+  responsableId: string | null;
+  responsableNombre: string;
+  pasoNombre: string;
+  estacionId: string | null;
+  estacionNombre: string;
+  estadoPaso: string;
+  fechaInicio: string;
+  fechaFin: string;
+  duracionMinutos: number;
+}
+
 export type WorktableUrgency = 'vencida' | 'hoy' | 'manana' | 'futura' | 'sin_fecha';
 
 export interface WorktableTask {
@@ -77,12 +100,16 @@ interface UseProductionPerformanceResult {
   seriesByUser: CompletedByUserPoint[];
   seriesByStation: CompletedByStationPoint[];
   cycleTrend: CycleTrendPoint[];
+  tasksTimeline: TasksTimelinePoint[];
+  timelineUserId: string | null;
+  completedTasksLog: CompletedTaskLogEntry[];
   worktablesByUser: WorktableGroup[];
   lastUpdated: Date | null;
   isRealtimeConnected: boolean;
   setPeriod: (period: PerformancePeriod) => void;
   setEstacionId: (estacionId: string | null) => void;
   setUserId: (userId: string | null) => void;
+  setTimelineUserId: (userId: string | null) => void;
   refresh: () => void;
 }
 
@@ -142,6 +169,9 @@ export function useProductionPerformance(): UseProductionPerformanceResult {
   const [seriesByUser, setSeriesByUser] = useState<CompletedByUserPoint[]>([]);
   const [seriesByStation, setSeriesByStation] = useState<CompletedByStationPoint[]>([]);
   const [cycleTrend, setCycleTrend] = useState<CycleTrendPoint[]>([]);
+  const [tasksTimeline, setTasksTimeline] = useState<TasksTimelinePoint[]>([]);
+  const [timelineUserId, setTimelineUserId] = useState<string | null>(null);
+  const [completedTasksLog, setCompletedTasksLog] = useState<CompletedTaskLogEntry[]>([]);
   const [worktablesByUser, setWorktablesByUser] = useState<WorktableGroup[]>([]);
 
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
@@ -209,7 +239,7 @@ export function useProductionPerformance(): UseProductionPerformanceResult {
     setError(null);
 
     try {
-      const [kpiRes, byUserRes, byStationRes, cycleRes, mesaRes] = await Promise.all([
+      const [kpiRes, byUserRes, byStationRes, cycleRes, timelineRes, logRes, mesaRes] = await Promise.all([
         supabase.rpc('fn_production_performance_kpis', {
           p_company_id: companyId,
           p_from: from,
@@ -240,6 +270,22 @@ export function useProductionPerformance(): UseProductionPerformanceResult {
           p_user_id: filters.userId,
           p_tz: 'America/Argentina/Buenos_Aires',
         }),
+        supabase.rpc('fn_production_tasks_timeline', {
+          p_company_id: companyId,
+          p_from: from,
+          p_to: to,
+          p_estacion_id: filters.estacionId,
+          p_user_id: timelineUserId,
+          p_tz: 'America/Argentina/Buenos_Aires',
+        }),
+        supabase.rpc('fn_production_completed_tasks_log', {
+          p_company_id: companyId,
+          p_from: from,
+          p_to: to,
+          p_estacion_id: filters.estacionId,
+          p_user_id: filters.userId,
+          p_limit: 500,
+        }),
         supabase.rpc('fn_production_worktables_snapshot', {
           p_company_id: companyId,
           p_estacion_id: filters.estacionId,
@@ -251,6 +297,8 @@ export function useProductionPerformance(): UseProductionPerformanceResult {
       if (byUserRes.error) throw byUserRes.error;
       if (byStationRes.error) throw byStationRes.error;
       if (cycleRes.error) throw cycleRes.error;
+      if (timelineRes.error) throw timelineRes.error;
+      if (logRes.error) throw logRes.error;
       if (mesaRes.error) throw mesaRes.error;
 
       const kpiRow = Array.isArray(kpiRes.data) && kpiRes.data.length > 0 ? kpiRes.data[0] : null;
@@ -289,6 +337,33 @@ export function useProductionPerformance(): UseProductionPerformanceResult {
           label: toNullableString(row.label) || '--',
           cicloPromedioHoras: toNumber(row.ciclo_promedio_horas),
           ordenesCompletas: toNumber(row.ordenes_completas),
+        }))
+      );
+
+      setTasksTimeline(
+        (timelineRes.data || []).map((row: any) => ({
+          dia: toNullableString(row.dia) || '',
+          label: toNullableString(row.label) || '--',
+          tareasTerminadas: toNumber(row.tareas_terminadas),
+        }))
+      );
+
+      setCompletedTasksLog(
+        (logRes.data || []).map((row: any) => ({
+          rutaId: toNullableString(row.ruta_id) || '',
+          ordenId: toNullableString(row.orden_id) || '',
+          numeroOrden: toNullableString(row.numero_orden) || '-',
+          ordenItemId: toNullableString(row.orden_item_id) || '',
+          itemNombre: toNullableString(row.item_nombre) || 'Item sin nombre',
+          responsableId: toNullableString(row.responsable_id),
+          responsableNombre: toNullableString(row.responsable_nombre) || 'Sin asignar',
+          pasoNombre: toNullableString(row.paso_nombre) || 'Paso',
+          estacionId: toNullableString(row.estacion_id),
+          estacionNombre: toNullableString(row.estacion_nombre) || 'Sin estación',
+          estadoPaso: toNullableString(row.estado_paso) || '-',
+          fechaInicio: toNullableString(row.fecha_inicio) || '',
+          fechaFin: toNullableString(row.fecha_fin) || '',
+          duracionMinutos: toNumber(row.duracion_minutos),
         }))
       );
 
@@ -339,7 +414,7 @@ export function useProductionPerformance(): UseProductionPerformanceResult {
       inFlightRef.current = false;
       setLoading(false);
     }
-  }, [companyId, filters.estacionId, filters.period, filters.userId]);
+  }, [companyId, filters.estacionId, filters.period, filters.userId, timelineUserId]);
 
   const debouncedRefresh = useCallback(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -397,12 +472,16 @@ export function useProductionPerformance(): UseProductionPerformanceResult {
       seriesByUser,
       seriesByStation,
       cycleTrend,
+      tasksTimeline,
+      timelineUserId,
+      completedTasksLog,
       worktablesByUser,
       lastUpdated,
       isRealtimeConnected,
       setPeriod,
       setEstacionId,
       setUserId,
+      setTimelineUserId,
       refresh,
     }),
     [
@@ -415,12 +494,16 @@ export function useProductionPerformance(): UseProductionPerformanceResult {
       seriesByUser,
       seriesByStation,
       cycleTrend,
+      tasksTimeline,
+      timelineUserId,
+      completedTasksLog,
       worktablesByUser,
       lastUpdated,
       isRealtimeConnected,
       setPeriod,
       setEstacionId,
       setUserId,
+      setTimelineUserId,
       refresh,
     ]
   );

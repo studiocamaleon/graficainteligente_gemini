@@ -710,7 +710,7 @@ export function CreateOrderPage() {
         producto_id: item.producto_id,
         categoria_id: item.categoria_id || item.configuracion?.categoria_id,
         producto_nombre: item.producto_nombre,
-        producto_categoria: item.producto_categoria || item.categoria || 'Sin categoría',
+        producto_categoria: item.producto_categoria || item.categoria || 'Personalizado',
         descripcion: item.descripcion || (item.tipo_item === 'centro_copiado' || item.categoria_id === 'centro_copiado' ? generarDescripcionCopiado(item.configuracion) : null),
         tiempo_produccion_dias: item.tiempo_produccion_dias || null,
         cantidad: item.cantidad,

@@ -48,10 +48,18 @@ function MainLayoutContent({ children }: MainLayoutProps) {
   const isOrderDetailRoute = /^\/app\/orders\/[a-f0-9-]+$/i.test(location.pathname);
   const isCopyOrderDetailRoute = /^\/app\/centro-copiado\/ordenes\/[a-f0-9-]+$/i.test(location.pathname);
   const isFinanzasRoute = location.pathname === '/app/finanzas' || location.pathname.startsWith('/app/finanzas/');
+  const isBusinessIntelligenceRoute = location.pathname === '/app/business-intelligence' || location.pathname.startsWith('/app/business-intelligence/');
   const isIntegrationsRoute = location.pathname === '/app/integrations' || location.pathname.startsWith('/app/integrations/');
   const isSettingsRoute = location.pathname === '/app/settings' || location.pathname.startsWith('/app/settings/');
   const isTeamRoute = location.pathname === '/app/team' || location.pathname.startsWith('/app/team/');
-  const hideQuickActions = isOrderDetailRoute || isCopyOrderDetailRoute || isFinanzasRoute || isIntegrationsRoute || isSettingsRoute || isTeamRoute;
+  const hideQuickActions =
+    isOrderDetailRoute ||
+    isCopyOrderDetailRoute ||
+    isFinanzasRoute ||
+    isBusinessIntelligenceRoute ||
+    isIntegrationsRoute ||
+    isSettingsRoute ||
+    isTeamRoute;
   const showQuickActions = (canCreateOT || canCreateOC) && !hideQuickActions;
 
   const getCurrentPageTitle = () => {

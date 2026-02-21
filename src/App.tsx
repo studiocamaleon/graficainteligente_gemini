@@ -15,6 +15,7 @@ import { CreateOrderPage } from './pages/app/orders/CreateOrderPage';
 import { OrderDetailPage } from './pages/app/orders/OrderDetailPage';
 import { ProductionPage } from './pages/app/production/ProductionPage';
 import Finanzas from './pages/app/Finanzas';
+import BusinessIntelligence from './pages/app/BusinessIntelligence';
 import { Team } from './pages/app/Team';
 import { Integrations } from './pages/app/Integrations';
 import WatiIntegration from './pages/app/integrations/WatiIntegration';
@@ -398,6 +399,14 @@ function AppRoutes() {
                   element={
                     <ProtectedModuleRoute moduleId="finance">
                       <Finanzas />
+                    </ProtectedModuleRoute>
+                  }
+                />
+                <Route
+                  path="business-intelligence/*"
+                  element={
+                    <ProtectedModuleRoute moduleId="finance-reportes">
+                      <BusinessIntelligence />
                     </ProtectedModuleRoute>
                   }
                 />

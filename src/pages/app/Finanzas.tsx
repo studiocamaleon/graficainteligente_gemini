@@ -1,7 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import TesoreriaView from './finanzas/TesoreriaView';
 import CuentasCorrientesView from './finanzas/CuentasCorrientesView';
-import ReportesView from './finanzas/ReportesView';
 import { FacturasView } from './finanzas/FacturasView';
 
 import CuentasPorPagarPage from './tesoreria/CuentasPorPagarPage';
@@ -48,14 +47,7 @@ export default function Finanzas() {
             </ProtectedModuleRoute>
           }
         />
-        <Route
-          path="/reportes/*"
-          element={
-            <ProtectedModuleRoute moduleId="finance-reportes">
-              <ReportesView />
-            </ProtectedModuleRoute>
-          }
-        />
+        <Route path="/reportes/*" element={<Navigate to="/app/business-intelligence/v2/executive" replace />} />
       </Routes>
     </div>
   );
