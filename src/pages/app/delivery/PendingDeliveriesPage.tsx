@@ -30,6 +30,7 @@ function PendingDeliveriesContent({ embedded = false }: PendingDeliveriesPagePro
 
     const { deliveries, loading, error, refresh, deliverOrder, addPayment } = usePendingDeliveries();
     const [searchTerm, setSearchTerm] = useState('');
+    const [paymentFilter, setPaymentFilter] = useState<'all' | 'deben'>('all');
     const [selectedDelivery, setSelectedDelivery] = useState<PendingDelivery | null>(null);
     const [showShippingModal, setShowShippingModal] = useState(false);
 
@@ -37,14 +38,19 @@ function PendingDeliveriesContent({ embedded = false }: PendingDeliveriesPagePro
     const { dialogState: infoDialogState, closeDialog: closeInfoDialog, openDialog: openInfoDialog } = useInfoDialog();
 
     const filteredDeliveries = useMemo(() => {
-        if (!searchTerm) return deliveries;
-        const lowerTerm = searchTerm.toLowerCase();
-        return deliveries.filter(d =>
-            d.numero_orden.toLowerCase().includes(lowerTerm) ||
-            (d.cliente?.nombre_fantasia || d.cliente?.razon_social || '').toLowerCase().includes(lowerTerm) ||
-            (d.cliente?.numero_documento || '').includes(lowerTerm)
-        );
-    }, [deliveries, searchTerm]);
+        return deliveries.filter((d) => {
+            const matchesDebt = paymentFilter === 'deben' ? d.saldo_pendiente > 0.01 : true;
+            if (!matchesDebt) return false;
+            if (!searchTerm) return true;
+
+            const lowerTerm = searchTerm.toLowerCase();
+            return (
+                d.numero_orden.toLowerCase().includes(lowerTerm) ||
+                (d.cliente?.nombre_fantasia || d.cliente?.razon_social || '').toLowerCase().includes(lowerTerm) ||
+                (d.cliente?.numero_documento || '').includes(lowerTerm)
+            );
+        });
+    }, [deliveries, paymentFilter, searchTerm]);
 
     const headerMetrics = useMemo(() => {
         const count = filteredDeliveries.length;
@@ -269,7 +275,15 @@ function PendingDeliveriesContent({ embedded = false }: PendingDeliveriesPagePro
                                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 w-full md:w-auto">
+                            <select
+                                value={paymentFilter}
+                                onChange={(e) => setPaymentFilter(e.target.value as 'all' | 'deben')}
+                                className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                                <option value="all">Todas</option>
+                                <option value="deben">Solo deben</option>
+                            </select>
                             <Badge variant="primary">{filteredDeliveries.length} Pendientes</Badge>
                         </div>
                     </div>
