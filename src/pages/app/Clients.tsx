@@ -62,6 +62,7 @@ export function Clients() {
   const { showToast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const canEdit = profile?.role && ['super_admin', 'admin', 'manager', 'operador_diseno'].includes(profile.role);
+  const canViewRevenueMetrics = profile?.role === 'admin' || profile?.role === 'super_admin';
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -205,6 +206,13 @@ export function Clients() {
     setSortCriteria(mapSortByToCriteria(value));
   }, [mapSortByToCriteria]);
 
+  useEffect(() => {
+    if (!canViewRevenueMetrics && sortBy === 'ltv_desc') {
+      setSortBy('created_at_desc');
+      setSortCriteria([]);
+    }
+  }, [canViewRevenueMetrics, sortBy]);
+
   const mapCriteriaToSortBy = useCallback((criteria: SortCriterion[]): SortByOption => {
     if (criteria.length !== 1) return 'created_at_desc';
     const [criterion] = criteria;
@@ -302,19 +310,29 @@ export function Clients() {
   }, [clients]);
 
   const kpiItems = useMemo(
-    () => [
-      { id: 'total', label: 'Total clientes', value: totalCount.toLocaleString('es-AR') },
-      { id: 'pending', label: 'Pendientes', value: pendingCount.toLocaleString('es-AR') },
-      { id: 'avg_ltv', label: 'LTV promedio', value: `$${avgLtv.toLocaleString('es-AR')}` },
-      { id: 'total_ltv', label: 'Total vendido', value: `$${totalLtv.toLocaleString('es-AR')}` },
-      {
+    () => {
+      const items = [
+        { id: 'total', label: 'Total clientes', value: totalCount.toLocaleString('es-AR') },
+        { id: 'pending', label: 'Pendientes', value: pendingCount.toLocaleString('es-AR') },
+      ];
+
+      if (canViewRevenueMetrics) {
+        items.push(
+          { id: 'avg_ltv', label: 'LTV promedio', value: `$${avgLtv.toLocaleString('es-AR')}` },
+          { id: 'total_ltv', label: 'Total vendido', value: `$${totalLtv.toLocaleString('es-AR')}` },
+        );
+      }
+
+      items.push({
         id: 'risk_mix',
         label: 'Riesgo clientes',
         value: `B ${riskDistribution.bajo}% · M ${riskDistribution.medio}% · A ${riskDistribution.alto}%`,
         hint: 'Sobre clientes visibles con filtros activos',
-      },
-    ],
-    [avgLtv, pendingCount, totalCount, totalLtv, riskDistribution]
+      });
+
+      return items;
+    },
+    [avgLtv, canViewRevenueMetrics, pendingCount, totalCount, totalLtv, riskDistribution]
   );
 
   const handleEdit = (client: ClientWithCommercialMetrics) => {
@@ -461,7 +479,7 @@ export function Clients() {
       ),
       showFrom: 'md',
     },
-    {
+    canViewRevenueMetrics ? {
       key: 'ltv_total',
       header: renderSortableHeader('LTV', 'ltv_total'),
       render: (client: ClientWithCommercialMetrics) => (
@@ -470,7 +488,7 @@ export function Clients() {
         </div>
       ),
       width: '140px',
-    },
+    } : null,
     {
       key: 'recencia',
       header: renderSortableHeader('Recencia', 'recencia'),
@@ -635,7 +653,7 @@ export function Clients() {
       ),
       width: '200px',
     },
-  ];
+  ].filter(Boolean) as Array<any>;
 
   return (
     <div className="space-y-4">
@@ -803,7 +821,7 @@ export function Clients() {
               }}
             options={[
               { value: 'created_at_desc', label: 'Orden: más recientes' },
-              { value: 'ltv_desc', label: 'Orden: mayor LTV' },
+              ...(canViewRevenueMetrics ? [{ value: 'ltv_desc', label: 'Orden: mayor LTV' }] : []),
               { value: 'recency_desc', label: 'Orden: más días sin compra' },
               { value: 'frequency_90d_desc', label: 'Orden: más órdenes (90d)' },
               { value: 'ticket_promedio_desc', label: 'Orden: mayor ticket promedio' },
@@ -858,6 +876,7 @@ export function Clients() {
         isOpen={isDetailModalOpen}
         onClose={() => setIsDetailModalOpen(false)}
         cliente={selectedClient}
+        canViewRevenueMetrics={canViewRevenueMetrics}
       />
 
       {selectedClient && (

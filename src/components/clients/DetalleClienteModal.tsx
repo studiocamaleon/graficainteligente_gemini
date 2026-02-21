@@ -10,6 +10,7 @@ interface DetalleClienteModalProps {
   isOpen: boolean;
   onClose: () => void;
   cliente: ClientWithCommercialMetrics | null;
+  canViewRevenueMetrics?: boolean;
 }
 
 const money = (value?: number | null) => `$${Number(value || 0).toLocaleString('es-AR')}`;
@@ -17,7 +18,7 @@ const pct = (value?: number | null) => `${Number(value || 0).toFixed(0)}%`;
 const riskVariant = (riesgo?: 'alto' | 'medio' | 'bajo') =>
   riesgo === 'alto' ? 'danger' : riesgo === 'medio' ? 'warning' : 'success';
 
-export function DetalleClienteModal({ isOpen, onClose, cliente }: DetalleClienteModalProps) {
+export function DetalleClienteModal({ isOpen, onClose, cliente, canViewRevenueMetrics = true }: DetalleClienteModalProps) {
   if (!cliente) return null;
 
   const fechaRegistro = cliente.created_at
@@ -46,7 +47,9 @@ export function DetalleClienteModal({ isOpen, onClose, cliente }: DetalleCliente
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <Section title="Datos Comerciales">
-            <InfoField icon={BadgeDollarSign} label="LTV total" value={money(cliente.ltv_total)} />
+            {canViewRevenueMetrics && (
+              <InfoField icon={BadgeDollarSign} label="LTV total" value={money(cliente.ltv_total)} />
+            )}
             <InfoField icon={ShoppingCart} label="Órdenes 90 días" value={`${cliente.ordenes_90d || 0}`} />
             <InfoField icon={TrendingUp} label="Ticket promedio" value={money(cliente.ticket_promedio)} />
             <InfoField
