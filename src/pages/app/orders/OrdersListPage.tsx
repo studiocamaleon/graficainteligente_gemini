@@ -8,25 +8,19 @@ import { useOrdenesTrabajo } from '../../../hooks/useOrdenesTrabajo';
 import { KanbanBoard } from '../../../components/orders/KanbanBoard';
 import { OrdenesTable } from '../../../components/orders/OrdenesTable';
 import { usePermissions } from '../../../hooks/usePermissions';
-import { useAuth } from '../../../hooks/useAuth';
 
 export function OrdersListPage() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const { hasPermission } = usePermissions();
-  const { profile } = useAuth();
 
   const canCreate = hasPermission('orders', 'create');
-  const canViewTotalFacturadoCard = profile?.role === 'admin' || profile?.role === 'super_admin';
-  const metricsGridClass = canViewTotalFacturadoCard
-    ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-8 gap-3'
-    : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-7 gap-3';
 
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
   const [page, setPage] = useState(1);
   const itemsPerPage = 50;
 
-  const { ordenes, metrics, loading, totalCount } = useOrdenesTrabajo({
+  const { ordenes, loading, totalCount } = useOrdenesTrabajo({
     searchTerm,
     page,
     itemsPerPage,
@@ -53,77 +47,6 @@ export function OrdersListPage() {
 
   return (
     <div className="space-y-6">
-      <div className={metricsGridClass}>
-        <Card>
-          <div className="p-4 min-w-0">
-            <div className="text-xs text-gray-600 mb-1">Total Órdenes</div>
-            <div className="text-xl xl:text-2xl font-bold text-gray-900 leading-tight break-words">
-              {metrics.totalOrdenes}
-            </div>
-            <div className="text-xs text-gray-500 mt-1 leading-tight">
-              <div>OT: {metrics.totalOrdenesOt}</div>
-              <div>Copiado: {metrics.totalOrdenesCopiado}</div>
-            </div>
-          </div>
-        </Card>
-        <Card>
-          <div className="p-4 min-w-0">
-            <div className="text-xs text-gray-600 mb-1">Órdenes del Mes</div>
-            <div className="text-xl xl:text-2xl font-bold text-indigo-600 leading-tight break-words">{metrics.totalOrdenesMes}</div>
-          </div>
-        </Card>
-
-        {canViewTotalFacturadoCard && (
-          <Card>
-            <div className="p-4 min-w-0">
-              <div className="text-xs text-gray-600 mb-1">Total Facturado</div>
-              <div className="text-xl xl:text-2xl font-bold text-green-600 leading-tight break-words">
-                ${metrics.totalFacturado.toLocaleString('es-AR')}
-              </div>
-              <div className="text-xs text-gray-500 mt-1 leading-tight">
-                <div>OT: ${metrics.totalFacturadoOt.toLocaleString('es-AR')}</div>
-                <div>Copiado: ${metrics.totalFacturadoCopiado.toLocaleString('es-AR')}</div>
-              </div>
-            </div>
-          </Card>
-        )}
-
-        <Card>
-          <div className="p-4 min-w-0">
-            <div className="text-xs text-gray-600 mb-1">Pendientes</div>
-            <div className="text-xl xl:text-2xl font-bold text-yellow-600 leading-tight break-words">{metrics.ordenesPendientes}</div>
-          </div>
-        </Card>
-
-        <Card>
-          <div className="p-4 min-w-0">
-            <div className="text-xs text-gray-600 mb-1">En Producción</div>
-            <div className="text-xl xl:text-2xl font-bold text-blue-600 leading-tight break-words">{metrics.ordenesEnProduccion}</div>
-          </div>
-        </Card>
-
-        <Card>
-          <div className="p-4 min-w-0">
-            <div className="text-xs text-gray-600 mb-1">Finalizadas</div>
-            <div className="text-xl xl:text-2xl font-bold text-violet-600 leading-tight break-words">{metrics.ordenesFinalizadas}</div>
-          </div>
-        </Card>
-
-        <Card>
-          <div className="p-4 min-w-0">
-            <div className="text-xs text-gray-600 mb-1">Entregadas</div>
-            <div className="text-xl xl:text-2xl font-bold text-teal-600 leading-tight break-words">{metrics.ordenesEntregadas}</div>
-          </div>
-        </Card>
-
-        <Card>
-          <div className="p-4 min-w-0">
-            <div className="text-xs text-gray-600 mb-1">Canceladas</div>
-            <div className="text-xl xl:text-2xl font-bold text-rose-600 leading-tight break-words">{metrics.ordenesCanceladas}</div>
-          </div>
-        </Card>
-      </div>
-
       <Card>
         <div className="p-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
