@@ -50,6 +50,9 @@ export function usePendingDeliveries() {
           created_at,
           fecha_completado,
           fecha_estimada_entrega,
+          subtotal,
+          total_descuentos,
+          subtotal_iva,
           total,
           estado,
           requiere_despacho,
@@ -82,13 +85,42 @@ export function usePendingDeliveries() {
 
             if (copyError) throw copyError;
 
+            const workOrderIds = (workOrders as any[] || []).map((o) => o.id);
+            let ocTotalsByOtId = new Map<string, number>();
+
+            if (workOrderIds.length > 0) {
+                const { data: linkedOc, error: linkedOcError } = await supabase
+                    .from('centro_copiado_ordenes')
+                    .select('orden_trabajo_id, total, estado')
+                    .in('orden_trabajo_id', workOrderIds)
+                    .neq('estado', 'cancelada');
+
+                if (linkedOcError) throw linkedOcError;
+
+                ocTotalsByOtId = (linkedOc || []).reduce((acc: Map<string, number>, row: any) => {
+                    const otId = row.orden_trabajo_id as string | null;
+                    if (!otId) return acc;
+                    const current = acc.get(otId) || 0;
+                    acc.set(otId, current + Number(row.total || 0));
+                    return acc;
+                }, new Map<string, number>());
+            }
+
             // Helper to sum payments
             const sumPayments = (pagos: any[]) => pagos?.reduce((sum, p) => sum + Number(p.monto || 0), 0) || 0;
 
             // Map and merge
             const mappedWorkOrders: PendingDelivery[] = (workOrders as any[] || []).map(o => {
                 const totalPagado = sumPayments(o.pagos);
-                const saldoPendiente = Math.max(0, (o.total || 0) - totalPagado);
+                const subtotal = Number(o.subtotal || 0);
+                const descuentos = Number(o.total_descuentos || 0);
+                const iva = Number(o.subtotal_iva || 0);
+                const ocTotal = Number(ocTotalsByOtId.get(o.id) || 0);
+
+                // Total neto robusto para evitar inconsistencias cuando el campo `total` quedó desactualizado.
+                const totalCalculado = Number((subtotal - descuentos + iva + ocTotal).toFixed(2));
+                const totalOrden = Math.max(0, totalCalculado);
+                const saldoPendiente = Math.max(0, Number((totalOrden - totalPagado).toFixed(2)));
                 const fechaFinalizada = o.fecha_completado ?? null;
                 return {
                     id: o.id,
@@ -98,7 +130,7 @@ export function usePendingDeliveries() {
                     fecha_finalizada: fechaFinalizada,
                     fecha_entrega_estimada: o.fecha_estimada_entrega,
                     tipo: 'orden_trabajo',
-                    total: o.total,
+                    total: totalOrden,
                     estado: o.estado,
                     total_pagado: totalPagado,
                     saldo_pendiente: saldoPendiente,

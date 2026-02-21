@@ -6,6 +6,7 @@ import { PagoFormModal, type PagoFormData } from '../../../components/orders/Pag
 import { Card } from '../../../components/ui/card';
 import { Badge } from '../../../components/ui/Badge';
 import { Table } from '../../../components/ui/Table';
+import { Modal } from '../../../components/ui/Modal';
 import { usePageHeader } from '../../../hooks/usePageHeader';
 import { usePendingDeliveries, PendingDelivery } from '../../../hooks/usePendingDeliveries';
 import { useConfirmDialog } from '../../../hooks/useConfirmDialog';
@@ -13,6 +14,7 @@ import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
 import { useInfoDialog } from '../../../hooks/useInfoDialog';
 import { InfoDialog } from '../../../components/ui/InfoDialog';
 import { ShippingModal, ShippingData } from '../../../components/orders/ShippingModal';
+import { supabase } from '../../../lib/supabase';
 
 import { useAuth } from '../../../hooks/useAuth';
 import { sendWatiMessage } from '../../../lib/wati';
@@ -21,6 +23,25 @@ import { canRegisterPaymentsRole } from '../../../utils/roles';
 
 interface PendingDeliveriesPageProps {
     embedded?: boolean;
+}
+
+interface DeliveryDetailData {
+    tipo: 'orden_trabajo' | 'centro_copiado';
+    numeroOrden: string;
+    clienteNombre: string;
+    fecha: string;
+    fechaEstimada: string | null;
+    total: number;
+    saldoPendiente: number;
+    notas: string | null;
+    items: Array<{
+        id: string;
+        nombre: string;
+        categoria: string;
+        cantidad: number;
+        precioUnitario: number;
+        precioTotal: number;
+    }>;
 }
 
 function PendingDeliveriesContent({ embedded = false }: PendingDeliveriesPageProps) {
@@ -33,6 +54,10 @@ function PendingDeliveriesContent({ embedded = false }: PendingDeliveriesPagePro
     const [paymentFilter, setPaymentFilter] = useState<'all' | 'deben'>('all');
     const [selectedDelivery, setSelectedDelivery] = useState<PendingDelivery | null>(null);
     const [showShippingModal, setShowShippingModal] = useState(false);
+    const [detailModalOpen, setDetailModalOpen] = useState(false);
+    const [detailLoading, setDetailLoading] = useState(false);
+    const [detailError, setDetailError] = useState<string | null>(null);
+    const [detailData, setDetailData] = useState<DeliveryDetailData | null>(null);
 
     const { dialogState: confirmDialogState, closeDialog: closeConfirmDialog, handleConfirm, openConfirm } = useConfirmDialog();
     const { dialogState: infoDialogState, closeDialog: closeInfoDialog, openDialog: openInfoDialog } = useInfoDialog();
@@ -247,6 +272,118 @@ function PendingDeliveriesContent({ embedded = false }: PendingDeliveriesPagePro
         });
     };
 
+    const formatMoney = (value: number) => `$${Number(value || 0).toLocaleString('es-AR')}`;
+
+    const openDetailModal = async (delivery: PendingDelivery) => {
+        if (!profile?.company_id) return;
+
+        setDetailModalOpen(true);
+        setDetailLoading(true);
+        setDetailError(null);
+        setDetailData(null);
+
+        try {
+            if (delivery.tipo === 'orden_trabajo') {
+                const { data: orden, error: ordenError } = await supabase
+                    .from('ordenes_trabajo')
+                    .select(`
+                        id,
+                        numero_orden,
+                        fecha_creacion,
+                        fecha_estimada_entrega,
+                        total,
+                        notas_internas,
+                        cliente:clients(id, nombre_fantasia, razon_social)
+                    `)
+                    .eq('id', delivery.id)
+                    .eq('company_id', profile.company_id)
+                    .single();
+
+                if (ordenError) throw ordenError;
+
+                const { data: items, error: itemsError } = await supabase
+                    .from('ordenes_trabajo_items')
+                    .select('id, producto_nombre, producto_categoria, cantidad, precio_unitario_final, precio_total')
+                    .eq('orden_id', delivery.id)
+                    .order('created_at', { ascending: true });
+
+                if (itemsError) throw itemsError;
+
+                const parsedItems = (items || []).map((it: any) => ({
+                    id: String(it.id),
+                    nombre: it.producto_nombre || 'Item sin nombre',
+                    categoria: it.producto_categoria || 'Personalizado',
+                    cantidad: Number(it.cantidad || 0),
+                    precioUnitario: Number(it.precio_unitario_final || 0),
+                    precioTotal: Number(it.precio_total || 0),
+                }));
+
+                setDetailData({
+                    tipo: 'orden_trabajo',
+                    numeroOrden: orden.numero_orden || delivery.numero_orden,
+                    clienteNombre: orden.cliente?.nombre_fantasia || orden.cliente?.razon_social || 'Cliente eventual',
+                    fecha: orden.fecha_creacion || delivery.fecha_solicitud,
+                    fechaEstimada: orden.fecha_estimada_entrega || null,
+                    total: Number(orden.total || delivery.total || 0),
+                    saldoPendiente: Number(delivery.saldo_pendiente || 0),
+                    notas: orden.notas_internas || null,
+                    items: parsedItems,
+                });
+            } else {
+                const { data: orden, error: ordenError } = await supabase
+                    .from('centro_copiado_ordenes')
+                    .select(`
+                        id,
+                        numero_orden,
+                        fecha_solicitud,
+                        fecha_entrega_estimada,
+                        total,
+                        observaciones,
+                        cliente:clients(id, nombre_fantasia, razon_social)
+                    `)
+                    .eq('id', delivery.id)
+                    .eq('company_id', profile.company_id)
+                    .single();
+
+                if (ordenError) throw ordenError;
+
+                const { data: items, error: itemsError } = await supabase
+                    .from('centro_copiado_ordenes_items')
+                    .select('id, tipo_item, descripcion, cantidad_copias, precio_unitario, precio_total')
+                    .eq('orden_copiado_id', delivery.id)
+                    .order('created_at', { ascending: true });
+
+                if (itemsError) throw itemsError;
+
+                const parsedItems = (items || []).map((it: any) => ({
+                    id: String(it.id),
+                    nombre: it.descripcion || `Item ${it.tipo_item || 'copiado'}`,
+                    categoria: it.tipo_item || 'Centro Copiado',
+                    cantidad: Number(it.cantidad_copias || 1),
+                    precioUnitario: Number(it.precio_unitario || 0),
+                    precioTotal: Number(it.precio_total || 0),
+                }));
+
+                setDetailData({
+                    tipo: 'centro_copiado',
+                    numeroOrden: orden.numero_orden || delivery.numero_orden,
+                    clienteNombre: orden.cliente?.nombre_fantasia || orden.cliente?.razon_social || 'Cliente eventual',
+                    fecha: orden.fecha_solicitud || delivery.fecha_solicitud,
+                    fechaEstimada: orden.fecha_entrega_estimada || null,
+                    total: Number(orden.total || delivery.total || 0),
+                    saldoPendiente: Number(delivery.saldo_pendiente || 0),
+                    notas: orden.observaciones || null,
+                    items: parsedItems,
+                });
+            }
+        } catch (err) {
+            console.error('Error loading delivery detail:', err);
+            setDetailError('No se pudo cargar el detalle de la orden.');
+        } finally {
+            setDetailLoading(false);
+        }
+    };
+
     return (
         <div className="space-y-6">
             {!embedded && (
@@ -429,10 +566,7 @@ function PendingDeliveriesContent({ embedded = false }: PendingDeliveriesPagePro
                                             <Button
                                                 size="sm"
                                                 variant="secondary"
-                                                onClick={() => {
-                                                    if (item.tipo === 'orden_trabajo') navigate(`/app/orders/${item.id}`);
-                                                    else navigate(`/app/centro-copiado/ordenes/${item.id}`);
-                                                }}
+                                                onClick={() => openDetailModal(item)}
                                             >
                                                 Ver Detalle
                                             </Button>
@@ -507,6 +641,108 @@ function PendingDeliveriesContent({ embedded = false }: PendingDeliveriesPagePro
                 }}
                 onSave={handleShippingSubmit}
             />
+
+            <Modal
+                isOpen={detailModalOpen}
+                onClose={() => {
+                    setDetailModalOpen(false);
+                    setDetailData(null);
+                    setDetailError(null);
+                }}
+                title={detailData ? `Detalle ${detailData.numeroOrden}` : 'Detalle de orden'}
+                size="xl"
+            >
+                {detailLoading ? (
+                    <div className="py-10 flex justify-center">
+                        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />
+                    </div>
+                ) : detailError ? (
+                    <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                        {detailError}
+                    </div>
+                ) : !detailData ? (
+                    <div className="text-sm text-gray-500">Sin datos para mostrar.</div>
+                ) : (
+                    <div className="space-y-5">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                            <Card className="p-3">
+                                <div className="text-xs text-gray-500">Tipo</div>
+                                <div className="font-semibold text-gray-900">
+                                    {detailData.tipo === 'orden_trabajo' ? 'Orden de Trabajo' : 'Centro Copiado'}
+                                </div>
+                            </Card>
+                            <Card className="p-3">
+                                <div className="text-xs text-gray-500">Cliente</div>
+                                <div className="font-semibold text-gray-900">{detailData.clienteNombre}</div>
+                            </Card>
+                            <Card className="p-3">
+                                <div className="text-xs text-gray-500">Total</div>
+                                <div className="font-semibold text-gray-900">{formatMoney(detailData.total)}</div>
+                            </Card>
+                            <Card className="p-3">
+                                <div className="text-xs text-gray-500">Saldo pendiente</div>
+                                <div className={`font-semibold ${detailData.saldoPendiente > 0.01 ? 'text-amber-700' : 'text-emerald-700'}`}>
+                                    {formatMoney(detailData.saldoPendiente)}
+                                </div>
+                            </Card>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                            <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                                <div className="text-xs text-gray-500">Fecha de creación</div>
+                                <div className="font-medium text-gray-900">{formatDate(detailData.fecha)}</div>
+                            </div>
+                            <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                                <div className="text-xs text-gray-500">Fecha estimada</div>
+                                <div className="font-medium text-gray-900">
+                                    {detailData.fechaEstimada ? formatDate(detailData.fechaEstimada) : '-'}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h4 className="text-sm font-semibold text-gray-900 mb-2">Productos / Items comprados</h4>
+                            {detailData.items.length === 0 ? (
+                                <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4 text-sm text-gray-500">
+                                    Esta orden no tiene items cargados.
+                                </div>
+                            ) : (
+                                <div className="overflow-x-auto rounded-lg border border-gray-200">
+                                    <table className="w-full min-w-[760px] text-sm">
+                                        <thead className="bg-gray-50 text-gray-600">
+                                            <tr>
+                                                <th className="px-3 py-2 text-left font-semibold">Producto / Item</th>
+                                                <th className="px-3 py-2 text-left font-semibold">Categoría</th>
+                                                <th className="px-3 py-2 text-right font-semibold">Cantidad</th>
+                                                <th className="px-3 py-2 text-right font-semibold">P. Unitario</th>
+                                                <th className="px-3 py-2 text-right font-semibold">Subtotal</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {detailData.items.map((item) => (
+                                                <tr key={item.id} className="border-t border-gray-200">
+                                                    <td className="px-3 py-2 text-gray-900">{item.nombre}</td>
+                                                    <td className="px-3 py-2 text-gray-600">{item.categoria}</td>
+                                                    <td className="px-3 py-2 text-right text-gray-900">{item.cantidad.toLocaleString('es-AR')}</td>
+                                                    <td className="px-3 py-2 text-right text-gray-900">{formatMoney(item.precioUnitario)}</td>
+                                                    <td className="px-3 py-2 text-right font-medium text-gray-900">{formatMoney(item.precioTotal)}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
+
+                        {detailData.notas && (
+                            <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                                <div className="text-xs text-gray-500 mb-1">Notas</div>
+                                <div className="text-sm text-gray-800 whitespace-pre-wrap">{detailData.notas}</div>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </Modal>
         </div>
     );
 }
