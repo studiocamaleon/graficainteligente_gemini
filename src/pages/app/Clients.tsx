@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Users, Plus, Eye, Edit2, Power, Check, X as XIcon, CheckCircle2, XCircle, Link as LinkIcon, QrCode, Download } from 'lucide-react';
+import { Users, Plus, Eye, Edit2, Power, Check, X as XIcon, CheckCircle2, XCircle, Link as LinkIcon, QrCode, Download, ArrowUp, ArrowDown, ChevronsUpDown } from 'lucide-react';
 import QRCode from 'qrcode';
 import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/Button';
@@ -31,6 +31,33 @@ import { EntityToolbar } from '../../components/shared/enterprise/EntityToolbar'
 import { AdvancedFiltersPanel } from '../../components/shared/enterprise/AdvancedFiltersPanel';
 
 export function Clients() {
+  type SortByOption =
+    | 'created_at_desc'
+    | 'ltv_desc'
+    | 'name_asc'
+    | 'recency_desc'
+    | 'frequency_90d_desc'
+    | 'ticket_promedio_desc';
+  type SortDirection = 'asc' | 'desc';
+  type SortableColumnKey =
+    | 'nombre_fantasia'
+    | 'razon_social'
+    | 'ltv_total'
+    | 'recencia'
+    | 'ordenes_90d'
+    | 'ticket_promedio'
+    | 'canal_preferido'
+    | 'riesgo_comercial'
+    | 'documento'
+    | 'status_aprobacion'
+    | 'cuenta_corriente'
+    | 'estado';
+
+  interface SortCriterion {
+    key: SortableColumnKey;
+    direction: SortDirection;
+  }
+
   const { profile } = useAuth();
   const { showToast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -42,9 +69,8 @@ export function Clients() {
   const [cuentaCorrienteFilter, setCuentaCorrienteFilter] = useState<string>('all');
   const [riesgoComercialFilter, setRiesgoComercialFilter] = useState<string>('all');
   const [sinCompraFilter, setSinCompraFilter] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<
-    'created_at_desc' | 'ltv_desc' | 'name_asc' | 'recency_desc' | 'frequency_90d_desc' | 'ticket_promedio_desc'
-  >('created_at_desc');
+  const [sortBy, setSortBy] = useState<SortByOption>('created_at_desc');
+  const [sortCriteria, setSortCriteria] = useState<SortCriterion[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(25);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -102,6 +128,7 @@ export function Clients() {
     riesgoComercial: riesgoComercialFilterValue,
     sinCompraDiasMin,
     sortBy,
+    sortCriteria,
     page: currentPage,
     itemsPerPage,
   });
@@ -140,20 +167,115 @@ export function Clients() {
     let count = 0;
     if (statusAprobacionFilter !== 'all') count += 1;
     if (cuentaCorrienteFilter !== 'all') count += 1;
-    if (sortBy !== 'created_at_desc') count += 1;
+    if (sortCriteria.length > 0) count += 1;
     if (riesgoComercialFilter !== 'all') count += 1;
     if (sinCompraFilter !== 'all') count += 1;
     return count;
-  }, [cuentaCorrienteFilter, riesgoComercialFilter, sinCompraFilter, sortBy, statusAprobacionFilter]);
+  }, [cuentaCorrienteFilter, riesgoComercialFilter, sinCompraFilter, sortCriteria.length, statusAprobacionFilter]);
 
   const resetAdvancedFilters = () => {
     setStatusAprobacionFilter('all');
     setCuentaCorrienteFilter('all');
     setSortBy('created_at_desc');
+    setSortCriteria([]);
     setRiesgoComercialFilter('all');
     setSinCompraFilter('all');
     setCurrentPage(1);
   };
+
+  const mapSortByToCriteria = useCallback((value: SortByOption): SortCriterion[] => {
+    switch (value) {
+      case 'ltv_desc':
+        return [{ key: 'ltv_total', direction: 'desc' }];
+      case 'name_asc':
+        return [{ key: 'nombre_fantasia', direction: 'asc' }];
+      case 'recency_desc':
+        return [{ key: 'recencia', direction: 'desc' }];
+      case 'frequency_90d_desc':
+        return [{ key: 'ordenes_90d', direction: 'desc' }];
+      case 'ticket_promedio_desc':
+        return [{ key: 'ticket_promedio', direction: 'desc' }];
+      default:
+        return [];
+    }
+  }, []);
+
+  const applySortByPreset = useCallback((value: SortByOption) => {
+    setSortBy(value);
+    setSortCriteria(mapSortByToCriteria(value));
+  }, [mapSortByToCriteria]);
+
+  const mapCriteriaToSortBy = useCallback((criteria: SortCriterion[]): SortByOption => {
+    if (criteria.length !== 1) return 'created_at_desc';
+    const [criterion] = criteria;
+    if (criterion.key === 'ltv_total' && criterion.direction === 'desc') return 'ltv_desc';
+    if (criterion.key === 'nombre_fantasia' && criterion.direction === 'asc') return 'name_asc';
+    if (criterion.key === 'recencia' && criterion.direction === 'desc') return 'recency_desc';
+    if (criterion.key === 'ordenes_90d' && criterion.direction === 'desc') return 'frequency_90d_desc';
+    if (criterion.key === 'ticket_promedio' && criterion.direction === 'desc') return 'ticket_promedio_desc';
+    return 'created_at_desc';
+  }, []);
+
+  const handleColumnSort = useCallback((key: SortableColumnKey, isMultiSort: boolean) => {
+    setSortCriteria((prev) => {
+      const index = prev.findIndex((c) => c.key === key);
+      const current = index >= 0 ? prev[index] : null;
+      const nextDirection: SortDirection | null =
+        current?.direction === 'asc' ? 'desc' : current?.direction === 'desc' ? null : 'asc';
+      let nextCriteria: SortCriterion[] = prev;
+
+      if (!isMultiSort) {
+        nextCriteria = nextDirection ? [{ key, direction: nextDirection }] : [];
+        setSortBy(mapCriteriaToSortBy(nextCriteria));
+        return nextCriteria;
+      }
+
+      if (index === -1 && nextDirection) {
+        nextCriteria = [...prev, { key, direction: nextDirection }];
+        setSortBy(mapCriteriaToSortBy(nextCriteria));
+        return nextCriteria;
+      }
+
+      if (index >= 0 && !nextDirection) {
+        nextCriteria = prev.filter((c) => c.key !== key);
+        setSortBy(mapCriteriaToSortBy(nextCriteria));
+        return nextCriteria;
+      }
+
+      nextCriteria = prev.map((c) => (c.key === key ? { ...c, direction: nextDirection as SortDirection } : c));
+      setSortBy(mapCriteriaToSortBy(nextCriteria));
+      return nextCriteria;
+    });
+    setCurrentPage(1);
+  }, [mapCriteriaToSortBy]);
+
+  const renderSortableHeader = useCallback((label: string, key: SortableColumnKey) => {
+    const index = sortCriteria.findIndex((c) => c.key === key);
+    const criterion = index >= 0 ? sortCriteria[index] : null;
+
+    return (
+      <button
+        type="button"
+        onClick={(event) => handleColumnSort(key, event.shiftKey)}
+        className="group inline-flex items-center gap-1.5 hover:text-slate-900"
+        title="Click para ordenar. Shift+Click para multi-orden."
+      >
+        <span>{label}</span>
+        {criterion ? (
+          criterion.direction === 'asc' ? (
+            <ArrowUp className="h-3.5 w-3.5 text-slate-700" />
+          ) : (
+            <ArrowDown className="h-3.5 w-3.5 text-slate-700" />
+          )
+        ) : (
+          <ChevronsUpDown className="h-3.5 w-3.5 text-slate-400 group-hover:text-slate-600" />
+        )}
+        {sortCriteria.length > 1 && index >= 0 && (
+          <span className="rounded bg-slate-200 px-1 text-[10px] font-bold text-slate-700">{index + 1}</span>
+        )}
+      </button>
+    );
+  }, [handleColumnSort, sortCriteria]);
 
   const riskDistribution = useMemo(() => {
     const total = clients.length;
@@ -326,14 +448,14 @@ export function Clients() {
   const columns = [
     {
       key: 'nombre_fantasia',
-      header: 'Nombre de Fantasía',
+      header: renderSortableHeader('Nombre de Fantasía', 'nombre_fantasia'),
       render: (client: Client) => (
         <div className="font-medium text-gray-900">{client.nombre_fantasia}</div>
       ),
     },
     {
       key: 'razon_social',
-      header: 'Razón Social',
+      header: renderSortableHeader('Razón Social', 'razon_social'),
       render: (client: Client) => (
         <div className="text-sm text-gray-600">{client.razon_social}</div>
       ),
@@ -341,7 +463,7 @@ export function Clients() {
     },
     {
       key: 'ltv_total',
-      header: 'LTV',
+      header: renderSortableHeader('LTV', 'ltv_total'),
       render: (client: ClientWithCommercialMetrics) => (
         <div className="text-sm font-semibold text-emerald-700">
           ${Number(client.ltv_total || 0).toLocaleString('es-AR')}
@@ -351,7 +473,7 @@ export function Clients() {
     },
     {
       key: 'recencia',
-      header: 'Recencia',
+      header: renderSortableHeader('Recencia', 'recencia'),
       render: (client: ClientWithCommercialMetrics) => (
         <div className="text-sm text-gray-700">
           {client.dias_sin_comprar === null ? 'Sin compras' : `${client.dias_sin_comprar} días`}
@@ -361,7 +483,7 @@ export function Clients() {
     },
     {
       key: 'ordenes_90d',
-      header: 'Órdenes 90d',
+      header: renderSortableHeader('Órdenes 90d', 'ordenes_90d'),
       render: (client: ClientWithCommercialMetrics) => (
         <div className="text-sm font-medium text-blue-700">{client.ordenes_90d || 0}</div>
       ),
@@ -369,7 +491,7 @@ export function Clients() {
     },
     {
       key: 'ticket_promedio',
-      header: 'Ticket Prom.',
+      header: renderSortableHeader('Ticket Prom.', 'ticket_promedio'),
       render: (client: ClientWithCommercialMetrics) => (
         <div className="text-sm text-gray-700">
           ${Number(client.ticket_promedio || 0).toLocaleString('es-AR')}
@@ -379,7 +501,7 @@ export function Clients() {
     },
     {
       key: 'canal_preferido',
-      header: 'Canal',
+      header: renderSortableHeader('Canal', 'canal_preferido'),
       render: (client: ClientWithCommercialMetrics) => (
         <div className="text-sm text-gray-700">{client.canal_preferido || '-'}</div>
       ),
@@ -399,7 +521,7 @@ export function Clients() {
     },
     {
       key: 'riesgo_comercial',
-      header: 'Riesgo',
+      header: renderSortableHeader('Riesgo', 'riesgo_comercial'),
       render: (client: ClientWithCommercialMetrics) => {
         const riesgo = client.riesgo_comercial || 'bajo';
         const variant: 'danger' | 'warning' | 'success' =
@@ -411,7 +533,7 @@ export function Clients() {
     },
     {
       key: 'documento',
-      header: 'CUIT/DNI',
+      header: renderSortableHeader('CUIT/DNI', 'documento'),
       render: (client: Client) => (
         <div className="text-sm">
           <span className="text-gray-500">{client.tipo_documento}:</span>{' '}
@@ -422,7 +544,7 @@ export function Clients() {
     },
     {
       key: 'status_aprobacion',
-      header: 'Estado Registro',
+      header: renderSortableHeader('Estado Registro', 'status_aprobacion'),
       render: (client: Client) => (
         <ClienteStatusBadge status={client.status_aprobacion || 'approved'} />
       ),
@@ -430,7 +552,7 @@ export function Clients() {
     },
     {
       key: 'cuenta_corriente',
-      header: 'C/C',
+      header: renderSortableHeader('C/C', 'cuenta_corriente'),
       render: (client: Client) => (
         <div className="flex justify-center">
           {client.tiene_cuenta_corriente ? (
@@ -444,7 +566,7 @@ export function Clients() {
     },
     {
       key: 'estado',
-      header: 'Estado',
+      header: renderSortableHeader('Estado', 'estado'),
       render: (client: Client) => (
         <Badge variant={client.is_active ? 'primary' : 'default'} size="sm">
           {client.is_active ? 'Activo' : 'Inactivo'}
@@ -673,12 +795,12 @@ export function Clients() {
               { value: 'gt_60', label: 'Sin compra > 60 días' },
             ]}
           />
-          <Select
-            value={sortBy}
-            onChange={(value) => {
-              setSortBy(value as 'created_at_desc' | 'ltv_desc' | 'name_asc' | 'recency_desc' | 'frequency_90d_desc' | 'ticket_promedio_desc');
-              setCurrentPage(1);
-            }}
+            <Select
+              value={sortBy}
+              onChange={(value) => {
+                applySortByPreset(value as SortByOption);
+                setCurrentPage(1);
+              }}
             options={[
               { value: 'created_at_desc', label: 'Orden: más recientes' },
               { value: 'ltv_desc', label: 'Orden: mayor LTV' },

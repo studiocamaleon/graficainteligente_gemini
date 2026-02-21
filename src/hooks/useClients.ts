@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
 import type { Client } from '../types/database';
@@ -15,6 +15,10 @@ interface UseClientsParams {
     | 'recency_desc'
     | 'frequency_90d_desc'
     | 'ticket_promedio_desc';
+  sortCriteria?: Array<{
+    key: string;
+    direction: 'asc' | 'desc';
+  }>;
   riesgoComercial?: 'alto' | 'medio' | 'bajo' | null;
   sinCompraDiasMin?: number | null;
   page?: number;
@@ -50,6 +54,7 @@ export function useClients({
   hasCuentaCorriente = null,
   statusAprobacion = null,
   sortBy = 'created_at_desc',
+  sortCriteria,
   riesgoComercial = null,
   sinCompraDiasMin = null,
   page = 1,
@@ -62,6 +67,11 @@ export function useClients({
   const [totalLtv, setTotalLtv] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const sortCriteriaSignature = useMemo(() => JSON.stringify(sortCriteria || []), [sortCriteria]);
+  const effectiveSortCriteria = useMemo(
+    () => (sortCriteriaSignature ? (JSON.parse(sortCriteriaSignature) as Array<{ key: string; direction: 'asc' | 'desc' }>) : []),
+    [sortCriteriaSignature]
+  );
 
   const fetchClients = useCallback(async () => {
     if (!profile?.company_id) return;
@@ -83,13 +93,31 @@ export function useClients({
         p_offset: (page - 1) * itemsPerPage,
       };
 
+      const commercialParamsWithMultiSort =
+        effectiveSortCriteria.length > 1
+          ? { ...commercialParams, p_sort_criteria: effectiveSortCriteria }
+          : commercialParams;
+
       const { data: commercialData, error: commercialError } = await supabase.rpc(
         'fn_list_clients_commercial_metrics',
-        commercialParams
+        commercialParamsWithMultiSort
       );
 
-      if (!commercialError) {
-        const rows = (commercialData || []) as Array<ClientWithCommercialMetrics & RpcAggregateMeta>;
+      let resolvedCommercialData = commercialData;
+      let resolvedCommercialError = commercialError;
+
+      // Compatibilidad: si el backend aún no soporta p_sort_criteria, reintentar sin ese parámetro.
+      if (resolvedCommercialError && effectiveSortCriteria.length > 1) {
+        const isMissingSortCriteriaSignature = resolvedCommercialError.code === 'PGRST202';
+        if (isMissingSortCriteriaSignature) {
+          const retry = await supabase.rpc('fn_list_clients_commercial_metrics', commercialParams);
+          resolvedCommercialData = retry.data;
+          resolvedCommercialError = retry.error;
+        }
+      }
+
+      if (!resolvedCommercialError) {
+        const rows = (resolvedCommercialData || []) as Array<ClientWithCommercialMetrics & RpcAggregateMeta>;
         setClients(rows);
         setTotalCount(rows.length > 0 ? Number(rows[0].full_count || 0) : 0);
         setAvgLtv(rows.length > 0 ? Number(rows[0].avg_ltv || 0) : 0);
@@ -97,8 +125,8 @@ export function useClients({
         return;
       }
 
-      if (commercialError.code !== 'PGRST202') {
-        throw commercialError;
+      if (resolvedCommercialError.code !== 'PGRST202') {
+        throw resolvedCommercialError;
       }
 
       const legacySortBy = sortBy === 'name_asc' || sortBy === 'ltv_desc' || sortBy === 'created_at_desc'
@@ -150,6 +178,7 @@ export function useClients({
     hasCuentaCorriente,
     statusAprobacion,
     sortBy,
+    effectiveSortCriteria,
     riesgoComercial,
     sinCompraDiasMin,
     page,

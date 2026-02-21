@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
 import type { SaldosPendientesCobro, OrdenPorCobrar } from '../types/medios-cobro';
+import { getArgentinaDate } from '../utils/dates';
 
 export function useSaldosPendientes() {
   const { profile } = useAuth();
@@ -99,9 +100,10 @@ export function useIngresosPeriodo(fechaDesde?: string, fechaHasta?: string) {
     try {
       setLoading(true);
 
-      // Definir fechas por defecto (últimos 30 días)
-      const desde = fechaDesde || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-      const hasta = fechaHasta || new Date().toISOString().split('T')[0];
+      // Definir fechas por defecto usando timezone Argentina (últimos 30 días, inclusivo)
+      const todayAr = getArgentinaDate();
+      const desde = fechaDesde || todayAr.subtract(29, 'day').format('YYYY-MM-DD');
+      const hasta = fechaHasta || todayAr.format('YYYY-MM-DD');
 
       // Primero obtener IDs de cajas de la empresa
       const { data: cajasData, error: cajasError } = await supabase
