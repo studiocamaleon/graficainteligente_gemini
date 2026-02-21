@@ -45,6 +45,8 @@ export function OrdenHistorialTab({ eventos }: OrdenHistorialTabProps) {
       item_modificado: { label: 'Item Modificado', variant: 'secondary' },
       item_eliminado: { label: 'Item Eliminado', variant: 'danger' },
       pago_registrado: { label: 'Pago Registrado', variant: 'success' },
+      pago_editado: { label: 'Pago Editado', variant: 'warning' },
+      pago_eliminado: { label: 'Pago Eliminado', variant: 'danger' },
     };
 
     const config = tipos[tipo] || { label: tipo, variant: 'secondary' };
