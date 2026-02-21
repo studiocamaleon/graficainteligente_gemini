@@ -2,6 +2,8 @@ import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
 import { isWorkshopOperatorRole } from '../utils/roles';
+import { useMediosCobro } from './useMediosCobro';
+import { sendWatiMessage } from '../lib/wati';
 
 
 export interface PendingDelivery {
@@ -30,6 +32,7 @@ export interface PendingDelivery {
 
 export function usePendingDeliveries() {
     const { profile } = useAuth();
+    const { calcularComisionYLiberacion } = useMediosCobro();
     const [deliveries, setDeliveries] = useState<PendingDelivery[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -232,15 +235,11 @@ export function usePendingDeliveries() {
 
             const table = data.tipo === 'orden_trabajo' ? 'ordenes_trabajo_pagos' : 'centro_copiado_ordenes_pagos';
             const idField = data.tipo === 'orden_trabajo' ? 'orden_id' : 'orden_copiado_id';
-
-            // Need check logic for commission like in other hooks? 
-            // For simplicity in this unified view, we assume basic payment recording. 
-            // Or better, reuse the logic via backend function if available, but likely direct insert for now.
-            // Wait, we should respect commission logic. I'll inject a basic commission calc or just save as is if commission not critical here.
-            // NOTE: The `PagoFormModal` handles the UI part, but the logic usually resides in `useMediosCobro` or similar. 
-            // In `useCentroCopiadoOrdenPagos` we saw commission calculation before insert.
-            // I should probably skip complex commission calc here for speed unless requested, or fetch medios cobro.
-            // Actually, `addPayment` should just insert. 
+            const { comision, fechaLiberacion } = calcularComisionYLiberacion(
+                data.monto,
+                data.medio_cobro_id,
+                data.fecha_pago
+            );
 
             const paymentData: any = {
                 [idField]: data.orden_id,
@@ -249,20 +248,95 @@ export function usePendingDeliveries() {
                 medio_cobro_id: data.medio_cobro_id,
                 referencia_pago: data.referencia_pago || null,
                 notas: data.notas || null,
+                comision_aplicada: comision,
+                fecha_liberacion_estimada: fechaLiberacion,
                 created_by: profile?.id
             };
 
-            const { error: insertError } = await supabase
+            const { data: insertedPago, error: insertError } = await supabase
                 .from(table)
-                .insert(paymentData);
+                .insert(paymentData)
+                .select('id')
+                .single();
 
             if (insertError) throw insertError;
+
+            if (insertedPago?.id && profile?.company_id) {
+                void (async () => {
+                    try {
+                        const reciboFilterField = data.tipo === 'orden_trabajo' ? 'pago_ot_id' : 'pago_copiado_id';
+                        let recibo: any = null;
+
+                        for (let i = 0; i < 5; i++) {
+                            const { data: reciboData, error: reciboErr } = await supabase
+                                .from('recibos_pagos' as any)
+                                .select('id, token_corto')
+                                .eq(reciboFilterField, insertedPago.id)
+                                .maybeSingle();
+
+                            if (!reciboErr && reciboData?.id && reciboData?.token_corto) {
+                                recibo = reciboData;
+                                break;
+                            }
+                            await new Promise((res) => setTimeout(res, 400));
+                        }
+
+                        if (!recibo?.id || !recibo?.token_corto) return;
+
+                        await supabase.functions.invoke('generate-recibo-pdf', {
+                            body: { recibo_id: recibo.id },
+                        });
+
+                        try {
+                            const sourceTable = data.tipo === 'orden_trabajo' ? 'ordenes_trabajo' : 'centro_copiado_ordenes';
+                            const { data: ordenInfo } = await supabase
+                                .from(sourceTable)
+                                .select('numero_orden, cliente:clients(whatsapp)')
+                                .eq('id', data.orden_id)
+                                .maybeSingle();
+
+                            const phone = (ordenInfo as any)?.cliente?.whatsapp as string | null;
+                            const numeroOrden = (ordenInfo as any)?.numero_orden as string | null;
+
+                            if (phone && numeroOrden) {
+                                const montoText = Number(data.monto).toLocaleString('es-AR', {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                });
+                                const path = `${profile.company_id}/recibos/${recibo.token_corto}`;
+
+                                await sendWatiMessage({
+                                    companyId: profile.company_id,
+                                    phone,
+                                    template_name: 'recibo_pago_v1',
+                                    parameters: [
+                                        { name: 'monto_pagado', value: montoText },
+                                        { name: 'numero_orden', value: numeroOrden },
+                                        { name: '1', value: path },
+                                    ],
+                                    metadata: {
+                                        tipo: 'recibo_pago',
+                                        ...(data.tipo === 'orden_trabajo'
+                                            ? { orden_trabajo_id: data.orden_id }
+                                            : { orden_copiado_id: data.orden_id }),
+                                    },
+                                });
+                            }
+                        } catch (watiErr) {
+                            console.warn('[Wati] No se pudo enviar recibo por WhatsApp desde entregas:', watiErr);
+                        }
+                    } catch (genErr) {
+                        console.warn('[Recibos] No se pudo generar PDF automáticamente desde entregas:', genErr);
+                    }
+                })();
+            }
 
             // Update local state
             await fetchDeliveries(); // Refresh to recalculate balance
             return true;
         } catch (err) {
             console.error('Error adding payment:', err);
+            setError(err instanceof Error ? err.message : 'Error al registrar pago');
             return false;
         }
     };
