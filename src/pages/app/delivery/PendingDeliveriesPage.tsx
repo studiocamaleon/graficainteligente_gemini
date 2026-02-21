@@ -349,7 +349,7 @@ function PendingDeliveriesContent({ embedded = false }: PendingDeliveriesPagePro
 
                 const { data: items, error: itemsError } = await supabase
                     .from('centro_copiado_ordenes_items')
-                    .select('id, tipo_item, descripcion, cantidad_copias, precio_unitario, precio_total')
+                    .select('id, tipo_item, descripcion, cantidad_hojas, cantidad_unidades, precio_unitario, subtotal')
                     .eq('orden_copiado_id', delivery.id)
                     .order('created_at', { ascending: true });
 
@@ -359,9 +359,9 @@ function PendingDeliveriesContent({ embedded = false }: PendingDeliveriesPagePro
                     id: String(it.id),
                     nombre: it.descripcion || `Item ${it.tipo_item || 'copiado'}`,
                     categoria: it.tipo_item || 'Centro Copiado',
-                    cantidad: Number(it.cantidad_copias || 1),
+                    cantidad: Number(it.cantidad_unidades || 1),
                     precioUnitario: Number(it.precio_unitario || 0),
-                    precioTotal: Number(it.precio_total || 0),
+                    precioTotal: Number(it.subtotal || 0),
                 }));
 
                 setDetailData({
