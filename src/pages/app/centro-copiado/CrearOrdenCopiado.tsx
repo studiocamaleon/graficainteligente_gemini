@@ -50,6 +50,17 @@ interface PagoTemporal {
   notas?: string;
 }
 
+function formatDateForWhatsappTemplate(dateValue: string | null | undefined): string {
+  if (!dateValue) return 'A confirmar';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+    const [year, month, day] = dateValue.split('-');
+    return `${Number(day)}/${Number(month)}/${year}`;
+  }
+  const date = new Date(dateValue);
+  if (Number.isNaN(date.getTime())) return 'A confirmar';
+  return date.toLocaleDateString('es-AR');
+}
+
 export function CrearOrdenCopiado() {
   const navigate = useNavigate();
   const { profile, company } = useAuth();
@@ -577,7 +588,7 @@ export function CrearOrdenCopiado() {
           parameters: [
             { name: 'nombre_cliente', value: clienteSeleccionado?.nombre_fantasia || clienteSeleccionado?.razon_social || 'Cliente' },
             { name: 'numero_orden', value: ordenFinal?.numero_orden || '' },
-            { name: 'fecha_entrega', value: fechaEntrega ? new Date(fechaEntrega).toLocaleDateString('es-AR') : 'A confirmar' },
+            { name: 'fecha_entrega', value: formatDateForWhatsappTemplate(fechaEntrega) },
             { name: 'subtotal', value: totales.subtotal.toLocaleString('es-AR') },
             { name: 'total_iva', value: totales.total.toLocaleString('es-AR') },
             { name: 'url_tracking', value: buildTrackingUrl((ordenFinal as any)?.tracking_token || '') },

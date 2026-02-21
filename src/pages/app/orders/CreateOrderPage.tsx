@@ -54,6 +54,17 @@ interface PagoTemporal {
 
 type LinkType = 'download' | 'internal';
 
+function formatDateForWhatsappTemplate(dateValue: string | null | undefined): string {
+  if (!dateValue) return 'A confirmar';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+    const [year, month, day] = dateValue.split('-');
+    return `${Number(day)}/${Number(month)}/${year}`;
+  }
+  const date = new Date(dateValue);
+  if (Number.isNaN(date.getTime())) return 'A confirmar';
+  return date.toLocaleDateString('es-AR');
+}
+
 export function CreateOrderPage() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -791,7 +802,7 @@ export function CreateOrderPage() {
               parameters: [
                 { name: 'nombre_cliente', value: clienteSeleccionado.nombre_fantasia || clienteSeleccionado.razon_social },
                 { name: 'numero_orden', value: result.numero_orden },
-                { name: 'fecha_entrega', value: fechaEntrega ? new Date(fechaEntrega).toLocaleDateString('es-AR') : 'A confirmar' },
+                { name: 'fecha_entrega', value: formatDateForWhatsappTemplate(fechaEntrega) },
                 { name: 'subtotal', value: totales.subtotal.toLocaleString('es-AR') },
                 { name: 'total_iva', value: totales.total.toLocaleString('es-AR') }, // User requested naming this Total FINAL
                 { name: 'url_tracking', value: buildTrackingUrl((result as any).tracking_token) },
