@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
 import type {
@@ -57,10 +57,173 @@ interface DesglosePrecios {
   total_copias: number;
 }
 
+interface RangoPrecioImpresionCache {
+  id: string;
+  hojas_desde: number;
+  hojas_hasta: number | null;
+}
+
+interface RangoAnilladoCache {
+  hojas_desde: number;
+  hojas_hasta: number | null;
+  precio_ring_wire: number;
+  precio_plastico: number;
+}
+
+interface PlastificadoCache {
+  unidades_desde: number;
+  unidades_hasta: number | null;
+  precio: number;
+}
+
+interface RangoGuillotinadoCache {
+  hojas_desde: number;
+  hojas_hasta: number | null;
+  precio: number;
+}
+
 export function useCentroCopiadoPriceCalculator() {
   const { profile } = useAuth();
   const [calculating, setCalculating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const rangosImpresionCacheRef = useRef<RangoPrecioImpresionCache[] | null>(null);
+  const precioImpresionCacheRef = useRef<Map<string, number>>(new Map());
+  const rangosAnilladoCacheRef = useRef<RangoAnilladoCache[] | null>(null);
+  const plastificadosByTipoCacheRef = useRef<Map<string, PlastificadoCache[]>>(new Map());
+  const rangosGuillotinadoCacheRef = useRef<RangoGuillotinadoCache[] | null>(null);
+  const precioPloteoCacheRef = useRef<Map<string, number>>(new Map());
+
+  useEffect(() => {
+    rangosImpresionCacheRef.current = null;
+    precioImpresionCacheRef.current.clear();
+    rangosAnilladoCacheRef.current = null;
+    plastificadosByTipoCacheRef.current.clear();
+    rangosGuillotinadoCacheRef.current = null;
+    precioPloteoCacheRef.current.clear();
+  }, [profile?.company_id]);
+
+  const getRangosImpresion = useCallback(async () => {
+    if (rangosImpresionCacheRef.current) {
+      return rangosImpresionCacheRef.current;
+    }
+    const { data: rangos, error: rangosError } = await supabase
+      .from('centro_copiado_rangos_precio_impresion')
+      .select('*')
+      .eq('company_id', profile?.company_id)
+      .eq('is_active', true)
+      .order('hojas_desde', { ascending: true });
+    if (rangosError) throw rangosError;
+    rangosImpresionCacheRef.current = rangos || [];
+    return rangosImpresionCacheRef.current;
+  }, [profile?.company_id]);
+
+  const getPrecioImpresion = useCallback(
+    async (
+      tamanioPapelId: string,
+      papelId: string,
+      tipoTinta: TipoTintaCopiado,
+      caraImpresa: CaraImpresaCopiado,
+      rangoPrecioId: string
+    ) => {
+      const key = [
+        profile?.company_id,
+        tamanioPapelId,
+        papelId,
+        tipoTinta,
+        caraImpresa,
+        rangoPrecioId,
+      ].join(':');
+      if (precioImpresionCacheRef.current.has(key)) {
+        return precioImpresionCacheRef.current.get(key) as number;
+      }
+
+      const { data: precio, error: precioError } = await supabase
+        .from('centro_copiado_precios_impresion')
+        .select('precio')
+        .eq('company_id', profile?.company_id)
+        .eq('tamanio_papel_id', tamanioPapelId)
+        .eq('papel_id', papelId)
+        .eq('tipo_tinta', tipoTinta)
+        .eq('cara_impresa', caraImpresa)
+        .eq('rango_precio_id', rangoPrecioId)
+        .maybeSingle();
+
+      if (precioError) throw precioError;
+      if (!precio) {
+        throw new Error('No se encontró precio configurado para esta combinación');
+      }
+
+      const value = Number(precio.precio);
+      precioImpresionCacheRef.current.set(key, value);
+      return value;
+    },
+    [profile?.company_id]
+  );
+
+  const getRangosAnillado = useCallback(async () => {
+    if (rangosAnilladoCacheRef.current) return rangosAnilladoCacheRef.current;
+    const { data: rangos, error: rangosError } = await supabase
+      .from('centro_copiado_rangos_anillado')
+      .select('*')
+      .eq('company_id', profile?.company_id)
+      .eq('is_active', true)
+      .order('hojas_desde', { ascending: true });
+    if (rangosError) throw rangosError;
+    rangosAnilladoCacheRef.current = rangos || [];
+    return rangosAnilladoCacheRef.current;
+  }, [profile?.company_id]);
+
+  const getPlastificadosByTipo = useCallback(async (tipo: TipoPlastificado) => {
+    const key = `${profile?.company_id}:${tipo}`;
+    if (plastificadosByTipoCacheRef.current.has(key)) {
+      return plastificadosByTipoCacheRef.current.get(key) as PlastificadoCache[];
+    }
+    const { data, error: plastificadosError } = await supabase
+      .from('centro_copiado_plastificados')
+      .select('*')
+      .eq('company_id', profile?.company_id)
+      .eq('tipo', tipo)
+      .eq('is_active', true);
+    if (plastificadosError) throw plastificadosError;
+    const rows = data || [];
+    plastificadosByTipoCacheRef.current.set(key, rows);
+    return rows;
+  }, [profile?.company_id]);
+
+  const getRangosGuillotinado = useCallback(async () => {
+    if (rangosGuillotinadoCacheRef.current) return rangosGuillotinadoCacheRef.current;
+    const { data: rangos, error: rangosError } = await supabase
+      .from('centro_copiado_rangos_guillotinado')
+      .select('*')
+      .eq('company_id', profile?.company_id)
+      .eq('is_active', true)
+      .order('hojas_desde', { ascending: true });
+    if (rangosError) throw rangosError;
+    rangosGuillotinadoCacheRef.current = rangos || [];
+    return rangosGuillotinadoCacheRef.current;
+  }, [profile?.company_id]);
+
+  const getPrecioPloteo = useCallback(async (tipoPapel: string, anchoRollo: 60 | 90) => {
+    const key = `${profile?.company_id}:${tipoPapel}:${anchoRollo}`;
+    if (precioPloteoCacheRef.current.has(key)) {
+      return precioPloteoCacheRef.current.get(key) as number;
+    }
+    const { data: precioConfig, error } = await supabase
+      .from('centro_copiado_ploteo_cad_precios')
+      .select('precio_metro_lineal')
+      .eq('company_id', profile?.company_id)
+      .eq('tipo_papel', tipoPapel)
+      .eq('ancho_cm', anchoRollo)
+      .eq('is_active', true)
+      .maybeSingle();
+    if (error) throw error;
+    if (!precioConfig) {
+      throw new Error(`No hay precio configurado para ${tipoPapel} ${anchoRollo}cm.`);
+    }
+    const value = Number(precioConfig.precio_metro_lineal);
+    precioPloteoCacheRef.current.set(key, value);
+    return value;
+  }, [profile?.company_id]);
 
   const calcularPrecioImpresion = useCallback(
     async (config: ConfiguracionImpresion): Promise<DesglosePrecios> => {
@@ -74,14 +237,7 @@ export function useCentroCopiadoPriceCalculator() {
 
         const totalHojas = config.cantidad_hojas * config.cantidad_copias;
 
-        const { data: rangos, error: rangosError } = await supabase
-          .from('centro_copiado_rangos_precio_impresion')
-          .select('*')
-          .eq('company_id', profile.company_id)
-          .eq('is_active', true)
-          .order('hojas_desde', { ascending: true });
-
-        if (rangosError) throw rangosError;
+        const rangos = await getRangosImpresion();
 
         if (!rangos || rangos.length === 0) {
           throw new Error('No hay rangos de precio configurados');
@@ -97,24 +253,13 @@ export function useCentroCopiadoPriceCalculator() {
           throw new Error('No se encontró un rango de precio aplicable para esta cantidad');
         }
 
-        const { data: precio, error: precioError } = await supabase
-          .from('centro_copiado_precios_impresion')
-          .select('precio')
-          .eq('company_id', profile.company_id)
-          .eq('tamanio_papel_id', config.tamanio_papel_id)
-          .eq('papel_id', config.papel_id)
-          .eq('tipo_tinta', config.tipo_tinta)
-          .eq('cara_impresa', config.cara_impresa)
-          .eq('rango_precio_id', rangoAplicable.id)
-          .maybeSingle();
-
-        if (precioError) throw precioError;
-
-        if (!precio) {
-          throw new Error('No se encontró precio configurado para esta combinación');
-        }
-
-        const precioImpresionUnitario = Number(precio.precio);
+        const precioImpresionUnitario = await getPrecioImpresion(
+          config.tamanio_papel_id,
+          config.papel_id,
+          config.tipo_tinta,
+          config.cara_impresa,
+          rangoAplicable.id
+        );
         const precioImpresionTotal = precioImpresionUnitario * totalHojas;
 
         return {
@@ -137,7 +282,7 @@ export function useCentroCopiadoPriceCalculator() {
         setCalculating(false);
       }
     },
-    [profile?.company_id]
+    [profile?.company_id, getPrecioImpresion, getRangosImpresion]
   );
 
   const calcularPrecioAnillado = useCallback(
@@ -151,14 +296,7 @@ export function useCentroCopiadoPriceCalculator() {
       }
 
       try {
-        const { data: rangos, error: rangosError } = await supabase
-          .from('centro_copiado_rangos_anillado')
-          .select('*')
-          .eq('company_id', profile.company_id)
-          .eq('is_active', true)
-          .order('hojas_desde', { ascending: true });
-
-        if (rangosError) throw rangosError;
+        const rangos = await getRangosAnillado();
 
         if (!rangos || rangos.length === 0) {
           throw new Error('No hay rangos de anillado configurados. Por favor, configure los rangos en la sección de Terminaciones.');
@@ -191,7 +329,7 @@ export function useCentroCopiadoPriceCalculator() {
         throw err;
       }
     },
-    [profile?.company_id]
+    [profile?.company_id, getRangosAnillado]
   );
 
   const calcularPrecioPlastificado = useCallback(
@@ -211,14 +349,7 @@ export function useCentroCopiadoPriceCalculator() {
           return 0;
         }
 
-        const { data: plastificados, error: plastificadosError } = await supabase
-          .from('centro_copiado_plastificados')
-          .select('*')
-          .eq('company_id', profile.company_id)
-          .eq('tipo', config.tipo_plastificado)
-          .eq('is_active', true);
-
-        if (plastificadosError) throw plastificadosError;
+        const plastificados = await getPlastificadosByTipo(config.tipo_plastificado);
 
         if (!plastificados || plastificados.length === 0) {
           throw new Error(`No hay precios de plastificado configurados para el tipo "${config.tipo_plastificado}". Por favor, configure los precios en la sección de Terminaciones.`);
@@ -248,7 +379,7 @@ export function useCentroCopiadoPriceCalculator() {
         throw err;
       }
     },
-    [profile?.company_id]
+    [profile?.company_id, getPlastificadosByTipo]
   );
 
   const calcularPrecioGuillotinado = useCallback(
@@ -262,14 +393,7 @@ export function useCentroCopiadoPriceCalculator() {
       }
 
       try {
-        const { data: rangos, error: rangosError } = await supabase
-          .from('centro_copiado_rangos_guillotinado')
-          .select('*')
-          .eq('company_id', profile.company_id)
-          .eq('is_active', true)
-          .order('hojas_desde', { ascending: true });
-
-        if (rangosError) throw rangosError;
+        const rangos = await getRangosGuillotinado();
 
         if (!rangos || rangos.length === 0) {
           throw new Error('No hay rangos de guillotinado configurados. Por favor, configure los rangos en la sección de Terminaciones.');
@@ -299,7 +423,7 @@ export function useCentroCopiadoPriceCalculator() {
         throw err;
       }
     },
-    [profile?.company_id]
+    [profile?.company_id, getRangosGuillotinado]
   );
 
   const calcularPrecioPloteoCAD = useCallback(
@@ -313,22 +437,8 @@ export function useCentroCopiadoPriceCalculator() {
       }
 
       try {
-        const { data: precioConfig, error } = await supabase
-          .from('centro_copiado_ploteo_cad_precios')
-          .select('precio_metro_lineal')
-          .eq('company_id', profile.company_id)
-          .eq('tipo_papel', config.tipo_papel)
-          .eq('ancho_cm', config.ancho_rollo)
-          .eq('is_active', true)
-          .maybeSingle();
-
-        if (error) throw error;
-
-        if (!precioConfig) {
-          throw new Error(`No hay precio configurado para ${config.tipo_papel} ${config.ancho_rollo}cm.`);
-        }
-
-        const precioTotal = precioConfig.precio_metro_lineal * config.metros_lineales * config.cantidad_copias;
+        const precioMetroLineal = await getPrecioPloteo(config.tipo_papel, config.ancho_rollo);
+        const precioTotal = precioMetroLineal * config.metros_lineales * config.cantidad_copias;
         return precioTotal;
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Error al calcular precio de Ploteo CAD';
@@ -336,7 +446,7 @@ export function useCentroCopiadoPriceCalculator() {
         throw err;
       }
     },
-    [profile?.company_id]
+    [profile?.company_id, getPrecioPloteo]
   );
 
 

@@ -76,9 +76,11 @@ export function CentroCopiadoItemForm({
   const { calcularPrecioCompleto, calculating } = useCentroCopiadoPriceCalculator();
   const { papeles: papelesCAD, anchos: anchosCAD, loading: loadingCAD } = useCentroCopiadoPloteoCADOptions();
 
-  const debouncedConfig = useDebounce(value, 500);
+  const debouncedConfig = useDebounce(value, 250);
 
   const isPloteoCAD = value.modo_item === 'ploteo_cad';
+  const hojasFisicasIngresadas = value.cantidad_hojas || 0;
+  const hojasFisicasPorCopia = hojasFisicasIngresadas;
 
   const isConfigComplete = isPloteoCAD
     ? (value.ploteo_cad_tipo_papel && value.ploteo_cad_ancho_rollo && value.ploteo_cad_metros_lineales && value.cantidad_copias)
@@ -93,7 +95,25 @@ export function CentroCopiadoItemForm({
 
   useEffect(() => {
     const calcularPrecio = async () => {
-      if (!isConfigComplete) {
+      const configDebounced = debouncedConfig;
+      const isPloteoCADDebounced = configDebounced.modo_item === 'ploteo_cad';
+      const isConfigCompleteDebounced = isPloteoCADDebounced
+        ? (
+          configDebounced.ploteo_cad_tipo_papel &&
+          configDebounced.ploteo_cad_ancho_rollo &&
+          configDebounced.ploteo_cad_metros_lineales &&
+          configDebounced.cantidad_copias
+        )
+        : (
+          configDebounced.tamanio_papel_id &&
+          configDebounced.papel_id &&
+          configDebounced.tipo_tinta &&
+          configDebounced.cara_impresa &&
+          configDebounced.cantidad_hojas &&
+          configDebounced.cantidad_copias
+        );
+
+      if (!isConfigCompleteDebounced) {
         setPrecioCalculado(null);
         setErrorCalculo(null);
         if (onPriceCalculated) {
@@ -112,51 +132,48 @@ export function CentroCopiadoItemForm({
         let configPlastificado;
         let configGuillotinado;
 
-        if (isPloteoCAD) {
+        if (isPloteoCADDebounced) {
           configPloteoCAD = {
-            tipo_papel: value.ploteo_cad_tipo_papel!,
-            ancho_rollo: value.ploteo_cad_ancho_rollo!,
-            metros_lineales: value.ploteo_cad_metros_lineales!,
-            cantidad_copias: value.cantidad_copias || 1
+            tipo_papel: configDebounced.ploteo_cad_tipo_papel!,
+            ancho_rollo: configDebounced.ploteo_cad_ancho_rollo!,
+            metros_lineales: configDebounced.ploteo_cad_metros_lineales!,
+            cantidad_copias: configDebounced.cantidad_copias || 1
           };
         } else {
-          const hojasOriginales = value.cantidad_hojas || 0;
-          const hojasFisicas = value.cara_impresa === 'frente_y_dorso'
-            ? Math.ceil(hojasOriginales / 2)
-            : hojasOriginales;
+          const hojasFisicas = configDebounced.cantidad_hojas || 0;
 
           configImpresion = {
-            tamanio_papel_id: value.tamanio_papel_id!,
-            papel_id: value.papel_id!,
-            tipo_tinta: value.tipo_tinta!,
-            cara_impresa: value.cara_impresa!,
+            tamanio_papel_id: configDebounced.tamanio_papel_id!,
+            papel_id: configDebounced.papel_id!,
+            tipo_tinta: configDebounced.tipo_tinta!,
+            cara_impresa: configDebounced.cara_impresa!,
             cantidad_hojas: hojasFisicas,
-            cantidad_copias: value.cantidad_copias || 1,
+            cantidad_copias: configDebounced.cantidad_copias || 1,
           };
         
-          configAnillado = value.anillado?.tipo
+          configAnillado = configDebounced.anillado?.tipo
             ? {
-              tipo_anillado: value.anillado.tipo,
+              tipo_anillado: configDebounced.anillado.tipo,
               cantidad_hojas: hojasFisicas,
-              cantidad_copias: value.cantidad_copias || 1,
+              cantidad_copias: configDebounced.cantidad_copias || 1,
             }
             : undefined;
 
-          configPlastificado = value.plastificado?.tipo
+          configPlastificado = configDebounced.plastificado?.tipo
             ? {
-              tipo_plastificado: value.plastificado.tipo,
-              cantidad_hojas: value.plastificado.todas_hojas ? hojasFisicas : undefined,
-              cantidad_especifica: value.plastificado.todas_hojas
+              tipo_plastificado: configDebounced.plastificado.tipo,
+              cantidad_hojas: configDebounced.plastificado.todas_hojas ? hojasFisicas : undefined,
+              cantidad_especifica: configDebounced.plastificado.todas_hojas
                 ? undefined
-                : value.plastificado.cantidad_especifica,
-              cantidad_copias: value.cantidad_copias || 1,
+                : configDebounced.plastificado.cantidad_especifica,
+              cantidad_copias: configDebounced.cantidad_copias || 1,
             }
             : undefined;
 
-          configGuillotinado = value.guillotinado
+          configGuillotinado = configDebounced.guillotinado
             ? {
               cantidad_hojas: hojasFisicas,
-              cantidad_copias: value.cantidad_copias || 1,
+              cantidad_copias: configDebounced.cantidad_copias || 1,
             }
             : undefined;
         }
@@ -184,9 +201,9 @@ export function CentroCopiadoItemForm({
     };
 
     calcularPrecio();
-  }, [debouncedConfig, isConfigComplete, calcularPrecioCompleto, onPriceCalculated]);
+  }, [debouncedConfig, calcularPrecioCompleto, hojasFisicasPorCopia, onPriceCalculated]);
 
-  const handleFieldChange = (field: string, newValue: any) => {
+  const handleFieldChange = (field: string, newValue: unknown) => {
     onChange({
       ...value,
       [field]: newValue,
@@ -335,6 +352,18 @@ export function CentroCopiadoItemForm({
 
           {value.modo_item === 'ploteo_cad' ? (
             <div className="space-y-3">
+              {onDescripcionChange && (
+                <div>
+                  <Input
+                    type="text"
+                    className="h-10 text-sm bg-white border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                    value={descripcion || ''}
+                    onChange={(e) => onDescripcionChange(e.target.value)}
+                    placeholder="Descripción o nombre del archivo (Opcional)"
+                  />
+                </div>
+              )}
+
               <div className="grid grid-cols-1 gap-3">
                 {/* 1. Tipo de Papel CAD */}
                 <div>
@@ -431,164 +460,163 @@ export function CentroCopiadoItemForm({
             </div>
           ) : (
             <div className="space-y-3">
+              {onDescripcionChange && (
+                <div>
+                  <Input
+                    type="text"
+                    className="h-10 text-sm bg-white border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                    value={descripcion || ''}
+                    onChange={(e) => onDescripcionChange(e.target.value)}
+                    placeholder="Descripción o nombre del archivo (Opcional)"
+                  />
+                </div>
+              )}
+
               <div className="grid grid-cols-1 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 pl-1">
-                    1. Selección de Papel
+                    1. Cantidad
                   </label>
-                  <div className="bg-gray-50/50 p-2 rounded-xl border border-gray-100 space-y-4">
-                    {onDescripcionChange && (
+                  <div className="bg-gray-50/50 p-3 rounded-xl border border-gray-100 h-full flex flex-col justify-center">
+                    <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <Input
-                          type="text"
-                          className="h-10 text-sm bg-white border-gray-200 focus:border-blue-500 focus:ring-blue-500"
-                          value={descripcion || ''}
-                          onChange={(e) => onDescripcionChange(e.target.value)}
-                          placeholder="Descripción o nombre del archivo (Opcional)"
-                        />
+                        <label className="block text-xs font-medium text-gray-500 mb-1 text-center">
+                          Hojas físicas
+                        </label>
+                        <div className="relative bg-white rounded-lg border-2 border-gray-200 hover:border-gray-300 transition-colors p-1">
+                          <Input
+                            type="number"
+                            min="1"
+                            className="h-16 text-2xl font-bold text-center border-0 focus:ring-0 p-0"
+                            value={value.cantidad_hojas || ''}
+                            onChange={(e) => handleFieldChange('cantidad_hojas', parseInt(e.target.value) || 0)}
+                            placeholder="0"
+                          />
+                        </div>
                       </div>
-                    )}
-                    <div>
-
-                      <label className="block text-xs font-medium text-gray-500 mb-1 ml-1">Tamaño</label>
-                      <TamaniosPapelSelector
-                        tamanios={tamanios}
-                        selectedId={value.tamanio_papel_id}
-                        onSelect={handleTamanioChange}
-                        loading={loadingTamanios}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-medium text-gray-500 mb-1 ml-1">Tipo de Papel</label>
-                      <TiposPapelSelector
-                        papeles={papeles}
-                        selectedId={value.papel_id}
-                        onSelect={handlePapelChange}
-                        loading={loadingPapeles}
-                      />
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1 text-center">
+                          Copias / Juegos
+                        </label>
+                        <div className="relative bg-white rounded-lg border-2 border-gray-200 hover:border-gray-300 transition-colors p-1">
+                          <Input
+                            type="number"
+                            min="1"
+                            className="h-16 text-2xl font-bold text-center border-0 focus:ring-0 p-0 text-blue-600"
+                            value={value.cantidad_copias || ''}
+                            onChange={(e) => handleFieldChange('cantidad_copias', parseInt(e.target.value) || 1)}
+                            placeholder="1"
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 pl-1">
-                      2. Configuración de Impresión
-                    </label>
-                    <div className="bg-gray-50/50 p-3 rounded-xl border border-gray-100 h-full">
-                      <div className="grid grid-cols-2 gap-3 mb-3">
-                        <div>
-                          <label className="block text-xs font-medium text-gray-500 mb-1">Tinta</label>
-                          <div className="grid grid-cols-1 gap-1.5 h-full">
-                            <button
-                              type="button"
-                              onClick={() => handleFieldChange('tipo_tinta', 'CMYK')}
-                              className={`relative p-3 rounded-lg border-2 transition-all flex flex-col items-center justify-center gap-2 h-20 ${value.tipo_tinta === 'CMYK'
-                                ? 'border-blue-500 bg-blue-50 text-blue-700 ring-1 ring-blue-500'
-                                : 'border-gray-200 hover:border-gray-300 bg-white'
-                                }`}
-                            >
-                              <div className="flex -space-x-1 scale-125 mb-1">
-                                <div className="w-3 h-3 rounded-full bg-cyan-500 ring-1 ring-white"></div>
-                                <div className="w-3 h-3 rounded-full bg-fuchsia-500 ring-1 ring-white"></div>
-                                <div className="w-3 h-3 rounded-full bg-yellow-400 ring-1 ring-white"></div>
-                                <div className="w-3 h-3 rounded-full bg-black ring-1 ring-white"></div>
-                              </div>
-                              <span className="font-bold text-xs">Color</span>
-                              {value.tipo_tinta === 'CMYK' && (
-                                <CheckCircle2 className="w-3 h-3 text-blue-600 absolute top-1 right-1" />
-                              )}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleFieldChange('tipo_tinta', 'K')}
-                              className={`relative p-3 rounded-lg border-2 transition-all flex flex-col items-center justify-center gap-2 h-20 ${value.tipo_tinta === 'K'
-                                ? 'border-gray-700 bg-gray-50 text-gray-900 ring-1 ring-gray-700'
-                                : 'border-gray-200 hover:border-gray-300 bg-white'
-                                }`}
-                            >
-                              <div className="w-4 h-4 rounded-full bg-gray-900 mb-1"></div>
-                              <span className="font-bold text-xs">B/N</span>
-                              {value.tipo_tinta === 'K' && (
-                                <CheckCircle2 className="w-3 h-3 text-gray-600 absolute top-1 right-1" />
-                              )}
-                            </button>
-                          </div>
-                        </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 pl-1">
+                    2. Tamaño
+                  </label>
+                  <div className="bg-gray-50/50 p-2 rounded-xl border border-gray-100">
+                    <TamaniosPapelSelector
+                      tamanios={tamanios}
+                      selectedId={value.tamanio_papel_id}
+                      onSelect={handleTamanioChange}
+                      loading={loadingTamanios}
+                    />
+                  </div>
+                </div>
 
-                        <div>
-                          <label className="block text-xs font-medium text-gray-500 mb-1">Caras</label>
-                          <div className="grid grid-cols-1 gap-1.5 h-full">
-                            <button
-                              type="button"
-                              onClick={() => handleFieldChange('cara_impresa', 'frente')}
-                              className={`relative p-3 rounded-lg border-2 transition-all flex flex-col items-center justify-center gap-2 h-20 ${value.cara_impresa === 'frente'
-                                ? 'border-blue-500 bg-blue-50 text-blue-700 ring-1 ring-blue-500'
-                                : 'border-gray-200 hover:border-gray-300 bg-white'
-                                }`}
-                            >
-                              <File className={`w-5 h-5 ${value.cara_impresa === 'frente' ? 'text-blue-600' : 'text-gray-400'}`} />
-                              <span className="font-bold text-xs">Simple</span>
-                              {value.cara_impresa === 'frente' && (
-                                <CheckCircle2 className="w-3 h-3 text-blue-600 absolute top-1 right-1" />
-                              )}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleFieldChange('cara_impresa', 'frente_y_dorso')}
-                              className={`relative p-3 rounded-lg border-2 transition-all flex flex-col items-center justify-center gap-2 h-20 ${value.cara_impresa === 'frente_y_dorso'
-                                ? 'border-blue-500 bg-blue-50 text-blue-700 ring-1 ring-blue-500'
-                                : 'border-gray-200 hover:border-gray-300 bg-white'
-                                }`}
-                            >
-                              <FileText className={`w-5 h-5 ${value.cara_impresa === 'frente_y_dorso' ? 'text-blue-600' : 'text-gray-400'}`} />
-                              <span className="font-bold text-xs">Doble</span>
-                              {value.cara_impresa === 'frente_y_dorso' && (
-                                <CheckCircle2 className="w-3 h-3 text-blue-600 absolute top-1 right-1" />
-                              )}
-                            </button>
-                          </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 pl-1">
+                    3. Tipo de Papel
+                  </label>
+                  <div className="bg-gray-50/50 p-2 rounded-xl border border-gray-100">
+                    <TiposPapelSelector
+                      papeles={papeles}
+                      selectedId={value.papel_id}
+                      onSelect={handlePapelChange}
+                      loading={loadingPapeles}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 pl-1">
+                    4. Configuración de Impresión
+                  </label>
+                  <div className="bg-gray-50/50 p-3 rounded-xl border border-gray-100 h-full">
+                    <div className="grid grid-cols-1 gap-3 mb-3">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Tinta</label>
+                        <div className="grid grid-cols-2 gap-1.5 h-full">
+                          <button
+                            type="button"
+                            onClick={() => handleFieldChange('tipo_tinta', 'CMYK')}
+                            className={`relative p-3 rounded-lg border-2 transition-all flex flex-col items-center justify-center gap-2 h-20 ${value.tipo_tinta === 'CMYK'
+                              ? 'border-blue-500 bg-blue-50 text-blue-700 ring-1 ring-blue-500'
+                              : 'border-gray-200 hover:border-gray-300 bg-white'
+                              }`}
+                          >
+                            <div className="flex -space-x-1 scale-125 mb-1">
+                              <div className="w-3 h-3 rounded-full bg-cyan-500 ring-1 ring-white"></div>
+                              <div className="w-3 h-3 rounded-full bg-fuchsia-500 ring-1 ring-white"></div>
+                              <div className="w-3 h-3 rounded-full bg-yellow-400 ring-1 ring-white"></div>
+                              <div className="w-3 h-3 rounded-full bg-black ring-1 ring-white"></div>
+                            </div>
+                            <span className="font-bold text-xs">Color</span>
+                            {value.tipo_tinta === 'CMYK' && (
+                              <CheckCircle2 className="w-3 h-3 text-blue-600 absolute top-1 right-1" />
+                            )}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleFieldChange('tipo_tinta', 'K')}
+                            className={`relative p-3 rounded-lg border-2 transition-all flex flex-col items-center justify-center gap-2 h-20 ${value.tipo_tinta === 'K'
+                              ? 'border-gray-700 bg-gray-50 text-gray-900 ring-1 ring-gray-700'
+                              : 'border-gray-200 hover:border-gray-300 bg-white'
+                              }`}
+                          >
+                            <div className="w-4 h-4 rounded-full bg-gray-900 mb-1"></div>
+                            <span className="font-bold text-xs">B/N</span>
+                            {value.tipo_tinta === 'K' && (
+                              <CheckCircle2 className="w-3 h-3 text-gray-600 absolute top-1 right-1" />
+                            )}
+                          </button>
                         </div>
                       </div>
-                    </div>
-                  </div>
 
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 pl-1">
-                      3. Cantidad
-                    </label>
-                    <div className="bg-gray-50/50 p-3 rounded-xl border border-gray-100 h-full flex flex-col justify-center">
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-xs font-medium text-gray-500 mb-1 text-center">
-                            Hojas Originales
-                          </label>
-                          <div className="relative bg-white rounded-lg border-2 border-gray-200 hover:border-gray-300 transition-colors p-1">
-                            <Input
-                              type="number"
-                              min="1"
-                              className="h-16 text-2xl font-bold text-center border-0 focus:ring-0 p-0"
-                              value={value.cantidad_hojas || ''}
-                              onChange={(e) => handleFieldChange('cantidad_hojas', parseInt(e.target.value) || 0)}
-                              placeholder="0"
-                            />
-                          </div>
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-gray-500 mb-1 text-center">
-                            Copias / Juegos
-                          </label>
-                          <div className="relative bg-white rounded-lg border-2 border-gray-200 hover:border-gray-300 transition-colors p-1">
-                            <Input
-                              type="number"
-                              min="1"
-                              className="h-16 text-2xl font-bold text-center border-0 focus:ring-0 p-0 text-blue-600"
-                              value={value.cantidad_copias || ''}
-                              onChange={(e) => handleFieldChange('cantidad_copias', parseInt(e.target.value) || 1)}
-                              placeholder="1"
-                            />
-                          </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Caras</label>
+                        <div className="grid grid-cols-2 gap-1.5 h-full">
+                          <button
+                            type="button"
+                            onClick={() => handleFieldChange('cara_impresa', 'frente')}
+                            className={`relative p-3 rounded-lg border-2 transition-all flex flex-col items-center justify-center gap-2 h-20 ${value.cara_impresa === 'frente'
+                              ? 'border-blue-500 bg-blue-50 text-blue-700 ring-1 ring-blue-500'
+                              : 'border-gray-200 hover:border-gray-300 bg-white'
+                              }`}
+                          >
+                            <File className={`w-5 h-5 ${value.cara_impresa === 'frente' ? 'text-blue-600' : 'text-gray-400'}`} />
+                            <span className="font-bold text-xs">Simple</span>
+                            {value.cara_impresa === 'frente' && (
+                              <CheckCircle2 className="w-3 h-3 text-blue-600 absolute top-1 right-1" />
+                            )}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleFieldChange('cara_impresa', 'frente_y_dorso')}
+                            className={`relative p-3 rounded-lg border-2 transition-all flex flex-col items-center justify-center gap-2 h-20 ${value.cara_impresa === 'frente_y_dorso'
+                              ? 'border-blue-500 bg-blue-50 text-blue-700 ring-1 ring-blue-500'
+                              : 'border-gray-200 hover:border-gray-300 bg-white'
+                              }`}
+                          >
+                            <FileText className={`w-5 h-5 ${value.cara_impresa === 'frente_y_dorso' ? 'text-blue-600' : 'text-gray-400'}`} />
+                            <span className="font-bold text-xs">Doble</span>
+                            {value.cara_impresa === 'frente_y_dorso' && (
+                              <CheckCircle2 className="w-3 h-3 text-blue-600 absolute top-1 right-1" />
+                            )}
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -599,11 +627,11 @@ export function CentroCopiadoItemForm({
 
               <div className="pt-3">
                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 pl-1">
-                  4. Terminaciones
+                  5. Terminaciones
                 </label>
 
                 <CentroCopiadoItemTerminaciones
-                  cantidadHojas={value.cantidad_hojas || 0}
+                  cantidadHojas={hojasFisicasPorCopia}
                   cantidadCopias={value.cantidad_copias || 1}
                   anillado={value.anillado}
                   plastificado={value.plastificado}

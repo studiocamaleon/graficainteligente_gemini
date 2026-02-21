@@ -1,4 +1,4 @@
-import { Receipt, DollarSign, AlertTriangle } from 'lucide-react';
+import { Receipt, AlertTriangle } from 'lucide-react';
 import { clampZeroMoney, roundMoney, toMoney } from '../../utils/money';
 
 interface OrdenFooterTotalesProps {
@@ -29,7 +29,7 @@ export function OrdenFooterTotales({
   const tienePagos = totalPagadoNorm > 0.01;
 
   return (
-    <div className="fixed bottom-0 left-0 lg:left-72 right-0 bg-white border-t border-gray-200 shadow-lg z-40">
+    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-40 lg:left-[var(--main-layout-offset)]">
       <div className="px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">

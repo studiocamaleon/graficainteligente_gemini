@@ -17,6 +17,7 @@ interface UseDashboardDataV2Options {
   initialScope?: DashboardScope;
   initialPeriod?: DashboardPeriod;
   tz?: string;
+  enabled?: boolean;
 }
 
 const DEFAULT_SCOPE: DashboardScope = 'ot';
@@ -108,6 +109,7 @@ export function useDashboardDataV2({
   initialScope = DEFAULT_SCOPE,
   initialPeriod = DEFAULT_PERIOD,
   tz = DEFAULT_TZ,
+  enabled = true,
 }: UseDashboardDataV2Options = {}) {
   const { company, profile } = useAuth();
   const companyId = profile?.company_id || company?.id || null;
@@ -128,7 +130,7 @@ export function useDashboardDataV2({
   const refreshInFlightRef = useRef(false);
 
   const loadAll = useCallback(async () => {
-    if (!companyId || refreshInFlightRef.current) return;
+    if (!enabled || !companyId || refreshInFlightRef.current) return;
 
     refreshInFlightRef.current = true;
     setLoading(true);
@@ -227,7 +229,7 @@ export function useDashboardDataV2({
       refreshInFlightRef.current = false;
       setLoading(false);
     }
-  }, [companyId, entregasLimit, period, scope, tz]);
+  }, [companyId, enabled, entregasLimit, period, scope, tz]);
 
   const debouncedRefresh = useCallback(() => {
     if (refreshDebounceRef.current) {
@@ -239,11 +241,15 @@ export function useDashboardDataV2({
   }, [loadAll]);
 
   useEffect(() => {
+    if (!enabled) {
+      setLoading(false);
+      return;
+    }
     void loadAll();
-  }, [loadAll]);
+  }, [enabled, loadAll]);
 
   useEffect(() => {
-    if (!companyId) return;
+    if (!enabled || !companyId) return;
 
     const channel = supabase
       .channel(`dashboard-v2-${companyId}-${scope}`)
@@ -278,7 +284,7 @@ export function useDashboardDataV2({
       void supabase.removeChannel(channel);
       setIsRealtimeConnected(false);
     };
-  }, [companyId, debouncedRefresh, scope]);
+  }, [companyId, debouncedRefresh, enabled, scope]);
 
   const refresh = useCallback(() => {
     void loadAll();

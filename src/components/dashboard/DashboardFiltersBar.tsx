@@ -5,16 +5,17 @@ import { Select } from '../ui/Select';
 import { Tabs } from '../ui/Tabs';
 import type { DashboardPeriod, DashboardScope } from '../../types/dashboard';
 
+export type DashboardMainTab = DashboardScope | 'entregas';
+
 interface DashboardFiltersBarProps {
-  scope: DashboardScope;
+  activeTab: DashboardMainTab;
   period: DashboardPeriod;
   loading?: boolean;
   lastUpdated: Date | null;
   isRealtimeConnected: boolean;
-  onScopeChange: (scope: DashboardScope) => void;
+  onTabChange: (tab: DashboardMainTab) => void;
   onPeriodChange: (period: DashboardPeriod) => void;
   onRefresh: () => void;
-  onOpenPendingDeliveries?: () => void;
 }
 
 function formatLastUpdated(date: Date | null): string {
@@ -27,15 +28,14 @@ function formatLastUpdated(date: Date | null): string {
 }
 
 export function DashboardFiltersBar({
-  scope,
+  activeTab,
   period,
   loading,
   lastUpdated,
   isRealtimeConnected,
-  onScopeChange,
+  onTabChange,
   onPeriodChange,
   onRefresh,
-  onOpenPendingDeliveries,
 }: DashboardFiltersBarProps) {
   const [, setTicker] = useState(0);
 
@@ -48,6 +48,7 @@ export function DashboardFiltersBar({
     () => [
       { id: 'ot', label: 'Órdenes de Trabajo' },
       { id: 'copiado', label: 'Centro de Copiado' },
+      { id: 'entregas', label: 'Listas para entrega' },
     ],
     []
   );
@@ -58,29 +59,25 @@ export function DashboardFiltersBar({
         <div className="min-w-0 flex-1">
           <Tabs
             tabs={tabs}
-            activeTab={scope}
-            onTabChange={(tab) => onScopeChange(tab as DashboardScope)}
+            activeTab={activeTab}
+            onTabChange={(tab) => onTabChange(tab as DashboardMainTab)}
           />
         </div>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="min-w-[170px]">
-            <Select
-              value={period}
-              onChange={(value) => onPeriodChange(value as DashboardPeriod)}
-              options={[
-                { value: '7d', label: 'Últimos 7 días' },
-                { value: '30d', label: 'Últimos 30 días' },
-                { value: '90d', label: 'Últimos 90 días' },
-                { value: 'mes_actual', label: 'Mes actual' },
-              ]}
-            />
-          </div>
-
-          {onOpenPendingDeliveries ? (
-            <Button variant="outline" size="sm" onClick={onOpenPendingDeliveries}>
-              Gestionar entregas
-            </Button>
+          {activeTab !== 'entregas' ? (
+            <div className="min-w-[170px]">
+              <Select
+                value={period}
+                onChange={(value) => onPeriodChange(value as DashboardPeriod)}
+                options={[
+                  { value: '7d', label: 'Últimos 7 días' },
+                  { value: '30d', label: 'Últimos 30 días' },
+                  { value: '90d', label: 'Últimos 90 días' },
+                  { value: 'mes_actual', label: 'Mes actual' },
+                ]}
+              />
+            </div>
           ) : null}
 
           <Button variant="outline" size="sm" onClick={onRefresh} disabled={loading}>

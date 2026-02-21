@@ -133,18 +133,21 @@ export function AsociarOrdenCopiadoModal({
   }, []);
 
   const eliminarItem = useCallback((id: string) => {
-    if (items.length === 1) {
-      setErrorValidacion('Debe haber al menos un item en la orden de copiado');
-      return;
-    }
-    setItems((prev) => prev.filter((item) => item.id !== id));
+    setItems((prev) => {
+      const filtered = prev.filter((item) => item.id !== id);
+      if (filtered.length > 0) return filtered;
+      return [{
+        id: `item-${Date.now()}-${Math.random()}`,
+        config: { cantidad_copias: 1 },
+      }];
+    });
     setItemsCollapsed((prev) => {
       const newCollapsed = { ...prev };
       delete newCollapsed[id];
       return newCollapsed;
     });
     setErrorValidacion('');
-  }, [items.length]);
+  }, []);
 
   const toggleItemCollapse = useCallback((id: string) => {
     setItemsCollapsed(prev => ({

@@ -3,13 +3,14 @@ import { useState } from 'react';
 import { Vencimiento } from '../../hooks/useVencimientos';
 import { formatCurrency } from '../../utils/stringUtils';
 import { formatDateDisplay as formatDate } from '../../utils/dates';
-import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
-import { AlertCircle, CheckCircle, Clock } from 'lucide-react';
+import { AlertCircle, CheckCircle, Clock, Trash2 } from 'lucide-react';
 import { RegistrarEgresoModal } from './RegistrarEgresoModal';
 import { CreateEgresoData } from '../../types/tesoreria';
 import { useEgresos } from '../../hooks/useEgresos';
 import { useToast } from '../../contexts/ToastContext';
+import { useAuth } from '../../hooks/useAuth';
+import { supabase } from '../../lib/supabase';
 
 interface VencimientosListProps {
     vencimientos: Vencimiento[];
@@ -19,7 +20,53 @@ interface VencimientosListProps {
 export function VencimientosList({ vencimientos, onRefresh }: VencimientosListProps) {
     const { createEgreso } = useEgresos();
     const { showSuccess, showError } = useToast();
+    const { profile } = useAuth();
     const [selectedVencimiento, setSelectedVencimiento] = useState<Vencimiento | null>(null);
+    const canDelete = profile?.role === 'super_admin';
+
+    const canDeleteVencimiento = (item: Vencimiento) => item.origen === 'compra' || item.origen === 'cheque';
+
+    const handleDeleteVencimiento = async (item: Vencimiento) => {
+        if (!canDelete) {
+            showError('Solo superadmin puede eliminar cuentas por pagar.');
+            return;
+        }
+        if (!canDeleteVencimiento(item)) {
+            showError('Este vencimiento no se puede eliminar desde esta vista.');
+            return;
+        }
+
+        const confirmed = window.confirm('¿Eliminar este vencimiento? Esta acción no se puede deshacer.');
+        if (!confirmed) return;
+
+        try {
+            if (item.origen === 'compra') {
+                const { error } = await supabase
+                    .from('compras_proveedores')
+                    .delete()
+                    .eq('id', item.id_origen);
+                if (error) throw error;
+            }
+
+            if (item.origen === 'cheque') {
+                const { error } = await supabase
+                    .from('cheques_cartera')
+                    .delete()
+                    .eq('id', item.id_origen);
+                if (error) throw error;
+            }
+
+            showSuccess('Vencimiento eliminado correctamente');
+            onRefresh();
+        } catch (error: any) {
+            const code = error?.code ? String(error.code) : '';
+            if (code === '42501') {
+                showError('No tenés permisos para eliminar este registro con tu rol actual.');
+                return;
+            }
+            showError(error?.message || 'No se pudo eliminar el vencimiento');
+        }
+    };
 
     const handlePagar = async (data: CreateEgresoData) => {
         try {
@@ -117,13 +164,26 @@ export function VencimientosList({ vencimientos, onRefresh }: VencimientosListPr
                                     )}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                                    <Button
-                                        size="sm"
-                                        variant="primary"
-                                        onClick={() => setSelectedVencimiento(item)}
-                                    >
-                                        Pagar
-                                    </Button>
+                                    <div className="flex items-center justify-end gap-2">
+                                        <Button
+                                            size="sm"
+                                            variant="primary"
+                                            onClick={() => setSelectedVencimiento(item)}
+                                        >
+                                            Pagar
+                                        </Button>
+                                        {canDelete && canDeleteVencimiento(item) && (
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                className="text-red-600 hover:text-red-700"
+                                                onClick={() => handleDeleteVencimiento(item)}
+                                                title="Eliminar cuenta por pagar"
+                                            >
+                                                <Trash2 size={16} />
+                                            </Button>
+                                        )}
+                                    </div>
                                 </td>
                             </tr>
                         ))}

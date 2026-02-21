@@ -39,6 +39,7 @@ import { usePresupuestos } from '../../../hooks/usePresupuestos';
 import { generarDescripcionCopiado } from '../../../utils/ordenesHelpers';
 import { useLocation } from 'react-router-dom';
 import { usePageHeader } from '../../../hooks/usePageHeader';
+import { canManagePaymentsRole, canRegisterPaymentsRole } from '../../../utils/roles';
 
 // Tipos
 
@@ -61,6 +62,8 @@ export function CreateOrderPage() {
   const searchParams = new URLSearchParams(location.search);
 
   const { profile, company } = useAuth();
+  const canRegisterPayments = canRegisterPaymentsRole(profile?.role);
+  const canManagePersistedPayments = canManagePaymentsRole(profile?.role);
   const {
     createOrdenConItems,
     updateOrdenCompleta,
@@ -395,6 +398,10 @@ export function CreateOrderPage() {
 
   // --- Pagos ---
   const handleAgregarPago = () => {
+    if (!canRegisterPayments) {
+      showError('El rol Operador de taller no puede registrar pagos.');
+      return;
+    }
     setEditingPago(undefined);
     setShowPagoForm(true);
   };
@@ -437,11 +444,19 @@ export function CreateOrderPage() {
   };
 
   const handleEditarPago = (pago: PagoTemporal) => {
+    if (isEditing && !canManagePersistedPayments) {
+      showError('Solo superadmin puede editar pagos registrados.');
+      return;
+    }
     setEditingPago(pago);
     setShowPagoForm(true);
   };
 
   const handleEliminarPago = async (pagoId: string) => {
+    if (isEditing && !canManagePersistedPayments) {
+      showError('Solo superadmin puede eliminar pagos registrados.');
+      return;
+    }
     if (isEditing && id) {
       const ok = await deletePagoDb(pagoId, id);
       if (ok) {
@@ -929,9 +944,9 @@ export function CreateOrderPage() {
                 totales={totales}
                 pagos={pagos}
                 onAgregarPago={handleAgregarPago}
-                onEditarPago={handleEditarPago}
-                onEliminarPago={handleEliminarPago}
-                readOnly={false}
+                onEditarPago={isEditing && !canManagePersistedPayments ? undefined : handleEditarPago}
+                onEliminarPago={isEditing && !canManagePersistedPayments ? undefined : handleEliminarPago}
+                readOnly={!canRegisterPayments}
               />
             </div>
 
