@@ -1,15 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
 import type { Cheque } from '../types/database';
 
 export function useCheques() {
-    const { company } = useAuth();
+    const { company, profile } = useAuth();
     const [cheques, setCheques] = useState<Cheque[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    const fetchCheques = async () => {
+    const fetchCheques = useCallback(async () => {
         if (!company) return;
 
         try {
@@ -29,45 +29,37 @@ export function useCheques() {
             if (error) throw error;
 
             setCheques(data || []);
-        } catch (err: any) {
+        } catch (err) {
             console.error('Error fetching cheques:', err);
-            setError(err.message || 'Error al cargar cheques');
+            setError(err instanceof Error ? err.message : 'Error al cargar cheques');
         } finally {
             setLoading(false);
         }
-    };
+    }, [company]);
 
     const createCheque = async (data: Omit<Cheque, 'id' | 'created_at' | 'updated_at' | 'company_id'>) => {
         if (!company) throw new Error('No company');
+        const payload = {
+            ...data,
+            company_id: company.id,
+            created_by: profile?.id || null,
+        };
+        const { error } = await supabase
+            .from('cheques_cartera')
+            .insert([payload]);
 
-        try {
-            const { error } = await supabase
-                .from('cheques_cartera')
-                .insert([{
-                    ...data,
-                    company_id: company.id,
-                    created_by: null // or profile.id if available
-                }] as any);
-
-            if (error) throw error;
-            await fetchCheques();
-        } catch (err: any) {
-            throw err;
-        }
+        if (error) throw error;
+        await fetchCheques();
     };
 
     const updateCheque = async (id: string, data: Partial<Cheque>) => {
-        try {
-            const { error } = await supabase
-                .from('cheques_cartera')
-                .update(data as any)
-                .eq('id', id);
+        const { error } = await supabase
+            .from('cheques_cartera')
+            .update(data)
+            .eq('id', id);
 
-            if (error) throw error;
-            await fetchCheques();
-        } catch (err: any) {
-            throw err;
-        }
+        if (error) throw error;
+        await fetchCheques();
     };
 
     const deleteCheque = async (id: string) => {
@@ -79,8 +71,9 @@ export function useCheques() {
 
             if (error) throw error;
             await fetchCheques();
-        } catch (err: any) {
-            const code = err?.code ? String(err.code) : '';
+        } catch (err) {
+            const anyErr = err as { code?: string };
+            const code = anyErr?.code ? String(anyErr.code) : '';
             if (code === '42501') {
                 throw new Error('No tenés permisos para eliminar cheques con tu rol actual.');
             }
@@ -90,7 +83,7 @@ export function useCheques() {
 
     useEffect(() => {
         fetchCheques();
-    }, [company?.id]);
+    }, [fetchCheques]);
 
     return {
         cheques,
