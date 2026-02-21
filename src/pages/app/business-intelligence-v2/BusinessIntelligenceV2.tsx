@@ -57,13 +57,9 @@ export default function BusinessIntelligenceV2() {
         <div className="pointer-events-none absolute -bottom-12 left-1/4 h-36 w-36 rounded-full bg-blue-300/30 blur-3xl" />
         <div className="relative flex flex-col gap-5">
           <div>
-            <p className="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-cyan-700">
-              <Sparkles className="h-3.5 w-3.5" />
-              BI v2 · Fintech Analytics
-            </p>
-            <h1 className="mt-3 text-2xl font-bold text-slate-900 md:text-3xl">Inteligencia empresarial</h1>
+            <h1 className="text-2xl font-bold text-slate-900 md:text-3xl">Inteligencia empresarial</h1>
             <p className="mt-1 text-sm text-slate-600">
-              Reportes estratégicos en paralelo (v2) con cálculos auditados y visuales premium.
+              Reportes inteligentes para decisiones basadas en datos.
             </p>
           </div>
 

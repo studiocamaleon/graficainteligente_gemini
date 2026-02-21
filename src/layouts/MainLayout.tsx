@@ -47,6 +47,8 @@ function MainLayoutContent({ children }: MainLayoutProps) {
   const canCreateOC = hasPermission('centro-copiado-ordenes-crear', 'create');
   const isOrderDetailRoute = /^\/app\/orders\/[a-f0-9-]+$/i.test(location.pathname);
   const isCopyOrderDetailRoute = /^\/app\/centro-copiado\/ordenes\/[a-f0-9-]+$/i.test(location.pathname);
+  const isCreateOrderRoute = location.pathname === '/app/orders/crear-ot';
+  const isCreateCopyOrderRoute = location.pathname === '/app/centro-copiado/ordenes/crear';
   const isFinanzasRoute = location.pathname === '/app/finanzas' || location.pathname.startsWith('/app/finanzas/');
   const isBusinessIntelligenceRoute = location.pathname === '/app/business-intelligence' || location.pathname.startsWith('/app/business-intelligence/');
   const isIntegrationsRoute = location.pathname === '/app/integrations' || location.pathname.startsWith('/app/integrations/');
@@ -55,6 +57,8 @@ function MainLayoutContent({ children }: MainLayoutProps) {
   const hideQuickActions =
     isOrderDetailRoute ||
     isCopyOrderDetailRoute ||
+    isCreateOrderRoute ||
+    isCreateCopyOrderRoute ||
     isFinanzasRoute ||
     isBusinessIntelligenceRoute ||
     isIntegrationsRoute ||
