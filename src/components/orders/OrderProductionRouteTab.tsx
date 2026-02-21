@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ItemRouteEditor } from './ItemRouteEditor';
 import { EmptyState } from '../ui/EmptyState';
 import { useOrdenItemRutas } from '../../hooks/useOrdenItemRutas';
+import { Tooltip } from '../ui/Tooltip';
 
 interface OrdenItem {
   id: string;
@@ -68,10 +69,14 @@ export function OrderProductionRouteTab({ items, readonly = false }: OrderProduc
       <div className="mb-6">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">Rutas de Producción</h3>
-            <p className="text-sm text-gray-500 mt-1">
-              Configura la secuencia de producción de cada item y agrega comentarios para los operadores
-            </p>
+            <div className="flex items-center gap-2">
+              <h3 className="text-lg font-semibold text-gray-900">Rutas de Producción</h3>
+              <Tooltip
+                icon
+                position="right"
+                content="Las rutas se generan automáticamente. Podés agregar, eliminar y reordenar pasos; los comentarios se muestran al equipo de producción."
+              />
+            </div>
           </div>
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <span className="font-medium">{productionItems.length}</span>
@@ -79,20 +84,6 @@ export function OrderProductionRouteTab({ items, readonly = false }: OrderProduc
           </div>
         </div>
 
-        {!readonly && (
-          <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4 flex gap-3">
-            <CheckCircle2 className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-            <div className="text-sm text-blue-900">
-              <p className="font-medium mb-1">Instrucciones</p>
-              <ul className="text-blue-700 space-y-1 list-disc list-inside">
-                <li>Las rutas se generan automáticamente desde las plantillas de productos</li>
-                <li>Puedes agregar, eliminar o reordenar pasos según necesites</li>
-                <li>Los comentarios en cada paso son visibles para los operadores de producción</li>
-                <li>Los cambios se guardan automáticamente al confirmar la orden</li>
-              </ul>
-            </div>
-          </div>
-        )}
       </div>
 
       <div className="space-y-4">
@@ -213,6 +204,7 @@ function ItemRouteCard({
                 productoId={item.producto_id}
                 productoNombre={item.producto_nombre}
                 readonly={readonly}
+                hideHeader
               />
             </div>
           </motion.div>

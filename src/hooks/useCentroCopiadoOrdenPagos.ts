@@ -4,6 +4,7 @@ import { useAuth } from './useAuth';
 import { useMediosCobro } from './useMediosCobro';
 import type { CentroCopiadoOrdenPago } from '../types/database';
 import { sendWatiMessage } from '../lib/wati';
+import { isWorkshopOperatorRole } from '../utils/roles';
 
 interface CreatePagoData {
   orden_copiado_id: string;
@@ -65,6 +66,11 @@ export function useCentroCopiadoOrdenPagos(ordenCopiadoId?: string) {
     async (data: CreatePagoData) => {
       if (!profile?.company_id || !profile?.id) {
         setError('No se pudo obtener la información del usuario');
+        return null;
+      }
+
+      if (isWorkshopOperatorRole(profile?.role)) {
+        setError('El rol Operador de taller no puede registrar pagos.');
         return null;
       }
 
@@ -220,8 +226,14 @@ export function useCentroCopiadoOrdenPagos(ordenCopiadoId?: string) {
         await fetchPagos();
         return true;
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Error al actualizar pago';
-        setError(errorMessage);
+        const anyErr: any = err;
+        const code = anyErr?.code ? String(anyErr.code) : null;
+        if (code === '42501') {
+          setError('No tenés permisos para editar pagos con tu rol actual.');
+        } else {
+          const errorMessage = err instanceof Error ? err.message : 'Error al actualizar pago';
+          setError(errorMessage);
+        }
         console.error('Error updating pago:', err);
         return false;
       }

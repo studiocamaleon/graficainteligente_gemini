@@ -22,6 +22,8 @@ interface UseClientsParams {
 }
 
 export interface ClientWithCommercialMetrics extends Client {
+  status_aprobacion?: 'pending' | 'approved' | 'rejected';
+  ip_registro?: string | null;
   ltv_total: number;
   dias_sin_comprar: number | null;
   ordenes_90d: number;

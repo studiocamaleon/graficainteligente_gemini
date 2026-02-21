@@ -17,6 +17,7 @@ import { getArgentinaDateString } from '../utils/dates';
 import { generateProductionRoutes, normalizarEtapa } from '../utils/generateProductionRoutes';
 import { distribuirPagosProporcional, validarDesvinculacion } from '../utils/ordenesConsolidadas';
 import { sendWatiMessage } from '../lib/wati';
+import { isWorkshopOperatorRole } from '../utils/roles';
 
 export interface OrdenTrabajoServicio {
   id: string;
@@ -572,6 +573,11 @@ export function useOrdenTrabajo() {
   };
 
   const addPago = async (ordenId: string, pagoData: AddPagoData): Promise<boolean> => {
+    if (isWorkshopOperatorRole(profile?.role)) {
+      setError('El rol Operador de taller no puede registrar pagos.');
+      return false;
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -728,7 +734,13 @@ export function useOrdenTrabajo() {
       return true;
     } catch (err) {
       console.error('Error updating pago:', err);
-      setError(err instanceof Error ? err.message : 'Error al actualizar pago');
+      const anyErr: any = err;
+      const code = anyErr?.code ? String(anyErr.code) : null;
+      if (code === '42501') {
+        setError('No tenés permisos para editar pagos con tu rol actual.');
+      } else {
+        setError(err instanceof Error ? err.message : 'Error al actualizar pago');
+      }
       return false;
     } finally {
       setLoading(false);

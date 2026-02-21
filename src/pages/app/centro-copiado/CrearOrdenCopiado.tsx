@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
-import { Plus, ArrowLeft, ChevronDown, ChevronUp, MessageSquare, Globe, Store, Smartphone } from 'lucide-react';
+import { Plus, ArrowLeft, MessageSquare, Globe, Store, Smartphone } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/card';
 import { SearchableSelect } from '../../../components/ui/SearchableSelect';
@@ -28,6 +28,7 @@ import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../hooks/useAuth';
 import { sendWatiMessage } from '../../../lib/wati';
 import { buildTrackingUrl } from '../../../lib/trackingUrl';
+import { canRegisterPaymentsRole } from '../../../utils/roles';
 import type { CanalVenta, EstadoOrdenCopiado } from '../../../types/database';
 
 interface ItemWithId {
@@ -52,6 +53,7 @@ interface PagoTemporal {
 export function CrearOrdenCopiado() {
   const navigate = useNavigate();
   const { profile, company } = useAuth();
+  const canRegisterPayments = canRegisterPaymentsRole(profile?.role);
   const [searchParams] = useSearchParams();
   const { id } = useParams();
   const isEditing = !!id;
@@ -79,7 +81,6 @@ export function CrearOrdenCopiado() {
   const [showPagoForm, setShowPagoForm] = useState(false);
   const [editingPago, setEditingPago] = useState<PagoTemporal | undefined>();
   const [guardando, setGuardando] = useState(false);
-  const [infoGeneralCollapsed, setInfoGeneralCollapsed] = useState(false);
   const [initialized, setInitialized] = useState(false);
   const resumenContainerRef = useRef<HTMLDivElement>(null);
 
@@ -91,6 +92,7 @@ export function CrearOrdenCopiado() {
     itemsPerPage: 1000,
     searchTerm
   });
+  const clienteSeleccionado = clients.find(c => c.id === clienteId);
 
   const { workloadData } = useWorkload({ type: 'centro_copiado' });
 
@@ -121,9 +123,14 @@ export function CrearOrdenCopiado() {
       setTimeout(() => {
         const element = document.getElementById(`item-${addedItemId}`);
         if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          setAddedItemId(null);
+          const rect = element.getBoundingClientRect();
+          const targetTop = window.scrollY + rect.top - 96;
+          window.scrollTo({
+            top: Math.max(0, targetTop),
+            behavior: 'smooth',
+          });
         }
+        setAddedItemId(null);
       }, 100);
     }
   }, [items, addedItemId]);
@@ -276,9 +283,15 @@ export function CrearOrdenCopiado() {
   }, [items.map(i => i.id).join(','), actualizarPrecioItem]);
 
   const eliminarItem = (id: string) => {
-    if (items.length > 1) {
-      setItems((prev) => prev.filter((item) => item.id !== id));
-    }
+    setItems((prev) => {
+      const filtered = prev.filter((item) => item.id !== id);
+      if (filtered.length > 0) return filtered;
+      return [{
+        id: `item-${Date.now()}-${Math.random()}`,
+        config: { cantidad_copias: 1 },
+        isCollapsed: false,
+      }];
+    });
   };
 
   const toggleItemCollapse = (id: string) => {
@@ -314,6 +327,14 @@ export function CrearOrdenCopiado() {
 
   // Manejo de pagos
   const handleAgregarPago = () => {
+    if (!canRegisterPayments) {
+      openDialog({
+        title: 'Acción no permitida',
+        message: 'El rol Operador de taller no puede registrar pagos.',
+        variant: 'warning'
+      });
+      return;
+    }
     setEditingPago(undefined);
     setShowPagoForm(true);
   };
@@ -365,27 +386,24 @@ export function CrearOrdenCopiado() {
       return false;
     }
 
-    const itemsCompletos = items.filter(
-      (item) =>
-        (item) => {
-          if (item.config.modo_item === 'ploteo_cad') {
-            return (
-              item.config.ploteo_cad_tipo_papel &&
-              item.config.ploteo_cad_ancho_rollo &&
-              item.config.ploteo_cad_metros_lineales &&
-              item.config.cantidad_copias
-            );
-          }
-          return (
-            item.config.tamanio_papel_id &&
-            item.config.papel_id &&
-            item.config.tipo_tinta &&
-            item.config.cara_impresa &&
-            item.config.cantidad_hojas &&
-            item.config.cantidad_copias
-          );
-        }
-    );
+    const itemsCompletos = items.filter((item) => {
+      if (item.config.modo_item === 'ploteo_cad') {
+        return (
+          item.config.ploteo_cad_tipo_papel &&
+          item.config.ploteo_cad_ancho_rollo &&
+          item.config.ploteo_cad_metros_lineales &&
+          item.config.cantidad_copias
+        );
+      }
+      return (
+        item.config.tamanio_papel_id &&
+        item.config.papel_id &&
+        item.config.tipo_tinta &&
+        item.config.cara_impresa &&
+        item.config.cantidad_hojas &&
+        item.config.cantidad_copias
+      );
+    });
 
     if (itemsCompletos.length === 0) {
       openDialog('Error', 'Debes configurar al menos un item completo');
@@ -604,16 +622,6 @@ export function CrearOrdenCopiado() {
     navigate('/app/centro-copiado/ordenes');
   };
 
-  const infoGeneralCompleta = !!clienteId && !!origen;
-
-  useEffect(() => {
-    if (infoGeneralCompleta) {
-      setInfoGeneralCollapsed(true);
-    }
-  }, [infoGeneralCompleta]);
-
-  const clienteSeleccionado = clients.find(c => c.id === clienteId);
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -629,28 +637,9 @@ export function CrearOrdenCopiado() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 relative">
         <div className="lg:col-span-2 space-y-4 lg:pr-6">
           <Card>
-            <button
-              onClick={() => setInfoGeneralCollapsed(!infoGeneralCollapsed)}
-              className="w-full p-4 text-left hover:bg-gray-50 transition-colors rounded-t-lg flex items-center justify-between"
-            >
-              <div className="flex items-center gap-3">
-                <h2 className="text-lg font-bold text-gray-900">Información General</h2>
-                {infoGeneralCollapsed && clienteSeleccionado && (
-                  <span className="text-sm text-gray-600">
-                    {clienteSeleccionado.nombre_fantasia}
-                    {fechaEntrega && ` • ${new Date(fechaEntrega).toLocaleDateString()} `}
-                  </span>
-                )}
-              </div>
-              {infoGeneralCollapsed ? (
-                <ChevronDown className="w-5 h-5 text-gray-500" />
-              ) : (
-                <ChevronUp className="w-5 h-5 text-gray-500" />
-              )}
-            </button>
-
-            {!infoGeneralCollapsed && (
-              <div className="p-4 pt-0">
+            <div className="p-4">
+              <h2 className="text-lg font-bold text-gray-900 mb-4">Información General</h2>
+              <div className="p-0">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -757,21 +746,14 @@ export function CrearOrdenCopiado() {
                   />
                 </div>
               </div>
-            )}
+            </div>
           </Card>
-
-          <div className="bg-white p-4 rounded-b-lg border-x border-b border-gray-200">
-            <CentroCopiadoArchivosSection
-              ordenId={isEditing ? id : undefined}
-              ordenTemporalId={!isEditing ? ordenTemporalId : undefined}
-              onArchivoGenerado={handleArchivoGenerado}
-            />
-          </div>
 
           <Tabs
             tabs={[
               { id: 'items', label: 'Items' },
               { id: 'pagos', label: 'Pagos' },
+              { id: 'archivos', label: 'Archivos' },
             ]}
             activeTab={activeTab}
             onChange={setActiveTab}
@@ -815,7 +797,15 @@ export function CrearOrdenCopiado() {
               onAgregarPago={handleAgregarPago}
               onEditarPago={(pago) => handleEditarPago(pago as PagoTemporal)}
               onEliminarPago={handleEliminarPago}
-              readOnly={false}
+              readOnly={!canRegisterPayments}
+            />
+          </div>
+
+          <div className={activeTab === 'archivos' ? 'block' : 'hidden'}>
+            <CentroCopiadoArchivosSection
+              ordenId={isEditing ? id : undefined}
+              ordenTemporalId={!isEditing ? ordenTemporalId : undefined}
+              onArchivoGenerado={handleArchivoGenerado}
             />
           </div>
         </div>

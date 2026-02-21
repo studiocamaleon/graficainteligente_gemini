@@ -51,7 +51,7 @@ export function Clients() {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isAprobarModalOpen, setIsAprobarModalOpen] = useState(false);
   const [isRechazarModalOpen, setIsRechazarModalOpen] = useState(false);
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [selectedClient, setSelectedClient] = useState<ClientWithCommercialMetrics | null>(null);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [copiedLink, setCopiedLink] = useState(false);
   const [downloadingQR, setDownloadingQR] = useState(false);
@@ -155,23 +155,53 @@ export function Clients() {
     setCurrentPage(1);
   };
 
+  const riskDistribution = useMemo(() => {
+    const total = clients.length;
+    if (total === 0) {
+      return { bajo: 0, medio: 0, alto: 0 };
+    }
+
+    const counts = clients.reduce(
+      (acc, client) => {
+        const risk = client.riesgo_comercial || 'bajo';
+        if (risk === 'alto') acc.alto += 1;
+        else if (risk === 'medio') acc.medio += 1;
+        else acc.bajo += 1;
+        return acc;
+      },
+      { bajo: 0, medio: 0, alto: 0 }
+    );
+
+    return {
+      bajo: Math.round((counts.bajo / total) * 100),
+      medio: Math.round((counts.medio / total) * 100),
+      alto: Math.round((counts.alto / total) * 100),
+    };
+  }, [clients]);
+
   const kpiItems = useMemo(
     () => [
       { id: 'total', label: 'Total clientes', value: totalCount.toLocaleString('es-AR') },
       { id: 'pending', label: 'Pendientes', value: pendingCount.toLocaleString('es-AR') },
       { id: 'avg_ltv', label: 'LTV promedio', value: `$${avgLtv.toLocaleString('es-AR')}` },
       { id: 'total_ltv', label: 'Total vendido', value: `$${totalLtv.toLocaleString('es-AR')}` },
+      {
+        id: 'risk_mix',
+        label: 'Riesgo clientes',
+        value: `B ${riskDistribution.bajo}% · M ${riskDistribution.medio}% · A ${riskDistribution.alto}%`,
+        hint: 'Sobre clientes visibles con filtros activos',
+      },
     ],
-    [avgLtv, pendingCount, totalCount, totalLtv]
+    [avgLtv, pendingCount, totalCount, totalLtv, riskDistribution]
   );
 
-  const handleEdit = (client: Client) => {
+  const handleEdit = (client: ClientWithCommercialMetrics) => {
     setSelectedClient(client);
     setModalMode('edit');
     setIsModalOpen(true);
   };
 
-  const handleViewDetails = (client: Client) => {
+  const handleViewDetails = (client: ClientWithCommercialMetrics) => {
     setSelectedClient(client);
     setIsDetailModalOpen(true);
   };
@@ -307,6 +337,7 @@ export function Clients() {
       render: (client: Client) => (
         <div className="text-sm text-gray-600">{client.razon_social}</div>
       ),
+      showFrom: 'md',
     },
     {
       key: 'ltv_total',
@@ -317,7 +348,6 @@ export function Clients() {
         </div>
       ),
       width: '140px',
-      showFrom: 'lg',
     },
     {
       key: 'recencia',
@@ -328,7 +358,6 @@ export function Clients() {
         </div>
       ),
       width: '120px',
-      showFrom: 'xl',
     },
     {
       key: 'ordenes_90d',
@@ -337,7 +366,6 @@ export function Clients() {
         <div className="text-sm font-medium text-blue-700">{client.ordenes_90d || 0}</div>
       ),
       width: '110px',
-      showFrom: 'lg',
     },
     {
       key: 'ticket_promedio',
@@ -348,7 +376,6 @@ export function Clients() {
         </div>
       ),
       width: '130px',
-      showFrom: 'xl',
     },
     {
       key: 'canal_preferido',

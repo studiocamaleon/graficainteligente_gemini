@@ -1,7 +1,7 @@
-import { ReactNode, useState } from 'react';
+import { type CSSProperties, ReactNode, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion'; // Keep for Notifications/Mobile logic if needed, or check usage
-import { Menu, Bell } from 'lucide-react';
+import { Menu, Bell, ClipboardList, CopyPlus } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { Sidebar } from '../components/layout/Sidebar';
 import { PageHeaderProvider, usePageHeaderContext } from '../hooks/usePageHeader';
@@ -18,9 +18,9 @@ interface MainLayoutProps {
 
 function MainLayoutContent({ children }: MainLayoutProps) {
   const location = useLocation();
-  // navigated unused?
-  const { profile, signOut } = useAuth(); // company/plan unused here now? actually Sidebar needs them but it gets them from hook internally.
-  const { canAccessModule } = usePermissions();
+  const navigate = useNavigate();
+  const { profile } = useAuth(); // company/plan unused here now? actually Sidebar needs them but it gets them from hook internally.
+  const { canAccessModule, hasPermission } = usePermissions();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   // expandedModules removed
@@ -43,6 +43,12 @@ function MainLayoutContent({ children }: MainLayoutProps) {
   const description = pageHeaderContext.description;
   const action = pageHeaderContext.action;
   const pageTitle = description;
+  const canCreateOT = hasPermission('orders-crear', 'create');
+  const canCreateOC = hasPermission('centro-copiado-ordenes-crear', 'create');
+  const isOrderDetailRoute = /^\/app\/orders\/[a-f0-9-]+$/i.test(location.pathname);
+  const isCopyOrderDetailRoute = /^\/app\/centro-copiado\/ordenes\/[a-f0-9-]+$/i.test(location.pathname);
+  const hideQuickActions = isOrderDetailRoute || isCopyOrderDetailRoute;
+  const showQuickActions = (canCreateOT || canCreateOC) && !hideQuickActions;
 
   const getCurrentPageTitle = () => {
     // Si hay un título configurado vía usePageHeader, usarlo
@@ -99,7 +105,8 @@ function MainLayoutContent({ children }: MainLayoutProps) {
       </AnimatePresence>
 
       <div
-        className={`flex-1 flex flex-col ${isSidebarOpen ? 'lg:ml-72' : 'lg:ml-20'} transition-all duration-300`}
+        style={{ '--main-layout-offset': isSidebarOpen ? '19rem' : '6rem' } as CSSProperties}
+        className={`flex-1 flex flex-col ${isSidebarOpen ? 'lg:ml-[19rem]' : 'lg:ml-24'} transition-all duration-300`}
       >
         <header className="bg-white border-b border-gray-200 sticky top-0 z-20 shadow-sm">
           <div className="px-4 sm:px-6 lg:px-8 h-[72px] flex items-center">
@@ -188,6 +195,32 @@ function MainLayoutContent({ children }: MainLayoutProps) {
         isOpen={isCompanyModalOpen}
         onClose={() => setIsCompanyModalOpen(false)}
       />
+
+      {showQuickActions && (
+        <div className="fixed bottom-24 right-6 z-40 flex flex-col gap-3 md:bottom-20">
+          {canCreateOT && (
+            <button
+              type="button"
+              onClick={() => navigate('/app/orders/crear-ot')}
+              className="group inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-lg transition-all hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
+            >
+              <ClipboardList className="h-4 w-4 text-blue-600" />
+              <span>Crear OT</span>
+            </button>
+          )}
+
+          {canCreateOC && (
+            <button
+              type="button"
+              onClick={() => navigate('/app/centro-copiado/ordenes/crear')}
+              className="group inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-lg transition-all hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
+            >
+              <CopyPlus className="h-4 w-4 text-emerald-600" />
+              <span>Crear OC</span>
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

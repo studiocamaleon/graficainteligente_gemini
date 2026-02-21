@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Trash2, ArrowUp, ArrowDown, RotateCcw, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, ArrowUp, ArrowDown, AlertCircle } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { SearchableSelect } from '../ui/SearchableSelect';
 import { StepCommentEditor } from './StepCommentEditor';
@@ -14,6 +14,7 @@ interface ItemRouteEditorProps {
   productoId: string;
   productoNombre: string;
   readonly?: boolean;
+  hideHeader?: boolean;
 }
 
 export function ItemRouteEditor({
@@ -21,17 +22,15 @@ export function ItemRouteEditor({
   productoId,
   productoNombre,
   readonly = false,
+  hideHeader = false,
 }: ItemRouteEditorProps) {
   const {
     rutas,
     loading,
     createRuta,
-    updateRuta,
     deleteRuta,
     reordenarRutas,
     updateComentario,
-    copiarRutaDesdePlantilla,
-    deleteAllRutas,
     getRutasPorEtapa,
   } = useOrdenItemRutas({ ordenItemId });
 
@@ -130,158 +129,156 @@ export function ItemRouteEditor({
     }
   };
 
-  const handleRestaurarRuta = async () => {
-    confirmAction({
-      title: 'Restaurar ruta original',
-      message: `¿Estás seguro de restaurar la ruta original desde la plantilla del producto "${productoNombre}"? Se perderán todos los cambios y comentarios actuales.`,
-      confirmText: 'Restaurar',
-      cancelText: 'Cancelar',
-      variant: 'warning',
-      onConfirm: async () => {
-        try {
-          console.log('🔄 Restaurando ruta:', { ordenItemId, productoId });
-          await deleteAllRutas(ordenItemId);
-          const copiedCount = await copiarRutaDesdePlantilla(ordenItemId, productoId);
-          console.log('✅ Ruta restaurada. Pasos copiados:', copiedCount);
-          if (copiedCount === 0) {
-            console.warn('⚠️ La restauración no copió ningún paso. Verifique la plantilla del producto.');
-          }
-        } catch (error) {
-          console.error('Error restaurando ruta:', error);
-        }
-      },
-    });
-  };
-
   const renderEtapa = (etapa: TipoEtapaRuta, titulo: string, color: string) => {
     const rutasEtapa = rutasPorEtapa[etapa];
     const isAdding = addingToEtapa === etapa;
+    const headerThemeByEtapa: Record<TipoEtapaRuta, string> = {
+      pre_prensa: 'bg-violet-50 border-violet-200',
+      principal: 'bg-blue-50 border-blue-200',
+      post_prensa: 'bg-emerald-50 border-emerald-200',
+      instalacion: 'bg-amber-50 border-amber-200',
+    };
 
     return (
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
+      <section className="rounded-xl border border-slate-200 bg-white overflow-hidden">
+        <div className={`px-4 py-3 border-b ${headerThemeByEtapa[etapa]}`}>
           <div className="flex items-center gap-2">
-            <h4 className="font-medium text-gray-900">{titulo}</h4>
+            <h4 className="text-sm font-semibold text-slate-900">{titulo}</h4>
             <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${color}`}>
               {rutasEtapa.length} {rutasEtapa.length === 1 ? 'paso' : 'pasos'}
             </span>
           </div>
-          {!readonly && !isAdding && (
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setAddingToEtapa(etapa)}
-            >
-              <Plus className="w-4 h-4" />
-              Agregar
-            </Button>
-          )}
         </div>
 
-        {isAdding && (
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <SearchableSelect
-                options={(pasos || [])
-                  .filter(p => {
-                    const etapaMap: Record<string, string> = {
-                      'pre_prensa': 'Pre-prensa',
-                      'principal': 'Produccion',
-                      'post_prensa': 'Terminacion',
-                      'instalacion': 'Instalacion'
-                    };
-                    const dbEtapa = etapaMap[etapa] || etapa;
-                    return p.etapa === dbEtapa;
-                  })
-                  .map(p => ({ value: p.id, label: p.nombre }))
-                }
-                value=""
-                onChange={(value) => handleAgregarPaso(etapa, value)}
-                placeholder="Selecciona paso..."
-              />
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setAddingToEtapa(null)}
-            >
-              Cancelar
-            </Button>
-          </div>
-        )}
-
-        {rutasEtapa.length === 0 ? (
-          <div className="text-center py-6 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
-            <p className="text-sm text-gray-500">No hay pasos en esta etapa</p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {rutasEtapa.map((ruta, index) => (
-              <div
-                key={ruta.id}
-                className={`p-3 rounded-lg border-2 ${ruta.es_modificado
-                  ? 'bg-amber-50 border-amber-200'
-                  : 'bg-white border-gray-200'
-                  }`}
-              >
-                <div className="flex items-start gap-2 mb-2">
-                  <span className="flex items-center justify-center w-6 h-6 rounded-full bg-gray-100 text-gray-700 text-xs font-medium flex-shrink-0">
-                    {index + 1}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900">
-                      {ruta.paso_nombre}
-                    </p>
-                    {ruta.es_modificado && (
-                      <p className="text-xs text-amber-600 mt-0.5">
-                        Modificado manualmente
-                      </p>
-                    )}
-                  </div>
-                  {!readonly && (
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleMoverPaso(ruta, 'up')}
-                        disabled={index === 0}
-                        title="Mover arriba"
-                      >
-                        <ArrowUp className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleMoverPaso(ruta, 'down')}
-                        disabled={index === rutasEtapa.length - 1}
-                        title="Mover abajo"
-                      >
-                        <ArrowDown className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEliminarPaso(ruta)}
-                        title="Eliminar paso"
-                      >
-                        <Trash2 className="w-4 h-4 text-red-600" />
-                      </Button>
-                    </div>
-                  )}
-                </div>
-
-                <StepCommentEditor
-                  comentario={ruta.comentario_vendedor}
-                  onSave={async (comentario) => {
-                    await updateComentario(ruta.id, comentario);
-                  }}
-                  disabled={readonly}
+        <div className="p-4 space-y-3">
+          {isAdding && (
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <SearchableSelect
+                  options={(pasos || [])
+                    .filter(p => {
+                      const etapaMap: Record<string, string> = {
+                        'pre_prensa': 'Pre-prensa',
+                        'principal': 'Produccion',
+                        'post_prensa': 'Terminacion',
+                        'instalacion': 'Instalacion'
+                      };
+                      const dbEtapa = etapaMap[etapa] || etapa;
+                      return p.etapa === dbEtapa;
+                    })
+                    .map(p => ({ value: p.id, label: p.nombre }))
+                  }
+                  value=""
+                  onChange={(value) => handleAgregarPaso(etapa, value)}
+                  placeholder="Selecciona paso..."
                 />
               </div>
-            ))}
-          </div>
-        )}
-      </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setAddingToEtapa(null)}
+              >
+                Cancelar
+              </Button>
+            </div>
+          )}
+
+          {rutasEtapa.length === 0 ? (
+            <div className="flex items-center justify-between py-4 px-3 bg-slate-50 rounded-lg border border-dashed border-slate-300">
+              <p className="text-sm text-slate-500">No hay pasos en esta etapa</p>
+              {!readonly && !isAdding && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setAddingToEtapa(etapa)}
+                >
+                  <Plus className="w-4 h-4" />
+                  Pasos
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {!readonly && !isAdding && (
+                <div className="flex justify-end">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setAddingToEtapa(etapa)}
+                  >
+                    <Plus className="w-4 h-4" />
+                    Pasos
+                  </Button>
+                </div>
+              )}
+
+              {rutasEtapa.map((ruta, index) => (
+                <div
+                  key={ruta.id}
+                  className={`p-3 rounded-lg border ${ruta.es_modificado
+                    ? 'bg-amber-50 border-amber-200'
+                    : 'bg-white border-slate-200'
+                    }`}
+                >
+                  <div className="flex items-start gap-2 mb-2">
+                    <span className="flex items-center justify-center w-6 h-6 rounded-full bg-gray-100 text-gray-700 text-xs font-medium flex-shrink-0">
+                      {index + 1}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900">
+                        {ruta.paso_nombre}
+                      </p>
+                      {ruta.es_modificado && (
+                        <p className="text-xs text-amber-600 mt-0.5">
+                          Modificado manualmente
+                        </p>
+                      )}
+                    </div>
+                    {!readonly && (
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleMoverPaso(ruta, 'up')}
+                          disabled={index === 0}
+                          title="Mover arriba"
+                        >
+                          <ArrowUp className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleMoverPaso(ruta, 'down')}
+                          disabled={index === rutasEtapa.length - 1}
+                          title="Mover abajo"
+                        >
+                          <ArrowDown className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEliminarPaso(ruta)}
+                          title="Eliminar paso"
+                        >
+                          <Trash2 className="w-4 h-4 text-red-600" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+
+                  <StepCommentEditor
+                    comentario={ruta.comentario_vendedor}
+                    onSave={async (comentario) => {
+                      await updateComentario(ruta.id, comentario);
+                    }}
+                    disabled={readonly}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
     );
   };
 
@@ -298,24 +295,16 @@ export function ItemRouteEditor({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900">{productoNombre}</h3>
-          <p className="text-sm text-gray-500">
-            {rutas.length} {rutas.length === 1 ? 'paso' : 'pasos'} en total
-          </p>
+      {!hideHeader && (
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">{productoNombre}</h3>
+            <p className="text-sm text-gray-500">
+              {rutas.length} {rutas.length === 1 ? 'paso' : 'pasos'} en total
+            </p>
+          </div>
         </div>
-        {!readonly && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRestaurarRuta}
-          >
-            <RotateCcw className="w-4 h-4 mr-2" />
-            Restaurar Original
-          </Button>
-        )}
-      </div>
+      )}
 
       {!tienePasoPrincipal && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">

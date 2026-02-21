@@ -80,6 +80,10 @@ export function useCheques() {
             if (error) throw error;
             await fetchCheques();
         } catch (err: any) {
+            const code = err?.code ? String(err.code) : '';
+            if (code === '42501') {
+                throw new Error('No tenés permisos para eliminar cheques con tu rol actual.');
+            }
             throw err;
         }
     };

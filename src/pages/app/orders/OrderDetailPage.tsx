@@ -9,12 +9,8 @@ import {
   Ban,
   Share2,
   Check,
-  Calendar,
-  Clock,
   FileText,
   Download,
-  User,
-  Settings,
   Trash2,
   Package,
   Route,
@@ -30,6 +26,7 @@ import { Avatar } from '../../../components/ui/Avatar';
 import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
 import { usePageHeader } from '../../../hooks/usePageHeader';
 import { useAuth } from '../../../hooks/useAuth';
+import { canManagePaymentsRole, canRegisterPaymentsRole, isWorkshopOperatorRole } from '../../../utils/roles';
 import { useOrdenTrabajo } from '../../../hooks/useOrdenTrabajo';
 import { useConfirmDialog } from '../../../hooks/useConfirmDialog';
 import { OrderStatusBadge } from '../../../components/orders/OrderStatusBadge';
@@ -150,7 +147,9 @@ export function OrderDetailPage() {
   const [downloadingFactura, setDownloadingFactura] = useState(false);
 
   const isAdmin = profile?.role === 'super_admin' || profile?.role === 'admin';
-  const canViewPrices = profile?.role !== 'operador_taller';
+  const canViewPrices = !isWorkshopOperatorRole(profile?.role);
+  const canRegisterPayments = canRegisterPaymentsRole(profile?.role);
+  const canManagePayments = canManagePaymentsRole(profile?.role);
 
   usePageHeader(orden ? `Orden ${orden.numero_orden}` : 'Cargando orden...');
 
@@ -262,11 +261,19 @@ export function OrderDetailPage() {
   };
 
   const handleAgregarPago = () => {
+    if (!canRegisterPayments) {
+      showError('El rol Operador de taller no puede registrar pagos.');
+      return;
+    }
     setEditingPago(null);
     setShowPagoModal(true);
   };
 
   const handleEditarPago = (pago: any) => {
+    if (!canManagePayments) {
+      showError('Solo superadmin puede editar pagos registrados.');
+      return;
+    }
     setEditingPago(pago);
     setShowPagoModal(true);
   };
@@ -302,6 +309,10 @@ export function OrderDetailPage() {
   };
 
   const handleEliminarPago = async (pagoId: string) => {
+    if (!canManagePayments) {
+      showError('Solo superadmin puede eliminar pagos registrados.');
+      return;
+    }
     if (!id) return;
 
     const success = await deletePago(pagoId, id);
@@ -338,6 +349,17 @@ export function OrderDetailPage() {
     return clampZeroMoney(roundMoney(toMoney(orden.total)) - roundMoney(totalPagado));
   }, [orden, totalPagado]);
 
+  const formatDate = (value?: string | null) => {
+    if (!value) return '-';
+    return new Date(value).toLocaleDateString('es-AR');
+  };
+
+  const ocSubtotal = Number((orden?.ordenCopiado as any)?.items?.reduce((acc: number, i: any) => acc + (Number(i.subtotal) || 0), 0) || 0);
+  const subtotal = Number(orden?.subtotal || 0);
+  const descuentos = Number(orden?.total_descuentos || 0);
+  const baseImponible = subtotal + ocSubtotal - descuentos;
+  const ivaTotal = Number(orden?.subtotal_iva || 0) + (orden?.ordenCopiado?.total ? (Number(orden.ordenCopiado.total) - ocSubtotal) : 0);
+
   if (loadingData) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -367,8 +389,8 @@ export function OrderDetailPage() {
   return (
     <div className="space-y-6">
       <Card>
-        <div className="p-8">
-          <div className="flex items-center justify-between mb-8">
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-6">
             <Button
               variant="outline"
               size="sm"
@@ -437,83 +459,73 @@ export function OrderDetailPage() {
             </div>
           </div>
 
-          <div className="mb-8">
-            <div className="flex items-center gap-4 mb-3">
+          <div className="mb-6">
+            <div className="flex flex-wrap items-center gap-3 mb-4">
               <h1 className="text-3xl font-bold text-gray-900">
                 Orden {orden.numero_orden}
               </h1>
-              <OrderStatusBadge estado={orden.estado} size="lg" />
+              <OrderStatusBadge estado={orden.estado} size="md" />
               {orden.requiere_factura && (
                 <Badge variant={orden.facturada ? 'success' : 'warning'}>
                   {orden.facturada ? '✓ Facturada' : 'Requiere Factura'}
                 </Badge>
               )}
             </div>
-            <div className="flex items-center gap-6 text-sm text-gray-600">
-              <div className="flex items-center gap-2">
-                <Calendar className="w-5 h-5" />
-                <span>Creada: {new Date(orden.fecha_creacion).toLocaleDateString()}</span>
-              </div>
-              {orden.fecha_estimada_entrega && (
-                <div className="flex items-center gap-2">
-                  <Clock className="w-5 h-5" />
-                  <span>Entrega estimada: {new Date(orden.fecha_estimada_entrega).toLocaleDateString()}</span>
-                </div>
-              )}
-              {orden.facturada && orden.numero_factura && (
-                <div className="flex items-center gap-2">
-                  <FileText className="w-5 h-5" />
-                  <span>Factura N° {orden.numero_factura}</span>
-                  {orden.fecha_facturacion && (
-                    <span className="text-gray-500">
-                      ({new Date(orden.fecha_facturacion).toLocaleDateString()})
-                    </span>
-                  )}
-                  {orden.facturaStoragePath && (
-                    <button
-                      onClick={handleDescargarFactura}
-                      disabled={downloadingFactura}
-                      className="ml-2 p-1.5 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      title="Descargar factura"
-                    >
-                      <Download className={`w-4 h-4 text-blue-600 ${downloadingFactura ? 'animate-bounce' : ''}`} />
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <div className="p-6 bg-gray-50 rounded-lg border border-gray-200">
-              <div className="flex items-center gap-3 mb-3">
-                <User className="w-5 h-5 text-blue-600" />
-                <h3 className="text-sm font-medium text-gray-600">Cliente</h3>
+          <div className="rounded-xl border border-slate-200 bg-white p-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-slate-200">
+              <div className="px-4 py-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Cliente</p>
+                <p className="text-base font-semibold text-slate-900">{orden.cliente?.nombre_fantasia || orden.cliente?.razon_social || '-'}</p>
+                <p className="text-sm text-slate-500">{orden.cliente?.numero_documento || '-'}</p>
               </div>
-              <p className="text-lg font-semibold text-gray-900">{orden.cliente?.nombre_fantasia}</p>
-              <p className="text-sm text-gray-500 mt-1">{orden.cliente?.numero_documento}</p>
-            </div>
-
-            <div className="p-6 bg-gray-50 rounded-lg border border-gray-200">
-              <div className="flex items-center gap-3 mb-3">
-                <Settings className="w-5 h-5 text-blue-600" />
-                <h3 className="text-sm font-medium text-gray-600">Canal de Venta</h3>
+              <div className="px-4 py-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Canal de venta</p>
+                <div className="mt-2">
+                  <ChannelBadge canal={orden.canal_venta} showLabel />
+                </div>
               </div>
-              <ChannelBadge canal={orden.canal_venta} showLabel />
-            </div>
-
-            <div className="p-6 bg-gray-50 rounded-lg border border-gray-200">
-              <div className="flex items-center gap-3 mb-3">
-                <User className="w-5 h-5 text-blue-600" />
-                <h3 className="text-sm font-medium text-gray-600">Creado por</h3>
+              <div className="px-4 py-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Creado por</p>
+                <div className="mt-2 flex items-center gap-2">
+                  <Avatar
+                    src={orden.created_by_profile?.avatar_url}
+                    name={orden.created_by_profile?.full_name}
+                    size="sm"
+                  />
+                  <span className="text-base text-slate-900">{orden.created_by_profile?.full_name || '-'}</span>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Avatar
-                  src={orden.created_by_profile?.avatar_url}
-                  name={orden.created_by_profile?.full_name}
-                  size="sm"
-                />
-                <span className="text-sm text-gray-700">{orden.created_by_profile?.full_name}</span>
+              <div className="px-4 py-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Fechas</p>
+                <div className="mt-1 space-y-1 text-sm">
+                  <p className="text-slate-700">
+                    <span className="font-medium text-slate-600">Creada:</span>{' '}
+                    <span className="text-slate-900">{formatDate(orden.fecha_creacion)}</span>
+                  </p>
+                  <p className="text-slate-700">
+                    <span className="font-medium text-slate-600">Entrega estimada:</span>{' '}
+                    <span className="text-slate-900">{formatDate(orden.fecha_estimada_entrega)}</span>
+                  </p>
+                </div>
+                {orden.facturada && orden.numero_factura && (
+                  <div className="mt-2 flex items-center gap-2 text-xs text-slate-600">
+                    <FileText className="w-4 h-4" />
+                    <span>Factura N° {orden.numero_factura}</span>
+                    {orden.fecha_facturacion && <span>• Facturada: {formatDate(orden.fecha_facturacion)}</span>}
+                    {orden.facturaStoragePath && (
+                      <button
+                        onClick={handleDescargarFactura}
+                        disabled={downloadingFactura}
+                        className="p-1 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Descargar factura"
+                      >
+                        <Download className={`w-4 h-4 text-blue-600 ${downloadingFactura ? 'animate-bounce' : ''}`} />
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -530,8 +542,8 @@ export function OrderDetailPage() {
         </div>
       </Card>
 
-      <div className="border-b border-gray-200">
-        <nav className="flex gap-8 px-6 overflow-x-auto">
+      <div className="border-b border-slate-200">
+        <nav className="flex gap-8 px-2 overflow-x-auto">
           {[
             { key: 'items' as const, label: 'Items', icon: Package, count: orden.items?.length || 0 },
             { key: 'ruta' as const, label: 'Ruta de Producción', icon: Route },
@@ -539,17 +551,15 @@ export function OrderDetailPage() {
             ...(canViewPrices ? [{ key: 'pagos' as const, label: 'Pagos', icon: CreditCard, count: orden.pagos?.length || 0 }] : []),
             { key: 'historial' as const, label: 'Historial', icon: History },
           ].map((tab) => {
-            const Icon = tab.icon;
             return (
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors flex items-center gap-2 ${activeTab === tab.key
+                className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === tab.key
                   ? 'border-blue-500 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
               >
-                <Icon className="w-4 h-4" />
                 {tab.label}
                 {tab.count !== undefined && tab.count > 0 && (
                   <span className="ml-2 px-2 py-0.5 text-xs font-semibold rounded-full bg-gray-100 text-gray-600">
@@ -572,22 +582,23 @@ export function OrderDetailPage() {
                 description="Esta orden no tiene productos asociados"
               />
             ) : (
-              <>
+              <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)] gap-6">
                 <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    Items de la orden ({orden.items.length})
-                  </h3>
+                  <div className="rounded-xl border border-slate-200 bg-white p-4">
+                    <h3 className="text-xl font-semibold text-gray-900">
+                      Items de la orden ({orden.items.length})
+                    </h3>
 
-                  <div className="space-y-3">
-                    {orden.items.map((item: any, index: number) => {
-                      return (
-                        <motion.div
-                          key={item.id}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: index * 0.05 }}
-                          className="p-4 bg-white rounded-lg border border-gray-200"
-                        >
+                    <div className="space-y-3 mt-4">
+                      {orden.items.map((item: any, index: number) => {
+                        return (
+                          <motion.div
+                            key={item.id}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: index * 0.05 }}
+                            className="p-4 bg-white rounded-lg border border-gray-200 shadow-sm"
+                          >
                           {/* Línea 1: Número + Nombre + Categorías */}
                           <div className="flex items-center gap-2 mb-2">
                             <span className="text-xs font-semibold text-gray-500">#{index + 1}</span>
@@ -648,15 +659,16 @@ export function OrderDetailPage() {
                               </span>
                             )}
                           </div>
-                        </motion.div>
-                      );
-                    })}
+                          </motion.div>
+                        );
+                      })}
+                    </div>
                   </div>
 
                   {/* Servicios Adicionales */}
                   {orden.servicios && orden.servicios.length > 0 && (
-                    <div className="mt-8 space-y-4">
-                      <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                    <div className="mt-6 space-y-4">
+                      <h3 className="text-base font-semibold text-gray-900 flex items-center gap-2">
                         <span className="w-1 h-6 bg-blue-600 rounded-full inline-block"></span>
                         Servicios Adicionales ({orden.servicios.length})
                       </h3>
@@ -723,95 +735,47 @@ export function OrderDetailPage() {
                     </div>
                   )}
 
-                  {canViewPrices && (
-                    <div className="border-t border-gray-200 pt-4 mt-6">
-                      <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-                        <div className="flex justify-between items-center mb-4 pb-4 border-b border-gray-200">
-                          <Switch
-                            checked={orden.requiere_factura}
-                            onChange={handleToggleFactura}
-                            label="Requiere Factura"
-                          />
-                          {orden.numero_factura && (
-                            <span className="text-xs text-amber-600 font-medium bg-amber-50 px-2 py-1 rounded border border-amber-200">
-                              Factura: {orden.numero_factura}
-                            </span>
-                          )}
-                        </div>
+                </div>
 
-                        {/* Lógica de Totales según Factura */}
-                        {!orden.requiere_factura ? (
-                          /* Caso SIN Factura: Solo mostrar Total Final (ocultar subtotal interno incorrecto) */
-                          <div className="flex justify-between items-center pt-3 border-gray-300">
-                            <span className="text-base font-semibold text-gray-900">Total</span>
-                            <span className="text-2xl font-bold text-blue-600">
-                              ${Number(orden.total).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                            </span>
-                          </div>
-                        ) : (
-                          /* Caso CON Factura: Mostrar todo el desglose */
-                          <>
-                            {/* Subtotal OT */}
-                            <div className="flex justify-between items-center">
-                              <span className="text-sm text-gray-600">Subtotal {orden.ordenCopiado ? '(OT)' : ''}</span>
-                              <span className="text-sm font-medium text-gray-900">
-                                ${Number(orden.subtotal).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                              </span>
-                            </div>
-
-                            {/* Subtotal Orden Copiado (si existe) */}
-                            {orden.ordenCopiado && (
-                              <div className="flex justify-between items-center">
-                                <span className="text-sm text-gray-600">Subtotal (Orden Copiado)</span>
-                                <span className="text-sm font-medium text-gray-900">
-                                  ${Number((orden.ordenCopiado as any).items?.reduce((acc: number, i: any) => acc + (Number(i.subtotal) || 0), 0) || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                                </span>
-                              </div>
-                            )}
-
-                            {/* Descuentos (si hay) */}
-                            {Number(orden.total_descuentos || 0) > 0 && (
-                              <div className="flex justify-between items-center">
-                                <span className="text-sm text-gray-600">Descuento</span>
-                                <span className="text-sm font-medium text-red-600">
-                                  -${Number(orden.total_descuentos).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                                </span>
-                              </div>
-                            )}
-
-                            <div className="flex justify-between items-center pt-1 border-t border-gray-200">
-                              <span className="text-sm text-gray-600">Base Imponible</span>
-                              <span className="text-sm font-medium text-gray-900">
-                                ${(
-                                  Number(orden.subtotal) +
-                                  (orden.ordenCopiado ? (orden.ordenCopiado as any).items?.reduce((acc: number, i: any) => acc + (Number(i.subtotal) || 0), 0) : 0) -
-                                  Number(orden.total_descuentos || 0)
-                                ).toLocaleString('es-AR', { minimumFractionDigits: 2 })
-                                }
-                              </span>
-                            </div>
-
-                            <div className="flex justify-between items-center">
-                              <span className="text-sm text-gray-600">IVA (21%)</span>
-                              <span className="text-sm font-medium text-gray-900">
-                                ${Number(orden.subtotal_iva + (orden.ordenCopiado?.total ? (orden.ordenCopiado.total - ((orden.ordenCopiado as any).items?.reduce((acc: number, i: any) => acc + (Number(i.subtotal) || 0), 0) || 0)) : 0)).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                              </span>
-                            </div>
-
-                            <div className="flex justify-between items-center pt-3 border-t border-gray-300">
-                              <span className="text-base font-semibold text-gray-900">Total Final</span>
-                              <span className="text-2xl font-bold text-blue-600">
-                                ${Number(orden.total).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                              </span>
-                            </div>
-                          </>
-
-                        )}
+                {canViewPrices && (
+                  <div className="xl:sticky xl:top-4 h-fit rounded-xl border border-slate-200 bg-white p-4 space-y-3">
+                    <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+                      <span className="text-sm font-medium text-slate-700">Requiere factura</span>
+                      <Switch
+                        checked={orden.requiere_factura}
+                        onChange={handleToggleFactura}
+                        label=""
+                      />
+                    </div>
+                    <div className="flex justify-between items-center text-base">
+                      <span className="text-slate-700">Subtotal:</span>
+                      <span className="font-semibold text-slate-900">
+                        ${subtotal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                    <div className="border-t border-slate-200 pt-3 space-y-2">
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-slate-700">Base Imponible:</span>
+                        <span className="font-medium text-slate-900">
+                          ${baseImponible.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-slate-700">IVA (21%):</span>
+                        <span className="font-medium text-slate-900">
+                          ${ivaTotal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                        </span>
                       </div>
                     </div>
-                  )}
-                </div>
-              </>
+                    <div className="border-t border-slate-300 pt-3 flex justify-between items-center">
+                      <span className="text-slate-900">Total:</span>
+                      <span className="text-2xl font-bold text-slate-900">
+                        ${Number(orden.total).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         )}
@@ -855,9 +819,10 @@ export function OrderDetailPage() {
                 }}
                 pagos={orden.pagos || []}
                 onAgregarPago={handleAgregarPago}
-                onEditarPago={handleEditarPago}
-                onEliminarPago={handleEliminarPago}
+                onEditarPago={canManagePayments ? handleEditarPago : undefined}
+                onEliminarPago={canManagePayments ? handleEliminarPago : undefined}
                 ordenCopiado={orden.ordenCopiado}
+                readOnly={!canRegisterPayments}
               />
             </div>
           )

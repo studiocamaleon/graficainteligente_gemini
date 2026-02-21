@@ -23,11 +23,14 @@ import { PagoFormModal } from '../../../components/orders/PagoFormModal';
 import { ChannelBadge } from '../../../components/orders/ChannelBadge';
 import type { EstadoOrdenCopiado, TipoItemCopiado } from '../../../types/database';
 import { useAuth } from '../../../hooks/useAuth';
+import { canManagePaymentsRole, canRegisterPaymentsRole } from '../../../utils/roles';
 
 export function DetalleOrdenCopiado() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { profile } = useAuth();
+  const canRegisterPayments = canRegisterPaymentsRole(profile?.role);
+  const canManagePayments = canManagePaymentsRole(profile?.role);
   const [showCancelarModal, setShowCancelarModal] = useState(false);
   const [motivoCancelacion, setMotivoCancelacion] = useState('');
   const [activeTab, setActiveTab] = useState('detalles');
@@ -160,11 +163,19 @@ export function DetalleOrdenCopiado() {
   };
 
   const handleAgregarPago = () => {
+    if (!canRegisterPayments) {
+      openInfoDialog('Acción no permitida', 'El rol Operador de taller no puede registrar pagos.');
+      return;
+    }
     setPagoEditando(null);
     setShowPagoModal(true);
   };
 
   const handleEditarPago = (pago: any) => {
+    if (!canManagePayments) {
+      openInfoDialog('Acción no permitida', 'Solo superadmin puede editar pagos registrados.');
+      return;
+    }
     setPagoEditando(pago);
     setShowPagoModal(true);
   };
@@ -199,6 +210,10 @@ export function DetalleOrdenCopiado() {
   };
 
   const handleEliminarPago = async (pagoId: string) => {
+    if (!canManagePayments) {
+      openInfoDialog('Acción no permitida', 'Solo superadmin puede eliminar pagos registrados.');
+      return;
+    }
     const success = await deletePago(pagoId);
     if (success) {
       openInfoDialog('Éxito', 'Pago eliminado correctamente');
@@ -618,9 +633,9 @@ export function DetalleOrdenCopiado() {
                 fecha_liberacion_estimada: p.fecha_liberacion_estimada || undefined
               }))}
               onAgregarPago={handleAgregarPago}
-              onEditarPago={handleEditarPago}
-              onEliminarPago={handleEliminarPago}
-              readOnly={orden.estado === 'cancelada'}
+              onEditarPago={canManagePayments ? handleEditarPago : undefined}
+              onEliminarPago={canManagePayments ? handleEliminarPago : undefined}
+              readOnly={!canRegisterPayments || (orden.estado === 'cancelada' && profile?.role !== 'super_admin')}
             />
           </div>
         </Card>
@@ -764,7 +779,7 @@ export function DetalleOrdenCopiado() {
             setPagoEditando(null);
           }}
           onSubmit={handleSubmitPago}
-          saldoPendiente={calcularTotales(orden.total).saldoPendiente}
+          saldoPendiente={calcularTotales(totales.total).saldoPendiente}
           pago={pagoEditando}
         />
       )}

@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
+import { isWorkshopOperatorRole } from '../utils/roles';
 
 
 export interface PendingDelivery {
@@ -192,6 +193,11 @@ export function usePendingDeliveries() {
         notas?: string;
     }) => {
         try {
+            if (isWorkshopOperatorRole(profile?.role)) {
+                setError('El rol Operador de taller no puede registrar pagos.');
+                return false;
+            }
+
             const table = data.tipo === 'orden_trabajo' ? 'ordenes_trabajo_pagos' : 'centro_copiado_ordenes_pagos';
             const idField = data.tipo === 'orden_trabajo' ? 'orden_id' : 'orden_copiado_id';
 

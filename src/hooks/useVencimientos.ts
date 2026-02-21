@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
 
 export interface Vencimiento {
-    origen: 'recurrente' | 'tarjeta' | 'cheque';
+    origen: 'recurrente' | 'compra' | 'tarjeta' | 'cheque';
     id_origen: string;
     descripcion: string;
     proveedor: string;

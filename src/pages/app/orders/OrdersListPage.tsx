@@ -9,6 +9,7 @@ import { KanbanBoard } from '../../../components/orders/KanbanBoard';
 import { OrdenesTable } from '../../../components/orders/OrdenesTable';
 import { usePermissions } from '../../../hooks/usePermissions';
 import { useAuth } from '../../../hooks/useAuth';
+import { isWorkshopOperatorRole } from '../../../utils/roles';
 
 export function OrdersListPage() {
   const navigate = useNavigate();
@@ -17,7 +18,7 @@ export function OrdersListPage() {
   const { profile } = useAuth();
 
   const canCreate = hasPermission('orders', 'create');
-  const canViewFinancials = profile?.role !== 'operador_taller';
+  const canViewFinancials = !isWorkshopOperatorRole(profile?.role);
   const metricsGridClass = canViewFinancials
     ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-8 gap-3'
     : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-7 gap-3';

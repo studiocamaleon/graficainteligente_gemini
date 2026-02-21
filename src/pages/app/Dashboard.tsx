@@ -3,15 +3,17 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AlertCircle } from 'lucide-react';
 import { usePageHeader } from '../../hooks/usePageHeader';
 import { WelcomeIntro } from '../../components/dashboard/WelcomeIntro';
-import { DashboardFiltersBar } from '../../components/dashboard/DashboardFiltersBar';
+import { DashboardFiltersBar, type DashboardMainTab } from '../../components/dashboard/DashboardFiltersBar';
 import { DashboardKpiGrid } from '../../components/dashboard/DashboardKpiGrid';
 import { DashboardChartsPanel } from '../../components/dashboard/DashboardChartsPanel';
 import { DashboardOperationalPanel } from '../../components/dashboard/DashboardOperationalPanel';
 import { useDashboardDataV2 } from '../../hooks/useDashboardDataV2';
 import type { DashboardPeriod, DashboardScope } from '../../types/dashboard';
+import { PendingDeliveriesEmbedded } from './delivery/PendingDeliveriesPage';
 
 const VALID_SCOPES: DashboardScope[] = ['ot', 'copiado'];
 const VALID_PERIODS: DashboardPeriod[] = ['7d', '30d', '90d', 'mes_actual'];
+const VALID_TABS: DashboardMainTab[] = ['ot', 'copiado', 'entregas'];
 
 function parseScope(value: string | null): DashboardScope {
   if (value && VALID_SCOPES.includes(value as DashboardScope)) {
@@ -27,6 +29,13 @@ function parsePeriod(value: string | null): DashboardPeriod {
   return '7d';
 }
 
+function parseTab(value: string | null): DashboardMainTab {
+  if (value && VALID_TABS.includes(value as DashboardMainTab)) {
+    return value as DashboardMainTab;
+  }
+  return 'ot';
+}
+
 export function Dashboard() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -35,6 +44,8 @@ export function Dashboard() {
 
   const initialScope = useMemo(() => parseScope(searchParams.get('scope')), [searchParams]);
   const initialPeriod = useMemo(() => parsePeriod(searchParams.get('period')), [searchParams]);
+  const activeTab = useMemo(() => parseTab(searchParams.get('tab')), [searchParams]);
+  const dashboardEnabled = activeTab !== 'entregas';
 
   const {
     loading,
@@ -54,21 +65,28 @@ export function Dashboard() {
   } = useDashboardDataV2({
     initialScope,
     initialPeriod,
+    enabled: dashboardEnabled,
   });
 
   useEffect(() => {
+    if (!dashboardEnabled) return;
     const nextScope = parseScope(searchParams.get('scope'));
     const nextPeriod = parsePeriod(searchParams.get('period'));
     if (nextScope !== scope) setScope(nextScope);
     if (nextPeriod !== period) setPeriod(nextPeriod);
-  }, [period, scope, searchParams, setPeriod, setScope]);
+  }, [dashboardEnabled, period, scope, searchParams, setPeriod, setScope]);
 
-  const handleScopeChange = (nextScope: DashboardScope) => {
-    setScope(nextScope);
+  const handleTabChange = (tab: DashboardMainTab) => {
     const next = new URLSearchParams(searchParams);
-    next.set('scope', nextScope);
-    next.set('period', period);
+    next.set('tab', tab);
+    if (tab !== 'entregas') {
+      next.set('scope', tab);
+      next.set('period', period);
+    }
     setSearchParams(next, { replace: true });
+    if (tab !== 'entregas') {
+      setScope(tab);
+    }
   };
 
   const handlePeriodChange = (nextPeriod: DashboardPeriod) => {
@@ -92,41 +110,46 @@ export function Dashboard() {
       <WelcomeIntro loading={loading} />
 
       <DashboardFiltersBar
-        scope={scope}
+        activeTab={activeTab}
         period={period}
         loading={loading}
         lastUpdated={lastUpdated}
         isRealtimeConnected={isRealtimeConnected}
-        onScopeChange={handleScopeChange}
+        onTabChange={handleTabChange}
         onPeriodChange={handlePeriodChange}
         onRefresh={refresh}
-        onOpenPendingDeliveries={() => navigate('/app/pending-deliveries')}
       />
 
-      {error && (
+      {dashboardEnabled && error && (
         <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           <AlertCircle className="h-4 w-4" />
           {error}
         </div>
       )}
 
-      <DashboardKpiGrid
-        scope={scope}
-        kpis={kpis}
-        loading={loading}
-        onOpenRoute={(path) => navigate(path)}
-      />
+      {dashboardEnabled ? (
+        <>
+          <DashboardKpiGrid
+            scope={scope}
+            kpis={kpis}
+            loading={loading}
+            onOpenRoute={(path) => navigate(path)}
+          />
 
-      <DashboardChartsPanel series={series} loading={loading} />
+          <DashboardChartsPanel series={series} loading={loading} />
 
-      <DashboardOperationalPanel
-        entregas={operativo.proximasEntregas}
-        actividad={operativo.actividadReciente}
-        loading={loading}
-        onOpenOrder={handleOpenOrder}
-        canViewMore={operativo.proximasEntregas.length >= entregasLimit}
-        onViewMore={() => setEntregasLimit((prev) => prev + 10)}
-      />
+          <DashboardOperationalPanel
+            entregas={operativo.proximasEntregas}
+            actividad={operativo.actividadReciente}
+            loading={loading}
+            onOpenOrder={handleOpenOrder}
+            canViewMore={operativo.proximasEntregas.length >= entregasLimit}
+            onViewMore={() => setEntregasLimit((prev) => prev + 10)}
+          />
+        </>
+      ) : (
+        <PendingDeliveriesEmbedded />
+      )}
     </div>
   );
 }

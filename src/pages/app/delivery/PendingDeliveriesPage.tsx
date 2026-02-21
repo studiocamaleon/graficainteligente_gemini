@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Package, Check, ArrowLeft, Clock, DollarSign, Truck } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
-import { PagoFormModal } from '../../../components/orders/PagoFormModal';
+import { PagoFormModal, type PagoFormData } from '../../../components/orders/PagoFormModal';
 import { Card } from '../../../components/ui/card';
 import { Badge } from '../../../components/ui/Badge';
 import { Table } from '../../../components/ui/Table';
@@ -17,16 +17,20 @@ import { ShippingModal, ShippingData } from '../../../components/orders/Shipping
 import { useAuth } from '../../../hooks/useAuth';
 import { sendWatiMessage } from '../../../lib/wati';
 import { buildTrackingUrl } from '../../../lib/trackingUrl';
+import { canRegisterPaymentsRole } from '../../../utils/roles';
 
-export function PendingDeliveriesPage() {
+interface PendingDeliveriesPageProps {
+    embedded?: boolean;
+}
+
+function PendingDeliveriesContent({ embedded = false }: PendingDeliveriesPageProps) {
     const navigate = useNavigate();
-    usePageHeader('Entregas Pendientes de Despacho');
     const { profile, company } = useAuth();
+    const canRegisterPayments = canRegisterPaymentsRole(profile?.role);
 
     const { deliveries, loading, error, refresh, deliverOrder, addPayment } = usePendingDeliveries();
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedDelivery, setSelectedDelivery] = useState<PendingDelivery | null>(null);
-    const [showPagoForm, setShowPagoForm] = useState(false);
     const [showShippingModal, setShowShippingModal] = useState(false);
 
     const { dialogState: confirmDialogState, closeDialog: closeConfirmDialog, handleConfirm, openConfirm } = useConfirmDialog();
@@ -96,8 +100,11 @@ export function PendingDeliveriesPage() {
             }
         } else {
             // Must pay first
+            if (!canRegisterPayments) {
+                openInfoDialog('Acción no permitida', 'El rol Operador de taller no puede registrar pagos.');
+                return;
+            }
             setSelectedDelivery(delivery);
-            setShowPagoForm(true);
         }
     };
 
@@ -166,7 +173,7 @@ export function PendingDeliveriesPage() {
         }
     };
 
-    const handlePagoSubmit = async (data: any) => {
+    const handlePagoSubmit = async (data: PagoFormData) => {
         if (!selectedDelivery) return;
 
         const success = await addPayment({
@@ -180,8 +187,6 @@ export function PendingDeliveriesPage() {
         });
 
         if (success) {
-            setShowPagoForm(false);
-
             const nuevoSaldo = selectedDelivery.saldo_pendiente - data.monto;
             if (nuevoSaldo <= 0.01) { // Allowing small float margin
                 openConfirm({
@@ -238,16 +243,18 @@ export function PendingDeliveriesPage() {
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <Button variant="secondary" onClick={() => navigate('/app/dashboard')}>
-                    <ArrowLeft className="w-4 h-4 mr-2" />
-                    Volver al Dashboard
-                </Button>
-                <div className="text-sm text-gray-500">
-                    <Clock className="w-4 h-4 inline mr-1" />
-                    Ordenado por antigüedad (Más antiguos primero)
+            {!embedded && (
+                <div className="flex items-center justify-between">
+                    <Button variant="secondary" onClick={() => navigate('/app/dashboard')}>
+                        <ArrowLeft className="w-4 h-4 mr-2" />
+                        Volver al Dashboard
+                    </Button>
+                    <div className="text-sm text-gray-500">
+                        <Clock className="w-4 h-4 inline mr-1" />
+                        Ordenado por antigüedad (Más antiguos primero)
+                    </div>
                 </div>
-            </div>
+            )}
 
             <Card>
                 <div className="p-6">
@@ -285,7 +292,7 @@ export function PendingDeliveriesPage() {
                                 <div className="text-sm text-gray-600">Órdenes</div>
                                 <Package className="w-4 h-4 text-gray-500" />
                             </div>
-                            <div className="mt-2 text-2xl font-semibold text-gray-900">{headerMetrics.count}</div>
+                            <div className="mt-2 text-base sm:text-lg lg:text-xl font-semibold leading-tight text-gray-900 whitespace-nowrap tabular-nums">{headerMetrics.count}</div>
                             <div className="mt-1 text-xs text-gray-500">Pendientes (según filtro)</div>
                         </Card>
 
@@ -294,7 +301,7 @@ export function PendingDeliveriesPage() {
                                 <div className="text-sm text-gray-600">Deuda total</div>
                                 <DollarSign className="w-4 h-4 text-gray-500" />
                             </div>
-                            <div className="mt-2 text-2xl font-semibold text-gray-900">
+                            <div className="mt-2 text-base sm:text-lg lg:text-xl font-semibold leading-tight text-gray-900 whitespace-nowrap tabular-nums">
                                 ${headerMetrics.sumSaldo.toLocaleString('es-AR')}
                             </div>
                             <div className="mt-1 text-xs text-gray-500">Saldo pendiente acumulado</div>
@@ -305,7 +312,7 @@ export function PendingDeliveriesPage() {
                                 <div className="text-sm text-gray-600">A cobrar</div>
                                 <DollarSign className="w-4 h-4 text-orange-600" />
                             </div>
-                            <div className="mt-2 text-2xl font-semibold text-gray-900">
+                            <div className="mt-2 text-base sm:text-lg lg:text-xl font-semibold leading-tight text-gray-900 whitespace-nowrap tabular-nums">
                                 ${headerMetrics.sumCobrar.toLocaleString('es-AR')}
                             </div>
                             <div className="mt-1 text-xs text-gray-500">Sin cuenta corriente</div>
@@ -316,7 +323,7 @@ export function PendingDeliveriesPage() {
                                 <div className="text-sm text-gray-600">A c/c</div>
                                 <DollarSign className="w-4 h-4 text-emerald-600" />
                             </div>
-                            <div className="mt-2 text-2xl font-semibold text-gray-900">
+                            <div className="mt-2 text-base sm:text-lg lg:text-xl font-semibold leading-tight text-gray-900 whitespace-nowrap tabular-nums">
                                 ${headerMetrics.sumCuentaCorriente.toLocaleString('es-AR')}
                             </div>
                             <div className="mt-1 text-xs text-gray-500">Con cuenta corriente</div>
@@ -327,7 +334,7 @@ export function PendingDeliveriesPage() {
                                 <div className="text-sm text-gray-600">Despacho</div>
                                 <Truck className="w-4 h-4 text-gray-500" />
                             </div>
-                            <div className="mt-2 text-2xl font-semibold text-gray-900">{headerMetrics.countDespacho}</div>
+                            <div className="mt-2 text-base sm:text-lg lg:text-xl font-semibold leading-tight text-gray-900 whitespace-nowrap tabular-nums">{headerMetrics.countDespacho}</div>
                             <div className="mt-1 text-xs text-gray-500">Requieren despacho</div>
                         </Card>
 
@@ -336,7 +343,7 @@ export function PendingDeliveriesPage() {
                                 <div className="text-sm text-gray-600">Antigüedad</div>
                                 <Clock className="w-4 h-4 text-gray-500" />
                             </div>
-                            <div className="mt-2 text-2xl font-semibold text-gray-900">
+                            <div className="mt-2 text-base sm:text-lg lg:text-xl font-semibold leading-tight text-gray-900 whitespace-nowrap tabular-nums">
                                 {headerMetrics.oldestDays === null ? '-' : `${headerMetrics.oldestDays}d`}
                             </div>
                             <div className="mt-1 text-xs text-gray-500">Más antigua (según filtro)</div>
@@ -488,4 +495,13 @@ export function PendingDeliveriesPage() {
             />
         </div>
     );
+}
+
+export function PendingDeliveriesPage() {
+    usePageHeader('Entregas Pendientes de Despacho');
+    return <PendingDeliveriesContent />;
+}
+
+export function PendingDeliveriesEmbedded() {
+    return <PendingDeliveriesContent embedded />;
 }
