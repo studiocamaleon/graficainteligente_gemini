@@ -22,13 +22,13 @@ export function VencimientosList({ vencimientos, onRefresh }: VencimientosListPr
     const { showSuccess, showError } = useToast();
     const { profile } = useAuth();
     const [selectedVencimiento, setSelectedVencimiento] = useState<Vencimiento | null>(null);
-    const canDelete = profile?.role === 'super_admin';
+    const canDelete = profile?.role === 'super_admin' || profile?.role === 'admin';
 
-    const canDeleteVencimiento = (item: Vencimiento) => item.origen === 'compra' || item.origen === 'cheque';
+    const canDeleteVencimiento = (item: Vencimiento) => item.origen === 'compra' || item.origen === 'cheque' || item.origen === 'recurrente';
 
     const handleDeleteVencimiento = async (item: Vencimiento) => {
         if (!canDelete) {
-            showError('Solo superadmin puede eliminar cuentas por pagar.');
+            showError('Solo admin o superadmin pueden eliminar cuentas por pagar.');
             return;
         }
         if (!canDeleteVencimiento(item)) {
@@ -52,6 +52,14 @@ export function VencimientosList({ vencimientos, onRefresh }: VencimientosListPr
                 const { error } = await supabase
                     .from('cheques_cartera')
                     .delete()
+                    .eq('id', item.id_origen);
+                if (error) throw error;
+            }
+
+            if (item.origen === 'recurrente') {
+                const { error } = await supabase
+                    .from('recurring_expenses')
+                    .update({ is_active: false })
                     .eq('id', item.id_origen);
                 if (error) throw error;
             }
@@ -164,11 +172,12 @@ export function VencimientosList({ vencimientos, onRefresh }: VencimientosListPr
                                     )}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                                    <div className="flex items-center justify-end gap-2">
+                                    <div className="ml-auto grid w-[180px] grid-cols-[1fr_36px] items-center gap-2">
                                         <Button
                                             size="sm"
                                             variant="primary"
                                             onClick={() => setSelectedVencimiento(item)}
+                                            className="justify-self-end"
                                         >
                                             Pagar
                                         </Button>
@@ -183,6 +192,7 @@ export function VencimientosList({ vencimientos, onRefresh }: VencimientosListPr
                                                 <Trash2 size={16} />
                                             </Button>
                                         )}
+                                        {(!canDelete || !canDeleteVencimiento(item)) && <span className="block h-9 w-9" aria-hidden="true" />}
                                     </div>
                                 </td>
                             </tr>

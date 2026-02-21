@@ -1233,6 +1233,8 @@ export type TipoEventoHistorial =
   | 'modificacion'
   | 'cambio_estado'
   | 'pago_registrado'
+  | 'pago_editado'
+  | 'pago_eliminado'
   | 'nota_agregada'
   | 'item_agregado'
   | 'item_modificado'

@@ -356,6 +356,19 @@ export function useOrdenTrabajo() {
       setLoading(true);
       setError(null);
 
+      let estadoAnterior: EstadoOrdenTrabajo | null = null;
+      if (data.estado) {
+        const { data: ordenActual, error: estadoFetchError } = await supabase
+          .from('ordenes_trabajo')
+          .select('estado')
+          .eq('id', id)
+          .eq('company_id', profile.company_id)
+          .single();
+
+        if (estadoFetchError) throw estadoFetchError;
+        estadoAnterior = (ordenActual?.estado as EstadoOrdenTrabajo) || null;
+      }
+
       const updateData: any = {
         updated_by: profile.id,
       };
@@ -379,10 +392,15 @@ export function useOrdenTrabajo() {
       if (updateError) throw updateError;
 
       if (data.estado) {
-        await addHistorialEvent(id, 'cambio_estado', `Estado cambiado a: ${data.estado}`, {
-          estado_anterior: data.estado,
-          estado_nuevo: data.estado,
-        });
+        await addHistorialEvent(
+          id,
+          'cambio_estado',
+          `Estado cambiado${estadoAnterior ? ` de ${estadoAnterior}` : ''} a: ${data.estado}`,
+          {
+            estado_anterior: estadoAnterior,
+            estado_nuevo: data.estado,
+          }
+        );
       } else {
         await addHistorialEvent(id, 'modificacion', 'Orden de trabajo modificada');
       }
@@ -722,6 +740,14 @@ export function useOrdenTrabajo() {
       setLoading(true);
       setError(null);
 
+      const { data: pagoAnterior, error: pagoAnteriorError } = await supabase
+        .from('ordenes_trabajo_pagos')
+        .select('fecha_pago, monto, medio_cobro_id, metodo_pago, referencia_pago, comprobante_url, notas')
+        .eq('id', pagoId)
+        .single();
+
+      if (pagoAnteriorError) throw pagoAnteriorError;
+
       const { error: updateError } = await supabase
         .from('ordenes_trabajo_pagos')
         .update(pagoData)
@@ -729,7 +755,16 @@ export function useOrdenTrabajo() {
 
       if (updateError) throw updateError;
 
-      await addHistorialEvent(ordenId, 'modificacion', 'Pago actualizado');
+      const camposActualizados = Object.keys(pagoData).filter(
+        key => (pagoData as Record<string, unknown>)[key] !== undefined
+      );
+
+      await addHistorialEvent(ordenId, 'pago_editado', 'Pago actualizado', {
+        pago_id: pagoId,
+        campos_actualizados: camposActualizados,
+        before: pagoAnterior,
+        after: pagoData,
+      });
 
       return true;
     } catch (err) {
@@ -767,6 +802,14 @@ export function useOrdenTrabajo() {
         // Ignorar; si falla el check, intentamos el delete igualmente.
       }
 
+      const { data: pagoAEliminar, error: pagoAEliminarError } = await supabase
+        .from('ordenes_trabajo_pagos')
+        .select('fecha_pago, monto, medio_cobro_id, metodo_pago, referencia_pago, comprobante_url, notas')
+        .eq('id', pagoId)
+        .single();
+
+      if (pagoAEliminarError) throw pagoAEliminarError;
+
       const { error: deleteError } = await supabase
         .from('ordenes_trabajo_pagos')
         .delete()
@@ -774,7 +817,10 @@ export function useOrdenTrabajo() {
 
       if (deleteError) throw deleteError;
 
-      await addHistorialEvent(ordenId, 'modificacion', 'Pago eliminado');
+      await addHistorialEvent(ordenId, 'pago_eliminado', 'Pago eliminado', {
+        pago_id: pagoId,
+        before: pagoAEliminar,
+      });
 
       return true;
     } catch (err) {

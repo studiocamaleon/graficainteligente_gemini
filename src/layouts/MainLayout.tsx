@@ -47,7 +47,11 @@ function MainLayoutContent({ children }: MainLayoutProps) {
   const canCreateOC = hasPermission('centro-copiado-ordenes-crear', 'create');
   const isOrderDetailRoute = /^\/app\/orders\/[a-f0-9-]+$/i.test(location.pathname);
   const isCopyOrderDetailRoute = /^\/app\/centro-copiado\/ordenes\/[a-f0-9-]+$/i.test(location.pathname);
-  const hideQuickActions = isOrderDetailRoute || isCopyOrderDetailRoute;
+  const isFinanzasRoute = location.pathname === '/app/finanzas' || location.pathname.startsWith('/app/finanzas/');
+  const isIntegrationsRoute = location.pathname === '/app/integrations' || location.pathname.startsWith('/app/integrations/');
+  const isSettingsRoute = location.pathname === '/app/settings' || location.pathname.startsWith('/app/settings/');
+  const isTeamRoute = location.pathname === '/app/team' || location.pathname.startsWith('/app/team/');
+  const hideQuickActions = isOrderDetailRoute || isCopyOrderDetailRoute || isFinanzasRoute || isIntegrationsRoute || isSettingsRoute || isTeamRoute;
   const showQuickActions = (canCreateOT || canCreateOC) && !hideQuickActions;
 
   const getCurrentPageTitle = () => {

@@ -4,7 +4,7 @@ import { useAuth } from './useAuth';
 import type { RecurringExpense } from '../types/database';
 
 export function useRecurringExpenses() {
-    const { company } = useAuth();
+    const { company, profile } = useAuth();
     const [expenses, setExpenses] = useState<RecurringExpense[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -68,6 +68,11 @@ export function useRecurringExpenses() {
     };
 
     const deleteExpense = async (id: string) => {
+        const canDeleteRecurring = profile?.role === 'admin' || profile?.role === 'super_admin';
+        if (!canDeleteRecurring) {
+            throw new Error('Solo admin o superadmin pueden eliminar gastos fijos.');
+        }
+
         try {
             const { error } = await supabase
                 .from('recurring_expenses')

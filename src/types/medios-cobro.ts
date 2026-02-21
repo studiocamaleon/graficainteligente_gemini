@@ -102,7 +102,7 @@ export interface ResumenCajaPorTipo {
   tipo: TipoCaja;
   total_saldo: number;
   cantidad_cajas: number;
-  cajas: Caja[];
+  cajas: CajaConMediosCobro[];
 }
 
 export interface SaldosPendientesCobro {
