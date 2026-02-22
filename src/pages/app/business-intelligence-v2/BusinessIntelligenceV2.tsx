@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
-import { Activity, BarChart3, LayoutDashboard, Sparkles, Wallet } from 'lucide-react';
+import { Activity, BarChart3, Boxes, LayoutDashboard, Sparkles, Wallet } from 'lucide-react';
 import dayjs from 'dayjs';
 import { TabsModern } from '../../../components/ui/TabsModern';
 import { DateRangePicker } from '../../../components/ui/DateRangePicker';
@@ -10,11 +10,13 @@ import { VentasTab } from './VentasTab';
 import { CajaTab } from './CajaTab';
 import { ClientesTab } from './ClientesTab';
 import { OperacionTab } from './OperacionTab';
+import { ProductosTab } from './ProductosTab';
 
 function getActiveTab(pathname: string): string {
   if (pathname.includes('/v2/ventas')) return 'ventas';
   if (pathname.includes('/v2/caja')) return 'caja';
   if (pathname.includes('/v2/clientes')) return 'clientes';
+  if (pathname.includes('/v2/productos')) return 'productos';
   if (pathname.includes('/v2/operacion')) return 'operacion';
   return 'executive';
 }
@@ -36,6 +38,7 @@ export default function BusinessIntelligenceV2() {
       { id: 'ventas', label: 'Ventas', icon: BarChart3 },
       { id: 'caja', label: 'Caja', icon: Wallet },
       { id: 'clientes', label: 'Clientes', icon: Activity },
+      { id: 'productos', label: 'Productos', icon: Boxes },
       { id: 'operacion', label: 'Operación', icon: Sparkles },
     ],
     []
@@ -101,6 +104,7 @@ export default function BusinessIntelligenceV2() {
         <Route path="ventas" element={<VentasTab params={commonParams} />} />
         <Route path="caja" element={<CajaTab params={commonParams} />} />
         <Route path="clientes" element={<ClientesTab params={commonParams} />} />
+        <Route path="productos" element={<ProductosTab params={commonParams} />} />
         <Route path="operacion" element={<OperacionTab params={commonParams} />} />
         <Route path="*" element={<Navigate to="/app/business-intelligence/v2/executive" replace />} />
       </Routes>

@@ -78,6 +78,336 @@ export interface BIVentasData {
   heatmap: BIHeatmapItem[];
 }
 
+export interface BIProductosCategoriaItem {
+  categoria_nombre: string;
+  total_ventas: number;
+  total_unidades: number;
+  total_ordenes: number;
+}
+
+export interface BIProductosResumen {
+  total_ventas: number;
+  total_unidades: number;
+  total_ordenes: number;
+  ticket_promedio_orden: number;
+  precio_promedio_unidad: number;
+  productos_unicos: number;
+}
+
+export interface BIProductosTopItem {
+  producto_nombre: string;
+  total_ventas: number;
+  total_unidades: number;
+  total_ordenes: number;
+  ticket_promedio_orden: number;
+  precio_promedio_unidad: number;
+}
+
+export interface BIProductosLaserMedidaItem {
+  medida_label: string;
+  total_ventas: number;
+  total_unidades: number;
+  total_ordenes: number;
+}
+
+export interface BIProductosLaserTintaItem {
+  tinta_label: string;
+  total_ventas: number;
+  total_unidades: number;
+  total_ordenes: number;
+}
+
+export interface BIProductosLaserCaraItem {
+  cara_label: string;
+  total_ventas: number;
+  total_unidades: number;
+  total_ordenes: number;
+}
+
+export interface BIProductosGranFormatoResumen {
+  total_ventas: number;
+  total_ordenes: number;
+  total_items: number;
+  total_lineas: number;
+  total_mt2: number;
+  total_ml: number;
+  ticket_promedio_orden: number;
+  precio_promedio_mt2: number;
+  precio_promedio_ml: number;
+}
+
+export interface BIProductosGranFormatoMixTipoVentaItem {
+  tipo_venta: string;
+  total_ventas: number;
+  total_lineas: number;
+  total_mt2: number;
+  total_ml: number;
+  porcentaje_ventas: number;
+}
+
+export interface BIProductosGranFormatoMaterialItem {
+  material_label: string;
+  total_ventas: number;
+  total_lineas: number;
+  total_mt2: number;
+  total_ml: number;
+}
+
+export interface BIProductosGranFormatoAnchoItem {
+  ancho_label: string;
+  ancho_cm: number;
+  total_ventas: number;
+  total_lineas: number;
+  total_ml: number;
+}
+
+export interface BIProductosGranFormatoTecnologiaUnidadItem {
+  tecnologia_label: string;
+  tipo_venta: string;
+  total_ventas: number;
+  total_lineas: number;
+  total_mt2: number;
+  total_ml: number;
+  precio_promedio_mt2: number;
+  precio_promedio_ml: number;
+}
+
+export interface BIProductosActividadCategoria {
+  categoria_nombre: string;
+  total_items_historico: number;
+  primera_venta: string | null;
+  ultima_venta: string | null;
+}
+
+export interface BIProductosTalonariosResumen {
+  total_ventas: number;
+  total_ordenes: number;
+  total_unidades: number;
+  ticket_promedio_orden: number;
+  precio_promedio_unidad: number;
+}
+
+export interface BIProductosTalonariosTipoCopiaItem {
+  tipo_copia: string;
+  total_ventas: number;
+  total_unidades: number;
+  total_ordenes: number;
+  porcentaje_ventas: number;
+}
+
+export interface BIProductosTalonariosTintaItem {
+  tinta_label: string;
+  total_ventas: number;
+  total_unidades: number;
+  total_ordenes: number;
+  porcentaje_ventas: number;
+}
+
+export interface BIProductosTalonariosMedidaItem {
+  medida_label: string;
+  total_ventas: number;
+  total_unidades: number;
+  total_ordenes: number;
+}
+
+export interface BIProductosTalonariosMaterialItem {
+  material_label: string;
+  total_ventas: number;
+  total_unidades: number;
+  total_ordenes: number;
+}
+
+export interface BIProductosPlotterResumen {
+  total_ventas: number;
+  total_ordenes: number;
+  total_unidades: number;
+  total_ml: number;
+  ticket_promedio_orden: number;
+  precio_promedio_ml: number;
+}
+
+export interface BIProductosPlotterAnchoItem {
+  ancho_label: string;
+  total_ventas: number;
+  total_unidades: number;
+  total_ml: number;
+  porcentaje_ventas: number;
+}
+
+export interface BIProductosPlotterColorItem {
+  color_label: string;
+  total_ventas: number;
+  total_unidades: number;
+  total_ml: number;
+  porcentaje_ventas: number;
+}
+
+export interface BIProductosPlotterMarcaItem {
+  marca_label: string;
+  total_ventas: number;
+  total_unidades: number;
+  total_ml: number;
+  porcentaje_ventas: number;
+}
+
+export interface BIProductosPlotterMaterialItem {
+  material_label: string;
+  total_ventas: number;
+  total_unidades: number;
+  total_ml: number;
+}
+
+export interface BIProductosRigidosResumen {
+  total_ventas: number;
+  total_ordenes: number;
+  total_unidades: number;
+  total_mt2: number;
+  ticket_promedio_orden: number;
+  precio_promedio_mt2: number;
+}
+
+export interface BIProductosRigidosVarianteEspesorItem {
+  variante_espesor_label: string;
+  total_ventas: number;
+  total_unidades: number;
+  total_mt2: number;
+  porcentaje_ventas: number;
+}
+
+export interface BIProductosRigidosMaterialItem {
+  material_label: string;
+  total_ventas: number;
+  total_unidades: number;
+  total_mt2: number;
+}
+
+export interface BIProductosRigidosMedidaItem {
+  medida_label: string;
+  total_ventas: number;
+  total_unidades: number;
+  total_mt2: number;
+}
+
+export interface BIProductosSellosResumen {
+  total_ventas: number;
+  total_ordenes: number;
+  total_unidades: number;
+  ticket_promedio_orden: number;
+  precio_promedio_unidad: number;
+}
+
+export interface BIProductosSellosTipoProductoItem {
+  tipo_producto: string;
+  total_ventas: number;
+  total_unidades: number;
+  total_ordenes: number;
+  porcentaje_ventas: number;
+}
+
+export interface BIProductosSellosTipoSelloItem {
+  tipo_sello: string;
+  total_ventas: number;
+  total_unidades: number;
+  total_ordenes: number;
+  porcentaje_ventas: number;
+}
+
+export interface BIProductosSellosMarcaItem {
+  marca_label: string;
+  total_ventas: number;
+  total_unidades: number;
+  total_ordenes: number;
+  porcentaje_ventas: number;
+}
+
+export interface BIProductosSellosMedidaItem {
+  medida_label: string;
+  total_ventas: number;
+  total_unidades: number;
+  total_ordenes: number;
+}
+
+export interface BIProductosPortabannersResumen {
+  total_ventas: number;
+  total_ordenes: number;
+  total_unidades: number;
+  total_area_mt2: number;
+  ticket_promedio_orden: number;
+  precio_promedio_mt2: number;
+}
+
+export interface BIProductosPortabannersTecnologiaItem {
+  tecnologia_label: string;
+  total_ventas: number;
+  total_unidades: number;
+  total_area_mt2: number;
+  porcentaje_ventas: number;
+}
+
+export interface BIProductosPortabannersMedidaItem {
+  medida_label: string;
+  total_ventas: number;
+  total_unidades: number;
+  total_area_mt2: number;
+}
+
+export interface BIProductosPortabannersAreaItem {
+  rango_label: string;
+  total_ventas: number;
+  total_unidades: number;
+  total_area_mt2: number;
+}
+
+export interface BIProductosData {
+  categorias: BIProductosCategoriaItem[];
+  categoriaSeleccionada: string;
+  resumen: BIProductosResumen;
+  topProductos: BIProductosTopItem[];
+  laserMedidas: BIProductosLaserMedidaItem[];
+  laserTintas: BIProductosLaserTintaItem[];
+  laserCaras: BIProductosLaserCaraItem[];
+  granFormatoResumen: BIProductosGranFormatoResumen;
+  granFormatoMixTipoVenta: BIProductosGranFormatoMixTipoVentaItem[];
+  granFormatoTopMateriales: BIProductosGranFormatoMaterialItem[];
+  granFormatoTopAnchos: BIProductosGranFormatoAnchoItem[];
+  granFormatoTecnologiaUnidades: BIProductosGranFormatoTecnologiaUnidadItem[];
+  granFormatoTecnologiasDisponibles: string[];
+  actividadCategoria: BIProductosActividadCategoria;
+  talonarios: {
+    resumen: BIProductosTalonariosResumen;
+    mixTipoCopia: BIProductosTalonariosTipoCopiaItem[];
+    mixTintas: BIProductosTalonariosTintaItem[];
+    topMedidas: BIProductosTalonariosMedidaItem[];
+    topMateriales: BIProductosTalonariosMaterialItem[];
+  };
+  plotter: {
+    resumen: BIProductosPlotterResumen;
+    mixAnchos: BIProductosPlotterAnchoItem[];
+    mixColor: BIProductosPlotterColorItem[];
+    mixMarca: BIProductosPlotterMarcaItem[];
+    topMateriales: BIProductosPlotterMaterialItem[];
+  };
+  rigidos: {
+    resumen: BIProductosRigidosResumen;
+    mixVarianteEspesor: BIProductosRigidosVarianteEspesorItem[];
+    topMateriales: BIProductosRigidosMaterialItem[];
+    topMedidas: BIProductosRigidosMedidaItem[];
+  };
+  sellos: {
+    resumen: BIProductosSellosResumen;
+    mixTipoProducto: BIProductosSellosTipoProductoItem[];
+    mixTipoSello: BIProductosSellosTipoSelloItem[];
+    mixMarca: BIProductosSellosMarcaItem[];
+    topMedidas: BIProductosSellosMedidaItem[];
+  };
+  portabanners: {
+    resumen: BIProductosPortabannersResumen;
+    mixTecnologia: BIProductosPortabannersTecnologiaItem[];
+    topMedidas: BIProductosPortabannersMedidaItem[];
+    areaResumen: BIProductosPortabannersAreaItem[];
+  };
+}
+
 export interface BICajaData {
   ingresos_movimientos: number;
   egresos_movimientos: number;

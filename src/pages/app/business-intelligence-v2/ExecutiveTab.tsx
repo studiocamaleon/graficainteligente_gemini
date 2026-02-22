@@ -8,13 +8,11 @@ import type { BIQueryParams } from '../../../hooks/biShared';
 import { BISectionCard } from '../../../components/business-intelligence-v2/BISectionCard';
 import { KPICard } from '../../../components/business-intelligence-v2/KPICard';
 import { BIErrorState, BILoadingState } from '../../../components/business-intelligence-v2/BIState';
+import { formatCurrencyARS } from '../../../components/business-intelligence-v2/currency';
 
 interface ExecutiveTabProps {
   params: BIQueryParams;
 }
-
-const money = (value: number) =>
-  value.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export function ExecutiveTab({ params }: ExecutiveTabProps) {
   const executive = useBIExecutive(params);
@@ -31,7 +29,10 @@ export function ExecutiveTab({ params }: ExecutiveTabProps) {
 
   const timeline = ventas.data?.timeline || [];
   const salesOption = {
-    tooltip: { trigger: 'axis' },
+    tooltip: {
+      trigger: 'axis',
+      valueFormatter: (value: number) => formatCurrencyARS(Number(value || 0)),
+    },
     grid: { left: 12, right: 12, top: 20, bottom: 24, containLabel: true },
     xAxis: {
       type: 'category',
@@ -43,7 +44,7 @@ export function ExecutiveTab({ params }: ExecutiveTabProps) {
       type: 'value',
       axisLine: { show: false },
       splitLine: { lineStyle: { color: '#e2e8f0' } },
-      axisLabel: { color: '#64748b' },
+      axisLabel: { color: '#64748b', formatter: (value: number) => formatCurrencyARS(value) },
     },
     series: [
       {
@@ -98,7 +99,7 @@ export function ExecutiveTab({ params }: ExecutiveTabProps) {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         <KPICard
           title="Revenue total"
-          value={`$${money(executive.data.revenue_total)}`}
+          value={formatCurrencyARS(executive.data.revenue_total)}
           subtitle="Criterio comercial OT/OC"
           hint="Suma de OT + OC no vinculadas, excluye borrador/canceladas."
           icon={DollarSign}
@@ -108,7 +109,7 @@ export function ExecutiveTab({ params }: ExecutiveTabProps) {
         <KPICard
           title="Órdenes"
           value={String(executive.data.total_orders)}
-          subtitle={`Ticket ${money(executive.data.ticket_promedio)}`}
+          subtitle={`Ticket ${formatCurrencyARS(executive.data.ticket_promedio)}`}
           hint="Cantidad total de órdenes comerciales del período."
           icon={BarChart3}
           tone="indigo"
@@ -116,7 +117,7 @@ export function ExecutiveTab({ params }: ExecutiveTabProps) {
         <KPICard
           title="Margen caja"
           value={`${executive.data.cash_margin_pct.toFixed(1)}%`}
-          subtitle={`Cobrado período ${money(caja.data?.cobrado_periodo || 0)}`}
+          subtitle={`Cobrado período ${formatCurrencyARS(caja.data?.cobrado_periodo || 0)}`}
           hint="Margen sobre movimientos de caja del período (visión tesorería)."
           icon={Wallet}
           tone={executive.data.cash_margin_pct >= 0 ? 'emerald' : 'rose'}

@@ -5,13 +5,11 @@ import type { BIQueryParams } from '../../../hooks/biShared';
 import { BISectionCard } from '../../../components/business-intelligence-v2/BISectionCard';
 import { KPICard } from '../../../components/business-intelligence-v2/KPICard';
 import { BIErrorState, BILoadingState } from '../../../components/business-intelligence-v2/BIState';
+import { formatCurrencyARS } from '../../../components/business-intelligence-v2/currency';
 
 interface CajaTabProps {
   params: BIQueryParams;
 }
-
-const money = (value: number) =>
-  value.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export function CajaTab({ params }: CajaTabProps) {
   const caja = useBICaja(params);
@@ -20,9 +18,12 @@ export function CajaTab({ params }: CajaTabProps) {
   if (!caja.data) return <BIErrorState message="No hay datos de caja disponibles." />;
 
   const waterfallOption = {
-    tooltip: { trigger: 'axis' },
+    tooltip: {
+      trigger: 'axis',
+      valueFormatter: (value: number) => formatCurrencyARS(Number(value || 0)),
+    },
     xAxis: { type: 'category', data: ['Ingresos', 'Egresos', 'Balance'] },
-    yAxis: { type: 'value' },
+    yAxis: { type: 'value', axisLabel: { formatter: (value: number) => formatCurrencyARS(value) } },
     grid: { left: 12, right: 12, top: 12, bottom: 24, containLabel: true },
     series: [
       {
@@ -38,7 +39,11 @@ export function CajaTab({ params }: CajaTabProps) {
   };
 
   const agingOption = {
-    tooltip: { trigger: 'item' },
+    tooltip: {
+      trigger: 'item',
+      formatter: (params: { name: string; value: number; percent: number }) =>
+        `${params.name}: ${formatCurrencyARS(Number(params.value || 0))} (${Number(params.percent || 0).toFixed(1)}%)`,
+    },
     series: [
       {
         type: 'pie',
@@ -90,9 +95,9 @@ export function CajaTab({ params }: CajaTabProps) {
   return (
     <div className="space-y-5">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <KPICard title="Cobrado período" value={`$${money(caja.data.cobrado_periodo)}`} subtitle="Por fecha de pago" hint="Dinero efectivamente cobrado en el período." icon={Wallet} tone="emerald" />
-        <KPICard title="Balance movimientos" value={`$${money(caja.data.balance_movimientos)}`} subtitle={`Ingresos ${money(caja.data.ingresos_movimientos)}`} hint="Ingresos menos egresos registrados en caja." icon={Banknote} tone={caja.data.balance_movimientos >= 0 ? 'cyan' : 'rose'} />
-        <KPICard title="Aging 61+ días" value={`$${money(caja.data.pendiente_61_mas)}`} subtitle="Riesgo alto de cobranza" hint="Deuda con más de 61 días sin cobrar." icon={AlertTriangle} tone={caja.data.pendiente_61_mas > 0 ? 'amber' : 'emerald'} />
+        <KPICard title="Cobrado período" value={formatCurrencyARS(caja.data.cobrado_periodo)} subtitle="Por fecha de pago" hint="Dinero efectivamente cobrado en el período." icon={Wallet} tone="emerald" />
+        <KPICard title="Balance movimientos" value={formatCurrencyARS(caja.data.balance_movimientos)} subtitle={`Ingresos ${formatCurrencyARS(caja.data.ingresos_movimientos)}`} hint="Ingresos menos egresos registrados en caja." icon={Banknote} tone={caja.data.balance_movimientos >= 0 ? 'cyan' : 'rose'} />
+        <KPICard title="Aging 61+ días" value={formatCurrencyARS(caja.data.pendiente_61_mas)} subtitle="Riesgo alto de cobranza" hint="Deuda con más de 61 días sin cobrar." icon={AlertTriangle} tone={caja.data.pendiente_61_mas > 0 ? 'amber' : 'emerald'} />
         <KPICard title="DSO estimado" value={`${caja.data.dso_estimado.toFixed(1)} días`} subtitle="Tiempo medio de cobro" hint="Días promedio que tarda en cobrarse una venta." icon={Clock3} tone="indigo" />
       </div>
 
