@@ -6,13 +6,11 @@ import type { BIQueryParams } from '../../../hooks/biShared';
 import { BISectionCard } from '../../../components/business-intelligence-v2/BISectionCard';
 import { KPICard } from '../../../components/business-intelligence-v2/KPICard';
 import { BIErrorState, BILoadingState } from '../../../components/business-intelligence-v2/BIState';
+import { formatCurrencyARS } from '../../../components/business-intelligence-v2/currency';
 
 interface VentasTabProps {
   params: BIQueryParams;
 }
-
-const money = (value: number) =>
-  value.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 const DOW_LABELS = ['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab'];
 
@@ -31,11 +29,27 @@ export function VentasTab({ params }: VentasTabProps) {
   const ticket = totalOrdenes > 0 ? totalVentas / totalOrdenes : 0;
 
   const timelineOption = {
-    tooltip: { trigger: 'axis' },
+    tooltip: {
+      trigger: 'axis',
+      formatter: (params: Array<{ seriesName: string; marker: string; axisValueLabel: string; value: number }>) => {
+        if (!params?.length) return '';
+        const title = params[0].axisValueLabel;
+        const lines = params.map((p) => {
+          const formattedValue = p.seriesName === 'Ventas'
+            ? formatCurrencyARS(Number(p.value || 0))
+            : Number(p.value || 0).toFixed(0);
+          return `${p.marker}${p.seriesName}: ${formattedValue}`;
+        });
+        return [title, ...lines].join('<br/>');
+      },
+    },
     legend: { top: 0 },
     grid: { left: 12, right: 12, top: 40, bottom: 24, containLabel: true },
     xAxis: { type: 'category', data: ventas.data.timeline.map((d) => d.periodo_label) },
-    yAxis: [{ type: 'value', name: 'Ventas' }, { type: 'value', name: 'Órdenes' }],
+    yAxis: [
+      { type: 'value', name: 'Ventas', axisLabel: { formatter: (value: number) => formatCurrencyARS(value) } },
+      { type: 'value', name: 'Órdenes' },
+    ],
     series: [
       {
         type: 'bar',
@@ -55,9 +69,12 @@ export function VentasTab({ params }: VentasTabProps) {
   };
 
   const categoryOption = {
-    tooltip: { trigger: 'axis' },
+    tooltip: {
+      trigger: 'axis',
+      valueFormatter: (value: number) => formatCurrencyARS(Number(value || 0)),
+    },
     grid: { left: 12, right: 12, top: 12, bottom: 24, containLabel: true },
-    xAxis: { type: 'value' },
+    xAxis: { type: 'value', axisLabel: { formatter: (value: number) => formatCurrencyARS(value) } },
     yAxis: {
       type: 'category',
       data: ventas.data.categorias.slice(0, 8).map((c) => c.categoria_nombre),
@@ -72,9 +89,12 @@ export function VentasTab({ params }: VentasTabProps) {
   };
 
   const categoryTicketOption = {
-    tooltip: { trigger: 'axis' },
+    tooltip: {
+      trigger: 'axis',
+      valueFormatter: (value: number) => formatCurrencyARS(Number(value || 0)),
+    },
     grid: { left: 12, right: 12, top: 12, bottom: 24, containLabel: true },
-    xAxis: { type: 'value' },
+    xAxis: { type: 'value', axisLabel: { formatter: (value: number) => formatCurrencyARS(value) } },
     yAxis: {
       type: 'category',
       data: ventas.data.categorias.slice(0, 8).map((c) => c.categoria_nombre),
@@ -118,8 +138,8 @@ export function VentasTab({ params }: VentasTabProps) {
   return (
     <div className="space-y-5">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <KPICard title="Ventas período" value={`$${money(totalVentas)}`} subtitle="OT + OC independientes" hint="Facturación comercial total del rango elegido." icon={TrendingUp} tone="cyan" />
-        <KPICard title="Órdenes período" value={String(totalOrdenes)} subtitle={`Ticket ${money(ticket)}`} hint="Cantidad de órdenes comerciales en el período." icon={Target} tone="indigo" />
+        <KPICard title="Ventas período" value={formatCurrencyARS(totalVentas)} subtitle="OT + OC independientes" hint="Facturación comercial total del rango elegido." icon={TrendingUp} tone="cyan" />
+        <KPICard title="Órdenes período" value={String(totalOrdenes)} subtitle={`Ticket ${formatCurrencyARS(ticket)}`} hint="Cantidad de órdenes comerciales en el período." icon={Target} tone="indigo" />
         <KPICard title="Mix OC independientes" value={`${mixOc.toFixed(1)}%`} subtitle="Participación sobre órdenes" hint="% de órdenes OC sobre el total de órdenes comerciales." icon={Target} tone="emerald" />
         <KPICard
           title="Top producto share"

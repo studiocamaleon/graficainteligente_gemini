@@ -5,13 +5,11 @@ import type { BIQueryParams } from '../../../hooks/biShared';
 import { BISectionCard } from '../../../components/business-intelligence-v2/BISectionCard';
 import { KPICard } from '../../../components/business-intelligence-v2/KPICard';
 import { BIErrorState, BILoadingState } from '../../../components/business-intelligence-v2/BIState';
+import { formatCurrencyARS } from '../../../components/business-intelligence-v2/currency';
 
 interface ClientesTabProps {
   params: BIQueryParams;
 }
-
-const money = (value: number) =>
-  value.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export function ClientesTab({ params }: ClientesTabProps) {
   const clientes = useBIClientes(params);
@@ -40,8 +38,8 @@ export function ClientesTab({ params }: ClientesTabProps) {
         <KPICard title="Clientes nuevos" value={String(clientes.data.clientes_nuevos)} subtitle="Altas en el período" hint="Clientes que hicieron su primera compra en el rango." icon={UserPlus} tone="cyan" />
         <KPICard title="Clientes activos" value={String(clientes.data.clientes_activos)} subtitle={`Recurrentes ${clientes.data.clientes_recurrentes}`} hint="Clientes con al menos una compra en el período." icon={Users} tone="indigo" />
         <KPICard title="Frecuencia compra" value={clientes.data.frecuencia_compra.toFixed(2)} subtitle="Órdenes por cliente activo" hint="Promedio de compras por cada cliente activo." icon={Activity} tone="emerald" />
-        <KPICard title="Concentración top 10" value={`${clientes.data.concentracion_top10_pct.toFixed(1)}%`} subtitle={`Ticket cliente ${money(clientes.data.ticket_promedio_cliente)}`} hint="Qué porcentaje de ventas depende de tus 10 principales clientes." icon={PieChart} tone={clientes.data.concentracion_top10_pct > 60 ? 'amber' : 'emerald'} />
-        <KPICard title="LTV promedio" value={`$${money(clientes.data.ltv_promedio)}`} subtitle={`Mediano $${money(clientes.data.ltv_mediano)}`} hint="Valor de vida histórico por cliente con compras." icon={Users} tone="cyan" />
+        <KPICard title="Concentración top 10" value={`${clientes.data.concentracion_top10_pct.toFixed(1)}%`} subtitle={`Ticket cliente ${formatCurrencyARS(clientes.data.ticket_promedio_cliente)}`} hint="Qué porcentaje de ventas depende de tus 10 principales clientes." icon={PieChart} tone={clientes.data.concentracion_top10_pct > 60 ? 'amber' : 'emerald'} />
+        <KPICard title="LTV promedio" value={formatCurrencyARS(clientes.data.ltv_promedio)} subtitle={`Mediano ${formatCurrencyARS(clientes.data.ltv_mediano)}`} hint="Valor de vida histórico por cliente con compras." icon={Users} tone="cyan" />
       </div>
 
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-12">
@@ -59,7 +57,7 @@ export function ClientesTab({ params }: ClientesTabProps) {
               </div>
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                 <p className="text-xs uppercase tracking-wide text-slate-500">Ticket por cliente</p>
-                <p className="mt-1 text-2xl font-bold text-slate-900">${money(clientes.data.ticket_promedio_cliente)}</p>
+                <p className="mt-1 text-2xl font-bold text-slate-900">{formatCurrencyARS(clientes.data.ticket_promedio_cliente)}</p>
               </div>
             </div>
             <div className="mt-4 rounded-xl border border-cyan-200 bg-cyan-50 p-4 text-sm text-cyan-900">
@@ -91,9 +89,9 @@ export function ClientesTab({ params }: ClientesTabProps) {
               {clientes.data.top_ltv_clientes.map((row) => (
                 <tr key={row.cliente_id || row.cliente_nombre} className="border-b border-slate-100 last:border-b-0">
                   <td className="py-2 pr-3 font-medium text-slate-800">{row.cliente_nombre}</td>
-                  <td className="py-2 px-3 text-right font-semibold text-slate-900">${money(row.ltv_total)}</td>
+                  <td className="py-2 px-3 text-right font-semibold text-slate-900">{formatCurrencyARS(row.ltv_total)}</td>
                   <td className="py-2 px-3 text-right text-slate-700">{row.total_ordenes}</td>
-                  <td className="py-2 pl-3 text-right text-slate-700">${money(row.ticket_promedio)}</td>
+                  <td className="py-2 pl-3 text-right text-slate-700">{formatCurrencyARS(row.ticket_promedio)}</td>
                 </tr>
               ))}
               {clientes.data.top_ltv_clientes.length === 0 && (
