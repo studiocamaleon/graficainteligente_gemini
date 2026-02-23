@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Wallet, TrendingUp, TrendingDown, DollarSign, CreditCard, LineChart, HandCoins, Landmark, AlertTriangle, RefreshCw, ListOrdered } from 'lucide-react';
+import { Wallet, TrendingUp, TrendingDown, DollarSign, CreditCard, HandCoins, Landmark, AlertTriangle, RefreshCw, ListOrdered, Sparkles } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { TabsModern } from '../../../components/ui/TabsModern';
 import { ResumenCajas } from '../../../components/tesoreria/ResumenCajas';
@@ -8,7 +8,7 @@ import { RecurringExpensesPanel } from '../../../components/tesoreria/RecurringE
 import { ChequesPanel } from '../../../components/tesoreria/ChequesPanel';
 import { DineroPorCobrarPanel } from '../../../components/tesoreria/DineroPorCobrarPanel';
 import { TarjetasPanel } from '../../../components/tesoreria/TarjetasPanel';
-import { CashflowDashboard } from '../../../components/finanzas/CashflowDashboard';
+import { CashflowV2Dashboard } from '../../../components/finanzas-v2/CashflowV2Dashboard';
 import { CajaMovimientosModal } from '../../../components/tesoreria/CajaMovimientosModal';
 import { useCajas } from '../../../hooks/useCajas';
 
@@ -35,7 +35,7 @@ export default function TesoreriaView() {
 
   const allTabs = [
     { id: 'movimientos', label: 'Movimientos', icon: ListOrdered },
-    { id: 'cashflow', label: 'Proyección (Cashflow)', icon: LineChart },
+    { id: 'cashflow-v2', label: 'Proyección (Cashflow)', icon: Sparkles },
     { id: 'cajas', label: 'Cajas y Saldos', icon: Wallet },
     { id: 'cheques', label: 'Cartera Cheques', icon: DollarSign },
     { id: 'tarjetas', label: 'Tarjetas Corp.', icon: CreditCard },
@@ -172,7 +172,7 @@ export default function TesoreriaView() {
       <div className="mt-6">
         {activeTab === 'movimientos' && <MovimientosPanel onMovimientoRegistrado={refetch} />}
 
-        {activeTab === 'cashflow' && <CashflowDashboard />}
+        {activeTab === 'cashflow-v2' && <CashflowV2Dashboard />}
 
         {activeTab === 'cajas' && (
           <ResumenCajas
