@@ -52,7 +52,7 @@ function PendingDeliveriesContent({ embedded = false }: PendingDeliveriesPagePro
     const { deliveries, loading, error, refresh, deliverOrder, addPayment } = usePendingDeliveries();
     const [searchTerm, setSearchTerm] = useState('');
     const [paymentFilter, setPaymentFilter] = useState<'all' | 'deben'>('all');
-    const [paymentSort, setPaymentSort] = useState<'none' | 'asc' | 'desc'>('none');
+    const [balanceSort, setBalanceSort] = useState<'none' | 'asc' | 'desc'>('none');
     const [selectedDelivery, setSelectedDelivery] = useState<PendingDelivery | null>(null);
     const [showShippingModal, setShowShippingModal] = useState(false);
     const [detailModalOpen, setDetailModalOpen] = useState(false);
@@ -79,15 +79,15 @@ function PendingDeliveriesContent({ embedded = false }: PendingDeliveriesPagePro
     }, [deliveries, paymentFilter, searchTerm]);
 
     const sortedDeliveries = useMemo(() => {
-        if (paymentSort === 'none') return filteredDeliveries;
+        if (balanceSort === 'none') return filteredDeliveries;
 
         return [...filteredDeliveries].sort((a, b) => {
-            const amountA = Number(a.total || 0);
-            const amountB = Number(b.total || 0);
-            if (paymentSort === 'asc') return amountA - amountB;
-            return amountB - amountA;
+            const balanceA = Number(a.saldo_pendiente || 0);
+            const balanceB = Number(b.saldo_pendiente || 0);
+            if (balanceSort === 'asc') return balanceA - balanceB;
+            return balanceB - balanceA;
         });
-    }, [filteredDeliveries, paymentSort]);
+    }, [filteredDeliveries, balanceSort]);
 
     const headerMetrics = useMemo(() => {
         const count = filteredDeliveries.length;
@@ -406,11 +406,11 @@ function PendingDeliveriesContent({ embedded = false }: PendingDeliveriesPagePro
                     </Button>
                     <div className="text-sm text-gray-500">
                         <Clock className="w-4 h-4 inline mr-1" />
-                        {paymentSort === 'none'
+                        {balanceSort === 'none'
                             ? 'Ordenado por antigüedad (Más antiguos primero)'
-                            : paymentSort === 'asc'
-                                ? 'Ordenado por monto de pago (Menor a mayor)'
-                                : 'Ordenado por monto de pago (Mayor a menor)'}
+                            : balanceSort === 'asc'
+                                ? 'Ordenado por saldo pendiente (Menor a mayor)'
+                                : 'Ordenado por saldo pendiente (Mayor a menor)'}
                     </div>
                 </div>
             )}
@@ -565,14 +565,14 @@ function PendingDeliveriesContent({ embedded = false }: PendingDeliveriesPagePro
                                     header: (
                                         <button
                                             type="button"
-                                            onClick={() => setPaymentSort((prev) => (prev === 'none' ? 'asc' : prev === 'asc' ? 'desc' : 'none'))}
+                                            onClick={() => setBalanceSort((prev) => (prev === 'none' ? 'asc' : prev === 'asc' ? 'desc' : 'none'))}
                                             className="inline-flex items-center gap-1 hover:text-gray-800 transition-colors"
-                                            title="Ordenar por monto de pago"
+                                            title="Ordenar por saldo pendiente"
                                         >
-                                            Pago
-                                            {paymentSort === 'none' ? (
+                                            Saldo
+                                            {balanceSort === 'none' ? (
                                                 <ArrowUpDown className="w-3.5 h-3.5" />
-                                            ) : paymentSort === 'asc' ? (
+                                            ) : balanceSort === 'asc' ? (
                                                 <ChevronUp className="w-3.5 h-3.5" />
                                             ) : (
                                                 <ChevronDown className="w-3.5 h-3.5" />
@@ -581,12 +581,16 @@ function PendingDeliveriesContent({ embedded = false }: PendingDeliveriesPagePro
                                     ),
                                     render: (item) => (
                                         <div>
-                                            <div className="font-semibold">${item.total.toLocaleString('es-AR')}</div>
                                             {item.saldo_pendiente > 0 ? (
-                                                <Badge variant="warning" size="sm">Debe: ${item.saldo_pendiente.toLocaleString('es-AR')}</Badge>
+                                                <div className="font-semibold text-amber-700">
+                                                    ${item.saldo_pendiente.toLocaleString('es-AR')}
+                                                </div>
                                             ) : (
-                                                <Badge variant="success" size="sm">Pagado</Badge>
+                                                <div className="font-semibold text-emerald-700">Pagado</div>
                                             )}
+                                            <div className="text-xs text-gray-500">
+                                                Total orden: ${item.total.toLocaleString('es-AR')}
+                                            </div>
                                         </div>
                                     ),
                                 },
