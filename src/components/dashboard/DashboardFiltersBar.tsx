@@ -89,19 +89,26 @@ export function DashboardFiltersBar({
 
       <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
         <span>{formatLastUpdated(lastUpdated)}</span>
-        <span className="inline-flex items-center gap-1.5">
-          {isRealtimeConnected ? (
-            <>
-              <Wifi className="h-3.5 w-3.5 text-emerald-600" />
-              Tiempo real conectado
-            </>
-          ) : (
-            <>
-              <WifiOff className="h-3.5 w-3.5 text-amber-600" />
-              Tiempo real reconectando
-            </>
-          )}
-        </span>
+        {activeTab !== 'entregas' ? (
+          <span className="inline-flex items-center gap-1.5">
+            {isRealtimeConnected ? (
+              <>
+                <Wifi className="h-3.5 w-3.5 text-emerald-600" />
+                Tiempo real conectado
+              </>
+            ) : (
+              <>
+                <WifiOff className="h-3.5 w-3.5 text-amber-600" />
+                Tiempo real reconectando
+              </>
+            )}
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1.5">
+            <Clock3 className="h-3.5 w-3.5 text-slate-400" />
+            Vista operativa de entregas
+          </span>
+        )}
       </div>
     </div>
   );

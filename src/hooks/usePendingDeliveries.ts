@@ -4,6 +4,7 @@ import { useAuth } from './useAuth';
 import { isWorkshopOperatorRole } from '../utils/roles';
 import { useMediosCobro } from './useMediosCobro';
 import { sendWatiMessage } from '../lib/wati';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 
 
 export interface PendingDelivery {
@@ -36,6 +37,7 @@ export function usePendingDeliveries() {
     const [deliveries, setDeliveries] = useState<PendingDelivery[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [isRealtimeConnected, setIsRealtimeConnected] = useState(false);
 
     const fetchDeliveries = useCallback(async () => {
         if (!profile?.company_id) return;
@@ -45,17 +47,13 @@ export function usePendingDeliveries() {
             setError(null);
 
             const { data, error: rpcError } = await supabase
-                .rpc('fn_finanzas_saldos_comerciales_v2', {
+                .rpc('fn_dashboard_pending_deliveries_v1', {
                     p_company_id: profile.company_id,
-                    p_fecha_inicio: null,
-                    p_fecha_fin: null,
-                    p_timezone: 'America/Argentina/Buenos_Aires',
                 });
 
             if (rpcError) throw rpcError;
 
             const mappedDeliveries: PendingDelivery[] = (data || [])
-                .filter((row: any) => String(row.estado || '').toLowerCase() === 'finalizada')
                 .map((row: any) => ({
                     id: row.orden_id,
                     numero_orden: row.numero_orden,
@@ -263,10 +261,42 @@ export function usePendingDeliveries() {
         fetchDeliveries();
     }, [fetchDeliveries]);
 
+    useEffect(() => {
+        if (!profile?.company_id) return;
+
+        let channel: RealtimeChannel | null = null;
+
+        channel = supabase
+            .channel(`pending-deliveries-${profile.company_id}`)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'ordenes_trabajo' }, () => {
+                void fetchDeliveries();
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'centro_copiado_ordenes' }, () => {
+                void fetchDeliveries();
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'ordenes_trabajo_pagos' }, () => {
+                void fetchDeliveries();
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'centro_copiado_ordenes_pagos' }, () => {
+                void fetchDeliveries();
+            })
+            .subscribe((status) => {
+                setIsRealtimeConnected(status === 'SUBSCRIBED');
+            });
+
+        return () => {
+            if (channel) {
+                void supabase.removeChannel(channel);
+            }
+            setIsRealtimeConnected(false);
+        };
+    }, [profile?.company_id, fetchDeliveries]);
+
     return {
         deliveries,
         loading,
         error,
+        isRealtimeConnected,
         refresh: fetchDeliveries,
         deliverOrder,
         addPayment
