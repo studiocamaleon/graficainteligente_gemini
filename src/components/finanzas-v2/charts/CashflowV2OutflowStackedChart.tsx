@@ -1,5 +1,6 @@
 import ReactECharts from 'echarts-for-react';
 import type { CashflowV2Point } from '../../../types/finanzas-cashflow-v2';
+import { formatYmdAr } from '../../../utils/dates';
 
 interface CashflowV2OutflowStackedChartProps {
   data: CashflowV2Point[];
@@ -12,7 +13,8 @@ export function CashflowV2OutflowStackedChart({ data }: CashflowV2OutflowStacked
       trigger: 'axis',
       axisPointer: { type: 'shadow' },
       formatter: (params: any[]) => {
-        const label = params?.[0]?.axisValueLabel || '';
+        const rawDate = params?.[0]?.axisValue;
+        const label = typeof rawDate === 'string' ? formatYmdAr(rawDate, 'DD/MM/YYYY') : '';
         const total = params.reduce((acc, p) => acc + Math.abs(Number(p.value || 0)), 0);
         const rows = params
           .map(
@@ -38,7 +40,7 @@ export function CashflowV2OutflowStackedChart({ data }: CashflowV2OutflowStacked
       data: data.map((d) => d.fecha),
       axisLabel: {
         color: '#64748b',
-        formatter: (v: string) => new Date(v).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' }),
+        formatter: (v: string) => formatYmdAr(v, 'DD/MM'),
       },
     },
     yAxis: {

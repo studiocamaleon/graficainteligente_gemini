@@ -16,6 +16,7 @@ import { CashflowV2StressHeatmapChart } from './charts/CashflowV2StressHeatmapCh
 import { useCashflowV2 } from '../../hooks/useCashflowV2';
 import type { CashflowV2AssumptionsDelta, CashflowV2Basis, CashflowV2Point } from '../../types/finanzas-cashflow-v2';
 import { DEFAULT_CASHFLOW_V2_ASSUMPTIONS } from '../../types/finanzas-cashflow-v2';
+import { formatYmdAr } from '../../utils/dates';
 
 function formatMoney(value: number) {
   return new Intl.NumberFormat('es-AR', {
@@ -233,7 +234,7 @@ export function CashflowV2Dashboard() {
     doc.text('Cashflow V2 - Proyeccion', 14, 14);
     doc.setFontSize(9);
     doc.text(
-      `Base: ${basis} | Dias: ${days} | ΔWIP vencido: ${uiAssumptions.delta_wip_overdue_collectable}% | ΔWIP futuro: ${uiAssumptions.delta_wip_future_completion}% | ΔIngresos: ${uiAssumptions.delta_ingresos}% | ΔEgresos: ${uiAssumptions.delta_egresos}% | Vencidos: ${uiAssumptions.include_overdue ? 'si' : 'no'}`,
+      `Base: ${basis} | Dias: ${days} | TZ: America/Argentina/Buenos_Aires | ΔWIP vencido: ${uiAssumptions.delta_wip_overdue_collectable}% | ΔWIP futuro: ${uiAssumptions.delta_wip_future_completion}% | ΔIngresos: ${uiAssumptions.delta_ingresos}% | ΔEgresos: ${uiAssumptions.delta_egresos}% | Vencidos: ${uiAssumptions.include_overdue ? 'si' : 'no'}`,
       14,
       20
     );
@@ -250,7 +251,7 @@ export function CashflowV2Dashboard() {
         'Saldo Acumulado',
       ]],
       body: previewData.map((row) => [
-        row.fecha,
+        formatYmdAr(row.fecha, 'DD/MM/YYYY'),
         formatNumber(row.total_ingresos),
         formatNumber(row.total_egresos),
         formatNumber(row.ingreso_wip_vencido),
@@ -456,7 +457,7 @@ export function CashflowV2Dashboard() {
             <tbody className="divide-y divide-slate-100">
               {previewData.map((row, idx) => (
                 <tr key={row.fecha} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/70'}>
-                  <td className="px-3 py-2 text-left font-medium text-slate-700">{new Date(row.fecha).toLocaleDateString('es-AR')}</td>
+                  <td className="px-3 py-2 text-left font-medium text-slate-700">{formatYmdAr(row.fecha, 'DD/MM/YYYY')}</td>
                   <td className="px-3 py-2 text-right text-slate-700">{formatMoney(row.ingreso_cheques)}</td>
                   <td className="px-3 py-2 text-right text-slate-700">{formatMoney(row.ingreso_liquidaciones)}</td>
                   <td className="px-3 py-2 text-right text-slate-700">{formatMoney(row.ingreso_wip_futuro)}</td>

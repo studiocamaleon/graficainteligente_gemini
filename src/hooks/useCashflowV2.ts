@@ -74,6 +74,7 @@ export function useCashflowV2(
         p_days_to_project: daysToProject,
         p_basis: basis,
         p_params: rpcAssumptions,
+        p_timezone: 'America/Argentina/Buenos_Aires',
       });
 
       if (rpcError) throw rpcError;

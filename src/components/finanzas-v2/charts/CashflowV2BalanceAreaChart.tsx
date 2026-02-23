@@ -1,5 +1,6 @@
 import ReactECharts from 'echarts-for-react';
 import type { CashflowV2Point } from '../../../types/finanzas-cashflow-v2';
+import { formatYmdAr } from '../../../utils/dates';
 
 interface CashflowV2BalanceAreaChartProps {
   data: CashflowV2Point[];
@@ -11,15 +12,29 @@ export function CashflowV2BalanceAreaChart({ data }: CashflowV2BalanceAreaChartP
     grid: { left: 50, right: 24, top: 20, bottom: 34 },
     tooltip: {
       trigger: 'axis',
-      valueFormatter: (v: number) =>
-        new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(v || 0),
+      formatter: (params: any) => {
+        const rows = Array.isArray(params) ? params : [params];
+        const dateRaw = rows?.[0]?.axisValue;
+        const dateLabel = typeof dateRaw === 'string' ? formatYmdAr(dateRaw, 'DD/MM/YYYY') : '';
+        const content = rows
+          .map(
+            (p: any) =>
+              `${p.marker} ${p.seriesName}: ${new Intl.NumberFormat('es-AR', {
+                style: 'currency',
+                currency: 'ARS',
+                maximumFractionDigits: 0,
+              }).format(Number(p.value || 0))}`
+          )
+          .join('<br/>');
+        return `<strong>${dateLabel}</strong><br/>${content}`;
+      },
     },
     xAxis: {
       type: 'category',
       boundaryGap: false,
       data: data.map((d) => d.fecha),
       axisLabel: {
-        formatter: (v: string) => new Date(v).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' }),
+        formatter: (v: string) => formatYmdAr(v, 'DD/MM'),
         color: '#64748b',
       },
     },

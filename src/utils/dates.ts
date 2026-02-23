@@ -19,6 +19,18 @@ export function getArgentinaDateString(): string {
   return getArgentinaDate().format('YYYY-MM-DD');
 }
 
+export function parseYmdInAr(dateYmd: string): dayjs.Dayjs {
+  return dayjs.tz(dateYmd, 'YYYY-MM-DD', ARGENTINA_TIMEZONE);
+}
+
+export function formatYmdAr(dateYmd: string, mask: 'DD/MM' | 'DD/MM/YYYY' = 'DD/MM/YYYY'): string {
+  return parseYmdInAr(dateYmd).format(mask);
+}
+
+export function toArTodayYmd(): string {
+  return getArgentinaDate().format('YYYY-MM-DD');
+}
+
 export function formatDateForInput(date: Date | string | dayjs.Dayjs): string {
   return dayjs(date).tz(ARGENTINA_TIMEZONE).format('YYYY-MM-DD');
 }

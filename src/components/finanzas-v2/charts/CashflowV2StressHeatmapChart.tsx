@@ -1,5 +1,6 @@
 import ReactECharts from 'echarts-for-react';
 import type { CashflowV2Point } from '../../../types/finanzas-cashflow-v2';
+import { formatYmdAr } from '../../../utils/dates';
 
 interface CashflowV2StressHeatmapChartProps {
   data: CashflowV2Point[];
@@ -15,7 +16,7 @@ function toBucket(value: number) {
 }
 
 export function CashflowV2StressHeatmapChart({ data }: CashflowV2StressHeatmapChartProps) {
-  const x = data.map((d) => new Date(d.fecha).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' }));
+  const x = data.map((d) => formatYmdAr(d.fecha, 'DD/MM'));
   const shouldRotateLabels = data.length > 45;
 
   const heatData = data.map((d, idx) => {

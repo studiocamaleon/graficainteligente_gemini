@@ -1,5 +1,6 @@
 import ReactECharts from 'echarts-for-react';
 import type { CashflowV2Point } from '../../../types/finanzas-cashflow-v2';
+import { formatYmdAr } from '../../../utils/dates';
 
 interface CashflowV2InflowStackedChartProps {
   data: CashflowV2Point[];
@@ -11,8 +12,27 @@ export function CashflowV2InflowStackedChart({ data }: CashflowV2InflowStackedCh
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'shadow' },
-      valueFormatter: (v: number) =>
-        new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(v || 0),
+      formatter: (params: any[]) => {
+        const rawDate = params?.[0]?.axisValue;
+        const dateLabel = typeof rawDate === 'string' ? formatYmdAr(rawDate, 'DD/MM/YYYY') : '';
+        const total = params.reduce((acc, p) => acc + Number(p.value || 0), 0);
+        const rows = params
+          .map(
+            (p) =>
+              `${p.marker} ${p.seriesName}: ${new Intl.NumberFormat('es-AR', {
+                style: 'currency',
+                currency: 'ARS',
+                maximumFractionDigits: 0,
+              }).format(Number(p.value || 0))}`
+          )
+          .join('<br/>');
+
+        return `<strong>${dateLabel}</strong><br/>Total ingresos: ${new Intl.NumberFormat('es-AR', {
+          style: 'currency',
+          currency: 'ARS',
+          maximumFractionDigits: 0,
+        }).format(total)}<br/><br/>${rows}`;
+      },
     },
     legend: { top: 4, textStyle: { color: '#334155' } },
     xAxis: {
@@ -20,7 +40,7 @@ export function CashflowV2InflowStackedChart({ data }: CashflowV2InflowStackedCh
       data: data.map((d) => d.fecha),
       axisLabel: {
         color: '#64748b',
-        formatter: (v: string) => new Date(v).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' }),
+        formatter: (v: string) => formatYmdAr(v, 'DD/MM'),
       },
     },
     yAxis: {
