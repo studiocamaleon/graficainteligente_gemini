@@ -43,6 +43,8 @@ interface CashflowViewPoint extends CashflowPoint {
   ingreso_cheques_display: number;
   ingreso_liquidaciones_display: number;
   ingreso_wip_display: number;
+  ingreso_wip_vencido_display: number;
+  ingreso_otros_vencidos_display: number;
   total_ingreso_vencido_display: number;
   egreso_cheques_display: number;
   egreso_tarjetas_display: number;
@@ -117,11 +119,15 @@ export function CashflowDashboard() {
 
     return data.map((row) => {
       const overdueIn = includeOverdue ? row.total_ingreso_vencido : 0;
+      const overdueInWip = includeOverdue ? row.ingreso_wip_vencido : 0;
+      const overdueInOthers = includeOverdue ? row.ingreso_otros_vencidos : 0;
       const overdueOut = includeOverdue ? row.total_egreso_vencido : 0;
 
       const ingresoCheques = row.ingreso_cheques * scenarioConfig.ingresosFactor;
       const ingresoLiquidaciones = row.ingreso_liquidaciones * scenarioConfig.ingresosFactor;
       const ingresoWip = row.ingreso_wip * scenarioConfig.ingresosFactor;
+      const ingresoVencidoWip = overdueInWip * scenarioConfig.ingresosFactor;
+      const ingresoVencidoOtros = overdueInOthers * scenarioConfig.ingresosFactor;
       const ingresoVencido = overdueIn * scenarioConfig.ingresosFactor;
 
       const egresoCheques = row.egreso_cheques * scenarioConfig.egresosFactor;
@@ -143,6 +149,8 @@ export function CashflowDashboard() {
         ingreso_cheques_display: ingresoCheques,
         ingreso_liquidaciones_display: ingresoLiquidaciones,
         ingreso_wip_display: ingresoWip,
+        ingreso_wip_vencido_display: ingresoVencidoWip,
+        ingreso_otros_vencidos_display: ingresoVencidoOtros,
         total_ingreso_vencido_display: ingresoVencido,
         egreso_cheques_display: egresoCheques,
         egreso_tarjetas_display: egresoTarjetas,
@@ -167,7 +175,8 @@ export function CashflowDashboard() {
     const minBalance = Math.min(...viewData.map((d) => d.saldo_acumulado));
     const criticalDays = viewData.filter((d) => d.saldo_acumulado < 0).length;
     const overdueOut = viewData.reduce((acc, d) => acc + d.total_egreso_vencido_display, 0);
-    const overdueIn = viewData.reduce((acc, d) => acc + d.total_ingreso_vencido_display, 0);
+    const overdueInWip = viewData.reduce((acc, d) => acc + d.ingreso_wip_vencido_display, 0);
+    const overdueInOthers = viewData.reduce((acc, d) => acc + d.ingreso_otros_vencidos_display, 0);
 
     return {
       currentBalance,
@@ -175,7 +184,8 @@ export function CashflowDashboard() {
       minBalance,
       criticalDays,
       overdueOut,
-      overdueIn,
+      overdueInWip,
+      overdueInOthers,
     };
   }, [viewData]);
 
@@ -193,6 +203,8 @@ export function CashflowDashboard() {
       'ingreso_cheques',
       'ingreso_cuentas_corrientes',
       'ingreso_wip',
+      'ingreso_wip_vencido',
+      'ingreso_otros_vencidos',
       'ingreso_vencido',
       'egreso_cheques',
       'egreso_proveedores',
@@ -209,6 +221,8 @@ export function CashflowDashboard() {
       row.ingreso_cheques_display,
       row.ingreso_liquidaciones_display,
       row.ingreso_wip_display,
+      row.ingreso_wip_vencido_display,
+      row.ingreso_otros_vencidos_display,
       row.total_ingreso_vencido_display,
       row.egreso_cheques_display,
       row.egreso_compras_display,
@@ -254,6 +268,9 @@ export function CashflowDashboard() {
     const head = [[
       'Fecha',
       'Ingresos',
+      'Vencido WIP',
+      'Vencido Otros',
+      'Vencido Total',
       'Egresos',
       'Balance Día',
       'Saldo Acumulado',
@@ -262,6 +279,9 @@ export function CashflowDashboard() {
     const body = viewData.map((row) => [
       dayjs(row.fecha).format('DD/MM/YYYY'),
       formatNumber(row.total_ingresos),
+      formatNumber(row.ingreso_wip_vencido_display),
+      formatNumber(row.ingreso_otros_vencidos_display),
+      formatNumber(row.total_ingreso_vencido_display),
       formatNumber(row.total_egresos),
       formatNumber(row.saldo_diario),
       formatNumber(row.saldo_acumulado),
@@ -421,7 +441,7 @@ export function CashflowDashboard() {
       </div>
 
       {stats && (
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-6">
           <Card className="rounded-xl border border-slate-200 p-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Saldo actual</p>
             <p className="mt-2 text-2xl font-semibold text-slate-900">{formatMoney(stats.currentBalance)}</p>
@@ -454,12 +474,27 @@ export function CashflowDashboard() {
           </Card>
 
           <Card className="rounded-xl border border-slate-200 p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Cobros vencidos</p>
-            <p className="mt-2 text-2xl font-semibold text-emerald-700">{formatMoney(stats.overdueIn)}</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Cobros vencidos (WIP)</p>
+            <p className="mt-2 text-2xl font-semibold text-emerald-700">{formatMoney(stats.overdueInWip)}</p>
             <div className="mt-2 flex items-center gap-2 text-xs text-slate-500">
               <ArrowUpCircle className="h-4 w-4" />
               Recuperación pendiente
             </div>
+            <p className="mt-2 text-[11px] text-slate-500">
+              Órdenes vencidas pendientes de cobro.
+            </p>
+          </Card>
+
+          <Card className="rounded-xl border border-slate-200 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Otros cobros vencidos</p>
+            <p className="mt-2 text-2xl font-semibold text-teal-700">{formatMoney(stats.overdueInOthers)}</p>
+            <div className="mt-2 flex items-center gap-2 text-xs text-slate-500">
+              <ArrowUpCircle className="h-4 w-4" />
+              Recuperación pendiente
+            </div>
+            <p className="mt-2 text-[11px] text-slate-500">
+              Cheques y liquidaciones vencidas pendientes.
+            </p>
           </Card>
 
           <Card className="rounded-xl border border-slate-200 p-4">
@@ -546,7 +581,8 @@ export function CashflowDashboard() {
                 contentStyle={{ borderRadius: 10, borderColor: '#cbd5e1' }}
               />
               <Legend />
-              <Bar dataKey="total_ingreso_vencido_display" name="Cobros vencidos" stackId="flowIn" fill={COLORS.vencidoIngreso} />
+              <Bar dataKey="ingreso_wip_vencido_display" name="Cobros vencidos (WIP)" stackId="flowIn" fill={COLORS.vencidoIngreso} />
+              <Bar dataKey="ingreso_otros_vencidos_display" name="Otros cobros vencidos" stackId="flowIn" fill={COLORS.ingresoLiquidaciones} />
               <Bar dataKey="ingreso_cheques_display" name="Ingreso cheques" stackId="flowIn" fill={COLORS.ingresoCheques} />
               <Bar dataKey="ingreso_liquidaciones_display" name="Ingreso cuentas cte." stackId="flowIn" fill={COLORS.ingresoLiquidaciones} />
               <Bar dataKey="ingreso_wip_display" name="Ingreso WIP" stackId="flowIn" fill={COLORS.ingresoWip} />
@@ -601,10 +637,16 @@ export function CashflowDashboard() {
                 </div>
 
                 <div className="col-span-3 space-y-1 text-xs">
-                  {item.total_ingreso_vencido_display > 0 && (
+                  {item.ingreso_wip_vencido_display > 0 && (
                     <div className="flex justify-between text-emerald-800">
-                      <span>Vencidos</span>
-                      <span className="font-semibold">{formatMoney(item.total_ingreso_vencido_display)}</span>
+                      <span>Vencido WIP</span>
+                      <span className="font-semibold">{formatMoney(item.ingreso_wip_vencido_display)}</span>
+                    </div>
+                  )}
+                  {item.ingreso_otros_vencidos_display > 0 && (
+                    <div className="flex justify-between text-teal-700">
+                      <span>Otros vencidos</span>
+                      <span className="font-semibold">{formatMoney(item.ingreso_otros_vencidos_display)}</span>
                     </div>
                   )}
                   {item.ingreso_cheques_display > 0 && (

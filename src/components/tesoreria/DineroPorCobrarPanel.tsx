@@ -2,10 +2,9 @@ import { useMemo, useState } from 'react';
 import { DollarSign, Users, UserCheck, CheckCircle2, Factory } from 'lucide-react';
 import { Card } from '../ui/card';
 import { Badge } from '../ui/Badge';
-import { useSaldosPendientes, useOrdenesPorCobrar } from '../../hooks/useTesoreria';
+import { useOrdenesPorCobrar } from '../../hooks/useTesoreria';
 
 export function DineroPorCobrarPanel() {
-  const { saldos, loading: loadingSaldos } = useSaldosPendientes();
   const [tipoFiltro, setTipoFiltro] = useState<'cc' | 'sin_cc' | undefined>();
   const [etapaFiltro, setEtapaFiltro] = useState<'all' | 'ready' | 'not_ready'>('all');
   const { ordenes, loading: loadingOrdenes } = useOrdenesPorCobrar(tipoFiltro);
@@ -14,6 +13,55 @@ export function DineroPorCobrarPanel() {
     const normalized = String(estado || '').toLowerCase();
     return normalized === 'finalizada' || normalized === 'entregada';
   };
+
+  const resumenSaldos = useMemo(() => {
+    let totalPendiente = 0;
+    let totalCC = 0;
+    let totalSinCC = 0;
+    let cantidadCC = 0;
+    let cantidadSinCC = 0;
+    let totalFinalizadas = 0;
+    let totalEntregadasCC = 0;
+    let countFinalizadas = 0;
+    let countEntregadasCC = 0;
+
+    for (const orden of ordenes) {
+      const saldo = Number(orden.saldo_pendiente || 0);
+      const estado = String(orden.estado || '').toLowerCase();
+      const isCC = Boolean(orden.tiene_cuenta_corriente);
+
+      totalPendiente += saldo;
+      if (isCC) {
+        totalCC += saldo;
+        cantidadCC += 1;
+      } else {
+        totalSinCC += saldo;
+        cantidadSinCC += 1;
+      }
+
+      if (estado === 'finalizada') {
+        totalFinalizadas += saldo;
+        countFinalizadas += 1;
+      }
+
+      if (estado === 'entregada' && isCC) {
+        totalEntregadasCC += saldo;
+        countEntregadasCC += 1;
+      }
+    }
+
+    return {
+      totalPendiente,
+      totalCC,
+      totalSinCC,
+      cantidadCC,
+      cantidadSinCC,
+      totalFinalizadas,
+      totalEntregadasCC,
+      countFinalizadas,
+      countEntregadasCC,
+    };
+  }, [ordenes]);
 
   const resumenEtapas = useMemo(() => {
     let totalReady = 0;
@@ -59,6 +107,12 @@ export function DineroPorCobrarPanel() {
 
   return (
     <div className="space-y-6">
+      <Card className="border-slate-200 bg-slate-50/70 px-4 py-3">
+        <p className="text-sm text-slate-700">
+          Incluye finalizadas y entregadas con saldo (cuenta corriente). El total listo para cobrar se desglosa para reconciliar operación vs cobranza.
+        </p>
+      </Card>
+
       {/* KPIs */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
         <Card className="border-slate-200 bg-white p-5 shadow-sm">
@@ -66,7 +120,7 @@ export function DineroPorCobrarPanel() {
             <div>
               <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Total por Cobrar</p>
               <p className="text-2xl font-bold text-slate-900">
-                {loadingSaldos ? '...' : formatMoney(saldos.total_pendiente)}
+                {loadingOrdenes ? '...' : formatMoney(resumenSaldos.totalPendiente)}
               </p>
               <p className="mt-1 text-xs text-slate-500">Saldo pendiente total (no todo es cobrable hoy)</p>
             </div>
@@ -87,6 +141,9 @@ export function DineroPorCobrarPanel() {
                 {formatMoney(resumenEtapas.totalReady)}
               </p>
               <p className="mt-1 text-xs text-emerald-700">{resumenEtapas.countReady} órdenes finalizadas/entregadas</p>
+              <p className="mt-1 text-[11px] text-emerald-800">
+                Finalizadas: {formatMoney(resumenSaldos.totalFinalizadas)} | Entregadas CC: {formatMoney(resumenSaldos.totalEntregadasCC)}
+              </p>
             </div>
             <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-2.5">
               <CheckCircle2 className="h-5 w-5 text-emerald-600" />
@@ -126,9 +183,9 @@ export function DineroPorCobrarPanel() {
             <div>
               <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-blue-700">Cuenta Corriente</p>
               <p className="text-2xl font-bold text-blue-900">
-                {formatMoney(saldos.total_cc)}
+                {formatMoney(resumenSaldos.totalCC)}
               </p>
-              <p className="mt-1 text-xs text-blue-600">{saldos.cantidad_ordenes_cc} órdenes</p>
+              <p className="mt-1 text-xs text-blue-600">{resumenSaldos.cantidadCC} órdenes</p>
             </div>
             <div className="rounded-lg border border-blue-200 bg-blue-50 p-2.5">
               <UserCheck className="h-5 w-5 text-blue-600" />
@@ -147,9 +204,9 @@ export function DineroPorCobrarPanel() {
             <div>
               <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-700">Clientes Directos</p>
               <p className="text-2xl font-bold text-green-900">
-                {formatMoney(saldos.total_sin_cc)}
+                {formatMoney(resumenSaldos.totalSinCC)}
               </p>
-              <p className="mt-1 text-xs text-emerald-600">{saldos.cantidad_ordenes_sin_cc} órdenes</p>
+              <p className="mt-1 text-xs text-emerald-600">{resumenSaldos.cantidadSinCC} órdenes</p>
             </div>
             <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-2.5">
               <Users className="h-5 w-5 text-emerald-600" />
@@ -207,6 +264,7 @@ export function DineroPorCobrarPanel() {
                 ordenesFiltradas.map((orden) => {
                   const antiguedadBadge = getAntiguedadBadge(orden.dias_transcurridos);
                   const readyToCollect = isReadyToCollect(orden.estado);
+                  const estadoNormalizado = String(orden.estado || '').toLowerCase();
                   return (
                     <tr key={orden.orden_id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -234,8 +292,12 @@ export function DineroPorCobrarPanel() {
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-center">
-                        {readyToCollect ? (
-                          <Badge variant="success">Listo para cobrar</Badge>
+                        {estadoNormalizado === 'finalizada' ? (
+                          <Badge variant="success">Finalizada</Badge>
+                        ) : estadoNormalizado === 'entregada' && orden.tiene_cuenta_corriente ? (
+                          <Badge variant="info">Entregada CC</Badge>
+                        ) : readyToCollect ? (
+                          <Badge variant="success">Entregada</Badge>
                         ) : (
                           <Badge variant="warning">No finalizado</Badge>
                         )}

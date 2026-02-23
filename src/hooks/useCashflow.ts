@@ -14,6 +14,8 @@ export interface CashflowPoint {
     egreso_recurrentes: number;
     egreso_compras: number;
     // Overdue
+    ingreso_wip_vencido: number;
+    ingreso_otros_vencidos: number;
     total_ingreso_vencido: number;
     total_egreso_vencido: number;
     // Totals
@@ -37,6 +39,8 @@ interface CashflowRpcRow {
     egreso_tarjetas: number | null;
     egreso_recurrentes: number | null;
     egreso_compras: number | null;
+    ingreso_wip_vencido: number | null;
+    ingreso_otros_vencidos: number | null;
     total_ingreso_vencido: number | null;
     total_egreso_vencido: number | null;
     total_ingresos: number | null;
@@ -78,6 +82,8 @@ export function useCashflow(daysToProject: number = 90, collectionBasis: Cashflo
                 egreso_tarjetas: Number(d.egreso_tarjetas || 0),
                 egreso_recurrentes: Number(d.egreso_recurrentes || 0),
                 egreso_compras: Number(d.egreso_compras || 0),
+                ingreso_wip_vencido: Number(d.ingreso_wip_vencido || 0),
+                ingreso_otros_vencidos: Number(d.ingreso_otros_vencidos || 0),
                 total_ingreso_vencido: Number(d.total_ingreso_vencido || 0),
                 total_egreso_vencido: Number(d.total_egreso_vencido || 0),
                 total_ingresos: Number(d.total_ingresos || 0),

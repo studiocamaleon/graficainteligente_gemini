@@ -22,15 +22,40 @@ export function useSaldosPendientes() {
       setLoading(true);
 
       const { data, error } = await supabase
-        .rpc('fn_calcular_saldos_pendientes_cobro', {
+        .rpc('fn_finanzas_saldos_comerciales_v2', {
           p_company_id: profile.company_id,
+          p_fecha_inicio: null,
+          p_fecha_fin: null,
+          p_timezone: 'America/Argentina/Buenos_Aires',
         });
 
       if (error) throw error;
 
-      if (data && data.length > 0) {
-        setSaldos(data[0]);
-      }
+      const rows = (data || []) as any[];
+      const totals = rows.reduce(
+        (acc, row) => {
+          const saldo = Number(row.saldo_pendiente || 0);
+          const isCC = Boolean(row.tiene_cuenta_corriente);
+          acc.total_pendiente += saldo;
+          if (isCC) {
+            acc.total_cc += saldo;
+            acc.cantidad_ordenes_cc += 1;
+          } else {
+            acc.total_sin_cc += saldo;
+            acc.cantidad_ordenes_sin_cc += 1;
+          }
+          return acc;
+        },
+        {
+          total_pendiente: 0,
+          total_cc: 0,
+          total_sin_cc: 0,
+          cantidad_ordenes_cc: 0,
+          cantidad_ordenes_sin_cc: 0,
+        } as SaldosPendientesCobro
+      );
+
+      setSaldos(totals);
     } catch (error) {
       console.error('Error fetching saldos pendientes:', error);
     } finally {
@@ -61,14 +86,38 @@ export function useOrdenesPorCobrar(tipoCliente?: 'cc' | 'sin_cc') {
       setLoading(true);
 
       const { data, error } = await supabase
-        .rpc('fn_obtener_detalle_por_cobrar', {
+        .rpc('fn_finanzas_saldos_comerciales_v2', {
           p_company_id: profile.company_id,
-          p_tipo_cliente: tipoCliente || null,
+          p_fecha_inicio: null,
+          p_fecha_fin: null,
+          p_timezone: 'America/Argentina/Buenos_Aires',
         });
 
       if (error) throw error;
 
-      setOrdenes(data || []);
+      const rows = ((data || []) as any[])
+        .filter((row) => {
+          if (!tipoCliente) return true;
+          const isCC = Boolean(row.tiene_cuenta_corriente);
+          return tipoCliente === 'cc' ? isCC : !isCC;
+        })
+        .map((row) => ({
+          orden_id: row.orden_id,
+          numero_orden: row.numero_orden,
+          fecha_creacion: row.fecha_creacion,
+          cliente_id: row.cliente_id,
+          cliente_nombre: row.cliente_nombre,
+          cliente_documento: row.cliente_documento,
+          tiene_cuenta_corriente: Boolean(row.tiene_cuenta_corriente),
+          total: Number(row.total_calculado || 0),
+          pagado: Number(row.pagado || 0),
+          saldo_pendiente: Number(row.saldo_pendiente || 0),
+          dias_transcurridos: Number(row.dias_transcurridos || 0),
+          estado: row.estado,
+          tipo_orden: row.tipo_orden === 'orden_trabajo' ? 'trabajo' : 'copiado',
+        })) as OrdenPorCobrar[];
+
+      setOrdenes(rows);
     } catch (error) {
       console.error('Error fetching ordenes por cobrar:', error);
     } finally {

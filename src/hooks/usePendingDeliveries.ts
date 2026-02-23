@@ -44,125 +44,43 @@ export function usePendingDeliveries() {
             setLoading(true);
             setError(null);
 
-            // fetch Work Orders (Estado: finalizada) with payments
-            const { data: workOrders, error: workError } = await supabase
-                .from('ordenes_trabajo')
-                .select(`
-          id,
-          numero_orden,
-          created_at,
-          fecha_completado,
-          fecha_estimada_entrega,
-          subtotal,
-          total_descuentos,
-          subtotal_iva,
-          total,
-          estado,
-          requiere_despacho,
-          tracking_token,
-          cliente:clients(id, nombre_fantasia, razon_social, numero_documento, tiene_cuenta_corriente, whatsapp),
-          pagos:ordenes_trabajo_pagos(monto)
-        `)
-                .eq('company_id', profile.company_id)
-                .eq('estado', 'finalizada');
+            const { data, error: rpcError } = await supabase
+                .rpc('fn_finanzas_saldos_comerciales_v2', {
+                    p_company_id: profile.company_id,
+                    p_fecha_inicio: null,
+                    p_fecha_fin: null,
+                    p_timezone: 'America/Argentina/Buenos_Aires',
+                });
 
-            if (workError) throw workError;
+            if (rpcError) throw rpcError;
 
-            // fetch Copy Center Orders (Estado: finalizada) with payments
-            const { data: copyOrders, error: copyError } = await supabase
-                .from('centro_copiado_ordenes')
-                .select(`
-          id,
-          numero_orden,
-          fecha_solicitud,
-          fecha_completado,
-          fecha_entrega_estimada,
-          total,
-          estado,
-          tracking_token,
-          cliente:clients(id, nombre_fantasia, razon_social, numero_documento, tiene_cuenta_corriente, whatsapp),
-          pagos:centro_copiado_ordenes_pagos(monto)
-        `)
-                .eq('company_id', profile.company_id)
-                .eq('estado', 'finalizada');
+            const mappedDeliveries: PendingDelivery[] = (data || [])
+                .filter((row: any) => String(row.estado || '').toLowerCase() === 'finalizada')
+                .map((row: any) => ({
+                    id: row.orden_id,
+                    numero_orden: row.numero_orden,
+                    cliente: {
+                        id: row.cliente_id,
+                        nombre_fantasia: row.cliente_nombre || '',
+                        razon_social: row.cliente_nombre || '',
+                        numero_documento: row.cliente_documento || '',
+                        tiene_cuenta_corriente: Boolean(row.tiene_cuenta_corriente),
+                        whatsapp: row.cliente_whatsapp || null,
+                    },
+                    fecha_solicitud: row.fecha_creacion,
+                    fecha_finalizada: row.fecha_finalizada ?? null,
+                    fecha_entrega_estimada: row.fecha_entrega_estimada ?? null,
+                    tipo: row.tipo_orden === 'orden_trabajo' ? 'orden_trabajo' : 'centro_copiado',
+                    total: Number(row.total_calculado || 0),
+                    estado: row.estado,
+                    total_pagado: Number(row.pagado || 0),
+                    saldo_pendiente: Number(row.saldo_pendiente || 0),
+                    requiere_despacho: Boolean(row.requiere_despacho),
+                    tracking_token: row.tracking_token || undefined,
+                }));
 
-            if (copyError) throw copyError;
-
-            const workOrderIds = (workOrders as any[] || []).map((o) => o.id);
-            let ocTotalsByOtId = new Map<string, number>();
-
-            if (workOrderIds.length > 0) {
-                const { data: linkedOc, error: linkedOcError } = await supabase
-                    .from('centro_copiado_ordenes')
-                    .select('orden_trabajo_id, total, estado')
-                    .in('orden_trabajo_id', workOrderIds)
-                    .neq('estado', 'cancelada');
-
-                if (linkedOcError) throw linkedOcError;
-
-                ocTotalsByOtId = (linkedOc || []).reduce((acc: Map<string, number>, row: any) => {
-                    const otId = row.orden_trabajo_id as string | null;
-                    if (!otId) return acc;
-                    const current = acc.get(otId) || 0;
-                    acc.set(otId, current + Number(row.total || 0));
-                    return acc;
-                }, new Map<string, number>());
-            }
-
-            // Helper to sum payments
-            const sumPayments = (pagos: any[]) => pagos?.reduce((sum, p) => sum + Number(p.monto || 0), 0) || 0;
-
-            // Map and merge
-            const mappedWorkOrders: PendingDelivery[] = (workOrders as any[] || []).map(o => {
-                const totalPagado = sumPayments(o.pagos);
-                const subtotal = Number(o.subtotal || 0);
-                const descuentos = Number(o.total_descuentos || 0);
-                const iva = Number(o.subtotal_iva || 0);
-                const ocTotal = Number(ocTotalsByOtId.get(o.id) || 0);
-
-                // Total neto robusto para evitar inconsistencias cuando el campo `total` quedó desactualizado.
-                const totalCalculado = Number((subtotal - descuentos + iva + ocTotal).toFixed(2));
-                const totalOrden = Math.max(0, totalCalculado);
-                const saldoPendiente = Math.max(0, Number((totalOrden - totalPagado).toFixed(2)));
-                const fechaFinalizada = o.fecha_completado ?? null;
-                return {
-                    id: o.id,
-                    numero_orden: o.numero_orden,
-                    cliente: o.cliente,
-                    fecha_solicitud: o.created_at,
-                    fecha_finalizada: fechaFinalizada,
-                    fecha_entrega_estimada: o.fecha_estimada_entrega,
-                    tipo: 'orden_trabajo',
-                    total: totalOrden,
-                    estado: o.estado,
-                    total_pagado: totalPagado,
-                    saldo_pendiente: saldoPendiente,
-                    requiere_despacho: o.requiere_despacho,
-                    tracking_token: o.tracking_token,
-                };
-            });
-
-            const mappedCopyOrders: PendingDelivery[] = (copyOrders as any[] || []).map(o => {
-                const totalPagado = sumPayments(o.pagos);
-                const saldoPendiente = Math.max(0, (o.total || 0) - totalPagado);
-                const fechaFinalizada = o.fecha_completado ?? null;
-                return {
-                    id: o.id,
-                    numero_orden: o.numero_orden,
-                    cliente: o.cliente,
-                    fecha_solicitud: o.fecha_solicitud,
-                    fecha_finalizada: fechaFinalizada,
-                    fecha_entrega_estimada: o.fecha_entrega_estimada,
-                    tipo: 'centro_copiado',
-                    total: o.total,
-                    estado: o.estado,
-                    total_pagado: totalPagado,
-                    saldo_pendiente: saldoPendiente,
-                    tracking_token: o.tracking_token,
-                };
-            });
-            // Merge and Sort by Date (Oldest First)
-            const allDeliveries = [...mappedWorkOrders, ...mappedCopyOrders].sort((a, b) => {
+            // Sort by finalization/creation date (Oldest first)
+            const allDeliveries = [...mappedDeliveries].sort((a, b) => {
                 const aDate = new Date(a.fecha_finalizada ?? a.fecha_solicitud).getTime();
                 const bDate = new Date(b.fecha_finalizada ?? b.fecha_solicitud).getTime();
                 return aDate - bDate;
