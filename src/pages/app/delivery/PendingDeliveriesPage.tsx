@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Package, Check, ArrowLeft, Clock, DollarSign, Truck } from 'lucide-react';
+import { Search, Package, Check, ArrowLeft, Clock, DollarSign, Truck, ArrowUpDown, ChevronUp, ChevronDown } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { PagoFormModal, type PagoFormData } from '../../../components/orders/PagoFormModal';
 import { Card } from '../../../components/ui/card';
@@ -52,6 +52,7 @@ function PendingDeliveriesContent({ embedded = false }: PendingDeliveriesPagePro
     const { deliveries, loading, error, refresh, deliverOrder, addPayment } = usePendingDeliveries();
     const [searchTerm, setSearchTerm] = useState('');
     const [paymentFilter, setPaymentFilter] = useState<'all' | 'deben'>('all');
+    const [paymentSort, setPaymentSort] = useState<'none' | 'asc' | 'desc'>('none');
     const [selectedDelivery, setSelectedDelivery] = useState<PendingDelivery | null>(null);
     const [showShippingModal, setShowShippingModal] = useState(false);
     const [detailModalOpen, setDetailModalOpen] = useState(false);
@@ -76,6 +77,17 @@ function PendingDeliveriesContent({ embedded = false }: PendingDeliveriesPagePro
             );
         });
     }, [deliveries, paymentFilter, searchTerm]);
+
+    const sortedDeliveries = useMemo(() => {
+        if (paymentSort === 'none') return filteredDeliveries;
+
+        return [...filteredDeliveries].sort((a, b) => {
+            const amountA = Number(a.total || 0);
+            const amountB = Number(b.total || 0);
+            if (paymentSort === 'asc') return amountA - amountB;
+            return amountB - amountA;
+        });
+    }, [filteredDeliveries, paymentSort]);
 
     const headerMetrics = useMemo(() => {
         const count = filteredDeliveries.length;
@@ -394,7 +406,11 @@ function PendingDeliveriesContent({ embedded = false }: PendingDeliveriesPagePro
                     </Button>
                     <div className="text-sm text-gray-500">
                         <Clock className="w-4 h-4 inline mr-1" />
-                        Ordenado por antigüedad (Más antiguos primero)
+                        {paymentSort === 'none'
+                            ? 'Ordenado por antigüedad (Más antiguos primero)'
+                            : paymentSort === 'asc'
+                                ? 'Ordenado por monto de pago (Menor a mayor)'
+                                : 'Ordenado por monto de pago (Mayor a menor)'}
                     </div>
                 </div>
             )}
@@ -546,7 +562,23 @@ function PendingDeliveriesContent({ embedded = false }: PendingDeliveriesPagePro
                                 },
                                 {
                                     key: 'total',
-                                    header: 'Pago',
+                                    header: (
+                                        <button
+                                            type="button"
+                                            onClick={() => setPaymentSort((prev) => (prev === 'none' ? 'asc' : prev === 'asc' ? 'desc' : 'none'))}
+                                            className="inline-flex items-center gap-1 hover:text-gray-800 transition-colors"
+                                            title="Ordenar por monto de pago"
+                                        >
+                                            Pago
+                                            {paymentSort === 'none' ? (
+                                                <ArrowUpDown className="w-3.5 h-3.5" />
+                                            ) : paymentSort === 'asc' ? (
+                                                <ChevronUp className="w-3.5 h-3.5" />
+                                            ) : (
+                                                <ChevronDown className="w-3.5 h-3.5" />
+                                            )}
+                                        </button>
+                                    ),
                                     render: (item) => (
                                         <div>
                                             <div className="font-semibold">${item.total.toLocaleString('es-AR')}</div>
@@ -599,7 +631,7 @@ function PendingDeliveriesContent({ embedded = false }: PendingDeliveriesPagePro
                                     ),
                                 },
                             ]}
-                            data={filteredDeliveries}
+                            data={sortedDeliveries}
                             keyExtractor={(item) => item.id}
                         />
                     )}
