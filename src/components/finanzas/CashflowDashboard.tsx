@@ -28,7 +28,7 @@ import {
 import { Card } from '../ui/card';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
-import { useCashflow, type CashflowPoint } from '../../hooks/useCashflow';
+import { useCashflow, type CashflowCollectionBasis, type CashflowPoint } from '../../hooks/useCashflow';
 
 type ScenarioId = 'conservador' | 'base' | 'optimista';
 
@@ -104,7 +104,8 @@ export function CashflowDashboard() {
   const [days, setDays] = useState(30);
   const [scenario, setScenario] = useState<ScenarioId>('base');
   const [includeOverdue, setIncludeOverdue] = useState(true);
-  const { data, loading, error, refresh } = useCashflow(days);
+  const [collectionBasis, setCollectionBasis] = useState<CashflowCollectionBasis>('total');
+  const { data, loading, error, refresh } = useCashflow(days, collectionBasis);
 
   const scenarioConfig = SCENARIOS[scenario];
 
@@ -230,7 +231,7 @@ export function CashflowDashboard() {
     link.href = url;
     link.setAttribute(
       'download',
-      `cashflow_detalle_${scenario}_${includeOverdue ? 'con_vencidos' : 'sin_vencidos'}_${days}d.csv`
+      `cashflow_detalle_${scenario}_base-${collectionBasis}_${includeOverdue ? 'con_vencidos' : 'sin_vencidos'}_${days}d.csv`
     );
     document.body.appendChild(link);
     link.click();
@@ -245,7 +246,7 @@ export function CashflowDashboard() {
     doc.text('Detalle Diario de Cashflow', 14, 14);
     doc.setFontSize(9);
     doc.text(
-      `Escenario: ${scenarioConfig.label} | Vencidos: ${includeOverdue ? 'Incluidos' : 'Excluidos'} | Horizonte: ${days} días`,
+      `Escenario: ${scenarioConfig.label} | Base cobro: ${collectionBasis === 'total' ? 'Totales' : 'Cobrables'} | Vencidos: ${includeOverdue ? 'Incluidos' : 'Excluidos'} | Horizonte: ${days} días`,
       14,
       20
     );
@@ -275,7 +276,7 @@ export function CashflowDashboard() {
       alternateRowStyles: { fillColor: [248, 250, 252] },
     });
 
-    doc.save(`cashflow_detalle_${scenario}_${days}d.pdf`);
+    doc.save(`cashflow_detalle_${scenario}_base-${collectionBasis}_${days}d.pdf`);
   };
 
   if (loading) {
@@ -364,6 +365,38 @@ export function CashflowDashboard() {
 
           <div className="rounded-lg border border-slate-600 bg-slate-800/70 p-3">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-300">Supuestos</p>
+            <div className="mt-2 flex items-center justify-between">
+              <span className="text-sm text-slate-100">Base de cobro</span>
+              <div className="inline-flex rounded-md border border-slate-500 bg-slate-700/70 p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setCollectionBasis('total')}
+                  className={`rounded px-2.5 py-1 text-xs font-semibold transition ${
+                    collectionBasis === 'total'
+                      ? 'bg-cyan-300 text-slate-900'
+                      : 'text-slate-100 hover:bg-slate-600'
+                  }`}
+                >
+                  Totales
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCollectionBasis('cobrable')}
+                  className={`rounded px-2.5 py-1 text-xs font-semibold transition ${
+                    collectionBasis === 'cobrable'
+                      ? 'bg-cyan-300 text-slate-900'
+                      : 'text-slate-100 hover:bg-slate-600'
+                  }`}
+                >
+                  Cobrables
+                </button>
+              </div>
+            </div>
+            <p className="mt-2 text-xs text-slate-300">
+              {collectionBasis === 'total'
+                ? 'Totales: incluye todo WIP pendiente.'
+                : 'Cobrables: solo WIP finalizado/entregado con saldo pendiente.'}
+            </p>
             <div className="mt-2 flex items-center justify-between">
               <span className="text-sm text-slate-100">Incluir vencidos en proyección</span>
               <button
@@ -649,7 +682,7 @@ export function CashflowDashboard() {
 
         <div className="mt-3 flex items-center gap-3 text-xs text-slate-500">
           <CalendarDays className="h-4 w-4" />
-          <span>Los escenarios y vencidos impactan KPIs, gráficos y exportaciones.</span>
+          <span>Escenario, base de cobro y vencidos impactan KPIs, gráficos y exportaciones.</span>
         </div>
       </Card>
     </div>

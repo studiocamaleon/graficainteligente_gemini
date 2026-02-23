@@ -26,6 +26,8 @@ export interface CashflowPoint {
     egresos: number;
 }
 
+export type CashflowCollectionBasis = 'total' | 'cobrable';
+
 interface CashflowRpcRow {
     fecha: string;
     ingreso_cheques: number | null;
@@ -43,7 +45,7 @@ interface CashflowRpcRow {
     saldo_acumulado: number | null;
 }
 
-export function useCashflow(daysToProject: number = 90) {
+export function useCashflow(daysToProject: number = 90, collectionBasis: CashflowCollectionBasis = 'total') {
     const { company } = useAuth();
     const [data, setData] = useState<CashflowPoint[]>([]);
     const [loading, setLoading] = useState(true);
@@ -56,9 +58,10 @@ export function useCashflow(daysToProject: number = 90) {
         setError(null);
         try {
             const { data: rpcData, error: rpcError } = await supabase
-                .rpc('fn_get_cashflow_projection', {
+                .rpc('fn_get_cashflow_projection_v2', {
                     p_company_id: company.id,
-                    p_days_to_project: daysToProject
+                    p_days_to_project: daysToProject,
+                    p_collection_basis: collectionBasis
                 });
 
             if (rpcError) {
@@ -94,7 +97,7 @@ export function useCashflow(daysToProject: number = 90) {
         } finally {
             setLoading(false);
         }
-    }, [company, daysToProject]);
+    }, [company, daysToProject, collectionBasis]);
 
     useEffect(() => {
         fetchCashflow();

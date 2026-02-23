@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { DollarSign, Users, UserCheck, Clock, AlertTriangle } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { DollarSign, Users, UserCheck, CheckCircle2, Factory } from 'lucide-react';
 import { Card } from '../ui/card';
 import { Badge } from '../ui/Badge';
 import { useSaldosPendientes, useOrdenesPorCobrar } from '../../hooks/useTesoreria';
@@ -7,7 +7,43 @@ import { useSaldosPendientes, useOrdenesPorCobrar } from '../../hooks/useTesorer
 export function DineroPorCobrarPanel() {
   const { saldos, loading: loadingSaldos } = useSaldosPendientes();
   const [tipoFiltro, setTipoFiltro] = useState<'cc' | 'sin_cc' | undefined>();
+  const [etapaFiltro, setEtapaFiltro] = useState<'all' | 'ready' | 'not_ready'>('all');
   const { ordenes, loading: loadingOrdenes } = useOrdenesPorCobrar(tipoFiltro);
+
+  const isReadyToCollect = (estado?: string | null) => {
+    const normalized = String(estado || '').toLowerCase();
+    return normalized === 'finalizada' || normalized === 'entregada';
+  };
+
+  const resumenEtapas = useMemo(() => {
+    let totalReady = 0;
+    let totalNotReady = 0;
+    let countReady = 0;
+    let countNotReady = 0;
+
+    for (const orden of ordenes) {
+      if (isReadyToCollect(orden.estado)) {
+        totalReady += Number(orden.saldo_pendiente || 0);
+        countReady += 1;
+      } else {
+        totalNotReady += Number(orden.saldo_pendiente || 0);
+        countNotReady += 1;
+      }
+    }
+
+    return {
+      totalReady,
+      totalNotReady,
+      countReady,
+      countNotReady,
+    };
+  }, [ordenes]);
+
+  const ordenesFiltradas = useMemo(() => {
+    if (etapaFiltro === 'all') return ordenes;
+    if (etapaFiltro === 'ready') return ordenes.filter((o) => isReadyToCollect(o.estado));
+    return ordenes.filter((o) => !isReadyToCollect(o.estado));
+  }, [ordenes, etapaFiltro]);
 
   const getAntiguedadBadge = (dias: number) => {
     if (dias <= 7) {
@@ -19,36 +55,84 @@ export function DineroPorCobrarPanel() {
     }
   };
 
+  const formatMoney = (value: number) => `$${Number(value || 0).toLocaleString('es-AR')}`;
+
   return (
     <div className="space-y-6">
       {/* KPIs */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card padding="md" className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
+        <Card className="border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-orange-700 mb-1">Total por Cobrar</p>
-              <p className="text-2xl font-bold text-orange-900">
-                ${saldos.total_pendiente.toLocaleString('es-AR')}
+              <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Total por Cobrar</p>
+              <p className="text-2xl font-bold text-slate-900">
+                {loadingSaldos ? '...' : formatMoney(saldos.total_pendiente)}
               </p>
+              <p className="mt-1 text-xs text-slate-500">Saldo pendiente total (no todo es cobrable hoy)</p>
             </div>
-            <DollarSign className="w-10 h-10 text-orange-500 opacity-50" />
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-2.5">
+              <DollarSign className="h-5 w-5 text-slate-600" />
+            </div>
           </div>
         </Card>
 
         <Card
-          padding="md"
-          className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 cursor-pointer hover:shadow-md transition-shadow"
+          className="cursor-pointer border-emerald-200 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
+          onClick={() => setEtapaFiltro(etapaFiltro === 'ready' ? 'all' : 'ready')}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-700">Listo para Cobrar</p>
+              <p className="text-2xl font-bold text-emerald-900">
+                {formatMoney(resumenEtapas.totalReady)}
+              </p>
+              <p className="mt-1 text-xs text-emerald-700">{resumenEtapas.countReady} órdenes finalizadas/entregadas</p>
+            </div>
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-2.5">
+              <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+            </div>
+          </div>
+          {etapaFiltro === 'ready' && (
+            <Badge variant="success" className="mt-2 text-xs">Filtrado</Badge>
+          )}
+        </Card>
+
+        <Card
+          className="cursor-pointer border-indigo-200 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
+          onClick={() => setEtapaFiltro(etapaFiltro === 'not_ready' ? 'all' : 'not_ready')}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-indigo-700">Aún no Finalizado</p>
+              <p className="text-2xl font-bold text-indigo-900">
+                {formatMoney(resumenEtapas.totalNotReady)}
+              </p>
+              <p className="mt-1 text-xs text-indigo-700">{resumenEtapas.countNotReady} órdenes en proceso</p>
+            </div>
+            <div className="rounded-lg border border-indigo-200 bg-indigo-50 p-2.5">
+              <Factory className="h-5 w-5 text-indigo-600" />
+            </div>
+          </div>
+          {etapaFiltro === 'not_ready' && (
+            <Badge variant="info" className="mt-2 text-xs">Filtrado</Badge>
+          )}
+        </Card>
+
+        <Card
+          className="cursor-pointer border-blue-200 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
           onClick={() => setTipoFiltro(tipoFiltro === 'cc' ? undefined : 'cc')}
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-blue-700 mb-1">Cuenta Corriente</p>
+              <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-blue-700">Cuenta Corriente</p>
               <p className="text-2xl font-bold text-blue-900">
-                ${saldos.total_cc.toLocaleString('es-AR')}
+                {formatMoney(saldos.total_cc)}
               </p>
-              <p className="text-xs text-blue-600 mt-1">{saldos.cantidad_ordenes_cc} órdenes</p>
+              <p className="mt-1 text-xs text-blue-600">{saldos.cantidad_ordenes_cc} órdenes</p>
             </div>
-            <UserCheck className="w-10 h-10 text-blue-500 opacity-50" />
+            <div className="rounded-lg border border-blue-200 bg-blue-50 p-2.5">
+              <UserCheck className="h-5 w-5 text-blue-600" />
+            </div>
           </div>
           {tipoFiltro === 'cc' && (
             <Badge variant="info" className="mt-2 text-xs">Filtrado</Badge>
@@ -56,19 +140,20 @@ export function DineroPorCobrarPanel() {
         </Card>
 
         <Card
-          padding="md"
-          className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 cursor-pointer hover:shadow-md transition-shadow"
+          className="cursor-pointer border-emerald-200 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
           onClick={() => setTipoFiltro(tipoFiltro === 'sin_cc' ? undefined : 'sin_cc')}
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-green-700 mb-1">Clientes Directos</p>
+              <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-700">Clientes Directos</p>
               <p className="text-2xl font-bold text-green-900">
-                ${saldos.total_sin_cc.toLocaleString('es-AR')}
+                {formatMoney(saldos.total_sin_cc)}
               </p>
-              <p className="text-xs text-green-600 mt-1">{saldos.cantidad_ordenes_sin_cc} órdenes</p>
+              <p className="mt-1 text-xs text-emerald-600">{saldos.cantidad_ordenes_sin_cc} órdenes</p>
             </div>
-            <Users className="w-10 h-10 text-green-500 opacity-50" />
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-2.5">
+              <Users className="h-5 w-5 text-emerald-600" />
+            </div>
           </div>
           {tipoFiltro === 'sin_cc' && (
             <Badge variant="success" className="mt-2 text-xs">Filtrado</Badge>
@@ -81,9 +166,12 @@ export function DineroPorCobrarPanel() {
         <div className="px-6 py-4 border-b border-gray-200">
           <h3 className="font-semibold text-gray-900">Detalle de Órdenes Pendientes</h3>
           <p className="text-sm text-gray-500 mt-1">
-            {tipoFiltro === 'cc' && 'Mostrando solo clientes con cuenta corriente'}
-            {tipoFiltro === 'sin_cc' && 'Mostrando solo clientes directos'}
-            {!tipoFiltro && 'Mostrando todas las órdenes con saldo pendiente'}
+            {tipoFiltro === 'cc' && 'Mostrando solo clientes con cuenta corriente. '}
+            {tipoFiltro === 'sin_cc' && 'Mostrando solo clientes directos. '}
+            {!tipoFiltro && 'Mostrando todos los tipos de cliente. '}
+            {etapaFiltro === 'ready' && 'Solo órdenes listas para cobrar.'}
+            {etapaFiltro === 'not_ready' && 'Solo órdenes aún no finalizadas.'}
+            {etapaFiltro === 'all' && 'Incluye listas para cobrar y aún en producción.'}
           </p>
         </div>
 
@@ -95,6 +183,7 @@ export function DineroPorCobrarPanel() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Origen</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Etapa Cobro</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Pagado</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Saldo</th>
@@ -104,19 +193,20 @@ export function DineroPorCobrarPanel() {
             <tbody className="bg-white divide-y divide-gray-200">
               {loadingOrdenes ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={9} className="px-6 py-8 text-center text-gray-500">
                     Cargando órdenes...
                   </td>
                 </tr>
-              ) : ordenes.length === 0 ? (
+              ) : ordenesFiltradas.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
-                    No hay órdenes pendientes de cobro
+                  <td colSpan={9} className="px-6 py-8 text-center text-gray-500">
+                    No hay órdenes para los filtros seleccionados
                   </td>
                 </tr>
               ) : (
-                ordenes.map((orden) => {
+                ordenesFiltradas.map((orden) => {
                   const antiguedadBadge = getAntiguedadBadge(orden.dias_transcurridos);
+                  const readyToCollect = isReadyToCollect(orden.estado);
                   return (
                     <tr key={orden.orden_id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -141,6 +231,13 @@ export function DineroPorCobrarPanel() {
                           <Badge variant="info">CC</Badge>
                         ) : (
                           <Badge variant="neutral">Directo</Badge>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                        {readyToCollect ? (
+                          <Badge variant="success">Listo para cobrar</Badge>
+                        ) : (
+                          <Badge variant="warning">No finalizado</Badge>
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">

@@ -8,8 +8,8 @@ export interface Vencimiento {
     id_origen: string;
     descripcion: string;
     proveedor: string;
-    proveedor_id: string | null;
-    tipo_egreso_id: string | null;
+    proveedor_id?: string | null;
+    tipo_egreso_id?: string | null;
     monto_total: number;
     monto_pagado: number;
     monto_pendiente: number;

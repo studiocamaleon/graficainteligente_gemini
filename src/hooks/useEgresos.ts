@@ -68,6 +68,7 @@ export function useEgresos(filters?: FetchEgresosFilters) {
 
   const createEgreso = async (data: CreateEgresoData) => {
     if (!company || !user) throw new Error('No company or user');
+    let createdChequeId: string | null = null;
 
     // 1. Tarjetas de Crédito: Consumo a Resumen
     if (data.medio_pago === 'tarjeta' && data.tarjeta_id) {
@@ -91,7 +92,7 @@ export function useEgresos(filters?: FetchEgresosFilters) {
       }
 
       // Crear cheque emitido
-      const { error: checkError } = await supabase
+      const { data: chequeData, error: checkError } = await supabase
         .from('cheques_cartera')
         .insert([{
           company_id: company.id,
@@ -109,76 +110,93 @@ export function useEgresos(filters?: FetchEgresosFilters) {
           destinatario: data.destinatario || data.concepto,
           descripcion: `Pago Egreso: ${data.concepto}`,
           created_by: user.id
-        }]);
+        }])
+        .select('id')
+        .single();
 
       if (checkError) throw checkError;
+      createdChequeId = chequeData.id;
     }
 
-    // Preparamos datos para insert (quitando campos UI-only)
-    const dbData: any = {
-      ...data,
-      company_id: company.id,
-      created_by: user.id
-    };
+    try {
+      // Preparamos datos para insert (quitando campos UI-only)
+      const dbData: any = {
+        ...data,
+        company_id: company.id,
+        created_by: user.id
+      };
 
-    // Cleanup fields not in 'egresos' table
-    delete dbData.cuotas;
-    delete dbData.numero_cheque;
-    delete dbData.fecha_pago;
-    delete dbData.banco;
-    delete dbData.destinatario;
-    delete dbData.tarjeta_id; // tarjeta_id is actually in egresos? Let's check type. Yes, but optional.
-    delete dbData.cerrar_recurrente;
-    delete dbData.cheque_pagado_id;
+      // Cleanup fields not in 'egresos' table
+      delete dbData.cuotas;
+      delete dbData.numero_cheque;
+      delete dbData.fecha_pago;
+      delete dbData.banco;
+      delete dbData.destinatario;
+      delete dbData.tarjeta_id;
+      delete dbData.cerrar_recurrente;
+      delete dbData.cheque_pagado_id;
 
-    // Logic for caja_id:
-    // - Tarjeta: caja_id = null (Deferred via resumen)
-    // - Cheque: caja_id = null (Deferred via cheque portfolio)
-    if (data.medio_pago === 'tarjeta' || data.medio_pago === 'cheque') {
-      dbData.caja_id = null;
+      // Logic for caja_id:
+      // - Tarjeta: caja_id = null (Deferred via resumen)
+      // - Cheque: caja_id = null (Deferred via cheque portfolio)
+      if (data.medio_pago === 'tarjeta' || data.medio_pago === 'cheque') {
+        dbData.caja_id = null;
+      }
+
+      const { data: newEgreso, error } = await supabase
+        .from('egresos')
+        .insert([dbData])
+        .select(`
+          *,
+          caja:cajas(nombre, moneda, tipo),
+          tipo_egreso:tipos_egreso(nombre, color, icono),
+          proveedor:providers(nombre_fantasia, razon_social)
+        `)
+        .single();
+
+      if (error) throw error;
+
+      // Handle Recurring Closure (The "Switch")
+      if (data.cerrar_recurrente && data.recurrente_id && data.periodo_devengado) {
+        const { error: closureError } = await supabase
+          .from('recurring_executions')
+          .upsert({
+            recurring_id: data.recurrente_id,
+            periodo: data.periodo_devengado,
+            estado: 'cerrado',
+            cerrado_manualmente: true,
+            created_by: user.id
+          }, { onConflict: 'recurring_id, periodo' });
+
+        if (closureError) console.error('Error closing recurring period:', closureError);
+      }
+
+      // Handle Cheque Debit Status Update
+      if (data.cheque_pagado_id) {
+        const { error: chequeError } = await supabase
+          .from('cheques_cartera')
+          .update({ estado: 'pagado' })
+          .eq('id', data.cheque_pagado_id);
+
+        if (chequeError) console.error('Error updating cheque status:', chequeError);
+      }
+
+      await fetchEgresos();
+      return newEgreso;
+    } catch (error) {
+      // Rollback compensatorio: si falló el alta de egreso, removemos el cheque recién creado.
+      if (createdChequeId) {
+        const { error: rollbackError } = await supabase
+          .from('cheques_cartera')
+          .delete()
+          .eq('id', createdChequeId);
+
+        if (rollbackError) {
+          console.error('Error en rollback de cheque huérfano:', rollbackError);
+        }
+      }
+      throw error;
     }
-
-    const { data: newEgreso, error } = await supabase
-      .from('egresos')
-      .insert([dbData])
-      .select(`
-        *,
-        caja:cajas(nombre, moneda, tipo),
-        tipo_egreso:tipos_egreso(nombre, color, icono),
-        proveedor:providers(nombre_fantasia, razon_social)
-      `)
-      .single();
-
-    if (error) throw error;
-
-    // Handle Recurring Closure (The "Switch")
-    if (data.cerrar_recurrente && data.recurrente_id && data.periodo_devengado) {
-      // Upsert into recurring_executions to mark as CLOSED
-      const { error: closureError } = await supabase
-        .from('recurring_executions')
-        .upsert({
-          recurring_id: data.recurrente_id,
-          periodo: data.periodo_devengado,
-          estado: 'cerrado',
-          cerrado_manualmente: true, // It was explicit
-          created_by: user.id
-        }, { onConflict: 'recurring_id, periodo' });
-
-      if (closureError) console.error('Error closing recurring period:', closureError);
-    }
-
-    // Handle Cheque Debit Status Update
-    if (data.cheque_pagado_id) {
-      const { error: chequeError } = await supabase
-        .from('cheques_cartera')
-        .update({ estado: 'pagado' })
-        .eq('id', data.cheque_pagado_id);
-
-      if (chequeError) console.error('Error updating cheque status:', chequeError);
-    }
-
-    await fetchEgresos();
-    return newEgreso;
   };
 
   const updateEgreso = async (id: string, data: UpdateEgresoData) => {
