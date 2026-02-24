@@ -35,7 +35,7 @@ export interface OrdenTrabajoServicio {
 export interface OrdenTrabajoFull extends OrdenTrabajo {
   items?: OrdenTrabajoItemFull[];
   servicios?: OrdenTrabajoServicio[];
-  pagos?: OrdenTrabajoPago[];
+  pagos?: Array<OrdenTrabajoPago & { author_name?: string | null; author_email?: string | null }>;
   historial?: OrdenTrabajoHistorial[];
   notas?: Array<OrdenTrabajoNota & { author_name?: string | null; author_email?: string | null }>;
   ordenCopiado?: CentroCopiadoOrdenResumida | null;
@@ -77,6 +77,7 @@ interface CreateOrdenData {
   subtotal_iva?: number;
   // Campos de envío
   requiere_despacho?: boolean;
+  created_by?: string | null;
 }
 
 interface UpdateOrdenData {
@@ -89,6 +90,7 @@ interface UpdateOrdenData {
   requiere_despacho?: boolean;
   total?: number;
   subtotal_iva?: number;
+  created_by?: string | null;
 }
 
 interface AddItemData {
@@ -314,6 +316,7 @@ export function useOrdenTrabajo() {
       if (rutasError) throw rutasError;
 
       const notasData = notasRes.data || [];
+      const pagosData = pagosRes.data || [];
       const noteAuthorIds = Array.from(
         new Set(
           notasData
@@ -321,13 +324,21 @@ export function useOrdenTrabajo() {
             .filter((value: unknown): value is string => typeof value === 'string' && value.length > 0)
         )
       );
+      const paymentAuthorIds = Array.from(
+        new Set(
+          pagosData
+            .map((p: any) => p.created_by)
+            .filter((value: unknown): value is string => typeof value === 'string' && value.length > 0)
+        )
+      );
 
       const authorById = new Map<string, { full_name: string | null; email: string | null }>();
-      if (noteAuthorIds.length > 0) {
+      const allAuthorIds = Array.from(new Set([...noteAuthorIds, ...paymentAuthorIds]));
+      if (allAuthorIds.length > 0) {
         const { data: noteAuthors, error: noteAuthorsError } = await supabase
           .from('profiles')
           .select('id, full_name, email')
-          .in('id', noteAuthorIds);
+          .in('id', allAuthorIds);
 
         if (noteAuthorsError) {
           console.error('Error fetching note authors:', noteAuthorsError);
@@ -351,6 +362,11 @@ export function useOrdenTrabajo() {
         author_name: n.created_by ? authorById.get(n.created_by)?.full_name || null : null,
         author_email: n.created_by ? authorById.get(n.created_by)?.email || null : null,
       }));
+      const pagosMapeados = pagosData.map((p: any) => ({
+        ...p,
+        author_name: p.created_by ? authorById.get(p.created_by)?.full_name || null : null,
+        author_email: p.created_by ? authorById.get(p.created_by)?.email || null : null,
+      }));
 
       // Mapear items con sus rutas
       const itemsConRutas = itemsRes.data?.map(item => ({
@@ -362,7 +378,7 @@ export function useOrdenTrabajo() {
         ...orden,
         items: itemsConRutas as OrdenTrabajoItemFull[],
         servicios: serviciosRes.data,
-        pagos: pagosRes.data,
+        pagos: pagosMapeados,
         historial: historialRes.data,
         notas: notasMapeadas,
         ordenCopiado: ordenCopiadoCompleta,
@@ -473,6 +489,7 @@ export function useOrdenTrabajo() {
       if (data.requiere_factura !== undefined) updateData.requiere_factura = data.requiere_factura;
       if (data.total !== undefined) updateData.total = data.total;
       if (data.subtotal_iva !== undefined) updateData.subtotal_iva = data.subtotal_iva;
+      if (data.created_by !== undefined) updateData.created_by = data.created_by;
 
       const { error: updateError } = await supabase
         .from('ordenes_trabajo')
@@ -1026,6 +1043,7 @@ export function useOrdenTrabajo() {
         requiere_factura: data.ordenData.requiere_factura || false,
         subtotal_iva: data.ordenData.subtotal_iva || 0,
         requiere_despacho: data.ordenData.requiere_despacho || false, // Nuevo campo
+        ...(data.ordenData.created_by !== undefined ? { created_by: data.ordenData.created_by } : {}),
 
         updated_at: new Date().toISOString(),
         updated_by: profile.id

@@ -11,6 +11,7 @@ import { usePermissions } from '../hooks/usePermissions';
 import { useNotificaciones } from '../hooks/useNotificaciones';
 import { NotificationsPanel } from '../components/notifications/NotificationsPanel';
 import { MODULES } from '../constants/modules'; // Used for title resolution
+import { ReglasInternasMandatoryModal } from '../components/documentation/ReglasInternasMandatoryModal';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -211,6 +212,8 @@ function MainLayoutContent({ children }: MainLayoutProps) {
         isOpen={isCompanyModalOpen}
         onClose={() => setIsCompanyModalOpen(false)}
       />
+
+      <ReglasInternasMandatoryModal />
 
       {showQuickActions && (
         <div className="fixed bottom-24 right-6 z-40 flex flex-col gap-3 md:bottom-20">
