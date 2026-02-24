@@ -59,6 +59,7 @@ import { ReciboRedirect } from './pages/public/ReciboRedirect';
 import { ClienteRegistro } from './pages/public/ClienteRegistro';
 import { AgendarVisita } from './pages/public/AgendarVisita';
 import { PendingDeliveriesPage } from './pages/app/delivery/PendingDeliveriesPage';
+import Documentation from './pages/app/Documentation';
 
 function AppRoutes() {
   const { user, loading, isAuthenticating } = useAuth();
@@ -407,6 +408,14 @@ function AppRoutes() {
                   element={
                     <ProtectedModuleRoute moduleId="finance-reportes">
                       <BusinessIntelligence />
+                    </ProtectedModuleRoute>
+                  }
+                />
+                <Route
+                  path="documentacion/*"
+                  element={
+                    <ProtectedModuleRoute moduleId="documentation">
+                      <Documentation />
                     </ProtectedModuleRoute>
                   }
                 />
