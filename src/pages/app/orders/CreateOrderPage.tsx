@@ -9,7 +9,7 @@ dayjs.extend(timezone);
 
 const ARGENTINA_TIMEZONE = 'America/Argentina/Buenos_Aires';
 import {
-  ArrowLeft, Save, Loader2
+  ArrowLeft, Loader2
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { Button } from '../../../components/ui/Button';
@@ -79,6 +79,7 @@ export function CreateOrderPage() {
     createOrdenConItems,
     updateOrdenCompleta,
     getOrdenById,
+    addNota,
     addPago: addPagoDb,
     updatePago: updatePagoDb,
     deletePago: deletePagoDb,
@@ -105,12 +106,20 @@ export function CreateOrderPage() {
 
   // Estados para Adjuntos (Links)
   const [links, setLinks] = useState<{ titulo: string; url: string; descripcion: string }[]>([]);
+  const [adjuntosCount, setAdjuntosCount] = useState(0);
 
   // Estados del Formulario
   const [clienteId, setClienteId] = useState('');
   const [canalVenta, setCanalVenta] = useState<CanalVenta | ''>('');
   const [fechaEntrega, setFechaEntrega] = useState('');
   const [notasInternas, setNotasInternas] = useState('');
+  const [notasOrden, setNotasOrden] = useState<Array<{
+    id: string;
+    nota: string;
+    created_at: string;
+    author_name?: string | null;
+    author_email?: string | null;
+  }>>([]);
   const [requiereFactura, setRequiereFactura] = useState(true);
   const [requiereDespacho, setRequiereDespacho] = useState(false);
 
@@ -214,6 +223,7 @@ export function CreateOrderPage() {
     } else {
       // Initial reset if create mode
       // resetFormulario(); // Comentado para no pisar el effect de inicializacion de modo
+      setNotasOrden([]);
     }
   }, [id, isEditing]);
 
@@ -242,6 +252,7 @@ export function CreateOrderPage() {
       setPresupuestoValidez(presupuesto.fecha_validez ? presupuesto.fecha_validez.split('T')[0] : '');
       setPresupuestoCondiciones(presupuesto.condiciones_comerciales || '');
       setNotasInternas(presupuesto.notas_internas || '');
+      setNotasOrden([]);
       setRequiereFactura(false);
 
       const mappedItems = (presupuesto.items || []).map((item: any) => ({
@@ -307,6 +318,13 @@ export function CreateOrderPage() {
       setNotasInternas(orden.notas_internas || '');
       setRequiereFactura(orden.requiere_factura || false);
       setRequiereDespacho(orden.requiere_despacho || false);
+      setNotasOrden((orden.notas || []).map((n: any) => ({
+        id: n.id,
+        nota: n.nota,
+        created_at: n.created_at,
+        author_name: n.author_name || null,
+        author_email: n.author_email || null,
+      })));
 
       // If editing an order, force mode to order
       setMode('orden');
@@ -844,6 +862,18 @@ export function CreateOrderPage() {
     return success;
   };
 
+  const handleAddNoteInEdit = async (nota: string): Promise<boolean> => {
+    if (!isEditing || !id) return false;
+    const ok = await addNota(id, nota);
+    if (!ok) {
+      showError(ordenError || 'No se pudo agregar la nota');
+      return false;
+    }
+    showSuccess('Nota agregada');
+    await loadOrderData(id);
+    return true;
+  };
+
   // --- Render ---
   const totales = calcularTotales();
   const totalRutas = items.filter(item =>
@@ -859,7 +889,7 @@ export function CreateOrderPage() {
   const tabsDefinition = [
     { id: 'items', label: 'Items', count: items.length },
     { id: 'rutas', label: 'Rutas de Producción', count: totalRutas, disabled: items.length === 0, badge: totalComentarios > 0 ? totalComentarios : undefined },
-    { id: 'adjuntos', label: 'Adjuntos', disabled: false },
+    { id: 'adjuntos', label: 'Adjuntos', count: adjuntosCount, disabled: false },
     ...(mode !== 'presupuesto' ? [{ id: 'pagos', label: 'Pagos', count: pagos.length, disabled: false }] : []),
     { id: 'historial', label: 'Historial', disabled: true },
   ];
@@ -881,26 +911,6 @@ export function CreateOrderPage() {
             <ArrowLeft className="w-4 h-4 mr-2" />
             Volver a órdenes
           </Button>
-
-          <div className="flex gap-2">
-            <Button
-              onClick={handleCrearOrden}
-              disabled={isLoading || items.length === 0 || !clienteId}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  {isEditing ? 'Guardando...' : 'Procesando...'}
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4 mr-2" />
-                  {isEditing ? 'Guardar Cambios' : (mode === 'presupuesto' ? 'Crear Presupuesto' : 'Crear Orden')}
-                </>
-              )}
-            </Button>
-          </div>
         </div>
 
         <Card>
@@ -928,6 +938,8 @@ export function CreateOrderPage() {
             presupuestoCondiciones={presupuestoCondiciones}
             setPresupuestoCondiciones={setPresupuestoCondiciones}
             isEditing={isEditing}
+            notas={notasOrden}
+            onAddNota={isEditing ? handleAddNoteInEdit : undefined}
           />
         </Card>
 
@@ -976,6 +988,7 @@ export function CreateOrderPage() {
                 ordenTemporalId={ordenTemporalId}
                 onLinksChange={setLinks}
                 initialLinks={links}
+                onArchivosCountChange={setAdjuntosCount}
               />
             </div>
 
@@ -993,8 +1006,10 @@ export function CreateOrderPage() {
           requiereFactura={requiereFactura}
           totalPagado={pagos.reduce((sum, p) => sum + toMoney(p.monto), 0)}
           mostrarSaldo={pagos.length > 0}
-          subtotalItems={items.reduce((sum, item) => sum + item.precio_total, 0)}
-          subtotalOrdenesCopiado={ordenesCopiadoAsociadas.reduce((sum, oc) => sum + oc.total, 0)}
+          actionLabel={isEditing ? 'Guardar Cambios' : (mode === 'presupuesto' ? 'Crear Presupuesto' : 'Crear Orden')}
+          onActionClick={handleCrearOrden}
+          actionDisabled={isLoading || items.length === 0 || !clienteId}
+          actionLoading={isLoading}
         />
       </div>
 

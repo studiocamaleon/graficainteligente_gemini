@@ -14,6 +14,28 @@ export type StorageBucket = 'centro-copiado-archivos' | 'ordenes-trabajo-archivo
 export function useFileUpload() {
   const [uploadProgress, setUploadProgress] = useState<Record<string, UploadProgress>>({});
 
+  const sanitizeFileName = (fileName: string): string => {
+    const trimmed = fileName.trim();
+    const lastDot = trimmed.lastIndexOf('.');
+    const hasValidExtension = lastDot > 0 && lastDot < trimmed.length - 1;
+
+    const baseName = hasValidExtension ? trimmed.slice(0, lastDot) : trimmed;
+    const extension = hasValidExtension ? trimmed.slice(lastDot + 1) : '';
+
+    const sanitizeSegment = (value: string): string =>
+      value
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9._-]+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-+|-+$/g, '');
+
+    const safeBase = sanitizeSegment(baseName) || 'archivo';
+    const safeExtension = sanitizeSegment(extension);
+
+    return safeExtension ? `${safeBase}.${safeExtension}` : safeBase;
+  };
+
   const uploadFile = async (
     file: File,
     companyId: string,
@@ -21,7 +43,8 @@ export function useFileUpload() {
     fileId: string,
     bucket: StorageBucket = 'centro-copiado-archivos'
   ): Promise<{ storagePath: string; nombreStorage: string } | null> => {
-    const nombreStorage = `${fileId}-${file.name}`;
+    const safeFileName = sanitizeFileName(file.name);
+    const nombreStorage = `${fileId}-${safeFileName}`;
 
     // Detectar si es un ID temporal (comienza con "temp_")
     const isTemporalId = ordenId.startsWith('temp_');

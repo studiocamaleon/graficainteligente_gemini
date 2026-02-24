@@ -9,6 +9,7 @@ export interface JobItem {
   id: string;
   estado: EstadoOrdenItem;
   producto_nombre: string;
+  identificador_interno?: string | null;
   producto_categoria: string | null;
   cantidad: number;
   orden_id: string;
@@ -185,6 +186,7 @@ export function useProductionJobs() {
           id: item.id,
           estado: item.estado,
           producto_nombre: item.producto_nombre || 'Sin nombre',
+          identificador_interno: item.configuracion?.identificador_interno || null,
           producto_categoria: item.producto_categoria,
           cantidad: item.cantidad,
           orden_id: item.orden.id,
@@ -257,6 +259,7 @@ export function useProductionJobs() {
             estado,
             created_at,
             updated_at,
+            configuracion,
             orden:ordenes_trabajo!inner(
               id,
               numero_orden,
@@ -299,6 +302,7 @@ export function useProductionJobs() {
           id: itemDataAny.id,
           estado: itemDataAny.estado,
           producto_nombre: itemDataAny.producto_nombre || 'Sin nombre',
+          identificador_interno: itemDataAny.configuracion?.identificador_interno || null,
           producto_categoria: itemDataAny.producto_categoria,
           cantidad: itemDataAny.cantidad,
           orden_id: (itemDataAny.orden as any).id,

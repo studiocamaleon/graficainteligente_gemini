@@ -3,6 +3,7 @@ import { CalendarRange, ChevronLeft, ChevronRight } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import dayjs from 'dayjs';
 import 'dayjs/locale/es';
+import { formatYmdAr, getArgentinaDate, parseYmdInAr } from '../../utils/dates';
 
 dayjs.locale('es');
 
@@ -18,18 +19,18 @@ const weekDays = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
 
 export function DateRangePicker({ startDate, endDate, onChange }: DateRangePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [currentMonth, setCurrentMonth] = useState(() => (startDate ? dayjs(startDate) : dayjs()));
-  const [draftStart, setDraftStart] = useState<dayjs.Dayjs | null>(startDate ? dayjs(startDate) : null);
-  const [draftEnd, setDraftEnd] = useState<dayjs.Dayjs | null>(endDate ? dayjs(endDate) : null);
+  const [currentMonth, setCurrentMonth] = useState(() => (startDate ? parseYmdInAr(startDate) : getArgentinaDate()));
+  const [draftStart, setDraftStart] = useState<dayjs.Dayjs | null>(startDate ? parseYmdInAr(startDate) : null);
+  const [draftEnd, setDraftEnd] = useState<dayjs.Dayjs | null>(endDate ? parseYmdInAr(endDate) : null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const start = startDate ? dayjs(startDate) : null;
-  const end = endDate ? dayjs(endDate) : null;
+  const start = startDate ? parseYmdInAr(startDate) : null;
+  const end = endDate ? parseYmdInAr(endDate) : null;
 
   useEffect(() => {
     if (isOpen) {
-      setDraftStart(startDate ? dayjs(startDate) : null);
-      setDraftEnd(endDate ? dayjs(endDate) : null);
+      setDraftStart(startDate ? parseYmdInAr(startDate) : null);
+      setDraftEnd(endDate ? parseYmdInAr(endDate) : null);
     }
   }, [isOpen, startDate, endDate]);
 
@@ -59,7 +60,7 @@ export function DateRangePicker({ startDate, endDate, onChange }: DateRangePicke
   };
 
   const applyPreset = (preset: '7d' | '30d' | 'mes') => {
-    const now = dayjs();
+    const now = getArgentinaDate();
     if (preset === '7d') {
       onChange(now.subtract(6, 'day').format('YYYY-MM-DD'), now.format('YYYY-MM-DD'));
       return;
@@ -87,9 +88,9 @@ export function DateRangePicker({ startDate, endDate, onChange }: DateRangePicke
   };
 
   const label = start && end
-    ? `${start.format('DD/MM/YYYY')} - ${end.format('DD/MM/YYYY')}`
+    ? `${formatYmdAr(start.format('YYYY-MM-DD'), 'DD/MM/YYYY')} - ${formatYmdAr(end.format('YYYY-MM-DD'), 'DD/MM/YYYY')}`
     : start
-      ? `${start.format('DD/MM/YYYY')} - ...`
+      ? `${formatYmdAr(start.format('YYYY-MM-DD'), 'DD/MM/YYYY')} - ...`
       : 'Elegir rango';
 
   return (
@@ -112,7 +113,7 @@ export function DateRangePicker({ startDate, endDate, onChange }: DateRangePicke
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.16 }}
-            className="absolute z-50 mt-2 w-[340px] rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl"
+            className="absolute z-[80] mt-2 w-[340px] rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl"
           >
             <div className="mb-3 flex items-center justify-between">
               <button type="button" onClick={() => setCurrentMonth((m) => m.subtract(1, 'month'))} className="rounded-lg p-2 hover:bg-slate-100">

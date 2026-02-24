@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { MessageSquare, Globe, Store, User, Smartphone, Truck, Plus, Calendar, FileText } from 'lucide-react';
+import { MessageCircle, Globe2, Store, User, Smartphone, Truck, Plus, FileText, MessageSquarePlus, Home } from 'lucide-react';
 import { SearchableSelect } from '../ui/SearchableSelect';
 import { DatePicker } from '../ui/DatePicker';
 import { Tooltip } from '../ui/Tooltip';
@@ -7,8 +7,8 @@ import { Button } from '../ui/Button';
 import { Label } from '../ui/Label';
 import { Textarea } from '../ui/Textarea';
 import { Select } from '../ui/Select';
-import { Input } from '../ui/Input';
 import { supabase } from '../../lib/supabase';
+import { formatDateTimeDisplay } from '../../utils/dates';
 
 import { useClients } from '../../hooks/useClients';
 import { useWorkload } from '../../hooks/useWorkload';
@@ -40,6 +40,14 @@ interface OrdenGeneralSectionProps {
   presupuestoCondiciones: string;
   setPresupuestoCondiciones: (text: string) => void;
   isEditing?: boolean;
+  notas?: Array<{
+    id: string;
+    nota: string;
+    created_at: string;
+    author_name?: string | null;
+    author_email?: string | null;
+  }>;
+  onAddNota?: (nota: string) => Promise<boolean>;
 }
 
 export function OrdenGeneralSection({
@@ -64,10 +72,12 @@ export function OrdenGeneralSection({
   setPresupuestoValidez,
   presupuestoCondiciones,
   setPresupuestoCondiciones,
-  isEditing = false
+  isEditing = false,
+  notas = [],
+  onAddNota
 }: OrdenGeneralSectionProps) {
   const [searchTerm, setSearchTerm] = useState('');
-  const { clients, loading, refetch } = useClients({ searchTerm, itemsPerPage: 50 });
+  const { clients, loading } = useClients({ searchTerm, itemsPerPage: 50 });
 
   const [showQuickClientModal, setShowQuickClientModal] = useState(false);
   const [newlyCreatedClients, setNewlyCreatedClients] = useState<Client[]>([]);
@@ -76,12 +86,14 @@ export function OrdenGeneralSection({
   const [plantillasCondiciones, setPlantillasCondiciones] = useState<{ id: string, nombre: string, contenido: string }[]>([]);
   const [selectedPlantilla, setSelectedPlantilla] = useState('');
   const [loadingPlantillas, setLoadingPlantillas] = useState(false);
+  const [newNoteText, setNewNoteText] = useState('');
+  const [isAddingNote, setIsAddingNote] = useState(false);
 
   const canalesVenta: { value: CanalVenta; label: string; icon: any }[] = [
-    { value: 'WhatsApp', label: 'WhatsApp', icon: MessageSquare },
-    { value: 'Web', label: 'Web', icon: Globe },
+    { value: 'WhatsApp', label: 'WhatsApp', icon: MessageCircle },
+    { value: 'Web', label: 'Web', icon: Globe2 },
     { value: 'Mostrador', label: 'Mostrador', icon: Store },
-    { value: 'App Mobile', label: 'App Mobile', icon: Smartphone },
+    { value: 'App Mobile', label: 'App', icon: Smartphone },
   ];
 
   const { workloadData } = useWorkload({ type: 'orden_trabajo' });
@@ -155,18 +167,28 @@ export function OrdenGeneralSection({
     // refetch(); 
   };
 
+  const handleAddNote = async () => {
+    if (!onAddNota || !newNoteText.trim()) return;
+    setIsAddingNote(true);
+    const ok = await onAddNota(newNoteText);
+    if (ok) {
+      setNewNoteText('');
+    }
+    setIsAddingNote(false);
+  };
+
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-5 space-y-4">
 
       {/* Mode Switcher */}
       {!isEditing && (
-        <div className="flex justify-center mb-6">
-          <div className="bg-gray-100 p-1 rounded-lg inline-flex shadow-inner">
+        <div className="flex justify-center">
+          <div className="inline-flex rounded-xl border border-gray-200 bg-gray-50 p-1 shadow-sm">
             <button
               type="button"
               onClick={() => onModeChange('orden')}
-              className={`px-6 py-2 rounded-md font-medium text-sm transition-all duration-200 ${mode === 'orden'
-                ? 'bg-white text-blue-600 shadow-sm'
+              className={`rounded-lg px-4 py-1.5 text-sm font-medium transition-all duration-200 ${mode === 'orden'
+                ? 'bg-blue-500 text-white shadow-sm'
                 : 'text-gray-500 hover:text-gray-700'
                 }`}
             >
@@ -175,7 +197,7 @@ export function OrdenGeneralSection({
             <button
               type="button"
               onClick={() => onModeChange('presupuesto')}
-              className={`px-6 py-2 rounded-md font-medium text-sm transition-all duration-200 ${mode === 'presupuesto'
+              className={`rounded-lg px-4 py-1.5 text-sm font-medium transition-all duration-200 ${mode === 'presupuesto'
                 ? 'bg-green-600 text-white shadow-sm'
                 : 'text-gray-500 hover:text-gray-700'
                 }`}
@@ -186,93 +208,65 @@ export function OrdenGeneralSection({
         </div>
       )}
 
-      <div className="border-b border-gray-200 pb-4">
-        <h3 className="text-lg font-semibold text-gray-900">
-          {mode === 'orden'
-            ? (isEditing ? 'Editar Orden de Trabajo' : 'Orden de Trabajo')
-            : (isEditing ? 'Editar Presupuesto' : 'Nuevo Presupuesto')}
-        </h3>
+      <div className="flex flex-wrap items-center justify-end gap-2 border-b border-gray-200 pb-3">
+        <div className="inline-flex items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1 shadow-sm">
+          <User className="h-4 w-4 text-blue-600" />
+          <span className="text-xs font-medium text-blue-700">{usuarioLogueado}</span>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <SearchableSelect
-                // label="Cliente" // Managed externally for layout
-                value={clienteId}
-                onChange={(value) => setClienteId(value)}
-                options={clientesOptions}
-                placeholder="Buscar cliente por nombre..."
-                loading={loading}
-                disabled={loading}
-                required
-                error={errors.cliente}
-                emptyMessage="No se encontraron clientes"
-                onSearch={setSearchTerm}
-              />
+      {mode === 'orden' ? (
+        <div className="grid grid-cols-1 gap-3 xl:grid-cols-12">
+          <section className="rounded-xl border border-gray-200 bg-gray-50/80 p-3 xl:col-span-5">
+            <h4 className="mb-2 text-sm font-semibold text-gray-900">Cliente</h4>
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <SearchableSelect
+                  value={clienteId}
+                  onChange={(value) => setClienteId(value)}
+                  options={clientesOptions}
+                  placeholder="Buscar cliente por nombre..."
+                  loading={loading}
+                  disabled={loading}
+                  required
+                  error={errors.cliente}
+                  emptyMessage="No se encontraron clientes"
+                  onSearch={setSearchTerm}
+                />
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="px-3"
+                onClick={() => setShowQuickClientModal(true)}
+                title="Crear nuevo cliente rápido"
+              >
+                <Plus className="h-5 w-5 text-blue-600" />
+              </Button>
             </div>
-            <Button
-              type="button"
-              variant="outline"
-              className="px-3"
-              onClick={() => setShowQuickClientModal(true)}
-              title="Crear nuevo cliente rápido"
-            >
-              <Plus className="w-5 h-5 text-blue-600" />
-            </Button>
-          </div>
-        </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Canal de Venta <span className="text-red-500">*</span>
-          </label>
-          <div className="flex items-center gap-3">
-            {canalesVenta.map(canal => {
-              const Icon = canal.icon;
-              const isSelected = canalVenta === canal.value;
+            {selectedClient && (
+              <div className="mt-3 space-y-1.5 rounded-lg border border-slate-200/80 bg-slate-100/60 p-2.5">
+                <div className="grid grid-cols-3 items-center gap-2 rounded-md px-2 py-1.5">
+                  <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Nombre Fantasía</span>
+                  <span className="col-span-2 text-sm font-medium text-slate-800">{selectedClient.nombre_fantasia || '-'}</span>
+                </div>
+                <div className="grid grid-cols-3 items-center gap-2 rounded-md border-y border-slate-200/70 px-2 py-1.5">
+                  <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Razón Social</span>
+                  <span className="col-span-2 text-sm font-medium text-slate-800">{selectedClient.razon_social || '-'}</span>
+                </div>
+                <div className="grid grid-cols-3 items-center gap-2 rounded-md px-2 py-1.5">
+                  <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">CUIT</span>
+                  <span className="col-span-2 text-sm font-medium text-slate-800">{selectedClient.numero_documento || '-'}</span>
+                </div>
+              </div>
+            )}
+          </section>
 
-              return (
-                <Tooltip key={canal.value} content={canal.label} position="top">
-                  <button
-                    type="button"
-                    onClick={() => setCanalVenta(canal.value)}
-                    className={`
-                      flex items-center justify-center p-4 rounded-lg border-2 transition-all
-                      ${isSelected
-                        ? 'border-blue-500 bg-blue-50 text-blue-700'
-                        : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
-                      }
-                    `}
-                  >
-                    <Icon className="w-6 h-6" />
-                  </button>
-                </Tooltip>
-              );
-            })}
-          </div>
-          {errors.canalVenta && (
-            <p className="mt-1 text-sm text-red-600">{errors.canalVenta}</p>
-          )}
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Creado por
-          </label>
-          <div className="flex items-center space-x-2 px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg">
-            <User className="w-5 h-5 text-gray-400" />
-            <span className="text-sm text-gray-700">{usuarioLogueado}</span>
-          </div>
-        </div>
-
-        {/* Conditional Fields based on Mode */}
-        {mode === 'orden' ? (
-          <>
+          <section className="rounded-xl border border-gray-200 bg-gray-50/80 p-3 xl:col-span-4">
+            <h4 className="mb-3 text-sm font-semibold text-gray-900">Entrega</h4>
             <DatePicker
-              label="Fecha Estimada de Entrega"
+              label="Fecha Estimada"
               value={fechaEntrega}
               onChange={(date) => setFechaEntrega(date || '')}
               minDate={new Date()}
@@ -283,61 +277,135 @@ export function OrdenGeneralSection({
               workloadThresholds={{ low: 3, medium: 7 }}
             />
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+            <div className="mt-3">
+              <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-600">
                 Tipo de Entrega
               </label>
-              <div className="flex items-center gap-3">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <button
                   type="button"
                   onClick={() => setRequiereDespacho && setRequiereDespacho(false)}
                   className={`
-                        flex-1 flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-all gap-2
-                        ${!requiereDespacho
-                      ? 'border-blue-500 bg-blue-50 text-blue-700'
-                      : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                    flex items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-sm transition-all
+                    ${!requiereDespacho
+                      ? 'border-blue-500 bg-blue-500 text-white shadow-sm'
+                      : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
                     }
-                      `}
+                  `}
                 >
-                  <Store className="w-5 h-5" />
-                  <span className="text-sm font-medium">Retiro en Local</span>
+                  <Home className="h-4 w-4" />
+                  <span className="font-medium">Retiro en Local</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setRequiereDespacho && setRequiereDespacho(true)}
                   className={`
-                        flex-1 flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-all gap-2
-                        ${requiereDespacho
-                      ? 'border-blue-500 bg-blue-50 text-blue-700'
-                      : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                    flex items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-sm transition-all
+                    ${requiereDespacho
+                      ? 'border-blue-500 bg-blue-500 text-white shadow-sm'
+                      : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
                     }
-                      `}
+                  `}
                 >
-                  <Truck className="w-5 h-5" />
-                  <span className="text-sm font-medium">Envío a Domicilio</span>
+                  <Truck className="h-4 w-4" />
+                  <span className="font-medium">Envío a Domicilio</span>
                 </button>
               </div>
             </div>
-          </>
-        ) : (
-          <>
-            <div>
-              <Label htmlFor="fechaValidez">Válido hasta</Label>
-              <div className="relative mt-1">
-                <Calendar className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
-                <Input
-                  id="fechaValidez"
-                  type="date"
+          </section>
+
+          <section className="rounded-xl border border-gray-200 bg-gray-50/80 p-3 xl:col-span-3">
+            <h4 className="mb-2 text-sm font-semibold text-gray-900">Canal de Venta</h4>
+            <div className="grid grid-cols-1 gap-2">
+              {canalesVenta.map(canal => {
+                const Icon = canal.icon;
+                const isSelected = canalVenta === canal.value;
+
+                return (
+                  <Tooltip key={canal.value} content={canal.label} position="top">
+                    <button
+                      type="button"
+                      onClick={() => setCanalVenta(canal.value)}
+                      className={`
+                        relative flex w-full items-center justify-center rounded-lg border px-3 py-2.5 text-sm transition-all
+                        ${isSelected
+                          ? 'border-blue-500 bg-blue-500 text-white shadow-sm'
+                          : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                        }
+                      `}
+                    >
+                      <Icon className="absolute left-3 h-4 w-4 shrink-0" />
+                      <span className="font-medium leading-none">{canal.label}</span>
+                    </button>
+                  </Tooltip>
+                );
+              })}
+            </div>
+            {errors.canalVenta && (
+              <p className="mt-2 text-sm text-red-600">{errors.canalVenta}</p>
+            )}
+          </section>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-3 xl:grid-cols-12">
+          <section className="rounded-xl border border-gray-200 bg-gray-50/80 p-3 xl:col-span-5">
+            <h4 className="mb-2 text-sm font-semibold text-gray-900">Cliente</h4>
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <SearchableSelect
+                  value={clienteId}
+                  onChange={(value) => setClienteId(value)}
+                  options={clientesOptions}
+                  placeholder="Buscar cliente por nombre..."
+                  loading={loading}
+                  disabled={loading}
                   required
-                  className="pl-9"
-                  value={presupuestoValidez}
-                  onChange={(e) => setPresupuestoValidez(e.target.value)}
-                  min={new Date().toISOString().split('T')[0]}
+                  error={errors.cliente}
+                  emptyMessage="No se encontraron clientes"
+                  onSearch={setSearchTerm}
                 />
               </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="px-3"
+                onClick={() => setShowQuickClientModal(true)}
+                title="Crear nuevo cliente rápido"
+              >
+                <Plus className="h-5 w-5 text-blue-600" />
+              </Button>
             </div>
 
-            <div>
+            {selectedClient && (
+              <div className="mt-3 space-y-1.5 rounded-lg border border-slate-200/80 bg-slate-100/60 p-2.5">
+                <div className="grid grid-cols-3 items-center gap-2 rounded-md px-2 py-1.5">
+                  <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Nombre Fantasía</span>
+                  <span className="col-span-2 text-sm font-medium text-slate-800">{selectedClient.nombre_fantasia || '-'}</span>
+                </div>
+                <div className="grid grid-cols-3 items-center gap-2 rounded-md border-y border-slate-200/70 px-2 py-1.5">
+                  <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Razón Social</span>
+                  <span className="col-span-2 text-sm font-medium text-slate-800">{selectedClient.razon_social || '-'}</span>
+                </div>
+                <div className="grid grid-cols-3 items-center gap-2 rounded-md px-2 py-1.5">
+                  <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">CUIT</span>
+                  <span className="col-span-2 text-sm font-medium text-slate-800">{selectedClient.numero_documento || '-'}</span>
+                </div>
+              </div>
+            )}
+          </section>
+
+          <section className="rounded-xl border border-gray-200 bg-gray-50/80 p-3 xl:col-span-4">
+            <h4 className="mb-3 text-sm font-semibold text-gray-900">Presupuesto</h4>
+            <DatePicker
+              label="Válido hasta"
+              value={presupuestoValidez}
+              onChange={(date) => setPresupuestoValidez(date || '')}
+              minDate={new Date()}
+              required
+              placeholder="Seleccionar fecha de validez"
+            />
+
+            <div className="mt-3">
               <Label htmlFor="plantilla">Plantilla de Condiciones</Label>
               <Select
                 id="plantilla"
@@ -351,9 +419,40 @@ export function OrdenGeneralSection({
                 ))}
               </Select>
             </div>
-          </>
-        )}
-      </div>
+          </section>
+
+          <section className="rounded-xl border border-gray-200 bg-gray-50/80 p-3 xl:col-span-3">
+            <h4 className="mb-2 text-sm font-semibold text-gray-900">Canal de Venta</h4>
+            <div className="grid grid-cols-1 gap-2">
+              {canalesVenta.map(canal => {
+                const Icon = canal.icon;
+                const isSelected = canalVenta === canal.value;
+                return (
+                  <Tooltip key={canal.value} content={canal.label} position="top">
+                    <button
+                      type="button"
+                      onClick={() => setCanalVenta(canal.value)}
+                      className={`
+                        relative flex w-full items-center justify-center rounded-lg border px-3 py-2.5 text-sm transition-all
+                        ${isSelected
+                          ? 'border-blue-500 bg-blue-500 text-white shadow-sm'
+                          : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                        }
+                      `}
+                    >
+                      <Icon className="absolute left-3 h-4 w-4 shrink-0" />
+                      <span className="font-medium leading-none">{canal.label}</span>
+                    </button>
+                  </Tooltip>
+                );
+              })}
+            </div>
+            {errors.canalVenta && (
+              <p className="mt-2 text-sm text-red-600">{errors.canalVenta}</p>
+            )}
+          </section>
+        </div>
+      )}
 
       {mode === 'presupuesto' && (
         <div>
@@ -369,18 +468,64 @@ export function OrdenGeneralSection({
         </div>
       )}
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Notas Internas
-        </label>
-        <textarea
-          value={notasInternas}
-          onChange={(e) => setNotasInternas(e.target.value)}
-          rows={3}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-          placeholder="Agrega notas internas sobre esta orden..."
-        />
-      </div>
+      {isEditing ? (
+        <div className="space-y-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
+          <div className="flex items-center gap-2">
+            <FileText className="h-4 w-4 text-amber-700" />
+            <h4 className="text-sm font-semibold text-amber-900">Notas internas</h4>
+          </div>
+
+          <div className="space-y-2">
+            {notas.length > 0 ? (
+              notas.map((note) => (
+                <div key={note.id} className="rounded-lg border border-amber-200 bg-white p-3">
+                  <p className="whitespace-pre-wrap text-sm text-gray-800">{note.nota}</p>
+                  <p className="mt-2 text-xs text-gray-500">
+                    {note.author_name || note.author_email || 'Usuario'} · {formatDateTimeDisplay(note.created_at)}
+                  </p>
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-amber-900">Sin notas cargadas.</p>
+            )}
+          </div>
+
+          <div className="rounded-lg border border-amber-200 bg-white p-3">
+            <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-amber-900">Agregar nota</label>
+            <textarea
+              value={newNoteText}
+              onChange={(e) => setNewNoteText(e.target.value)}
+              rows={3}
+              className="w-full resize-none rounded-lg border border-amber-200 px-3 py-2 text-sm focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-400"
+              placeholder="Escribí una nota interna..."
+            />
+            <div className="mt-2 flex justify-end">
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleAddNote}
+                disabled={isAddingNote || !newNoteText.trim() || !onAddNota}
+              >
+                <MessageSquarePlus className="mr-2 h-4 w-4" />
+                {isAddingNote ? 'Guardando...' : 'Agregar nota'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Notas Internas
+          </label>
+          <textarea
+            value={notasInternas}
+            onChange={(e) => setNotasInternas(e.target.value)}
+            rows={3}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+            placeholder="Agrega notas internas sobre esta orden..."
+          />
+        </div>
+      )}
 
       <QuickClientModal
         isOpen={showQuickClientModal}
