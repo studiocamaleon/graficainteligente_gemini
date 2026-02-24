@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { BookOpen, Boxes, ClipboardList, LayoutDashboard, Sparkles } from 'lucide-react';
+import { BookOpen, Boxes, ClipboardList, LayoutDashboard, Scale, Sparkles } from 'lucide-react';
 
 const sections = [
   {
@@ -29,6 +29,13 @@ const sections = [
     description: 'Guía de uso e impacto en OT',
     icon: Sparkles,
     path: '/app/documentacion/servicios-acabados',
+  },
+  {
+    id: 'reglas-internas',
+    name: 'Reglas internas',
+    description: 'Procedimientos críticos y acuerdos',
+    icon: Scale,
+    path: '/app/documentacion/reglas-internas',
   },
 ];
 

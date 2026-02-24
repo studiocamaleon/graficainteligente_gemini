@@ -22,6 +22,7 @@ import { usePrompt } from '../../../hooks/usePrompt';
 import { useItemRoutesComments } from '../../../hooks/useItemRoutesComments';
 import { useToast } from '../../../contexts/ToastContext';
 import { useClients } from '../../../hooks/useClients';
+import { useTeamMembers } from '../../../hooks/useTeamMembers';
 import { OrdenGeneralSection } from '../../../components/orders/OrdenGeneralSection';
 import { OrdenItemsTab } from '../../../components/orders/OrdenItemsTab';
 import { OrdenPagosTab } from '../../../components/orders/OrdenPagosTab';
@@ -50,6 +51,10 @@ interface PagoTemporal {
   medio_cobro_id: string;
   referencia_pago?: string;
   notas?: string;
+  created_at?: string;
+  created_by?: string | null;
+  author_name?: string | null;
+  author_email?: string | null;
 }
 
 type LinkType = 'download' | 'internal';
@@ -73,8 +78,10 @@ export function CreateOrderPage() {
   const searchParams = new URLSearchParams(location.search);
 
   const { profile, company } = useAuth();
+  const canChangeOrderCreator = profile?.role === 'admin' || profile?.role === 'super_admin';
   const canRegisterPayments = canRegisterPaymentsRole(profile?.role);
   const canManagePersistedPayments = canManagePaymentsRole(profile?.role);
+  const { members } = useTeamMembers();
   const {
     createOrdenConItems,
     updateOrdenCompleta,
@@ -113,6 +120,7 @@ export function CreateOrderPage() {
   const [canalVenta, setCanalVenta] = useState<CanalVenta | ''>('');
   const [fechaEntrega, setFechaEntrega] = useState('');
   const [notasInternas, setNotasInternas] = useState('');
+  const [createdByUserId, setCreatedByUserId] = useState('');
   const [notasOrden, setNotasOrden] = useState<Array<{
     id: string;
     nota: string;
@@ -161,6 +169,12 @@ export function CreateOrderPage() {
       setRequiereFactura(false); // Forzar false en presupuesto
     }
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (!isEditing && profile?.id) {
+      setCreatedByUserId(profile.id);
+    }
+  }, [isEditing, profile?.id]);
 
   // Efecto para manejar cambios de modo
   const handleModeChange = (newMode: 'orden' | 'presupuesto') => {
@@ -316,6 +330,7 @@ export function CreateOrderPage() {
       setCanalVenta(orden.canal_venta || '');
       setFechaEntrega(orden.fecha_estimada_entrega ? orden.fecha_estimada_entrega.split('T')[0] : '');
       setNotasInternas(orden.notas_internas || '');
+      setCreatedByUserId(orden.created_by || '');
       setRequiereFactura(orden.requiere_factura || false);
       setRequiereDespacho(orden.requiere_despacho || false);
       setNotasOrden((orden.notas || []).map((n: any) => ({
@@ -363,7 +378,11 @@ export function CreateOrderPage() {
           monto: p.monto,
           medio_cobro_id: (p as any).medio_cobro_id || '',
           referencia_pago: p.referencia_pago || '',
-          notas: p.notas || ''
+          notas: p.notas || '',
+          created_at: p.created_at,
+          created_by: p.created_by,
+          author_name: (p as any).author_name || null,
+          author_email: (p as any).author_email || null,
         })));
       }
 
@@ -726,6 +745,7 @@ export function CreateOrderPage() {
       requiere_factura: requiereFactura,
       subtotal_iva: totales.iva,
       requiere_despacho: requiereDespacho,
+      ...(isEditing && canChangeOrderCreator ? { created_by: createdByUserId || null } : {}),
     };
 
     const itemsFisicos = items.filter(i => !i.es_servicio_cobro);
@@ -929,6 +949,16 @@ export function CreateOrderPage() {
             requiereFactura={requiereFactura}
             setRequiereFactura={setRequiereFactura}
             usuarioLogueado={profile?.full_name || 'Usuario'}
+            creatorUserId={createdByUserId}
+            setCreatorUserId={setCreatedByUserId}
+            canEditCreator={Boolean(isEditing && canChangeOrderCreator)}
+            creatorOptions={members
+              .filter((m: any) => m?.is_active !== false)
+              .map((m: any) => ({
+                value: m.id,
+                label: m.full_name || m.email || 'Usuario',
+                subtitle: m.email || undefined,
+              }))}
             errors={formErrors}
             // New props
             mode={mode}

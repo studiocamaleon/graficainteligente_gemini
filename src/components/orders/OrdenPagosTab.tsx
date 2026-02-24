@@ -8,7 +8,7 @@ import { useMediosCobro } from '../../hooks/useMediosCobro';
 import { useConfirmDialog } from '../../hooks/useConfirmDialog';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
-import { formatDateDisplay } from '../../utils/dates';
+import { formatDateDisplay, formatDateTimeDisplay } from '../../utils/dates';
 import { PaymentMethodIcon } from './PaymentMethodIcon';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import type { CentroCopiadoOrdenResumida } from '../../types/database';
@@ -32,6 +32,10 @@ interface Pago {
   notas?: string;
   comision_aplicada?: number;
   fecha_liberacion_estimada?: string;
+  created_at?: string;
+  created_by?: string | null;
+  author_name?: string | null;
+  author_email?: string | null;
 }
 
 interface OrdenPagosTabProps {
@@ -302,6 +306,12 @@ export function OrdenPagosTab({
                             {pago.notas && (
                               <span>{pago.notas}</span>
                             )}
+                          </div>
+                        )}
+                        {(pago.author_name || pago.author_email || pago.created_at) && (
+                          <div className="mt-1 text-xs text-gray-500">
+                            Registrado por {pago.author_name || pago.author_email || 'Usuario'}
+                            {pago.created_at ? ` · ${formatDateTimeDisplay(pago.created_at)}` : ''}
                           </div>
                         )}
                       </div>

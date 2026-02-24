@@ -30,6 +30,10 @@ interface OrdenGeneralSectionProps {
   requiereFactura: boolean;
   setRequiereFactura: (requiere: boolean) => void;
   usuarioLogueado: string;
+  creatorUserId?: string;
+  setCreatorUserId?: (id: string) => void;
+  canEditCreator?: boolean;
+  creatorOptions?: Array<{ value: string; label: string; subtitle?: string }>;
   errors?: Record<string, string>;
 
   // New props for Budget Mode
@@ -65,6 +69,10 @@ export function OrdenGeneralSection({
   requiereFactura,
   setRequiereFactura,
   usuarioLogueado,
+  creatorUserId = '',
+  setCreatorUserId,
+  canEditCreator = false,
+  creatorOptions = [],
   errors = {},
   mode,
   onModeChange,
@@ -213,6 +221,24 @@ export function OrdenGeneralSection({
           <User className="h-4 w-4 text-blue-600" />
           <span className="text-xs font-medium text-blue-700">{usuarioLogueado}</span>
         </div>
+        {canEditCreator ? (
+          <div className="min-w-[280px] rounded-md border border-slate-200 bg-white px-2.5 py-2 shadow-sm">
+            <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+              Usuario creador de la orden
+            </label>
+            <Select
+              value={creatorUserId}
+              onChange={(value) => setCreatorUserId?.(value)}
+            >
+              <option value="">Seleccionar usuario...</option>
+              {creatorOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}{option.subtitle ? ` (${option.subtitle})` : ''}
+                </option>
+              ))}
+            </Select>
+          </div>
+        ) : null}
       </div>
 
       {mode === 'orden' ? (
