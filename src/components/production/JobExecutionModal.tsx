@@ -575,6 +575,11 @@ export function JobExecutionModal({ isOpen, onClose, job, onOptimisticUpdate }: 
                     <p className="text-xs text-slate-500">Producto</p>
                   </div>
                   <p className="mt-1 truncate text-sm font-semibold text-slate-900">{job.producto_nombre}</p>
+                  {job.identificador_interno && (
+                    <p className="mt-1 text-xs text-slate-600">
+                      Identificador: <span className="font-medium text-slate-800">{job.identificador_interno}</span>
+                    </p>
+                  )}
                   <p className="mt-1 text-xs text-slate-500">Cantidad: {job.cantidad}</p>
                 </div>
               </div>

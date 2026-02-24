@@ -25,7 +25,7 @@ export default function BusinessIntelligenceV2() {
   const location = useLocation();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(getActiveTab(location.pathname));
-  const [fechaInicio, setFechaInicio] = useState(dayjs().subtract(29, 'day').format('YYYY-MM-DD'));
+  const [fechaInicio, setFechaInicio] = useState(dayjs().format('YYYY-MM-DD'));
   const [fechaFin, setFechaFin] = useState(dayjs().format('YYYY-MM-DD'));
 
   useEffect(() => {
@@ -47,7 +47,7 @@ export default function BusinessIntelligenceV2() {
   const commonParams: BIQueryParams = useMemo(
     () => ({
       preset: 'personalizado',
-      fechaInicio: fechaInicio || dayjs().subtract(29, 'day').format('YYYY-MM-DD'),
+      fechaInicio: fechaInicio || dayjs().format('YYYY-MM-DD'),
       fechaFin: fechaFin || dayjs().format('YYYY-MM-DD'),
     }),
     [fechaInicio, fechaFin]
@@ -74,7 +74,7 @@ export default function BusinessIntelligenceV2() {
                 endDate={fechaFin}
                 onChange={(start, end) => {
                   if (!start && !end) {
-                    setFechaInicio(dayjs().subtract(29, 'day').format('YYYY-MM-DD'));
+                    setFechaInicio(dayjs().format('YYYY-MM-DD'));
                     setFechaFin(dayjs().format('YYYY-MM-DD'));
                     return;
                   }

@@ -1444,6 +1444,15 @@ export interface OrdenTrabajoHistorial {
   created_at: string;
 }
 
+export interface OrdenTrabajoNota {
+  id: string;
+  orden_id: string;
+  company_id: string;
+  nota: string;
+  created_by: string | null;
+  created_at: string;
+}
+
 export interface OrdenItemRuta {
   id: string;
   company_id: string;

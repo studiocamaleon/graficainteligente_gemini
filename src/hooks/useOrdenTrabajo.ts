@@ -4,6 +4,7 @@ import { useAuth } from './useAuth';
 import type {
   OrdenTrabajo,
   OrdenTrabajoItem,
+  OrdenTrabajoNota,
   OrdenTrabajoPago,
   OrdenTrabajoHistorial,
   CanalVenta,
@@ -36,6 +37,7 @@ export interface OrdenTrabajoFull extends OrdenTrabajo {
   servicios?: OrdenTrabajoServicio[];
   pagos?: OrdenTrabajoPago[];
   historial?: OrdenTrabajoHistorial[];
+  notas?: Array<OrdenTrabajoNota & { author_name?: string | null; author_email?: string | null }>;
   ordenCopiado?: CentroCopiadoOrdenResumida | null;
   facturaStoragePath?: string | null;
   cliente?: {
@@ -167,6 +169,31 @@ export function useOrdenTrabajo() {
     }
   };
 
+  const insertOrderNote = async (ordenId: string, noteText: string): Promise<boolean> => {
+    if (!profile?.company_id || !profile?.id) return false;
+
+    const trimmed = (noteText || '').trim();
+    if (!trimmed) return false;
+
+    const { error: noteError } = await supabase
+      .from('ordenes_trabajo_notas')
+      .insert([
+        {
+          orden_id: ordenId,
+          company_id: profile.company_id,
+          nota: trimmed,
+          created_by: profile.id,
+        },
+      ]);
+
+    if (noteError) {
+      console.error('Error inserting order note:', noteError);
+      return false;
+    }
+
+    return true;
+  };
+
   const normalizeDateOnly = (dateValue?: string | null): string | undefined => {
     if (!dateValue) return undefined;
     if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) return dateValue;
@@ -201,7 +228,7 @@ export function useOrdenTrabajo() {
 
       if (ordenError) throw ordenError;
 
-      const [itemsRes, serviciosRes, pagosRes, historialRes, ordenCopiadoRes, facturaRes] = await Promise.all([
+      const [itemsRes, serviciosRes, pagosRes, historialRes, notasRes, ordenCopiadoRes, facturaRes] = await Promise.all([
         supabase
           .from('ordenes_trabajo_items')
           .select('*')
@@ -220,6 +247,11 @@ export function useOrdenTrabajo() {
         supabase
           .from('ordenes_trabajo_historial')
           .select('*')
+          .eq('orden_id', id)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('ordenes_trabajo_notas')
+          .select('id, orden_id, company_id, nota, created_by, created_at')
           .eq('orden_id', id)
           .order('created_at', { ascending: false }),
         supabase
@@ -242,6 +274,9 @@ export function useOrdenTrabajo() {
       if (serviciosRes.error) throw serviciosRes.error;
       if (pagosRes.error) throw pagosRes.error;
       if (historialRes.error) throw historialRes.error;
+      if (notasRes.error) {
+        console.error('Error fetching order notes:', notasRes.error);
+      }
       if (ordenCopiadoRes.error) throw ordenCopiadoRes.error;
       if (facturaRes.error) throw facturaRes.error;
 
@@ -278,6 +313,45 @@ export function useOrdenTrabajo() {
 
       if (rutasError) throw rutasError;
 
+      const notasData = notasRes.data || [];
+      const noteAuthorIds = Array.from(
+        new Set(
+          notasData
+            .map((n: any) => n.created_by)
+            .filter((value: unknown): value is string => typeof value === 'string' && value.length > 0)
+        )
+      );
+
+      const authorById = new Map<string, { full_name: string | null; email: string | null }>();
+      if (noteAuthorIds.length > 0) {
+        const { data: noteAuthors, error: noteAuthorsError } = await supabase
+          .from('profiles')
+          .select('id, full_name, email')
+          .in('id', noteAuthorIds);
+
+        if (noteAuthorsError) {
+          console.error('Error fetching note authors:', noteAuthorsError);
+        } else {
+          (noteAuthors || []).forEach((author: any) => {
+            authorById.set(author.id, {
+              full_name: author.full_name || null,
+              email: author.email || null,
+            });
+          });
+        }
+      }
+
+      const notasMapeadas = notasData.map((n: any) => ({
+        id: n.id,
+        orden_id: n.orden_id,
+        company_id: n.company_id,
+        nota: n.nota,
+        created_by: n.created_by,
+        created_at: n.created_at,
+        author_name: n.created_by ? authorById.get(n.created_by)?.full_name || null : null,
+        author_email: n.created_by ? authorById.get(n.created_by)?.email || null : null,
+      }));
+
       // Mapear items con sus rutas
       const itemsConRutas = itemsRes.data?.map(item => ({
         ...item,
@@ -290,6 +364,7 @@ export function useOrdenTrabajo() {
         servicios: serviciosRes.data,
         pagos: pagosRes.data,
         historial: historialRes.data,
+        notas: notasMapeadas,
         ordenCopiado: ordenCopiadoCompleta,
         facturaStoragePath: facturaRes.data?.factura_storage_path || null,
       } as OrdenTrabajoFull;
@@ -335,6 +410,16 @@ export function useOrdenTrabajo() {
         .single();
 
       if (ordenError) throw ordenError;
+
+      const initialNote = (data.notas_internas || '').trim();
+      if (initialNote) {
+        const noteOk = await insertOrderNote(newOrden.id, initialNote);
+        if (noteOk) {
+          await addHistorialEvent(newOrden.id, 'nota_agregada', `Nota agregada por ${profile.full_name}`, {
+            nota: initialNote,
+          });
+        }
+      }
 
       await addHistorialEvent(
         newOrden.id,
@@ -415,6 +500,53 @@ export function useOrdenTrabajo() {
     } catch (err) {
       console.error('Error updating orden:', err);
       setError(err instanceof Error ? err.message : 'Error al actualizar orden');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const addNota = async (ordenId: string, nota: string): Promise<boolean> => {
+    if (!profile?.company_id || !profile?.id) {
+      setError('No hay empresa o usuario asociado');
+      return false;
+    }
+
+    const trimmed = (nota || '').trim();
+    if (!trimmed) {
+      setError('La nota no puede estar vacía');
+      return false;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const noteOk = await insertOrderNote(ordenId, trimmed);
+      if (!noteOk) {
+        throw new Error('No se pudo guardar la nota');
+      }
+
+      const { error: syncError } = await supabase
+        .from('ordenes_trabajo')
+        .update({
+          notas_internas: trimmed,
+          updated_by: profile.id,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', ordenId)
+        .eq('company_id', profile.company_id);
+
+      if (syncError) throw syncError;
+
+      await addHistorialEvent(ordenId, 'nota_agregada', `Nota agregada por ${profile.full_name}`, {
+        nota: trimmed,
+      });
+
+      return true;
+    } catch (err) {
+      console.error('Error adding note:', err);
+      setError(err instanceof Error ? err.message : 'Error al agregar nota');
       return false;
     } finally {
       setLoading(false);
@@ -895,6 +1027,15 @@ export function useOrdenTrabajo() {
 
       if (ordenError) throw ordenError;
 
+      if (incomingNote && incomingNote !== previousNote) {
+        const noteOk = await insertOrderNote(id, incomingNote);
+        if (noteOk) {
+          await addHistorialEvent(id, 'nota_agregada', `Nota agregada por ${profile.full_name}`, {
+            nota: incomingNote,
+          });
+        }
+      }
+
       // 2. Gestionar Servicios Adicionales (Estrategia: Borrar y Recrear)
       // Primero borramos todos los servicios existentes
       const { error: deleteServicesError } = await supabase
@@ -1161,6 +1302,16 @@ export function useOrdenTrabajo() {
         .single();
       if (ordenError) throw ordenError;
       createdOrdenId = newOrden.id;
+
+      const initialNote = (data.ordenData.notas_internas || '').trim();
+      if (initialNote) {
+        const noteOk = await insertOrderNote(newOrden.id, initialNote);
+        if (noteOk) {
+          await addHistorialEvent(newOrden.id, 'nota_agregada', `Nota agregada por ${profile.full_name}`, {
+            nota: initialNote,
+          });
+        }
+      }
 
       // 2. Insertar items
       if (data.items.length > 0) {
@@ -1528,6 +1679,7 @@ export function useOrdenTrabajo() {
     addPago,
     updatePago,
     deletePago,
+    addNota,
     changeEstado,
     desvincularOrdenCopiado,
     updateOrdenCompleta,

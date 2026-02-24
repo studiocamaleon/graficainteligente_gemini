@@ -1,5 +1,5 @@
 import { useState, Dispatch, SetStateAction } from 'react';
-import { Trash2, Plus, Calendar, Square, CheckSquare, ChevronUp, ChevronDown, Wand2, Edit2, Package, Printer, Hammer } from 'lucide-react';
+import { Trash2, Plus, Calendar, Square, CheckSquare, ChevronUp, ChevronDown, Wand2, Edit2, Package, Printer } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Switch } from '../ui/Switch';
@@ -12,7 +12,6 @@ import { AsociarOrdenCopiadoModal } from './AsociarOrdenCopiadoModal';
 import { AddItemPersonalizadoOrdenModal } from './AddItemPersonalizadoOrdenModal';
 import { AplicarServicioMasivoModal } from './AplicarServicioMasivoModal';
 import { ItemConfigRenderer } from './ItemConfigRenderer';
-import { ConstructorConfigurator } from './ConstructorConfigurator';
 import { generateProductionRoutes, normalizarEtapa } from '../../utils/generateProductionRoutes';
 import { supabase } from '../../lib/supabase';
 
@@ -64,7 +63,6 @@ export function OrdenItemsTab({
 }: OrdenItemsTabProps) {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showAddPersonalizadoModal, setShowAddPersonalizadoModal] = useState(false);
-  const [showConstructor, setShowConstructor] = useState(false);
   const [showAsociarOCModal, setShowAsociarOCModal] = useState(false);
   const [ordenCopiadoEditando, setOrdenCopiadoEditando] = useState<any>(undefined);
   const [ordenesExpanded, setOrdenesExpanded] = useState<Record<string, boolean>>({});
@@ -357,9 +355,7 @@ export function OrdenItemsTab({
     setEditingIndex(index);
     setItemToEdit(item);
 
-    if (item.configuracion?.es_compuesto) {
-      setShowConstructor(true);
-    } else if (item.tipo_item === 'personalizado') {
+    if (item.tipo_item === 'personalizado') {
       setShowAddPersonalizadoModal(true);
     } else {
       setShowAddModal(true);
@@ -395,6 +391,22 @@ export function OrdenItemsTab({
     }
 
     setItems(itemsCopy);
+  };
+
+  const handleIdentificadorInternoChange = (index: number, identificador: string) => {
+    setItems((prev) => {
+      const next = [...prev];
+      const currentItem = next[index];
+      const currentConfig = currentItem.configuracion || {};
+      next[index] = {
+        ...currentItem,
+        configuracion: {
+          ...currentConfig,
+          identificador_interno: identificador,
+        },
+      };
+      return next;
+    });
   };
 
 
@@ -441,7 +453,7 @@ export function OrdenItemsTab({
     {
       key: 'producto',
       header: 'Item y Configuración',
-      render: (item: OrdenItem) => (
+      render: (item: OrdenItem, index: number) => (
         <div>
           <div className="flex items-center gap-2 mb-1">
             <div className="font-medium text-gray-900">{item.producto_nombre}</div>
@@ -464,6 +476,16 @@ export function OrdenItemsTab({
                 )}
               </>
             )}
+          </div>
+          <div className="mb-2">
+            <Input
+              type="text"
+              value={item.configuracion?.identificador_interno || ''}
+              onChange={(e) => handleIdentificadorInternoChange(index, e.target.value)}
+              placeholder="Identificador interno (ej: Modelo A)"
+              className="h-8 text-xs"
+              maxLength={80}
+            />
           </div>
           {item.tipo_item === 'personalizado' && !item.configuracion?.es_compuesto && item.descripcion ? (
             <div className="text-sm text-gray-600 whitespace-pre-wrap">
@@ -577,14 +599,10 @@ export function OrdenItemsTab({
                 checked={requiereFactura}
                 onChange={setRequiereFactura}
               />
-              <span className="text-sm text-gray-700">Requiere factura</span>
+              <span className="text-sm text-gray-700">IVA 21%</span>
             </div>
           )}
           <div className="flex items-center gap-2">
-            <Button onClick={() => setShowConstructor(true)} variant="outline" className="border-blue-200 text-blue-600 hover:bg-blue-50">
-              <Hammer className="w-4 h-4 mr-2" />
-              Construir
-            </Button>
             <Button onClick={() => {
               setEditingIndex(null);
               setItemToEdit(null);
@@ -802,17 +820,6 @@ export function OrdenItemsTab({
         initialData={itemToEdit}
         isEditing={!!itemToEdit}
         mode={mode}
-      />
-
-      <ConstructorConfigurator
-        isOpen={showConstructor}
-        onClose={() => {
-          setShowConstructor(false);
-          setEditingIndex(null);
-          setItemToEdit(null);
-        }}
-        onSave={handleAgregarItem}
-        initialData={itemToEdit}
       />
 
       {

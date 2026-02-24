@@ -70,6 +70,7 @@ export function useOrdenArchivos({ ordenId, ordenTemporalId }: UseOrdenArchivosP
         if (!profile?.company_id) return null;
 
         try {
+            setError(null);
             const { data: newArchivo, error: insertError } = await supabase
                 .from('ordenes_trabajo_archivos')
                 .insert({
@@ -86,7 +87,8 @@ export function useOrdenArchivos({ ordenId, ordenTemporalId }: UseOrdenArchivosP
             return newArchivo;
         } catch (err: any) {
             console.error('[useOrdenArchivos] Error creating:', err);
-            return null;
+            setError(err.message || 'Error al guardar archivo');
+            throw err;
         }
     };
 

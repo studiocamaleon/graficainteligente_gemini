@@ -96,7 +96,7 @@ export function CajaTab({ params }: CajaTabProps) {
     <div className="space-y-5">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         <KPICard title="Cobrado período" value={formatCurrencyARS(caja.data.cobrado_periodo)} subtitle="Por fecha de pago" hint="Dinero efectivamente cobrado en el período." icon={Wallet} tone="emerald" />
-        <KPICard title="Balance movimientos" value={formatCurrencyARS(caja.data.balance_movimientos)} subtitle={`Ingresos ${formatCurrencyARS(caja.data.ingresos_movimientos)}`} hint="Ingresos menos egresos registrados en caja." icon={Banknote} tone={caja.data.balance_movimientos >= 0 ? 'cyan' : 'rose'} />
+        <KPICard title="Egresos período" value={formatCurrencyARS(caja.data.egresos_movimientos)} subtitle="Total de salidas de caja" hint="Suma de egresos registrados en el período seleccionado." icon={Banknote} tone="rose" />
         <KPICard title="Aging 61+ días" value={formatCurrencyARS(caja.data.pendiente_61_mas)} subtitle="Riesgo alto de cobranza" hint="Deuda con más de 61 días sin cobrar." icon={AlertTriangle} tone={caja.data.pendiente_61_mas > 0 ? 'amber' : 'emerald'} />
         <KPICard title="DSO estimado" value={`${caja.data.dso_estimado.toFixed(1)} días`} subtitle="Tiempo medio de cobro" hint="Días promedio que tarda en cobrarse una venta." icon={Clock3} tone="indigo" />
       </div>

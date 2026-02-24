@@ -17,6 +17,7 @@ import {
   Link as LinkIcon,
   CreditCard,
   History,
+  MessageSquarePlus,
 } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/card';
@@ -40,6 +41,7 @@ import { useToast } from '../../../contexts/ToastContext';
 import { descargarFactura } from '../../../utils/facturaHelpers';
 import { ItemConfigRenderer } from '../../../components/orders/ItemConfigRenderer';
 import { clampZeroMoney, roundMoney, toMoney } from '../../../utils/money';
+import { formatDateTimeDisplay } from '../../../utils/dates';
 
 type TabKey = 'items' | 'ruta' | 'adjuntos' | 'pagos' | 'historial';
 
@@ -54,6 +56,7 @@ export function OrderDetailPage() {
     addPago,
     updatePago,
     deletePago,
+    addNota,
     desvincularOrdenCopiado,
     updateOrden,
     loading,
@@ -145,6 +148,9 @@ export function OrderDetailPage() {
   const [showPagoModal, setShowPagoModal] = useState(false);
   const [editingPago, setEditingPago] = useState<any>(null);
   const [downloadingFactura, setDownloadingFactura] = useState(false);
+  const [newNoteText, setNewNoteText] = useState('');
+  const [addingNote, setAddingNote] = useState(false);
+  const [adjuntosCount, setAdjuntosCount] = useState(0);
 
   const isAdmin = profile?.role === 'super_admin' || profile?.role === 'admin';
   const canViewPrices = !isWorkshopOperatorRole(profile?.role);
@@ -167,7 +173,7 @@ export function OrderDetailPage() {
     if (data) {
       setOrden(data);
     } else {
-      navigate('/app/orders/ordenes');
+      setOrden(null);
     }
     setLoadingData(false);
   };
@@ -337,6 +343,21 @@ export function OrderDetailPage() {
     } else {
       showError('Error al desvincular orden de copiado');
     }
+  };
+
+  const handleAddNote = async () => {
+    if (!orden?.id || !newNoteText.trim()) return;
+
+    setAddingNote(true);
+    const ok = await addNota(orden.id, newNoteText);
+    if (ok) {
+      setNewNoteText('');
+      showSuccess('Nota agregada');
+      await loadOrden();
+    } else {
+      showError(ordenTrabajoError || 'No se pudo agregar la nota');
+    }
+    setAddingNote(false);
   };
 
   const totalPagado = useMemo(() => {
@@ -530,15 +551,53 @@ export function OrderDetailPage() {
             </div>
           </div>
 
-          {orden.notas_internas && (
-            <div className="p-6 bg-amber-50 rounded-lg border border-amber-200">
-              <div className="flex items-center gap-2 mb-2">
-                <FileText className="w-5 h-5 text-amber-600" />
-                <h3 className="text-sm font-medium text-amber-900">Notas Internas</h3>
-              </div>
-              <p className="text-sm text-gray-700">{orden.notas_internas}</p>
+          <div className="p-6 bg-amber-50 rounded-lg border border-amber-200 space-y-4">
+            <div className="flex items-center gap-2">
+              <FileText className="w-5 h-5 text-amber-600" />
+              <h3 className="text-sm font-medium text-amber-900">Notas Internas</h3>
             </div>
-          )}
+
+            <div className="space-y-2">
+              {(orden.notas && orden.notas.length > 0) ? (
+                orden.notas.map((note: any) => (
+                  <div key={note.id} className="rounded-lg border border-amber-200 bg-white p-3">
+                    <p className="text-sm text-gray-800 whitespace-pre-wrap">{note.nota}</p>
+                    <div className="mt-2 text-xs text-gray-500">
+                      {note.author_name || note.author_email || 'Usuario'} · {formatDateTimeDisplay(note.created_at)}
+                    </div>
+                  </div>
+                ))
+              ) : orden.notas_internas ? (
+                <div className="rounded-lg border border-amber-200 bg-white p-3">
+                  <p className="text-sm text-gray-800 whitespace-pre-wrap">{orden.notas_internas}</p>
+                  <div className="mt-2 text-xs text-gray-500">Nota legacy</div>
+                </div>
+              ) : (
+                <p className="text-sm text-amber-900">Sin notas cargadas.</p>
+              )}
+            </div>
+
+            <div className="rounded-lg border border-amber-200 bg-white p-3 space-y-2">
+              <label className="text-xs font-semibold uppercase tracking-wide text-amber-900">Agregar nota</label>
+              <textarea
+                value={newNoteText}
+                onChange={(e) => setNewNoteText(e.target.value)}
+                rows={3}
+                placeholder="Escribí una nota interna..."
+                className="w-full rounded-md border border-amber-200 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+              />
+              <div className="flex justify-end">
+                <Button
+                  size="sm"
+                  onClick={handleAddNote}
+                  disabled={addingNote || !newNoteText.trim()}
+                >
+                  <MessageSquarePlus className="w-4 h-4 mr-2" />
+                  {addingNote ? 'Guardando...' : 'Agregar nota'}
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
       </Card>
 
@@ -547,7 +606,7 @@ export function OrderDetailPage() {
           {[
             { key: 'items' as const, label: 'Items', icon: Package, count: orden.items?.length || 0 },
             { key: 'ruta' as const, label: 'Ruta de Producción', icon: Route },
-            { key: 'adjuntos' as const, label: 'Adjuntos', icon: LinkIcon },
+            { key: 'adjuntos' as const, label: 'Adjuntos', icon: LinkIcon, count: adjuntosCount },
             ...(canViewPrices ? [{ key: 'pagos' as const, label: 'Pagos', icon: CreditCard, count: orden.pagos?.length || 0 }] : []),
             { key: 'historial' as const, label: 'Historial', icon: History },
           ].map((tab) => {
@@ -605,6 +664,11 @@ export function OrderDetailPage() {
                             <h4 className="font-semibold text-gray-900">
                               {item.producto_nombre || 'Producto'}
                             </h4>
+                            {item.configuracion?.identificador_interno && (
+                              <span className="inline-flex items-center rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-700">
+                                {item.configuracion.identificador_interno}
+                              </span>
+                            )}
                             {/* Clasificación de Categoría y Tipo */}
                             {(item.tipo_item === 'centro_copiado' || item.producto_categoria === 'Centro de Copiado' || item.categoria_id === 'centro_copiado') ? (
                               <Badge variant="blue" className="bg-blue-100 text-blue-800 text-xs">
@@ -801,6 +865,7 @@ export function OrderDetailPage() {
             <div className="p-6">
               <OrdenAdjuntosSection
                 ordenId={orden.id}
+                onArchivosCountChange={setAdjuntosCount}
               />
             </div>
           )

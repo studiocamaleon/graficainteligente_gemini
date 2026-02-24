@@ -7,6 +7,8 @@ import { useFileUpload } from '../../hooks/useFileUpload';
 import { FilePasteZone } from './FilePasteZone';
 import { useAuth } from '../../hooks/useAuth';
 import { Modal } from '../ui/Modal';
+import { useToast } from '../../contexts/ToastContext';
+import { isWorkshopOperatorRole } from '../../utils/roles';
 
 interface OrdenAdjuntosSectionProps {
     ordenId?: string;
@@ -14,17 +16,21 @@ interface OrdenAdjuntosSectionProps {
     // Para modo creación (sin IDs reales aún)
     onLinksChange?: (links: any[]) => void;
     initialLinks?: any[];
+    onArchivosCountChange?: (count: number) => void;
 }
 
 export function OrdenAdjuntosSection({
     ordenId,
     ordenTemporalId,
     onLinksChange,
-    initialLinks = []
+    initialLinks = [],
+    onArchivosCountChange
 }: OrdenAdjuntosSectionProps) {
     const { profile } = useAuth();
+    const { showError, showSuccess } = useToast();
+    const canUploadAdjuntos = !isWorkshopOperatorRole(profile?.role);
     const { links, createLink, deleteLink } = useOrdenLinks(ordenId || '');
-    const { archivos, createArchivo, deleteArchivo, loading: loadingArchivos } = useOrdenArchivos({ ordenId, ordenTemporalId });
+    const { archivos, createArchivo, deleteArchivo, loading: loadingArchivos, error: archivosError } = useOrdenArchivos({ ordenId, ordenTemporalId });
     const { uploadFile, downloadFile, deleteFile: deleteFromStorage, createSignedUrl } = useFileUpload();
 
     const [showAddLink, setShowAddLink] = useState(false);
@@ -42,6 +48,10 @@ export function OrdenAdjuntosSection({
             onLinksChange(localLinks);
         }
     }, [localLinks, ordenId, onLinksChange]);
+
+    useEffect(() => {
+        onArchivosCountChange?.(archivos.length);
+    }, [archivos.length, onArchivosCountChange]);
 
     // Cargar miniaturas (Signed URLs) para imágenes
     useEffect(() => {
@@ -92,12 +102,17 @@ export function OrdenAdjuntosSection({
     };
 
     const handleFilesSelected = useCallback(async (selectedFiles: File[]) => {
+        if (!canUploadAdjuntos) {
+            showError('No tenés permisos para adjuntar archivos');
+            return;
+        }
         if (!profile?.company_id || (!ordenId && !ordenTemporalId)) return;
 
         const targetId = (ordenId || ordenTemporalId)!;
 
         setIsUploading(true);
         try {
+            let uploadedCount = 0;
             for (const file of selectedFiles) {
                 const fileId = crypto.randomUUID();
 
@@ -111,22 +126,38 @@ export function OrdenAdjuntosSection({
                 );
 
                 if (uploadResult) {
-                    // 2. Crear registro en BD
-                    await createArchivo({
-                        orden_id: ordenId || null,
-                        orden_temporal_id: ordenId ? null : ordenTemporalId,
-                        nombre_archivo: file.name,
-                        nombre_storage: uploadResult.nombreStorage,
-                        tipo_mime: file.type,
-                        tamano_bytes: file.size,
-                        storage_path: uploadResult.storagePath,
-                    });
+                    try {
+                        // 2. Crear registro en BD
+                        await createArchivo({
+                            ...(ordenId ? { orden_id: ordenId } : { orden_temporal_id: ordenTemporalId }),
+                            nombre_archivo: file.name,
+                            nombre_storage: uploadResult.nombreStorage,
+                            tipo_mime: file.type,
+                            tamano_bytes: file.size,
+                            storage_path: uploadResult.storagePath,
+                        });
+                        uploadedCount += 1;
+                    } catch (createError) {
+                        // Evita dejar archivo huérfano en storage si falla el insert
+                        await deleteFromStorage(uploadResult.storagePath, 'ordenes-trabajo-archivos');
+                        throw createError;
+                    }
                 }
             }
+
+            if (uploadedCount > 0) {
+                showSuccess(
+                    uploadedCount === 1
+                        ? 'Archivo adjuntado correctamente'
+                        : `${uploadedCount} archivos adjuntados correctamente`
+                );
+            }
+        } catch (error: any) {
+            showError(error?.message || 'No se pudieron adjuntar los archivos');
         } finally {
             setIsUploading(false);
         }
-    }, [profile?.company_id, ordenId, ordenTemporalId, uploadFile, createArchivo]);
+    }, [canUploadAdjuntos, profile?.company_id, ordenId, ordenTemporalId, uploadFile, createArchivo, deleteFromStorage, showError, showSuccess]);
 
     const handleDeleteArchivo = async (archivo: OrdenArchivo) => {
         const confirm = window.confirm(`¿Seguro que quieres eliminar "${archivo.nombre_archivo}"?`);
@@ -167,11 +198,23 @@ export function OrdenAdjuntosSection({
                     Imágenes y Documentos Adjuntos
                 </label>
 
-                <FilePasteZone
-                    onFilesSelected={handleFilesSelected}
-                    isLoading={isUploading}
-                    disabled={loadingArchivos || isUploading}
-                />
+                {canUploadAdjuntos ? (
+                    <FilePasteZone
+                        onFilesSelected={handleFilesSelected}
+                        isLoading={isUploading}
+                        disabled={loadingArchivos || isUploading}
+                    />
+                ) : (
+                    <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+                        Tu rol no tiene permisos para adjuntar archivos.
+                    </div>
+                )}
+
+                {archivosError && (
+                    <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                        Error al cargar/guardar adjuntos: {archivosError}
+                    </div>
+                )}
 
                 {archivos.length > 0 && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
