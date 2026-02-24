@@ -1002,6 +1002,18 @@ export function useOrdenTrabajo() {
       setLoading(true);
       setError(null);
 
+      const incomingNote = (data.ordenData.notas_internas || '').trim();
+
+      const { data: currentOrder, error: currentOrderError } = await supabase
+        .from('ordenes_trabajo')
+        .select('notas_internas')
+        .eq('id', id)
+        .eq('company_id', profile.company_id)
+        .single();
+
+      if (currentOrderError) throw currentOrderError;
+      const previousNote = ((currentOrder?.notas_internas as string | null) || '').trim();
+
       // 1. Actualizar Header de la Orden
       const updateData: any = {
         cliente_id: data.ordenData.cliente_id,

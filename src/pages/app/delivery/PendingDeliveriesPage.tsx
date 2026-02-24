@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Package, Check, ArrowLeft, Clock, DollarSign, Truck, ArrowUpDown, ChevronUp, ChevronDown } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
@@ -45,14 +45,33 @@ interface DeliveryDetailData {
 }
 
 function PendingDeliveriesContent({ embedded = false }: PendingDeliveriesPageProps) {
+    const getSessionValue = <T,>(key: string, fallback: T, isValid: (value: string) => boolean): T => {
+        if (typeof window === 'undefined') return fallback;
+        const raw = window.sessionStorage.getItem(key);
+        if (!raw || !isValid(raw)) return fallback;
+        return raw as T;
+    };
+
+    const SESSION_KEYS = {
+        searchTerm: 'pending-deliveries:search-term',
+        paymentFilter: 'pending-deliveries:payment-filter',
+        balanceSort: 'pending-deliveries:balance-sort',
+    } as const;
+
     const navigate = useNavigate();
     const { profile, company } = useAuth();
     const canRegisterPayments = canRegisterPaymentsRole(profile?.role);
 
     const { deliveries, loading, error, refresh, deliverOrder, addPayment } = usePendingDeliveries();
-    const [searchTerm, setSearchTerm] = useState('');
-    const [paymentFilter, setPaymentFilter] = useState<'all' | 'deben'>('all');
-    const [balanceSort, setBalanceSort] = useState<'none' | 'asc' | 'desc'>('none');
+    const [searchTerm, setSearchTerm] = useState(() =>
+        getSessionValue<string>(SESSION_KEYS.searchTerm, '', () => true)
+    );
+    const [paymentFilter, setPaymentFilter] = useState<'all' | 'deben'>(() =>
+        getSessionValue<'all' | 'deben'>(SESSION_KEYS.paymentFilter, 'all', (v) => v === 'all' || v === 'deben')
+    );
+    const [balanceSort, setBalanceSort] = useState<'none' | 'asc' | 'desc'>(() =>
+        getSessionValue<'none' | 'asc' | 'desc'>(SESSION_KEYS.balanceSort, 'none', (v) => v === 'none' || v === 'asc' || v === 'desc')
+    );
     const [selectedDelivery, setSelectedDelivery] = useState<PendingDelivery | null>(null);
     const [showShippingModal, setShowShippingModal] = useState(false);
     const [detailModalOpen, setDetailModalOpen] = useState(false);
@@ -62,6 +81,21 @@ function PendingDeliveriesContent({ embedded = false }: PendingDeliveriesPagePro
 
     const { dialogState: confirmDialogState, closeDialog: closeConfirmDialog, handleConfirm, openConfirm } = useConfirmDialog();
     const { dialogState: infoDialogState, closeDialog: closeInfoDialog, openDialog: openInfoDialog } = useInfoDialog();
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        window.sessionStorage.setItem(SESSION_KEYS.searchTerm, searchTerm);
+    }, [searchTerm]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        window.sessionStorage.setItem(SESSION_KEYS.paymentFilter, paymentFilter);
+    }, [paymentFilter]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        window.sessionStorage.setItem(SESSION_KEYS.balanceSort, balanceSort);
+    }, [balanceSort]);
 
     const filteredDeliveries = useMemo(() => {
         return deliveries.filter((d) => {

@@ -103,6 +103,7 @@ AVAILABLE_PERMISSIONS.forEach((permission) => {
   }
 
   const managerAllowedModules = [
+    'documentation',
     'clients',
     'providers',
     'orders',
@@ -170,6 +171,7 @@ AVAILABLE_PERMISSIONS.forEach((permission) => {
 
   const operadorDisenoViewOnlyModules = [
     'dashboard',
+    'documentation',
     'productos',
     'productos-impresion-laser',
     'productos-talonarios',
@@ -220,6 +222,7 @@ AVAILABLE_PERMISSIONS.forEach((permission) => {
   const operadorTallerFullAccessModules = ['production'];
   const operadorTallerViewOnlyModules = [
     'dashboard',
+    'documentation',
     'orders',
     'orders-lista'
   ];
@@ -248,7 +251,7 @@ AVAILABLE_PERMISSIONS.forEach((permission) => {
   }
 
   PREDEFINED_ROLES.viewer.permissions[permission.moduleId] = {
-    view: !['team', 'settings', 'finance'].includes(permission.moduleId),
+    view: permission.moduleId === 'documentation' || !['team', 'settings', 'finance'].includes(permission.moduleId),
     create: false,
     edit: false,
     delete: false,

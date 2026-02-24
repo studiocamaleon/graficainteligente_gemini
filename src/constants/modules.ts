@@ -32,6 +32,7 @@ import {
   FileText,
   Settings2,
   Briefcase,
+  BookOpen,
   CreditCard,
   BarChart3,
   Wallet,
@@ -68,6 +69,14 @@ export const MODULES: Module[] = [
     icon: LayoutDashboard,
     path: '/app/dashboard',
     color: 'text-blue-600',
+  },
+  {
+    id: 'documentation',
+    name: 'Documentación',
+    description: 'Guías de uso y soporte del sistema',
+    icon: BookOpen,
+    path: '/app/documentacion',
+    color: 'text-sky-600',
   },
   {
     id: 'clients',
