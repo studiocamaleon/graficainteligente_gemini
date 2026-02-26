@@ -89,7 +89,7 @@ export function PlastificadoForm({ plastificado, onSubmit, onCancel }: Plastific
       <Select
         label="Tipo de Plastificado"
         value={formData.tipo}
-        onChange={(e) => setFormData({ ...formData, tipo: e.target.value as 'A4' | 'SRA3' | 'Carnet' })}
+        onChange={(value) => setFormData({ ...formData, tipo: value as 'A4' | 'SRA3' | 'Carnet' })}
         options={TIPOS_PLASTIFICADO}
         error={errors.tipo}
         required
