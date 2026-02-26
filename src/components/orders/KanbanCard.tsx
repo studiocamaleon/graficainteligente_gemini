@@ -6,10 +6,10 @@ import type { CanalVenta } from '../../types/database';
 
 interface KanbanCardProps {
   ordenId: string;
-  numeroOrden: string;
+  numeroOrden: string | null;
   clienteNombre: string;
   clienteDocumento: string;
-  canalVenta: CanalVenta;
+  canalVenta: CanalVenta | null;
   fechaCreacion: string;
   total: number;
 }
@@ -50,7 +50,7 @@ export function KanbanCard({
       <div className="flex items-start justify-between mb-2">
         <div className="flex-1 min-w-0">
           <h4 className="text-sm font-bold text-blue-600 group-hover:text-blue-700 truncate">
-            {numeroOrden}
+            {numeroOrden || 'Sin número'}
           </h4>
           <p className="text-sm font-medium text-gray-900 truncate mt-0.5">
             {clienteNombre}

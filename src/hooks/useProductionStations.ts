@@ -21,6 +21,7 @@ export interface StationStep {
   fecha_creacion_orden: string;
   fecha_estimada_entrega: string | null;
   orden_id: string;
+  requiere_despacho: boolean;
   pausa_activa?: {
     motivo_nombre: string;
     categoria_motivo: string;
@@ -102,6 +103,7 @@ export function useProductionStations(params: UseProductionStationsParams = {}) 
               numero_orden,
               fecha_creacion,
               fecha_estimada_entrega,
+              requiere_despacho,
               estado,
               cliente:clients!inner(
                 id,
@@ -122,6 +124,7 @@ export function useProductionStations(params: UseProductionStationsParams = {}) 
         `)
         .eq('company_id', profile.company_id)
         .neq('orden_item.orden.estado', 'cancelada')
+        .neq('orden_item.orden.estado', 'borrador')
         .neq('orden_item.orden.estado', 'entregada')
         .eq('paso.estacion.is_active', true);
 
@@ -300,6 +303,7 @@ export function useProductionStations(params: UseProductionStationsParams = {}) 
             fecha_creacion_orden: ruta.orden_item.orden.fecha_creacion,
             fecha_estimada_entrega: ruta.orden_item.orden.fecha_estimada_entrega,
             orden_id: ruta.orden_item.orden.id,
+            requiere_despacho: Boolean(ruta.orden_item.orden.requiere_despacho),
             pausa_activa: ruta.pausa_activa || null,
             tiempo_pausado_total: tiempoPausadoTotalMap.get(ruta.id) || 0,
             global_task_id: ruta.global_task_id,

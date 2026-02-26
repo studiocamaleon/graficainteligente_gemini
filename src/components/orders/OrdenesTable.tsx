@@ -1,13 +1,13 @@
-import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Eye,
-    MoreVertical,
     Calendar,
-    AlertCircle
+    AlertCircle,
+    Check,
+    Pencil,
+    Trash2,
 } from 'lucide-react';
 import { Button } from '../ui/Button';
-import { Badge } from '../ui/Badge';
 import { OrderStatusBadge } from './OrderStatusBadge';
 import type { OrdenTrabajoWithRelations } from '../../hooks/useOrdenesTrabajo';
 import dayjs from 'dayjs';
@@ -15,9 +15,11 @@ import { clampZeroMoney, roundMoney, toMoney } from '../../utils/money';
 
 interface OrdenesTableProps {
     ordenes: OrdenTrabajoWithRelations[];
+    onConfirmDraft?: (ordenId: string) => void;
+    onDeleteDraft?: (ordenId: string) => void;
 }
 
-export function OrdenesTable({ ordenes }: OrdenesTableProps) {
+export function OrdenesTable({ ordenes, onConfirmDraft, onDeleteDraft }: OrdenesTableProps) {
     const navigate = useNavigate();
 
     return (
@@ -58,7 +60,7 @@ export function OrdenesTable({ ordenes }: OrdenesTableProps) {
                                     <td className="px-6 py-4">
                                         <div className="flex flex-col">
                                             <span className="text-sm font-medium text-blue-600 hover:text-blue-800 cursor-pointer" onClick={() => navigate(`/app/orders/${orden.id}`)}>
-                                                #{orden.numero_orden}
+                                                #{orden.numero_orden || 'Sin número'}
                                             </span>
                                             <span className="text-sm text-gray-900 font-medium mt-0.5">
                                                 {orden.cliente?.nombre_fantasia || 'Cliente Desconocido'}
@@ -108,13 +110,46 @@ export function OrdenesTable({ ordenes }: OrdenesTableProps) {
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => navigate(`/app/orders/${orden.id}`)}
-                                        >
-                                            <Eye className="w-4 h-4 text-gray-500" />
-                                        </Button>
+                                        {orden.estado === 'borrador' ? (
+                                            <div className="flex items-center justify-end gap-1">
+                                                {onConfirmDraft && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        title="Confirmar borrador"
+                                                        onClick={() => onConfirmDraft(orden.id)}
+                                                    >
+                                                        <Check className="w-4 h-4 text-emerald-600" />
+                                                    </Button>
+                                                )}
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    title="Continuar edición"
+                                                    onClick={() => navigate(`/app/orders/editar-ot/${orden.id}`)}
+                                                >
+                                                    <Pencil className="w-4 h-4 text-blue-600" />
+                                                </Button>
+                                                {onDeleteDraft && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        title="Eliminar borrador"
+                                                        onClick={() => onDeleteDraft(orden.id)}
+                                                    >
+                                                        <Trash2 className="w-4 h-4 text-red-600" />
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => navigate(`/app/orders/${orden.id}`)}
+                                            >
+                                                <Eye className="w-4 h-4 text-gray-500" />
+                                            </Button>
+                                        )}
                                     </td>
                                 </tr>
                             );

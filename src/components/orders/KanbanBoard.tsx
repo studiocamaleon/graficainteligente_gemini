@@ -4,13 +4,13 @@ import type { EstadoOrdenTrabajo, CanalVenta } from '../../types/database';
 
 interface OrdenData {
   id: string;
-  numero_orden: string;
+  numero_orden: string | null;
   estado: EstadoOrdenTrabajo;
   cliente?: {
     nombre_fantasia: string;
     numero_documento: string;
   };
-  canal_venta: CanalVenta;
+  canal_venta: CanalVenta | null;
   fecha_creacion: string;
   total: number;
 }
@@ -61,6 +61,7 @@ const columnsConfig: ColumnConfig[] = [
 export function KanbanBoard({ ordenes }: KanbanBoardProps) {
   const ordenesPorEstado = useMemo(() => {
     const grupos: Record<EstadoOrdenTrabajo, OrdenData[]> = {
+      borrador: [],
       pendiente: [],
       en_proceso: [],
       finalizada: [],

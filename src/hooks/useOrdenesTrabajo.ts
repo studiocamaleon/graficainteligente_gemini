@@ -14,6 +14,8 @@ interface UseOrdenesTrabajoParams {
   fechaHasta?: string | null;
   page?: number;
   itemsPerPage?: number;
+  draftsOnly?: boolean;
+  includeDrafts?: boolean;
 }
 
 export interface OrdenTrabajoWithRelations extends OrdenTrabajo {
@@ -77,6 +79,8 @@ export function useOrdenesTrabajo(params: UseOrdenesTrabajoParams = {}) {
     fechaHasta = null,
     page = 1,
     itemsPerPage = 25,
+    draftsOnly = false,
+    includeDrafts = false,
   } = params;
 
   const fetchMetrics = useCallback(async () => {
@@ -99,40 +103,42 @@ export function useOrdenesTrabajo(params: UseOrdenesTrabajoParams = {}) {
 
       const otRows = ordenesOt || [];
       const ccRows = ordenesCopiado || [];
+      const otOperativas = otRows.filter((o) => o.estado !== 'borrador');
+      const ccOperativas = ccRows.filter((o) => o.estado !== 'borrador');
       const startOfMonth = new Date();
       startOfMonth.setDate(1);
       startOfMonth.setHours(0, 0, 0, 0);
 
-      const totalOrdenesOt = otRows.length;
-      const totalOrdenesCopiado = ccRows.length;
+      const totalOrdenesOt = otOperativas.length;
+      const totalOrdenesCopiado = ccOperativas.length;
       const totalOrdenes = totalOrdenesOt + totalOrdenesCopiado;
 
-      const totalOrdenesMesOt = otRows.filter(
+      const totalOrdenesMesOt = otOperativas.filter(
         (o) => new Date(o.fecha_creacion).getTime() >= startOfMonth.getTime()
       ).length;
-      const totalOrdenesMesCopiado = ccRows.filter(
+      const totalOrdenesMesCopiado = ccOperativas.filter(
         (o) => new Date(o.created_at).getTime() >= startOfMonth.getTime()
       ).length;
       const totalOrdenesMes = totalOrdenesMesOt + totalOrdenesMesCopiado;
 
       const totalFacturadoOt = otRows
-        .filter((o) => o.estado !== 'cancelada')
+        .filter((o) => o.estado !== 'cancelada' && o.estado !== 'borrador')
         .reduce((sum, o) => sum + roundMoney(toMoney(o.total)), 0);
       const totalFacturadoCopiado = ccRows
-        .filter((o) => o.estado !== 'cancelada')
+        .filter((o) => o.estado !== 'cancelada' && o.estado !== 'borrador')
         .reduce((sum, o) => sum + roundMoney(toMoney(o.total)), 0);
       const totalFacturado = totalFacturadoOt + totalFacturadoCopiado;
 
-      const ordenesPendientes = otRows.filter((o) => o.estado === 'pendiente').length
-        + ccRows.filter((o) => o.estado === 'pendiente').length;
-      const ordenesEnProduccion = otRows.filter((o) => o.estado === 'en_proceso').length
-        + ccRows.filter((o) => o.estado === 'en_proceso').length;
-      const ordenesFinalizadas = otRows.filter((o) => o.estado === 'finalizada').length
-        + ccRows.filter((o) => o.estado === 'finalizada').length;
-      const ordenesEntregadas = otRows.filter((o) => o.estado === 'entregada').length
-        + ccRows.filter((o) => o.estado === 'entregada').length;
-      const ordenesCanceladas = otRows.filter((o) => o.estado === 'cancelada').length
-        + ccRows.filter((o) => o.estado === 'cancelada').length;
+      const ordenesPendientes = otOperativas.filter((o) => o.estado === 'pendiente').length
+        + ccOperativas.filter((o) => o.estado === 'pendiente').length;
+      const ordenesEnProduccion = otOperativas.filter((o) => o.estado === 'en_proceso').length
+        + ccOperativas.filter((o) => o.estado === 'en_proceso').length;
+      const ordenesFinalizadas = otOperativas.filter((o) => o.estado === 'finalizada').length
+        + ccOperativas.filter((o) => o.estado === 'finalizada').length;
+      const ordenesEntregadas = otOperativas.filter((o) => o.estado === 'entregada').length
+        + ccOperativas.filter((o) => o.estado === 'entregada').length;
+      const ordenesCanceladas = otOperativas.filter((o) => o.estado === 'cancelada').length
+        + ccOperativas.filter((o) => o.estado === 'cancelada').length;
 
       setMetrics({
         totalOrdenes,
@@ -172,7 +178,9 @@ export function useOrdenesTrabajo(params: UseOrdenesTrabajoParams = {}) {
             p_search_term: normalizedSearchTerm,
             p_company_id: profile.company_id,
             p_limit: itemsPerPage,
-            p_offset: (page - 1) * itemsPerPage
+            p_offset: (page - 1) * itemsPerPage,
+            p_include_drafts: includeDrafts,
+            p_drafts_only: draftsOnly,
           });
 
         if (searchError) throw searchError;
@@ -202,6 +210,10 @@ export function useOrdenesTrabajo(params: UseOrdenesTrabajoParams = {}) {
 
         if (estado) {
           query = query.eq('estado', estado);
+        } else if (draftsOnly) {
+          query = query.eq('estado', 'borrador');
+        } else if (!includeDrafts) {
+          query = query.neq('estado', 'borrador');
         }
 
         if (canalVenta) {
@@ -306,6 +318,8 @@ export function useOrdenesTrabajo(params: UseOrdenesTrabajoParams = {}) {
     fechaHasta,
     page,
     itemsPerPage,
+    draftsOnly,
+    includeDrafts,
   ]);
 
   useEffect(() => {

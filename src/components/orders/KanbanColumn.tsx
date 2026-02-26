@@ -1,16 +1,15 @@
 import { KanbanCard } from './KanbanCard';
-import { EmptyState } from '../ui/EmptyState';
 import { Package } from 'lucide-react';
 import type { EstadoOrdenTrabajo, CanalVenta } from '../../types/database';
 
 interface OrdenData {
   id: string;
-  numero_orden: string;
+  numero_orden: string | null;
   cliente?: {
     nombre_fantasia: string;
     numero_documento: string;
   };
-  canal_venta: CanalVenta;
+  canal_venta: CanalVenta | null;
   fecha_creacion: string;
   total: number;
 }
@@ -25,6 +24,7 @@ interface KanbanColumnProps {
 }
 
 const estadoEmptyMessages: Record<EstadoOrdenTrabajo, string> = {
+  borrador: 'No hay órdenes en borrador',
   pendiente: 'No hay órdenes pendientes',
   en_proceso: 'No hay órdenes en proceso',
   finalizada: 'No hay órdenes finalizadas',

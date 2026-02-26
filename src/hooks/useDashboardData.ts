@@ -146,6 +146,7 @@ export function useDashboardData() {
         .from('ordenes_trabajo')
         .select('created_at')
         .eq('company_id', companyId)
+        .neq('estado', 'borrador')
         .gte('created_at', hace7Dias.toISOString())
         .order('created_at', { ascending: true });
 

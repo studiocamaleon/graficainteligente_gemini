@@ -17,6 +17,7 @@ interface OrdenCopiadoAsociadaCardProps {
 
 const getEstadoBadge = (estado: EstadoOrdenCopiado) => {
   const estilos = {
+    borrador: { variant: 'secondary' as const, label: 'Borrador' },
     pendiente: { variant: 'warning' as const, label: 'Pendiente' },
     en_proceso: { variant: 'primary' as const, label: 'En Proceso' },
     finalizada: { variant: 'success' as const, label: 'Finalizada' },

@@ -9,6 +9,10 @@ const estadoConfig: Record<
   EstadoOrdenTrabajo,
   { label: string; className: string }
 > = {
+  borrador: {
+    label: 'Borrador',
+    className: 'bg-slate-100 text-slate-700 border-slate-300',
+  },
   pendiente: {
     label: 'Pendiente',
     className: 'bg-yellow-100 text-yellow-700 border-yellow-300',

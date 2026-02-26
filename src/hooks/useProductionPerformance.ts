@@ -66,7 +66,7 @@ export interface CompletedTaskLogEntry {
   estadoPaso: string;
   fechaInicio: string;
   fechaFin: string;
-  duracionMinutos: number;
+  tiempoEntreHitosMinutos: number | null;
 }
 
 export type WorktableUrgency = 'vencida' | 'hoy' | 'manana' | 'futura' | 'sin_fecha';
@@ -130,6 +130,12 @@ const DEFAULT_FILTERS: PerformanceFilters = {
 const toNumber = (value: unknown): number => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const toNullableNumber = (value: unknown): number | null => {
+  if (value === null || value === undefined) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
 };
 
 const toNullableString = (value: unknown): string | null => {
@@ -363,7 +369,7 @@ export function useProductionPerformance(): UseProductionPerformanceResult {
           estadoPaso: toNullableString(row.estado_paso) || '-',
           fechaInicio: toNullableString(row.fecha_inicio) || '',
           fechaFin: toNullableString(row.fecha_fin) || '',
-          duracionMinutos: toNumber(row.duracion_minutos),
+          tiempoEntreHitosMinutos: toNullableNumber(row.tiempo_entre_hitos_minutos),
         }))
       );
 

@@ -13,12 +13,14 @@ interface CentroCopiadoResumenOrdenProps {
   descuento: number;
   onDescuentoChange: (descuento: number) => void;
   onGuardar: () => void;
+  onGuardarBorrador?: () => void;
   onGuardarEntregada?: () => void;
   onCancelar: () => void;
   guardando: boolean;
   containerRef: RefObject<HTMLDivElement>;
   requiereFactura: boolean;
   buttonText?: string;
+  buttonDraftText?: string;
   buttonSecondaryText?: string;
 }
 
@@ -27,12 +29,14 @@ export function CentroCopiadoResumenOrden({
   descuento,
   onDescuentoChange,
   onGuardar,
+  onGuardarBorrador,
   onGuardarEntregada,
   onCancelar,
   guardando,
   containerRef,
   requiereFactura,
   buttonText,
+  buttonDraftText,
   buttonSecondaryText,
 }: CentroCopiadoResumenOrdenProps) {
   const { tamanios } = useCentroCopiadoTamanios();
@@ -103,6 +107,7 @@ export function CentroCopiadoResumenOrden({
   const total = subtotalNeto + iva;
 
   const puedeGuardar = itemsCompletos.length > 0 && !guardando;
+  const puedeGuardarBorrador = !guardando;
 
   const getItemDescripcion = (item: { config: Partial<ItemCopiadoConfig> }) => {
     const config = item.config;
@@ -312,6 +317,17 @@ export function CentroCopiadoResumenOrden({
                 >
                   {guardando ? 'Guardando...' : (buttonText || 'Guardar Orden')}
                 </Button>
+                {onGuardarBorrador && (
+                  <Button
+                    variant="secondary"
+                    onClick={() => onGuardarBorrador()}
+                    disabled={!puedeGuardarBorrador}
+                    isLoading={guardando}
+                    className="w-full"
+                  >
+                    {guardando ? 'Guardando...' : (buttonDraftText || 'Guardar borrador')}
+                  </Button>
+                )}
                 {onGuardarEntregada && (
                   <Button
                     variant="success"

@@ -86,15 +86,15 @@ export function ProductionPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <Card>
+    <div className="space-y-6 overflow-x-hidden">
+      <Card className="overflow-x-hidden">
         <Tabs
           tabs={tabs}
           activeTab={activeTab}
           onTabChange={handleTabChange}
         />
 
-        <div className="p-6">
+        <div className="min-w-0 p-6">
           {activeTab === 'jobs' && <JobsView />}
 
           {activeTab === 'estaciones' && <StationsView />}

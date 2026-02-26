@@ -33,7 +33,7 @@ export function PerformanceView() {
   } = useProductionPerformance();
 
   return (
-    <div className="space-y-4">
+    <div className="max-w-full space-y-4 overflow-x-hidden [&>*]:min-w-0">
       <PerformanceFiltersBar
         period={filters.period}
         estacionId={filters.estacionId}
@@ -62,12 +62,16 @@ export function PerformanceView() {
       <PerformanceKpiRow kpis={kpis} loading={loading} />
 
       <div className="grid gap-4 xl:grid-cols-2">
-        <CompletedByUserChart data={seriesByUser} loading={loading} />
-        <CompletedByStationChart data={seriesByStation} loading={loading} />
+        <div className="min-w-0">
+          <CompletedByUserChart data={seriesByUser} loading={loading} />
+        </div>
+        <div className="min-w-0">
+          <CompletedByStationChart data={seriesByStation} loading={loading} />
+        </div>
       </div>
 
       <div className="grid gap-4 xl:grid-cols-3">
-        <Card className="border-slate-200 shadow-sm xl:col-span-1">
+        <Card className="min-w-0 border-slate-200 shadow-sm xl:col-span-1">
           <CardHeader>
             <CardTitle>Ranking de usuarios</CardTitle>
           </CardHeader>
@@ -83,11 +87,11 @@ export function PerformanceView() {
             ) : (
               <div className="space-y-2">
                 {seriesByUser.slice(0, 10).map((row, index) => (
-                  <div key={`${row.responsableId || 'none'}-${index}`} className="flex items-center justify-between rounded border border-slate-200 px-3 py-2">
-                    <p className="text-sm font-medium text-slate-700">
+                  <div key={`${row.responsableId || 'none'}-${index}`} className="flex min-w-0 items-center justify-between gap-2 rounded border border-slate-200 px-3 py-2">
+                    <p className="truncate text-sm font-medium text-slate-700" title={row.responsableNombre}>
                       {index + 1}. {row.responsableNombre}
                     </p>
-                    <p className="text-sm font-semibold text-slate-900">{row.tareasTerminadas.toLocaleString('es-AR')}</p>
+                    <p className="shrink-0 text-sm font-semibold text-slate-900">{row.tareasTerminadas.toLocaleString('es-AR')}</p>
                   </div>
                 ))}
               </div>
@@ -95,22 +99,28 @@ export function PerformanceView() {
           </CardContent>
         </Card>
 
-        <div className="xl:col-span-2">
+        <div className="min-w-0 xl:col-span-2">
           <CycleTrendChart data={cycleTrend} loading={loading} />
         </div>
       </div>
 
-      <TasksEvolutionChart
-        data={tasksTimeline}
-        users={usuarios}
-        selectedUserId={timelineUserId}
-        loading={loading}
-        onUserChange={setTimelineUserId}
-      />
+      <div className="min-w-0">
+        <TasksEvolutionChart
+          data={tasksTimeline}
+          users={usuarios}
+          selectedUserId={timelineUserId}
+          loading={loading}
+          onUserChange={setTimelineUserId}
+        />
+      </div>
 
-      <CompletedTasksLogTable data={completedTasksLog} loading={loading} />
+      <div className="min-w-0">
+        <CompletedTasksLogTable data={completedTasksLog} loading={loading} />
+      </div>
 
-      <WorktablesGlobalKanban users={usuarios} groups={worktablesByUser} loading={loading} />
+      <div className="min-w-0">
+        <WorktablesGlobalKanban users={usuarios} groups={worktablesByUser} loading={loading} />
+      </div>
     </div>
   );
 }

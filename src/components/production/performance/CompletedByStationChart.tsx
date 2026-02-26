@@ -9,7 +9,7 @@ interface CompletedByStationChartProps {
 
 export function CompletedByStationChart({ data, loading = false }: CompletedByStationChartProps) {
   return (
-    <Card className="border-slate-200 shadow-sm">
+    <Card className="w-full min-w-0 overflow-hidden border-slate-200 shadow-sm">
       <CardHeader>
         <CardTitle>Rendimiento por estación</CardTitle>
         <CardDescription>Tareas completadas agrupadas por estación</CardDescription>

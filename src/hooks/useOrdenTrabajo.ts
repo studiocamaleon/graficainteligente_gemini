@@ -64,8 +64,8 @@ export interface OrdenTrabajoItemFull extends OrdenTrabajoItem {
 }
 
 interface CreateOrdenData {
-  cliente_id: string;
-  canal_venta: CanalVenta;
+  cliente_id?: string | null;
+  canal_venta?: CanalVenta | null;
   fecha_estimada_entrega?: string;
   notas_internas?: string;
   // Campos de totales
@@ -408,9 +408,9 @@ export function useOrdenTrabajo() {
         .insert([
           {
             company_id: profile.company_id,
-            cliente_id: data.cliente_id,
+            cliente_id: data.cliente_id || null,
             vendedor_id: profile.id, // Por ahora es igual a created_by, reservado para futura funcionalidad
-            canal_venta: data.canal_venta,
+            canal_venta: data.canal_venta || null,
             estado: 'borrador',
             fecha_creacion: new Date().toISOString(),
             fecha_estimada_entrega: data.fecha_estimada_entrega || null,
@@ -419,7 +419,7 @@ export function useOrdenTrabajo() {
             total_descuentos: 0,
             total: 0,
             created_by: profile.id,
-            numero_orden: '',
+            numero_orden: null,
           },
         ])
         .select()
@@ -1048,6 +1048,9 @@ export function useOrdenTrabajo() {
         updated_at: new Date().toISOString(),
         updated_by: profile.id
       };
+      if (data.estadoInicial) {
+        updateData.estado = data.estadoInicial;
+      }
 
       const { error: ordenError } = await supabase
         .from('ordenes_trabajo')
@@ -1263,6 +1266,12 @@ export function useOrdenTrabajo() {
       // 4. Recalcular totales consolidado
       await supabase.rpc('fn_recalcular_total_orden_trabajo', { p_orden_trabajo_id: id });
 
+      if ((data.estadoInicial || 'pendiente') !== 'borrador') {
+        await supabase.rpc('fn_assign_numero_orden_ot_if_missing', {
+          p_orden_id: id,
+        } as any);
+      }
+
       // 5. Historial
       await addHistorialEvent(
         id,
@@ -1288,7 +1297,7 @@ export function useOrdenTrabajo() {
     return updateOrden(id, { estado: nuevoEstado });
   };
 
-  const createOrdenConItems = async (data: CreateOrdenConItemsData): Promise<OrdenTrabajoFull | null> => {
+const createOrdenConItems = async (data: CreateOrdenConItemsData): Promise<OrdenTrabajoFull | null> => {
     if (!profile?.company_id || !profile?.id) {
       setError('No hay empresa o usuario asociado');
       return null;
@@ -1307,10 +1316,10 @@ export function useOrdenTrabajo() {
         .insert([
           {
             company_id: profile.company_id,
-            cliente_id: data.ordenData.cliente_id,
+            cliente_id: data.ordenData.cliente_id || null,
             vendedor_id: profile.id, // Por ahora el vendedor es quien crea
-            canal_venta: data.ordenData.canal_venta,
-            estado: 'pendiente',
+            canal_venta: data.ordenData.canal_venta || null,
+            estado: estadoFinal,
             fecha_creacion: new Date().toISOString(),
             fecha_estimada_entrega: data.ordenData.fecha_estimada_entrega || null,
             notas_internas: data.ordenData.notas_internas || null,
@@ -1321,7 +1330,7 @@ export function useOrdenTrabajo() {
             subtotal_iva: data.ordenData.subtotal_iva || 0,
             facturada: false,
             created_by: profile.id,
-            numero_orden: '',
+            numero_orden: null,
             requiere_despacho: data.ordenData.requiere_despacho || false,
             estado_envio: 'pendiente',
             updated_at: new Date().toISOString(),
@@ -1396,7 +1405,7 @@ export function useOrdenTrabajo() {
           }
 
           // Si el item tiene rutas (pregeneradas o recién calculadas), insertarlas
-          if (rutasPregeneradas && rutasPregeneradas.length > 0) {
+          if (estadoFinal !== 'borrador' && rutasPregeneradas && rutasPregeneradas.length > 0) {
             try {
               const rutasToInsert = rutasPregeneradas.map((ruta: any) => {
                 console.log('🔍 Ruta a insertar:', {
@@ -1516,6 +1525,13 @@ export function useOrdenTrabajo() {
           .from('ordenes_trabajo')
           .update({ subtotal: subtotalFinal, total })
           .eq('id', newOrden.id);
+      }
+
+      // Si se confirmó como orden operativa, asegurar número oficial.
+      if (estadoFinal !== 'borrador') {
+        await supabase.rpc('fn_assign_numero_orden_ot_if_missing', {
+          p_orden_id: newOrden.id,
+        } as any);
       }
 
       // 5. Agregar evento al historial

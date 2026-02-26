@@ -14,6 +14,10 @@ interface OrdenFooterTotalesProps {
   onActionClick?: () => void;
   actionDisabled?: boolean;
   actionLoading?: boolean;
+  secondaryActionLabel?: string;
+  onSecondaryActionClick?: () => void;
+  secondaryActionDisabled?: boolean;
+  secondaryActionLoading?: boolean;
 }
 
 export function OrdenFooterTotales({
@@ -28,6 +32,10 @@ export function OrdenFooterTotales({
   onActionClick,
   actionDisabled = false,
   actionLoading = false,
+  secondaryActionLabel,
+  onSecondaryActionClick,
+  secondaryActionDisabled = false,
+  secondaryActionLoading = false,
 }: OrdenFooterTotalesProps) {
   const totalPagadoNorm = roundMoney(toMoney(totalPagado));
   const saldoPendiente = clampZeroMoney(roundMoney(total) - totalPagadoNorm);
@@ -90,25 +98,48 @@ export function OrdenFooterTotales({
             )}
           </div>
 
-          {actionLabel && onActionClick && (
-            <Button
-              onClick={onActionClick}
-              disabled={actionDisabled}
-              className="h-10 min-w-[190px] bg-slate-900 text-white hover:bg-slate-800"
-            >
-              {actionLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Procesando...
-                </>
-              ) : (
-                <>
-                  <Save className="mr-2 h-4 w-4" />
-                  {actionLabel}
-                </>
-              )}
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {secondaryActionLabel && onSecondaryActionClick && (
+              <Button
+                variant="secondary"
+                onClick={onSecondaryActionClick}
+                disabled={secondaryActionDisabled}
+                className="h-10 min-w-[170px]"
+              >
+                {secondaryActionLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Guardando...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    {secondaryActionLabel}
+                  </>
+                )}
+              </Button>
+            )}
+
+            {actionLabel && onActionClick && (
+              <Button
+                onClick={onActionClick}
+                disabled={actionDisabled}
+                className="h-10 min-w-[190px] bg-slate-900 text-white hover:bg-slate-800"
+              >
+                {actionLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Procesando...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    {actionLabel}
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </div>

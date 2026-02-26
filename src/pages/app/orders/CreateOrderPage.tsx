@@ -35,7 +35,7 @@ import { sendWatiMessage } from '../../../lib/wati';
 import { buildTrackingUrl } from '../../../lib/trackingUrl';
 import { clampZeroMoney, roundMoney, toMoney } from '../../../utils/money';
 
-import type { CanalVenta } from '../../../types/database';
+import type { CanalVenta, EstadoOrdenTrabajo } from '../../../types/database';
 import { usePresupuestos } from '../../../hooks/usePresupuestos';
 import { generarDescripcionCopiado } from '../../../utils/ordenesHelpers';
 import { useLocation } from 'react-router-dom';
@@ -150,11 +150,14 @@ export function CreateOrderPage() {
   const [ordenesCopiadoAsociadas, setOrdenesCopiadoAsociadas] = useState<any[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
   const isInitialLoad = useRef(true);
+  const suppressUnsavedPromptRef = useRef(false);
+  const suppressUnsavedPromptTimerRef = useRef<number | null>(null);
 
   // Estados Presupuesto
   const [mode, setMode] = useState<'orden' | 'presupuesto'>('orden');
   const [presupuestoValidez, setPresupuestoValidez] = useState('');
   const [presupuestoCondiciones, setPresupuestoCondiciones] = useState('');
+  const [estadoOrdenActual, setEstadoOrdenActual] = useState<EstadoOrdenTrabajo>('pendiente');
 
   // Inicialización de modo presupuesto si viene por URL
   useEffect(() => {
@@ -198,7 +201,7 @@ export function CreateOrderPage() {
 
   // Tracking de cambios para avisar al salir
   useEffect(() => {
-    if (isLoadingData || isInitialLoad.current) return;
+    if (isLoadingData || isInitialLoad.current || suppressUnsavedPromptRef.current) return;
     setHasChanges(true);
   }, [clienteId, items, canalVenta, fechaEntrega, notasInternas, requiereFactura, requiereDespacho, descuentoTotal, pagos, ordenesCopiadoAsociadas, presupuestoValidez, presupuestoCondiciones]);
 
@@ -214,6 +217,14 @@ export function CreateOrderPage() {
       isInitialLoad.current = true;
     }
   }, [isLoadingData]);
+
+  useEffect(() => {
+    return () => {
+      if (suppressUnsavedPromptTimerRef.current !== null) {
+        window.clearTimeout(suppressUnsavedPromptTimerRef.current);
+      }
+    };
+  }, []);
 
   const { updateStepComment, countAllComments } = useItemRoutesComments({
     items,
@@ -326,8 +337,9 @@ export function CreateOrderPage() {
         return;
       }
 
-      setClienteId(orden.cliente_id);
+      setClienteId(orden.cliente_id || '');
       setCanalVenta(orden.canal_venta || '');
+      setEstadoOrdenActual((orden.estado as EstadoOrdenTrabajo) || 'pendiente');
       setFechaEntrega(orden.fecha_estimada_entrega ? orden.fecha_estimada_entrega.split('T')[0] : '');
       setNotasInternas(orden.notas_internas || '');
       setCreatedByUserId(orden.created_by || '');
@@ -402,6 +414,7 @@ export function CreateOrderPage() {
 
   // --- Prompt Changes ---
   const formularioTieneCambios = () => {
+    if (suppressUnsavedPromptRef.current) return false;
     if (ordenCreada) return false;
     if (isEditing) return hasChanges;
     return clienteId !== '' || items.length > 0 || notasInternas !== '' || fechaEntrega !== '' || ordenesCopiadoAsociadas.length > 0;
@@ -734,9 +747,12 @@ export function CreateOrderPage() {
     setIsLoading(true);
 
     const totales = calcularTotales();
+    const estadoConfirmacion: EstadoOrdenTrabajo = isEditing
+      ? (estadoOrdenActual === 'borrador' ? 'pendiente' : estadoOrdenActual)
+      : 'pendiente';
     const ordenData = {
-      cliente_id: clienteId,
-      canal_venta: canalVenta as CanalVenta,
+      cliente_id: clienteId || null,
+      canal_venta: (canalVenta as CanalVenta) || null,
       fecha_estimada_entrega: fechaEntrega ? `${fechaEntrega}T12:00:00-03:00` : undefined,
       notas_internas: notasInternas || undefined,
       subtotal: totales.subtotal,
@@ -779,7 +795,7 @@ export function CreateOrderPage() {
         servicio_id: null,
         metadata: (s as any).metadata
       })),
-      estadoInicial: 'pendiente' as const,
+      estadoInicial: estadoConfirmacion,
     };
 
     try {
@@ -827,6 +843,7 @@ export function CreateOrderPage() {
 
           setOrdenCreada(true);
           setOrdenCreadaId(result.id);
+          setEstadoOrdenActual((result.estado as EstadoOrdenTrabajo) || 'pendiente');
           showSuccess('Orden creada exitosamente');
 
           // Notificacion WhatsApp (Wati Template)
@@ -868,8 +885,115 @@ export function CreateOrderPage() {
     }
   };
 
+  const handleGuardarBorradorOT = async ({
+    redirectMode = 'editIfNew',
+  }: {
+    redirectMode?: 'editIfNew' | 'none';
+  } = {}): Promise<boolean> => {
+    if (!profile?.company_id || mode !== 'orden') return false;
+
+    isCreatingOrderRef.current = true;
+    setIsLoading(true);
+    setFormErrors({});
+
+    const totales = calcularTotales();
+    const ordenData = {
+      cliente_id: clienteId || null,
+      canal_venta: (canalVenta as CanalVenta) || null,
+      fecha_estimada_entrega: fechaEntrega ? `${fechaEntrega}T12:00:00-03:00` : undefined,
+      notas_internas: notasInternas || undefined,
+      subtotal: totales.subtotal,
+      total_descuentos: totales.descuentoAplicado,
+      total: totales.total,
+      requiere_factura: requiereFactura,
+      subtotal_iva: totales.iva,
+      requiere_despacho: requiereDespacho,
+      ...(isEditing && canChangeOrderCreator ? { created_by: createdByUserId || null } : {}),
+    };
+
+    const itemsFisicos = items.filter(i => !i.es_servicio_cobro);
+    const serviciosAdicionales = items.filter(i => i.es_servicio_cobro);
+
+    const payload = {
+      ordenData,
+      items: itemsFisicos.map(item => ({
+        id: item.id,
+        tipo_item: item.tipo_item || 'catalogo',
+        producto_id: item.producto_id || null,
+        categoria_id: item.categoria_id || item.configuracion?.categoria_id || null,
+        producto_nombre: item.producto_nombre || 'Item borrador',
+        producto_categoria: item.producto_categoria || item.categoria || 'Personalizado',
+        descripcion: item.descripcion || (item.tipo_item === 'centro_copiado' || item.categoria_id === 'centro_copiado' ? generarDescripcionCopiado(item.configuracion) : null),
+        tiempo_produccion_dias: item.tiempo_produccion_dias || null,
+        cantidad: item.cantidad || 1,
+        configuracion: item.configuracion || {},
+        precio_base: item.precio_base || 0,
+        precio_servicios: item.precio_servicios || 0,
+        precio_acabados: item.precio_acabados || 0,
+        precio_unitario_final: item.precio_unitario_final || 0,
+        precio_total: item.precio_total || 0,
+        rutas_generadas: (item as any).rutas_generadas || [],
+      })),
+      servicios: serviciosAdicionales.map(s => ({
+        descripcion: s.producto_nombre || 'Servicio borrador',
+        cantidad: s.cantidad || 1,
+        precio_unitario: s.precio_unitario_final || 0,
+        subtotal: s.precio_total || 0,
+        servicio_id: null,
+        metadata: (s as any).metadata
+      })),
+      estadoInicial: 'borrador' as const,
+    };
+
+    try {
+      let result: any;
+      if (isEditing && id) {
+        result = await updateOrdenCompleta(id, payload);
+      } else {
+        result = await createOrdenConItems(payload);
+      }
+
+      if (!result || !result.id) {
+        throw new Error(ordenError || 'No se pudo guardar el borrador');
+      }
+
+      setEstadoOrdenActual('borrador');
+      setOrdenCreadaId(result.id);
+      showSuccess('Borrador guardado');
+      setHasChanges(false);
+      isInitialLoad.current = true;
+      suppressUnsavedPromptRef.current = true;
+      if (suppressUnsavedPromptTimerRef.current !== null) {
+        window.clearTimeout(suppressUnsavedPromptTimerRef.current);
+      }
+      suppressUnsavedPromptTimerRef.current = window.setTimeout(() => {
+        suppressUnsavedPromptRef.current = false;
+        isInitialLoad.current = false;
+      }, 1200);
+
+      if (!isEditing && redirectMode === 'editIfNew') {
+        setTimeout(() => navigate(`/app/orders/editar-ot/${result.id}`), 300);
+      }
+      return true;
+    } catch (err: any) {
+      console.error(err);
+      showError(err.message || 'No se pudo guardar el borrador');
+      return false;
+    } finally {
+      setIsLoading(false);
+      isCreatingOrderRef.current = false;
+    }
+  };
+
+  const handleGuardarBorradorYSalir = async () => {
+    const guardadoOk = await handleGuardarBorradorOT({ redirectMode: 'none' });
+    if (guardadoOk) {
+      confirmPrompt();
+    }
+  };
+
   const handlePagoSubmit = async (data: any): Promise<boolean> => {
-    if (!ordenCreadaId) return;
+    if (!ordenCreadaId) return false;
     setIsLoading(true);
     const success = await addPago(ordenCreadaId, data);
     if (success) {
@@ -913,6 +1037,12 @@ export function CreateOrderPage() {
     ...(mode !== 'presupuesto' ? [{ id: 'pagos', label: 'Pagos', count: pagos.length, disabled: false }] : []),
     { id: 'historial', label: 'Historial', disabled: true },
   ];
+  const canSaveDraft = mode === 'orden' && (!isEditing || estadoOrdenActual === 'borrador');
+  const primaryActionLabel = mode === 'presupuesto'
+    ? (isEditing ? 'Guardar Cambios' : 'Crear Presupuesto')
+    : canSaveDraft
+      ? (isEditing ? 'Confirmar Orden' : 'Crear Orden')
+      : (isEditing ? 'Guardar Cambios' : 'Crear Orden');
 
   if (isLoadingData) {
     return (
@@ -1036,10 +1166,14 @@ export function CreateOrderPage() {
           requiereFactura={requiereFactura}
           totalPagado={pagos.reduce((sum, p) => sum + toMoney(p.monto), 0)}
           mostrarSaldo={pagos.length > 0}
-          actionLabel={isEditing ? 'Guardar Cambios' : (mode === 'presupuesto' ? 'Crear Presupuesto' : 'Crear Orden')}
+          actionLabel={primaryActionLabel}
           onActionClick={handleCrearOrden}
           actionDisabled={isLoading || items.length === 0 || !clienteId}
           actionLoading={isLoading}
+          secondaryActionLabel={canSaveDraft ? 'Guardar borrador' : undefined}
+          onSecondaryActionClick={canSaveDraft ? handleGuardarBorradorOT : undefined}
+          secondaryActionDisabled={isLoading}
+          secondaryActionLoading={isLoading}
         />
       </div>
 
@@ -1077,7 +1211,11 @@ export function CreateOrderPage() {
         message="¿Estás seguro de que deseas salir?"
         confirmText="Salir sin guardar"
         cancelText="Continuar editando"
+        extraActionText={canSaveDraft ? 'Guardar borrador y salir' : undefined}
+        onExtraAction={canSaveDraft ? handleGuardarBorradorYSalir : undefined}
+        isExtraActionLoading={isLoading}
         variant="warning"
+        isLoading={isLoading}
       />
 
     </>

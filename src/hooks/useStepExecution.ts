@@ -8,12 +8,71 @@ interface StepExecutionResult {
   success: boolean;
   error?: string;
   updatedRuta?: OrdenItemRuta;
+  ordenCambioAFinalizada?: boolean;
+  ordenFinalizada?: boolean;
+  ordenRequiereDespacho?: boolean;
+  ordenNumero?: string;
+  ordenId?: string;
+}
+
+interface OrdenSnapshot {
+  id: string;
+  estado: string;
+  requiere_despacho: boolean;
+  numero_orden: string;
 }
 
 export function useStepExecution() {
   const { profile } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const fetchOrdenSnapshot = async (ordenItemId: string): Promise<OrdenSnapshot | null> => {
+    const { data, error: snapshotError } = await supabase
+      .from('ordenes_trabajo_items')
+      .select('orden:ordenes_trabajo!inner(id, estado, requiere_despacho, numero_orden)')
+      .eq('id', ordenItemId)
+      .maybeSingle<any>();
+
+    if (snapshotError) {
+      console.warn('No se pudo obtener snapshot de la orden:', snapshotError);
+      return null;
+    }
+
+    const orden = data?.orden;
+    if (!orden) return null;
+
+    return {
+      id: orden.id,
+      estado: orden.estado,
+      requiere_despacho: Boolean(orden.requiere_despacho),
+      numero_orden: orden.numero_orden || 'Sin número',
+    };
+  };
+
+  const buildOrdenTransitionMeta = (
+    before: OrdenSnapshot | null,
+    after: OrdenSnapshot | null
+  ): Pick<
+    StepExecutionResult,
+    'ordenCambioAFinalizada' | 'ordenFinalizada' | 'ordenRequiereDespacho' | 'ordenNumero' | 'ordenId'
+  > => {
+    const finalOrder = after || before;
+    const estadoBefore = before?.estado;
+    const estadoAfter = after?.estado;
+    const ordenFinalizada = estadoAfter === 'finalizada';
+
+    return {
+      ordenCambioAFinalizada:
+        estadoBefore !== undefined
+          ? estadoBefore !== 'finalizada' && estadoAfter === 'finalizada'
+          : false,
+      ordenFinalizada,
+      ordenRequiereDespacho: finalOrder ? finalOrder.requiere_despacho : false,
+      ordenNumero: finalOrder?.numero_orden,
+      ordenId: finalOrder?.id,
+    };
+  };
 
   const startStep = async (rutaId: string, ordenItemId: string): Promise<StepExecutionResult> => {
     if (!profile?.id) {
@@ -112,6 +171,8 @@ export function useStepExecution() {
     setError(null);
 
     try {
+      const ordenBefore = await fetchOrdenSnapshot(ordenItemId);
+
       // 1. Verificar si es tarea global
       const { data: rutaInfo, error: fetchRutaError } = await supabase
         .from('ordenes_trabajo_items_rutas')
@@ -131,7 +192,11 @@ export function useStepExecution() {
         } as any);
 
         if (rpcError) throw rpcError;
-        return { success: true };
+        const ordenAfter = await fetchOrdenSnapshot(ordenItemId);
+        return {
+          success: true,
+          ...buildOrdenTransitionMeta(ordenBefore, ordenAfter),
+        };
       }
 
       // CASO NORMAL
@@ -174,7 +239,12 @@ export function useStepExecution() {
         if (itemError) console.warn('Error actualizando estado del item a finalizado:', itemError);
       }
 
-      return { success: true, updatedRuta };
+      const ordenAfter = await fetchOrdenSnapshot(ordenItemId);
+      return {
+        success: true,
+        updatedRuta,
+        ...buildOrdenTransitionMeta(ordenBefore, ordenAfter),
+      };
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Error desconocido';
       setError(errorMsg);
@@ -201,6 +271,8 @@ export function useStepExecution() {
     setError(null);
 
     try {
+      const ordenBefore = await fetchOrdenSnapshot(ordenItemId);
+
       // 1. Verificar si es tarea global
       const { data: rutaInfo, error: fetchRutaError } = await supabase
         .from('ordenes_trabajo_items_rutas')
@@ -220,7 +292,11 @@ export function useStepExecution() {
         } as any);
 
         if (rpcError) throw rpcError;
-        return { success: true };
+        const ordenAfter = await fetchOrdenSnapshot(ordenItemId);
+        return {
+          success: true,
+          ...buildOrdenTransitionMeta(ordenBefore, ordenAfter),
+        };
       }
 
       // CASO NORMAL
@@ -261,7 +337,12 @@ export function useStepExecution() {
         if (itemError) console.warn('Error actualizando estado del item a finalizado:', itemError);
       }
 
-      return { success: true, updatedRuta };
+      const ordenAfter = await fetchOrdenSnapshot(ordenItemId);
+      return {
+        success: true,
+        updatedRuta,
+        ...buildOrdenTransitionMeta(ordenBefore, ordenAfter),
+      };
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Error desconocido';
       setError(errorMsg);

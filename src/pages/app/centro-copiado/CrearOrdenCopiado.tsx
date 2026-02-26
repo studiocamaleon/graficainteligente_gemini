@@ -379,7 +379,11 @@ export function CrearOrdenCopiado() {
     setPagos(prev => prev.filter(p => p.id !== id));
   };
 
-  const validarFormulario = (): boolean => {
+  const validarFormulario = (estadoInicial: EstadoOrdenCopiado = 'pendiente'): boolean => {
+    if (estadoInicial === 'borrador') {
+      return true;
+    }
+
     if (!clienteId) {
       openDialog('Error', 'Debes seleccionar un cliente');
       return false;
@@ -425,7 +429,7 @@ export function CrearOrdenCopiado() {
   };
 
   const guardarOrden = async (estadoInicial: EstadoOrdenCopiado = 'pendiente') => {
-    if (!validarFormulario()) {
+    if (!validarFormulario(estadoInicial)) {
       return;
     }
 
@@ -448,8 +452,8 @@ export function CrearOrdenCopiado() {
 
       // 1. Crear orden real
       const datosOrden = {
-        cliente_id: clienteId,
-        origen: origen as CanalVenta,
+        cliente_id: clienteId || null,
+        origen: (origen as CanalVenta) || null,
         orden_trabajo_id: ordenTrabajoIdParam || undefined,
         fecha_entrega_estimada: fechaEntregaCompleta,
         observaciones: observaciones || undefined,
@@ -470,7 +474,9 @@ export function CrearOrdenCopiado() {
 
         openDialog(
           'Orden Actualizada',
-          `La orden ha sido actualizada exitosamente.`,
+          estadoInicial === 'borrador'
+            ? 'El borrador se guardó correctamente.'
+            : 'La orden ha sido actualizada exitosamente.',
           () => {
             navigate(`/app/centro-copiado/ordenes/${id}`);
           }
@@ -580,7 +586,7 @@ export function CrearOrdenCopiado() {
         .single() as { data: any, error: any };
 
       // Enviar notificación solo si es orden independiente (no asociada a orden de trabajo)
-      if (profile?.company_id && clienteId && !ordenTrabajoIdParam) {
+      if (estadoInicial !== 'borrador' && profile?.company_id && clienteId && !ordenTrabajoIdParam) {
         sendWatiMessage({
           companyId: profile.company_id,
           phone: clienteSeleccionado?.whatsapp || '', // Should check this before calling
@@ -604,9 +610,15 @@ export function CrearOrdenCopiado() {
 
       openDialog(
         'Orden Creada',
-        `La orden ${ordenFinal?.numero_orden || ''} ha sido creada exitosamente. Estado: ${estadoInicial === 'entregada' ? 'Entregada' : 'Pendiente'}.`,
+        `La orden ${ordenFinal?.numero_orden || ''} ha sido creada exitosamente. Estado: ${
+          estadoInicial === 'entregada' ? 'Entregada' : estadoInicial === 'borrador' ? 'Borrador' : 'Pendiente'
+        }.`,
         () => {
-          navigate(`/app/centro-copiado/ordenes/${ordenIdFinal}`);
+          navigate(
+            estadoInicial === 'borrador'
+              ? `/app/centro-copiado/ordenes/editar/${ordenIdFinal}`
+              : `/app/centro-copiado/ordenes/${ordenIdFinal}`
+          );
         }
       );
     } catch (error) {
@@ -632,6 +644,10 @@ export function CrearOrdenCopiado() {
     }
     navigate('/app/centro-copiado/ordenes');
   };
+  const canSaveDraft = !isEditing || ordenEditar?.estado === 'borrador';
+  const primaryButtonText = isEditing
+    ? (ordenEditar?.estado === 'borrador' ? 'Confirmar Orden' : 'Guardar Cambios')
+    : 'Crear Orden';
 
   return (
     <div className="space-y-6">
@@ -832,11 +848,13 @@ export function CrearOrdenCopiado() {
             onDescuentoChange={setDescuento}
             guardando={guardando}
             onGuardar={guardarOrden}
+            onGuardarBorrador={canSaveDraft ? () => guardarOrden('borrador') : undefined}
             onGuardarEntregada={!isEditing ? () => guardarOrden('entregada') : undefined}
             onCancelar={cancelar}
             containerRef={resumenContainerRef}
             requiereFactura={requiereFactura}
-            buttonText={isEditing ? 'Guardar Cambios' : 'Crear Orden'}
+            buttonText={primaryButtonText}
+            buttonDraftText="Guardar borrador"
             buttonSecondaryText="Crear y marcar como entregada"
           />
         </div>

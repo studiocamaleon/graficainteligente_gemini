@@ -1222,7 +1222,7 @@ export interface PedidoRutaResuelta {
 
 export type CanalVenta = 'Web' | 'WhatsApp' | 'Mostrador' | 'App Mobile';
 
-export type EstadoOrdenTrabajo = 'pendiente' | 'en_proceso' | 'finalizada' | 'entregada' | 'cancelada';
+export type EstadoOrdenTrabajo = 'borrador' | 'pendiente' | 'en_proceso' | 'finalizada' | 'entregada' | 'cancelada';
 
 export type EstadoOrdenItem = 'pendiente' | 'en_proceso' | 'finalizado';
 
@@ -1348,10 +1348,10 @@ export interface WizardItemData {
 export interface OrdenTrabajo {
   id: string;
   company_id: string;
-  cliente_id: string;
-  numero_orden: string;
+  cliente_id: string | null;
+  numero_orden: string | null;
   vendedor_id: string;
-  canal_venta: CanalVenta;
+  canal_venta: CanalVenta | null;
   estado: EstadoOrdenTrabajo;
   fecha_creacion: string;
   fecha_estimada_entrega: string | null;
@@ -1503,7 +1503,7 @@ export type CaraImpresaCopiado = 'frente' | 'frente_y_dorso';
 export type TipoAnillado = 'ring_wire' | 'plastico';
 export type TipoPlastificado = 'A4' | 'SRA3' | 'Carnet';
 export type TipoItemCopiado = 'impresion' | 'anillado' | 'plastificado' | 'guillotinado';
-export type EstadoOrdenCopiado = 'pendiente' | 'en_proceso' | 'finalizada' | 'entregada' | 'cancelada';
+export type EstadoOrdenCopiado = 'borrador' | 'pendiente' | 'en_proceso' | 'finalizada' | 'entregada' | 'cancelada';
 
 export interface CentroCopiadoTamanioPapel {
   id: string;
@@ -1600,7 +1600,7 @@ export interface CentroCopiadoPloteoCADPrecio {
 export interface CentroCopiadoOrden {
   id: string;
   company_id: string;
-  numero_orden: string;
+  numero_orden: string | null;
   orden_trabajo_id: string | null;
   cliente_id: string | null;
   estado: EstadoOrdenCopiado;
@@ -1614,7 +1614,7 @@ export interface CentroCopiadoOrden {
   created_by: string | null;
   created_at: string;
   updated_at: string;
-  canal_venta: CanalVenta;
+  canal_venta: CanalVenta | null;
   subtotal: number;
   total_descuentos: number;
 }

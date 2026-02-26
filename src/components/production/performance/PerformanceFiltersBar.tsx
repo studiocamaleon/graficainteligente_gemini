@@ -28,8 +28,8 @@ export function PerformanceFiltersBar({
   onUserChange,
 }: PerformanceFiltersBarProps) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="grid gap-3 md:grid-cols-4">
+    <div className="w-full min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="grid gap-3 md:grid-cols-4 [&>*]:min-w-0">
         <Select
           label="Período"
           value={period}

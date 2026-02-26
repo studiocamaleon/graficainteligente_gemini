@@ -1,7 +1,7 @@
 
 import type { DragEvent } from 'react';
 import { useState } from 'react';
-import { ChevronDown, ChevronUp, Layers, CheckSquare, MinusSquare, Square, AlertTriangle, CalendarDays, CalendarClock } from 'lucide-react';
+import { ChevronDown, ChevronUp, Layers, CheckSquare, MinusSquare, Square, AlertTriangle, CalendarDays, CalendarClock, Truck } from 'lucide-react';
 import type { StationStep } from '../../hooks/useProductionStations';
 import { StationStepCard } from './StationStepCard';
 import { Badge } from '../ui/Badge';
@@ -41,6 +41,7 @@ export function StationStepGroup({
   const tomorrowCount = steps.filter((step) => deliveryStatusByRuta[step.ruta_id] === 'tomorrow').length;
   const allSelected = selectedCount === steps.length;
   const partiallySelected = selectedCount > 0 && selectedCount < steps.length;
+  const dispatchCount = steps.filter((step) => step.requiere_despacho).length;
 
   return (
     <div className="border border-slate-200 rounded-lg bg-white shadow-sm overflow-hidden transition-all duration-200">
@@ -101,6 +102,12 @@ export function StationStepGroup({
             <Badge variant="info" size="sm" className="flex items-center gap-1 shadow-none" title="Incluye pasos para entregar mañana">
               <CalendarClock className="w-3.5 h-3.5" />
               {tomorrowCount}
+            </Badge>
+          )}
+          {dispatchCount > 0 && (
+            <Badge variant="warning" size="sm" className="flex items-center gap-1 shadow-none" title="Incluye ítems de órdenes con despacho">
+              <Truck className="w-3.5 h-3.5" />
+              {dispatchCount}
             </Badge>
           )}
           {isExpanded ? (

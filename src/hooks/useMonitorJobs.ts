@@ -104,6 +104,7 @@ export function useMonitorJobs(companyId: string) {
         `)
         .eq('orden.company_id', companyId)
         .neq('orden.estado', 'cancelada')
+        .neq('orden.estado', 'borrador')
         .neq('orden.estado', 'entregada');
 
       if (itemsError) throw itemsError;

@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, FileText, Eye, Calendar, DollarSign, CheckCircle, AlertCircle, Clock } from 'lucide-react';
+import { Plus, FileText, Eye, Calendar, DollarSign, CheckCircle, AlertCircle, Clock, Check, Pencil, Trash2 } from 'lucide-react';
 import { Switch } from '../../../components/ui/Switch';
 import { supabase } from '../../../lib/supabase';
 import { Card } from '../../../components/ui/card';
@@ -22,6 +22,7 @@ export function Ordenes() {
   const [searchTerm, setSearchTerm] = useState('');
   const [estadoFiltro, setEstadoFiltro] = useState<EstadoOrdenCopiado | ''>('');
   const [mostrarSoloActivas, setMostrarSoloActivas] = useState(true);
+  const [draftsOnly, setDraftsOnly] = useState(false);
   const [page, setPage] = useState(1);
   const itemsPerPage = 25;
   const [pagosPorOrden, setPagosPorOrden] = useState<Record<string, { totalPagado: number }>>({});
@@ -31,8 +32,10 @@ export function Ordenes() {
   const debouncedSearchTerm = useDebounce(searchTerm, 500);
 
   const estados = useMemo(() =>
-    !estadoFiltro && mostrarSoloActivas ? ['pendiente', 'en_proceso'] as EstadoOrdenCopiado[] : [],
-    [estadoFiltro, mostrarSoloActivas]);
+    draftsOnly
+      ? ['borrador'] as EstadoOrdenCopiado[]
+      : (!estadoFiltro && mostrarSoloActivas ? ['pendiente', 'en_proceso'] as EstadoOrdenCopiado[] : []),
+    [estadoFiltro, mostrarSoloActivas, draftsOnly]);
 
   const { ordenes, totalCount, loading, fetchOrdenes } = useCentroCopiadoOrdenes({
     searchTerm: debouncedSearchTerm,
@@ -76,7 +79,13 @@ export function Ordenes() {
   // Reset page when filters change
   useEffect(() => {
     setPage(1);
-  }, [debouncedSearchTerm, estadoFiltro, mostrarSoloActivas]);
+  }, [debouncedSearchTerm, estadoFiltro, mostrarSoloActivas, draftsOnly]);
+
+  useEffect(() => {
+    if (draftsOnly && estadoFiltro) {
+      setEstadoFiltro('');
+    }
+  }, [draftsOnly, estadoFiltro]);
 
   const headerAction = useMemo(
     () => (
@@ -138,6 +147,7 @@ export function Ordenes() {
 
   const getEstadoBadge = (estado: EstadoOrdenCopiado) => {
     const estilos = {
+      borrador: { variant: 'secondary' as const, label: 'Borrador' },
       pendiente: { variant: 'warning' as const, label: 'Pendiente' },
       en_proceso: { variant: 'primary' as const, label: 'En Proceso' },
       finalizada: { variant: 'success' as const, label: 'Finalizada' },
@@ -218,6 +228,41 @@ export function Ordenes() {
       window.alert('No se pudo completar la acción masiva. Intentalo nuevamente.');
     } finally {
       setBulkUpdating(false);
+    }
+  };
+
+  const handleConfirmDraft = async (ordenId: string) => {
+    const confirmed = window.confirm('¿Confirmar este borrador y pasarlo a pendiente?');
+    if (!confirmed) return;
+    try {
+      const { error } = await supabase
+        .from('centro_copiado_ordenes')
+        .update({ estado: 'pendiente' })
+        .eq('id', ordenId)
+        .eq('estado', 'borrador');
+      if (error) throw error;
+      await supabase.rpc('fn_assign_numero_orden_cc_if_missing', { p_orden_id: ordenId } as any);
+      await fetchOrdenes();
+    } catch (err) {
+      console.error('No se pudo confirmar borrador:', err);
+      window.alert('No se pudo confirmar el borrador.');
+    }
+  };
+
+  const handleDeleteDraft = async (ordenId: string) => {
+    const confirmed = window.confirm('¿Eliminar este borrador? Esta acción no se puede deshacer.');
+    if (!confirmed) return;
+    try {
+      const { error } = await supabase
+        .from('centro_copiado_ordenes')
+        .delete()
+        .eq('id', ordenId)
+        .eq('estado', 'borrador');
+      if (error) throw error;
+      await fetchOrdenes();
+    } catch (err) {
+      console.error('No se pudo eliminar borrador:', err);
+      window.alert('No se pudo eliminar el borrador.');
     }
   };
 
@@ -326,7 +371,7 @@ export function Ordenes() {
                         />
                       </td>
                       <td className="px-3 py-2 whitespace-nowrap">
-                        <span className="font-semibold text-blue-600 text-xs">{orden.numero_orden}</span>
+                          <span className="font-semibold text-blue-600 text-xs">{orden.numero_orden || 'Sin número'}</span>
                       </td>
                       <td className="px-3 py-2">
                         <div className="max-w-[150px] truncate">
@@ -364,13 +409,39 @@ export function Ordenes() {
                       </td>
                       <td className="px-3 py-2 whitespace-nowrap text-right text-xs font-medium">
                         <div className="flex items-center justify-end gap-1">
-                          <button
-                            onClick={() => navigate(`/app/centro-copiado/ordenes/${orden.id}`)}
-                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                            title="Ver detalle"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
+                          {orden.estado === 'borrador' ? (
+                            <>
+                              <button
+                                onClick={() => handleConfirmDraft(orden.id)}
+                                className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                                title="Confirmar borrador"
+                              >
+                                <Check className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => navigate(`/app/centro-copiado/ordenes/editar/${orden.id}`)}
+                                className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                title="Continuar edición"
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteDraft(orden.id)}
+                                className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                title="Eliminar borrador"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              onClick={() => navigate(`/app/centro-copiado/ordenes/${orden.id}`)}
+                              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              title="Ver detalle"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -402,6 +473,20 @@ export function Ordenes() {
         <div className="px-3 py-2">
           <div className="flex flex-col sm:flex-row gap-3 justify-between items-center">
             <div className="flex flex-col sm:flex-row gap-3 flex-1 w-full sm:w-auto items-center">
+              <div className="flex bg-gray-100 p-1 rounded-lg">
+                <button
+                  onClick={() => setDraftsOnly(false)}
+                  className={`px-3 py-1.5 text-sm rounded-md transition-all ${!draftsOnly ? 'bg-white shadow text-blue-600' : 'text-gray-600 hover:text-gray-800'}`}
+                >
+                  Operativas
+                </button>
+                <button
+                  onClick={() => setDraftsOnly(true)}
+                  className={`px-3 py-1.5 text-sm rounded-md transition-all ${draftsOnly ? 'bg-white shadow text-blue-600' : 'text-gray-600 hover:text-gray-800'}`}
+                >
+                  Mis borradores
+                </button>
+              </div>
               <div className="w-full sm:w-64">
                 <SearchInput
                   value={searchTerm}
@@ -413,8 +498,10 @@ export function Ordenes() {
                 <Select
                   value={estadoFiltro}
                   onChange={(e) => setEstadoFiltro(e.target.value as EstadoOrdenCopiado | '')}
+                  disabled={draftsOnly}
                 >
                   <option value="">Todos los estados</option>
+                  <option value="borrador">Borrador</option>
                   <option value="pendiente">Pendiente</option>
                   <option value="en_proceso">En Proceso</option>
                   <option value="finalizada">Finalizada</option>
@@ -428,13 +515,13 @@ export function Ordenes() {
                   checked={mostrarSoloActivas}
                   onChange={setMostrarSoloActivas}
                   label="Ocultar terminadas"
-                  disabled={!!estadoFiltro}
+                  disabled={!!estadoFiltro || draftsOnly}
                 />
               </div>
             </div>
           </div>
 
-          {selectedOrdenIds.length > 0 && (
+          {selectedOrdenIds.length > 0 && !draftsOnly && (
             <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-gray-100 pt-3">
               <span className="text-sm text-gray-700">
                 {selectedOrdenIds.length} seleccionada(s)

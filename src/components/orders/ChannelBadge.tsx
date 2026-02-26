@@ -2,7 +2,7 @@ import { Globe, MessageCircle, Store, Smartphone } from 'lucide-react';
 import type { CanalVenta } from '../../types/database';
 
 interface ChannelBadgeProps {
-  canal: CanalVenta;
+  canal: CanalVenta | null;
   showLabel?: boolean;
   size?: 'sm' | 'md';
 }
@@ -34,7 +34,11 @@ const canalConfig: Record<
 };
 
 export function ChannelBadge({ canal, showLabel = true, size = 'md' }: ChannelBadgeProps) {
-  const config = canalConfig[canal];
+  const config = canal ? canalConfig[canal] : {
+    label: 'Sin canal',
+    icon: Store,
+    className: 'bg-slate-100 text-slate-700',
+  };
   const Icon = config.icon;
 
   const sizeClasses = size === 'sm' ? 'p-1' : 'p-1.5';

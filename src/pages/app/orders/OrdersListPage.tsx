@@ -8,28 +8,75 @@ import { useOrdenesTrabajo } from '../../../hooks/useOrdenesTrabajo';
 import { KanbanBoard } from '../../../components/orders/KanbanBoard';
 import { OrdenesTable } from '../../../components/orders/OrdenesTable';
 import { usePermissions } from '../../../hooks/usePermissions';
+import { useToast } from '../../../contexts/ToastContext';
+import { supabase } from '../../../lib/supabase';
 
 export function OrdersListPage() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const { hasPermission } = usePermissions();
+  const { showSuccess, showError } = useToast();
 
   const canCreate = hasPermission('orders', 'create');
 
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
+  const [draftsOnly, setDraftsOnly] = useState(false);
   const [page, setPage] = useState(1);
   const itemsPerPage = 50;
 
-  const { ordenes, loading, totalCount } = useOrdenesTrabajo({
+  const { ordenes, loading, totalCount, refetch } = useOrdenesTrabajo({
     searchTerm,
     page,
     itemsPerPage,
+    draftsOnly,
+    includeDrafts: draftsOnly,
   });
+
+  const handleConfirmDraft = async (ordenId: string) => {
+    const ok = window.confirm('¿Confirmar este borrador y pasarlo a pendiente?');
+    if (!ok) return;
+    try {
+      const { error } = await supabase
+        .from('ordenes_trabajo')
+        .update({ estado: 'pendiente' })
+        .eq('id', ordenId)
+        .eq('estado', 'borrador');
+      if (error) throw error;
+      await supabase.rpc('fn_assign_numero_orden_ot_if_missing', { p_orden_id: ordenId } as any);
+      showSuccess('Borrador confirmado');
+      refetch();
+    } catch (err: any) {
+      showError(err.message || 'No se pudo confirmar el borrador');
+    }
+  };
+
+  const handleDeleteDraft = async (ordenId: string) => {
+    const ok = window.confirm('¿Eliminar este borrador? Esta acción no se puede deshacer.');
+    if (!ok) return;
+    try {
+      const { error } = await supabase
+        .from('ordenes_trabajo')
+        .delete()
+        .eq('id', ordenId)
+        .eq('estado', 'borrador');
+      if (error) throw error;
+      showSuccess('Borrador eliminado');
+      refetch();
+    } catch (err: any) {
+      showError(err.message || 'No se pudo eliminar el borrador');
+    }
+  };
 
   // Reset page when search changes
   useEffect(() => {
     setPage(1);
-  }, [searchTerm]);
+  }, [searchTerm, draftsOnly]);
+
+  useEffect(() => {
+    if (draftsOnly && viewMode === 'kanban') {
+      setViewMode('list');
+    }
+  }, [draftsOnly, viewMode]);
 
   const totalPages = Math.ceil(totalCount / itemsPerPage);
 
@@ -64,6 +111,20 @@ export function OrdersListPage() {
             <div className="flex items-center gap-4">
               <div className="flex bg-gray-100 p-1 rounded-lg">
                 <button
+                  onClick={() => setDraftsOnly(false)}
+                  className={`px-3 py-1.5 text-sm rounded-md transition-all ${!draftsOnly ? 'bg-white shadow text-blue-600' : 'text-gray-600 hover:text-gray-800'}`}
+                >
+                  Operativas
+                </button>
+                <button
+                  onClick={() => setDraftsOnly(true)}
+                  className={`px-3 py-1.5 text-sm rounded-md transition-all ${draftsOnly ? 'bg-white shadow text-blue-600' : 'text-gray-600 hover:text-gray-800'}`}
+                >
+                  Mis borradores
+                </button>
+              </div>
+              <div className="flex bg-gray-100 p-1 rounded-lg">
+                <button
                   onClick={() => setViewMode('list')}
                   className={`p-2 rounded-md transition-all ${viewMode === 'list'
                     ? 'bg-white shadow text-blue-600'
@@ -75,6 +136,7 @@ export function OrdersListPage() {
                 </button>
                 <button
                   onClick={() => setViewMode('kanban')}
+                  disabled={draftsOnly}
                   className={`p-2 rounded-md transition-all ${viewMode === 'kanban'
                     ? 'bg-white shadow text-blue-600'
                     : 'text-gray-500 hover:text-gray-700'
@@ -85,7 +147,7 @@ export function OrdersListPage() {
                 </button>
               </div>
               <div className="text-sm text-gray-600">
-                <span className="font-semibold">{totalCount}</span> órdenes
+                <span className="font-semibold">{totalCount}</span> {draftsOnly ? 'borradores' : 'órdenes'}
               </div>
             </div>
           </div>
@@ -112,7 +174,11 @@ export function OrdersListPage() {
           ) : (
             <>
               {viewMode === 'list' ? (
-                <OrdenesTable ordenes={ordenes} />
+                <OrdenesTable
+                  ordenes={ordenes}
+                  onConfirmDraft={draftsOnly ? handleConfirmDraft : undefined}
+                  onDeleteDraft={draftsOnly ? handleDeleteDraft : undefined}
+                />
               ) : (
                 <div className="grid grid-cols-1 w-full">
                   <KanbanBoard ordenes={ordenes} />

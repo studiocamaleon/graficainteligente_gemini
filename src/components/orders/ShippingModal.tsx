@@ -1,16 +1,25 @@
 
 import React, { useState } from 'react';
-import { Truck, Calendar, Package, FileText, X } from 'lucide-react';
+import { Truck, Package, FileText } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { DatePicker } from '../ui/DatePicker';
+import { ShippingLabelModal } from './ShippingLabelModal';
+import type { ShippingLabelCompanyData } from '../../utils/pdfGenerators/shippingLabelPDF';
 
 interface ShippingModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSave: (data: ShippingData) => Promise<void>;
     loading?: boolean;
+    companyData?: ShippingLabelCompanyData;
+    orderData?: {
+        numeroOrden: string;
+        clienteNombre: string;
+        requiereDespacho: boolean;
+    };
+    defaultLabelAddress?: string | null;
 }
 
 export interface ShippingData {
@@ -19,12 +28,21 @@ export interface ShippingData {
     numero_guia: string;
 }
 
-export function ShippingModal({ isOpen, onClose, onSave, loading = false }: ShippingModalProps) {
+export function ShippingModal({
+    isOpen,
+    onClose,
+    onSave,
+    loading = false,
+    companyData,
+    orderData,
+    defaultLabelAddress,
+}: ShippingModalProps) {
     const [formData, setFormData] = useState<ShippingData>({
         fecha_despacho: new Date().toISOString(),
         transporte: '',
         numero_guia: '',
     });
+    const [showLabelModal, setShowLabelModal] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -87,6 +105,18 @@ export function ShippingModal({ isOpen, onClose, onSave, loading = false }: Ship
                 </div>
 
                 <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+                    {orderData?.requiereDespacho && companyData && (
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setShowLabelModal(true)}
+                            disabled={loading}
+                            className="gap-2"
+                        >
+                            <Package className="w-4 h-4" />
+                            Generar etiqueta
+                        </Button>
+                    )}
                     <Button type="button" variant="ghost" onClick={onClose} disabled={loading}>
                         Cancelar
                     </Button>
@@ -96,6 +126,16 @@ export function ShippingModal({ isOpen, onClose, onSave, loading = false }: Ship
                     </Button>
                 </div>
             </form>
+
+            {companyData && orderData && (
+                <ShippingLabelModal
+                    isOpen={showLabelModal}
+                    onClose={() => setShowLabelModal(false)}
+                    companyData={companyData}
+                    orderData={orderData}
+                    defaultAddress={defaultLabelAddress}
+                />
+            )}
         </Modal>
     );
 }

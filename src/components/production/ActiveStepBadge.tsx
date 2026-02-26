@@ -3,6 +3,7 @@ import type { EstadoOrdenItem, TipoEtapaRuta } from '../../types/database';
 interface ActiveStepBadgeProps {
   pasoRelevante?: {
     nombre: string;
+    estacion_nombre?: string | null;
     estado: 'pendiente' | 'en_proceso' | 'pausado';
     etapa: TipoEtapaRuta;
   } | null;
@@ -72,13 +73,14 @@ export function ActiveStepBadge({
     const colors = pasoRelevante.estado === 'pausado'
       ? { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' }
       : etapaColors[pasoRelevante.etapa];
+    const badgeText = pasoRelevante.estacion_nombre || pasoRelevante.nombre;
 
     return (
       <span
         className={`inline-flex items-center rounded-full border font-semibold ${colors.bg} ${colors.text} ${colors.border} ${sizeClasses[size]} max-w-[180px] truncate sm:max-w-[220px]`}
-        title={pasoRelevante.nombre}
+        title={pasoRelevante.estacion_nombre ? `Paso: ${pasoRelevante.nombre}` : pasoRelevante.nombre}
       >
-        <span className="truncate">{pasoRelevante.nombre}</span>
+        <span className="truncate">{badgeText}</span>
       </span>
     );
   }

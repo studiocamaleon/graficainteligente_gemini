@@ -14,8 +14,12 @@ interface ConfirmDialogProps {
   message: string | ReactNode;
   confirmText?: string;
   cancelText?: string;
+  extraActionText?: string;
+  onExtraAction?: () => void | Promise<void>;
+  extraActionVariant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'success' | 'warning';
   variant?: ConfirmDialogVariant;
   isLoading?: boolean;
+  isExtraActionLoading?: boolean;
   icon?: ReactNode;
 }
 
@@ -54,8 +58,12 @@ export function ConfirmDialog({
   message,
   confirmText = 'Confirmar',
   cancelText = 'Cancelar',
+  extraActionText,
+  onExtraAction,
+  extraActionVariant = 'secondary',
   variant = 'danger',
   isLoading = false,
+  isExtraActionLoading = false,
   icon,
 }: ConfirmDialogProps) {
   const styles = variantStyles[variant];
@@ -63,6 +71,11 @@ export function ConfirmDialog({
 
   const handleConfirm = async () => {
     await onConfirm();
+  };
+
+  const handleExtraAction = async () => {
+    if (!onExtraAction) return;
+    await onExtraAction();
   };
 
   const modalContent = (
@@ -108,15 +121,25 @@ export function ConfirmDialog({
                   <Button
                     variant="secondary"
                     onClick={onClose}
-                    disabled={isLoading}
+                    disabled={isLoading || isExtraActionLoading}
                   >
                     {cancelText}
                   </Button>
+                  {extraActionText && onExtraAction && (
+                    <Button
+                      variant={extraActionVariant}
+                      onClick={handleExtraAction}
+                      isLoading={isExtraActionLoading}
+                      disabled={isLoading || isExtraActionLoading}
+                    >
+                      {extraActionText}
+                    </Button>
+                  )}
                   <Button
                     variant={styles.buttonVariant}
                     onClick={handleConfirm}
                     isLoading={isLoading}
-                    disabled={isLoading}
+                    disabled={isLoading || isExtraActionLoading}
                   >
                     {confirmText}
                   </Button>

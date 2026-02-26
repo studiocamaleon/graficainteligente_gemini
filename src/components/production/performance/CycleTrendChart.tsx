@@ -9,7 +9,7 @@ interface CycleTrendChartProps {
 
 export function CycleTrendChart({ data, loading = false }: CycleTrendChartProps) {
   return (
-    <Card className="border-slate-200 shadow-sm">
+    <Card className="w-full min-w-0 overflow-hidden border-slate-200 shadow-sm">
       <CardHeader>
         <CardTitle>Ciclo promedio diario</CardTitle>
         <CardDescription>Horas desde creación hasta orden 100% completa</CardDescription>

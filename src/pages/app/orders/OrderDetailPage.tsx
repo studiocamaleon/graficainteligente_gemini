@@ -13,6 +13,7 @@ import {
   Download,
   Trash2,
   Package,
+  Truck,
   Route,
   Link as LinkIcon,
   CreditCard,
@@ -40,6 +41,7 @@ import { OrdenCopiadoAsociadaCard } from '../../../components/orders/OrdenCopiad
 import { useToast } from '../../../contexts/ToastContext';
 import { descargarFactura } from '../../../utils/facturaHelpers';
 import { ItemConfigRenderer } from '../../../components/orders/ItemConfigRenderer';
+import { ShippingLabelModal } from '../../../components/orders/ShippingLabelModal';
 import { clampZeroMoney, roundMoney, toMoney } from '../../../utils/money';
 import { formatDateTimeDisplay } from '../../../utils/dates';
 
@@ -48,7 +50,7 @@ type TabKey = 'items' | 'ruta' | 'adjuntos' | 'pagos' | 'historial';
 export function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { profile } = useAuth();
+  const { profile, company } = useAuth();
   const {
     getOrdenById,
     deleteOrden,
@@ -151,6 +153,7 @@ export function OrderDetailPage() {
   const [newNoteText, setNewNoteText] = useState('');
   const [addingNote, setAddingNote] = useState(false);
   const [adjuntosCount, setAdjuntosCount] = useState(0);
+  const [showShippingLabelModal, setShowShippingLabelModal] = useState(false);
 
   const isAdmin = profile?.role === 'super_admin' || profile?.role === 'admin';
   const canViewPrices = !isWorkshopOperatorRole(profile?.role);
@@ -189,6 +192,14 @@ export function OrderDetailPage() {
     if (orden.estado === 'en_proceso') return isAdmin;
     return false;
   }, [orden, isAdmin]);
+
+  const canGenerateShippingLabel = useMemo(() => {
+    if (!orden) return false;
+    return (
+      Boolean(orden.requiere_despacho) &&
+      (orden.estado === 'finalizada' || orden.estado === 'entregada')
+    );
+  }, [orden]);
 
 
 
@@ -285,7 +296,7 @@ export function OrderDetailPage() {
   };
 
   const handleSubmitPago = async (pagoData: any): Promise<boolean> => {
-    if (!id) return;
+    if (!id) return false;
 
     try {
       if (editingPago) {
@@ -422,6 +433,17 @@ export function OrderDetailPage() {
             </Button>
 
             <div className="flex items-center gap-3">
+              {canGenerateShippingLabel && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowShippingLabelModal(true)}
+                  className="bg-orange-50 border-orange-200 hover:bg-orange-100 text-orange-700"
+                >
+                  <Truck className="w-4 h-4 mr-2" />
+                  Generar etiqueta de envío
+                </Button>
+              )}
               <Button
                 variant="outline"
                 size="sm"
@@ -956,6 +978,30 @@ export function OrderDetailPage() {
         saldoPendiente={saldoPendiente}
         clientName={orden.cliente?.nombre || orden.cliente?.razon_social} // Pass Client Name
       />
+
+      {orden && canGenerateShippingLabel && (
+        <ShippingLabelModal
+          isOpen={showShippingLabelModal}
+          onClose={() => setShowShippingLabelModal(false)}
+          companyData={{
+            name: company?.name || 'Tu empresa',
+            logoUrl: company?.logo_url || null,
+            phone: company?.contact_phone || null,
+            email: company?.contact_email || null,
+            address: company?.address || null,
+          }}
+          orderData={{
+            numeroOrden: orden.numero_orden || 'OT',
+            clienteNombre:
+              orden.cliente?.nombre_fantasia ||
+              orden.cliente?.nombre ||
+              orden.cliente?.razon_social ||
+              'Cliente',
+            requiereDespacho: Boolean(orden.requiere_despacho),
+          }}
+          defaultAddress={orden.cliente?.domicilio || null}
+        />
+      )}
     </div >
   );
 }

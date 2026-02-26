@@ -1,5 +1,5 @@
 import type { DragEvent } from 'react';
-import { Clock, Package, User, FileText, PauseCircle, CheckSquare, Square, AlertTriangle, CalendarDays, CalendarClock, GripVertical } from 'lucide-react';
+import { Clock, Package, User, FileText, PauseCircle, CheckSquare, Square, AlertTriangle, CalendarDays, CalendarClock, GripVertical, Truck } from 'lucide-react';
 import { Card } from '../ui/card';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
@@ -18,6 +18,7 @@ interface StationStepCardProps {
   cantidad: number;
   fecha_inicio: string | null;
   fecha_creacion_orden: string;
+  requiere_despacho: boolean;
   orden_item_id: string;
   pausa_activa?: {
     motivo_nombre: string;
@@ -47,6 +48,7 @@ export function StationStepCard({
   cantidad,
   fecha_inicio,
   fecha_creacion_orden,
+  requiere_despacho,
   pausa_activa,
   tiempo_pausado_total = 0,
   deliveryStatus = null,
@@ -147,6 +149,12 @@ export function StationStepCard({
                   title={mesaBadgeText}
                 >
                   {mesaBadgeText}
+                </Badge>
+              )}
+              {requiere_despacho && (
+                <Badge variant="warning" className="flex items-center gap-1" title="Al finalizar la OT, requiere despacho">
+                  <Truck className="w-3.5 h-3.5" />
+                  REQUIERE DESPACHO
                 </Badge>
               )}
             </div>

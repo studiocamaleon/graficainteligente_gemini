@@ -19,7 +19,7 @@ export function TasksEvolutionChart({
   onUserChange,
 }: TasksEvolutionChartProps) {
   return (
-    <Card className="border-slate-200 shadow-sm">
+    <Card className="w-full min-w-0 overflow-hidden border-slate-200 shadow-sm">
       <CardHeader className="gap-3 md:flex md:flex-row md:items-end md:justify-between">
         <div>
           <CardTitle>Evolución de tareas finalizadas</CardTitle>

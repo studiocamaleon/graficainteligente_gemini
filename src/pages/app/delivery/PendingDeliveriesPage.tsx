@@ -710,6 +710,22 @@ function PendingDeliveriesContent({ embedded = false }: PendingDeliveriesPagePro
                     setSelectedDelivery(null);
                 }}
                 onSave={handleShippingSubmit}
+                companyData={{
+                    name: company?.name || 'Tu empresa',
+                    logoUrl: company?.logo_url || null,
+                    phone: company?.contact_phone || null,
+                    email: company?.contact_email || null,
+                    address: company?.address || null,
+                }}
+                orderData={
+                    selectedDelivery
+                        ? {
+                            numeroOrden: selectedDelivery.numero_orden,
+                            clienteNombre: selectedDelivery.cliente?.nombre_fantasia || selectedDelivery.cliente?.razon_social || 'Cliente',
+                            requiereDespacho: Boolean(selectedDelivery.requiere_despacho),
+                        }
+                        : undefined
+                }
             />
 
             <Modal

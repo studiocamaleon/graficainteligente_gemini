@@ -26,6 +26,7 @@ export interface JobItem {
   progreso_porcentaje: number;
   paso_relevante?: {
     nombre: string;
+    estacion_nombre?: string | null;
     estado: 'pendiente' | 'en_proceso' | 'pausado';
     etapa: TipoEtapaRuta;
   } | null;
@@ -38,7 +39,7 @@ interface JobsByEstado {
   finalizado: JobItem[];
 }
 
-const encontrarPasoRelevante = (itemRutas: any[]) => {
+const encontrarPasoRelevante = (itemRutas: any[], estacionesByPasoId: Record<string, string>) => {
   if (itemRutas.length === 0) return null;
 
   const rutasOrdenadas = ordenarRutasPorEtapaYOrden(itemRutas);
@@ -48,6 +49,7 @@ const encontrarPasoRelevante = (itemRutas: any[]) => {
   if (pasoPausado) {
     return {
       nombre: pasoPausado.paso_nombre,
+      estacion_nombre: pasoPausado.paso_id ? estacionesByPasoId[pasoPausado.paso_id] || null : null,
       estado: 'pausado' as const,
       etapa: pasoPausado.tipo_etapa,
     };
@@ -58,6 +60,7 @@ const encontrarPasoRelevante = (itemRutas: any[]) => {
   if (pasoEnProceso) {
     return {
       nombre: pasoEnProceso.paso_nombre,
+      estacion_nombre: pasoEnProceso.paso_id ? estacionesByPasoId[pasoEnProceso.paso_id] || null : null,
       estado: 'en_proceso' as const,
       etapa: pasoEnProceso.tipo_etapa,
     };
@@ -68,6 +71,7 @@ const encontrarPasoRelevante = (itemRutas: any[]) => {
   if (pasoPendiente) {
     return {
       nombre: pasoPendiente.paso_nombre,
+      estacion_nombre: pasoPendiente.paso_id ? estacionesByPasoId[pasoPendiente.paso_id] || null : null,
       estado: 'pendiente' as const,
       etapa: pasoPendiente.tipo_etapa,
     };
@@ -125,6 +129,7 @@ export function useProductionJobs() {
         `)
         .eq('orden.company_id', profile.company_id)
         .neq('orden.estado', 'cancelada')
+        .neq('orden.estado', 'borrador')
         .neq('orden.estado', 'entregada');
 
       if (itemsError) throw itemsError;
@@ -151,10 +156,36 @@ export function useProductionJobs() {
 
       const { data: rutasData, error: rutasError } = await supabase
         .from('ordenes_trabajo_items_rutas')
-        .select('orden_item_id, estado_paso, paso_nombre, tipo_etapa, orden')
+        .select('orden_item_id, paso_id, estado_paso, paso_nombre, tipo_etapa, orden')
         .in('orden_item_id', itemIds);
 
       if (rutasError) throw rutasError;
+
+      const pasoIds = Array.from(
+        new Set(
+          ((rutasData as any[]) || [])
+            .map((r) => r.paso_id)
+            .filter((id): id is string => Boolean(id))
+        )
+      );
+
+      let estacionesByPasoId: Record<string, string> = {};
+      if (pasoIds.length > 0) {
+        const { data: pasosData, error: pasosError } = await supabase
+          .from('pasos')
+          .select('id, estaciones_trabajo(nombre)')
+          .in('id', pasoIds);
+
+        if (pasosError) throw pasosError;
+
+        estacionesByPasoId = ((pasosData as any[]) || []).reduce((acc, paso) => {
+          const nombre = paso?.estaciones_trabajo?.nombre;
+          if (paso?.id && nombre) {
+            acc[paso.id] = nombre;
+          }
+          return acc;
+        }, {} as Record<string, string>);
+      }
 
       const rutasByItem = ((rutasData as any[]) || []).reduce((acc, ruta) => {
         if (!acc[ruta.orden_item_id]) {
@@ -180,7 +211,7 @@ export function useProductionJobs() {
         const progresoPortcentaje =
           totalPasos > 0 ? Math.round((pasosCompletados / totalPasos) * 100) : 0;
 
-        const pasoRelevante = encontrarPasoRelevante(itemRutas);
+        const pasoRelevante = encontrarPasoRelevante(itemRutas, estacionesByPasoId);
 
         return {
           id: item.id,
@@ -280,7 +311,7 @@ export function useProductionJobs() {
 
         const { data: rutasData, error: rutasError } = await supabase
           .from('ordenes_trabajo_items_rutas')
-          .select('orden_item_id, estado_paso, paso_nombre, tipo_etapa, orden')
+          .select('orden_item_id, paso_id, estado_paso, paso_nombre, tipo_etapa, orden')
           .eq('orden_item_id', itemId);
 
         if (rutasError) throw rutasError;
@@ -295,7 +326,33 @@ export function useProductionJobs() {
         const progresoPortcentaje =
           totalPasos > 0 ? Math.round((pasosCompletados / totalPasos) * 100) : 0;
 
-        const pasoRelevante = encontrarPasoRelevante(itemRutas);
+        const pasoIds = Array.from(
+          new Set(
+            itemRutas
+              .map((r: any) => r.paso_id)
+              .filter((id: any): id is string => Boolean(id))
+          )
+        );
+
+        let estacionesByPasoId: Record<string, string> = {};
+        if (pasoIds.length > 0) {
+          const { data: pasosData, error: pasosError } = await supabase
+            .from('pasos')
+            .select('id, estaciones_trabajo(nombre)')
+            .in('id', pasoIds);
+
+          if (pasosError) throw pasosError;
+
+          estacionesByPasoId = ((pasosData as any[]) || []).reduce((acc, paso) => {
+            const nombre = paso?.estaciones_trabajo?.nombre;
+            if (paso?.id && nombre) {
+              acc[paso.id] = nombre;
+            }
+            return acc;
+          }, {} as Record<string, string>);
+        }
+
+        const pasoRelevante = encontrarPasoRelevante(itemRutas, estacionesByPasoId);
 
         const itemDataAny = itemData as any;
         const updatedJob: JobItem = {

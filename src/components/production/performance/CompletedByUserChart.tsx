@@ -9,7 +9,7 @@ interface CompletedByUserChartProps {
 
 export function CompletedByUserChart({ data, loading = false }: CompletedByUserChartProps) {
   return (
-    <Card className="border-slate-200 shadow-sm">
+    <Card className="w-full min-w-0 overflow-hidden border-slate-200 shadow-sm">
       <CardHeader>
         <CardTitle>Tareas terminadas por usuario</CardTitle>
         <CardDescription>Ranking de ejecución en el período seleccionado</CardDescription>

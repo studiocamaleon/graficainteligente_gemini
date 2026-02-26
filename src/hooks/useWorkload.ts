@@ -29,7 +29,8 @@ export function useWorkload({ type }: UseWorkloadProps) {
                 .select(`id, ${dateField}`)
                 .eq('company_id', profile.company_id)
                 .not(dateField, 'is', null)
-                .neq('estado', 'cancelada');
+                .neq('estado', 'cancelada')
+                .neq('estado', 'borrador');
 
             // Si es orden de trabajo, evitamos los presupuestos 'borrador' o 'enviado' (que no son órdenes aún)
             // Nota: En la tabla ordenes_trabajo, el estado 'presupuesto' se usa para identificar que no es OT

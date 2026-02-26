@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
-import { getArgentinaDate, startOfDay } from '../utils/dates';
 import type {
   CentroCopiadoOrden,
   EstadoOrdenCopiado,
@@ -46,8 +45,8 @@ interface OrdenCopiadoWithRelations extends CentroCopiadoOrden {
 }
 
 interface CreateOrdenCopiadoData {
-  cliente_id: string;
-  origen: 'WhatsApp' | 'Web' | 'Mostrador' | 'App Mobile';
+  cliente_id?: string | null;
+  origen?: 'WhatsApp' | 'Web' | 'Mostrador' | 'App Mobile' | null;
   orden_trabajo_id?: string;
   fecha_entrega_estimada?: string;
   observaciones?: string;
@@ -195,41 +194,14 @@ export function useCentroCopiadoOrdenes(params: UseCentroCopiadoOrdenesParams = 
       try {
         setError(null);
 
-        const today = getArgentinaDate();
-        const dateStr = today.format('YYYYMMDD');
-
-        // Obtener la última orden del día para calcular la secuencia
-        const { data: lastOrder } = await supabase
-          .from('centro_copiado_ordenes')
-          .select('numero_orden')
-          .eq('company_id', profile.company_id)
-          .gte('created_at', startOfDay(today).toISOString())
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        let nextSequence = 1;
-        if (lastOrder?.numero_orden) {
-          const parts = lastOrder.numero_orden.split('-');
-          if (parts.length === 3) {
-            const lastSequence = parseInt(parts[2], 10);
-            if (!isNaN(lastSequence)) {
-              nextSequence = lastSequence + 1;
-            }
-          }
-        }
-
-        const numeroSecuencia = String(nextSequence).padStart(4, '0');
-        const numeroOrden = `CC-${dateStr}-${numeroSecuencia}`;
-
         const estadoInicial: EstadoOrdenCopiado = data.estado || 'pendiente';
         const fechaEntregaReal = estadoInicial === 'entregada' ? new Date().toISOString() : null;
 
         const ordenData = {
           company_id: profile.company_id,
-          numero_orden: numeroOrden,
-          cliente_id: data.cliente_id,
-          canal_venta: data.origen, // Map origin to expected DB column
+          numero_orden: null,
+          cliente_id: data.cliente_id || null,
+          canal_venta: data.origen || null, // Map origin to expected DB column
           orden_trabajo_id: data.orden_trabajo_id || null,
           estado: estadoInicial,
           fecha_solicitud: new Date().toISOString(),
@@ -251,8 +223,19 @@ export function useCentroCopiadoOrdenes(params: UseCentroCopiadoOrdenesParams = 
 
         if (insertError) throw insertError;
 
+        if (estadoInicial !== 'borrador') {
+          await supabase.rpc('fn_assign_numero_orden_cc_if_missing', {
+            p_orden_id: newOrden.id,
+          } as any);
+        }
+
         await fetchOrdenes();
-        return newOrden;
+        const { data: refreshed } = await supabase
+          .from('centro_copiado_ordenes')
+          .select('*')
+          .eq('id', newOrden.id)
+          .maybeSingle();
+        return (refreshed || newOrden) as any;
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Error al crear orden de copiado';
         setError(errorMessage);
@@ -329,6 +312,7 @@ export function useCentroCopiadoOrdenes(params: UseCentroCopiadoOrdenesParams = 
           .update({
             cliente_id: data.cliente_id,
             canal_venta: data.origen,
+            ...(data.estado ? { estado: data.estado } : {}),
             orden_trabajo_id: data.orden_trabajo_id || null,
             fecha_entrega_estimada: data.fecha_entrega_estimada || null,
             total: data.total,
@@ -342,6 +326,12 @@ export function useCentroCopiadoOrdenes(params: UseCentroCopiadoOrdenesParams = 
           .eq('company_id', profile.company_id);
 
         if (updateOrderError) throw updateOrderError;
+
+        if ((data.estado || 'pendiente') !== 'borrador') {
+          await supabase.rpc('fn_assign_numero_orden_cc_if_missing', {
+            p_orden_id: ordenId,
+          } as any);
+        }
 
         // 2. Gestionar Items
         // Obtener items actuales para saber cuáles eliminar
