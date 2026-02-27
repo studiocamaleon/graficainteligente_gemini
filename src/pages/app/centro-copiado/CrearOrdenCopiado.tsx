@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
-import { Plus, ArrowLeft, MessageSquare, Globe, Store, Smartphone } from 'lucide-react';
+import { Plus, ArrowLeft, MessageSquare, Globe, Store, Smartphone, Home, Truck } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/card';
 import { SearchableSelect } from '../../../components/ui/SearchableSelect';
@@ -35,6 +35,9 @@ interface ItemWithId {
   id: string;
   config: Partial<ItemCopiadoConfig>;
   precio?: number;
+  ahorroCantidad?: number;
+  valorHojaImpresion?: number | null;
+  rangoHojaImpresion?: string | null;
   isCollapsed?: boolean;
   archivoId?: string;
   nombreArchivo?: string;
@@ -48,6 +51,16 @@ interface PagoTemporal {
   medio_cobro_id: string;
   referencia_pago?: string;
   notas?: string;
+}
+
+function buildImpresionGroupKey(config: Partial<ItemCopiadoConfig>): string | null {
+  if (config.modo_item === 'ploteo_cad') return null;
+
+  if (!config.tamanio_papel_id || !config.papel_id || !config.tipo_tinta || !config.cara_impresa) {
+    return null;
+  }
+
+  return `${config.tamanio_papel_id}|${config.papel_id}|${config.tipo_tinta}|${config.cara_impresa}`;
 }
 
 function formatDateForWhatsappTemplate(dateValue: string | null | undefined): string {
@@ -83,6 +96,7 @@ export function CrearOrdenCopiado() {
   const [activeTab, setActiveTab] = useState('items');
   const [clienteId, setClienteId] = useState<string>(clienteIdParam || '');
   const [origen, setOrigen] = useState<CanalVenta | ''>('');
+  const [requiereDespacho, setRequiereDespacho] = useState(false);
   const [requiereFactura, setRequiereFactura] = useState(true);
   const [fechaEntrega, setFechaEntrega] = useState('');
   const [observaciones, setObservaciones] = useState('');
@@ -193,6 +207,7 @@ export function CrearOrdenCopiado() {
         // Hydrate from existing order
         setClienteId(ordenEditar.cliente_id || '');
         setOrigen((ordenEditar.canal_venta as CanalVenta) || '');
+        setRequiereDespacho(Boolean(ordenEditar.requiere_despacho));
         if (ordenEditar.fecha_entrega_estimada) {
           setFechaEntrega(ordenEditar.fecha_entrega_estimada.split('T')[0]);
         }
@@ -254,6 +269,7 @@ export function CrearOrdenCopiado() {
         setItems([]);
         setClienteId(clienteIdParam || '');
         setOrigen('');
+        setRequiereDespacho(false);
         setFechaEntrega('');
         setObservaciones('');
         setRequiereFactura(true);
@@ -293,6 +309,87 @@ export function CrearOrdenCopiado() {
     return callbacks;
   }, [items.map(i => i.id).join(','), actualizarPrecioItem]);
 
+  const actualizarAhorroCantidadItem = useCallback((id: string, ahorro: number) => {
+    setItems((prev) =>
+      prev.map((item) =>
+        item.id === id
+          ? { ...item, ahorroCantidad: Math.max(0, ahorro || 0) }
+          : item
+      )
+    );
+  }, []);
+
+  const ahorroCantidadCallbacks = useMemo(() => {
+    const callbacks: Record<string, (ahorro: number) => void> = {};
+    items.forEach((item) => {
+      callbacks[item.id] = (ahorro: number) => {
+        actualizarAhorroCantidadItem(item.id, ahorro);
+      };
+    });
+    return callbacks;
+  }, [items.map(i => i.id).join(','), actualizarAhorroCantidadItem]);
+
+  const actualizarImpresionPricingItem = useCallback(
+    (id: string, info: { valorHoja: number | null; rango: string | null }) => {
+      setItems((prev) =>
+        prev.map((item) =>
+          item.id === id
+            ? { ...item, valorHojaImpresion: info.valorHoja, rangoHojaImpresion: info.rango }
+            : item
+        )
+      );
+    },
+    []
+  );
+
+  const impresionPricingCallbacks = useMemo(() => {
+    const callbacks: Record<string, (info: { valorHoja: number | null; rango: string | null }) => void> = {};
+    items.forEach((item) => {
+      callbacks[item.id] = (info) => {
+        actualizarImpresionPricingItem(item.id, info);
+      };
+    });
+    return callbacks;
+  }, [items.map(i => i.id).join(','), actualizarImpresionPricingItem]);
+
+  const hojasPorGrupoImpresion = useMemo(() => {
+    const totals = new Map<string, number>();
+
+    for (const item of items) {
+      const key = buildImpresionGroupKey(item.config);
+      if (!key) continue;
+
+      const hojas = Number(item.config.cantidad_hojas || 0);
+      const copias = Number(item.config.cantidad_copias || 0);
+      if (hojas <= 0 || copias <= 0) continue;
+
+      const hojasTotalesItem = hojas * copias;
+      totals.set(key, (totals.get(key) || 0) + hojasTotalesItem);
+    }
+
+    return totals;
+  }, [items]);
+
+  const hayAgrupacionImpresion = useMemo(() => {
+    const counts = new Map<string, number>();
+
+    for (const item of items) {
+      const key = buildImpresionGroupKey(item.config);
+      if (!key) continue;
+
+      const hojas = Number(item.config.cantidad_hojas || 0);
+      const copias = Number(item.config.cantidad_copias || 0);
+      if (hojas <= 0 || copias <= 0) continue;
+
+      counts.set(key, (counts.get(key) || 0) + 1);
+    }
+
+    for (const count of counts.values()) {
+      if (count > 1) return true;
+    }
+    return false;
+  }, [items]);
+
   const eliminarItem = (id: string) => {
     setItems((prev) => {
       const filtered = prev.filter((item) => item.id !== id);
@@ -318,6 +415,7 @@ export function CrearOrdenCopiado() {
   // Cálculo de totales
   const totales = useMemo(() => {
     const subtotal = items.reduce((sum, item) => sum + (item.precio || 0), 0);
+    const ahorroPorCantidad = items.reduce((sum, item) => sum + (item.ahorroCantidad || 0), 0);
     const descuentoMonto = (subtotal * descuento) / 100;
     const subtotalConDescuento = subtotal - descuentoMonto;
     const iva = requiereFactura ? subtotalConDescuento * 0.21 : 0;
@@ -327,6 +425,7 @@ export function CrearOrdenCopiado() {
 
     return {
       subtotal,
+      ahorroPorCantidad,
       descuentoAplicado: descuentoMonto,
       subtotalConDescuento,
       iva,
@@ -455,6 +554,7 @@ export function CrearOrdenCopiado() {
         cliente_id: clienteId || null,
         origen: (origen as CanalVenta) || null,
         orden_trabajo_id: ordenTrabajoIdParam || undefined,
+        requiere_despacho: requiereDespacho,
         fecha_entrega_estimada: fechaEntregaCompleta,
         observaciones: observaciones || undefined,
         requiere_factura: requiereFactura,
@@ -663,10 +763,13 @@ export function CrearOrdenCopiado() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 relative">
         <div className="lg:col-span-2 space-y-4 lg:pr-6">
-          <Card>
-            <div className="p-4">
-              <h2 className="text-lg font-bold text-gray-900 mb-4">Información General</h2>
-              <div className="p-0">
+          <Card className="overflow-hidden border-slate-200 shadow-[0_18px_48px_rgba(15,23,42,0.12)]">
+            <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-blue-900 p-4 text-white">
+              <h2 className="text-lg font-semibold tracking-tight">Información General</h2>
+              <p className="mt-1 text-xs text-slate-200">Datos base para cotización, facturación y entrega</p>
+            </div>
+            <div className="space-y-4 bg-gradient-to-b from-slate-50/80 to-white p-4">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -705,7 +808,7 @@ export function CrearOrdenCopiado() {
                     )}
                   </div>
 
-                  <div>
+                  <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Canal de Venta <span className="text-red-500">*</span>
                     </label>
@@ -738,7 +841,7 @@ export function CrearOrdenCopiado() {
                     )}
                   </div>
 
-                  <div>
+                  <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3">
                     <DatePicker
                       label="Fecha Entrega Estimada"
                       value={fechaEntrega}
@@ -751,7 +854,43 @@ export function CrearOrdenCopiado() {
                     <p className="mt-1 text-xs text-gray-500">Opcional</p>
                   </div>
 
-                  <div className="md:col-span-2">
+                  <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3">
+                    <label className="mb-2 block text-sm font-medium text-gray-700">
+                      Tipo de entrega
+                    </label>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      <button
+                        type="button"
+                        onClick={() => setRequiereDespacho(false)}
+                        className={`
+                          flex items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-sm transition-all
+                          ${!requiereDespacho
+                            ? 'border-blue-500 bg-blue-500 text-white shadow-sm'
+                            : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                          }
+                        `}
+                      >
+                        <Home className="h-4 w-4" />
+                        Retira por local
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setRequiereDespacho(true)}
+                        className={`
+                          flex items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-sm transition-all
+                          ${requiereDespacho
+                            ? 'border-amber-500 bg-amber-500 text-white shadow-sm'
+                            : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                          }
+                        `}
+                      >
+                        <Truck className="h-4 w-4" />
+                        Requiere envío
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3 flex items-center justify-center">
                     <Switch
                       checked={requiereFactura}
                       onChange={setRequiereFactura}
@@ -760,7 +899,7 @@ export function CrearOrdenCopiado() {
                   </div>
                 </div>
 
-                <div className="mt-4">
+                <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Observaciones
                   </label>
@@ -768,7 +907,7 @@ export function CrearOrdenCopiado() {
                     value={observaciones}
                     onChange={(e) => setObservaciones(e.target.value)}
                     rows={2}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30"
                     placeholder="Notas adicionales sobre la orden..."
                   />
                 </div>
@@ -787,34 +926,61 @@ export function CrearOrdenCopiado() {
           />
 
           <div className={activeTab === 'items' ? 'block' : 'hidden'}>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-gray-900">Items de la Orden</h2>
-              <Button variant="primary" onClick={agregarItem}>
-                <Plus className="w-4 h-4" />
-                Agregar Item
-              </Button>
-            </div>
-
-            <div className="space-y-3">
-              {items.map((item, index) => (
-                <div key={item.id} id={`item-${item.id}`}>
-                  <CentroCopiadoItemForm
-                    itemNumber={index + 1}
-                    nombreArchivo={item.nombreArchivo}
-                    descripcion={item.descripcion}
-                    onDescripcionChange={(desc) => {
-                      setItems(prev => prev.map(i => i.id === item.id ? { ...i, descripcion: desc } : i));
-                    }}
-                    value={item.config}
-                    onChange={(config) => actualizarItem(item.id, config)}
-                    onRemove={() => eliminarItem(item.id)}
-                    onPriceCalculated={priceCalculatedCallbacks[item.id]}
-                    isCollapsed={item.isCollapsed}
-                    onToggleCollapse={() => toggleItemCollapse(item.id)}
-                  />
+            <Card className="overflow-hidden border-slate-200 shadow-[0_18px_48px_rgba(15,23,42,0.12)]">
+              <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-blue-900 p-4 text-white">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <h2 className="text-lg font-semibold tracking-tight">Items de la Orden</h2>
+                    <p className="mt-1 text-xs text-slate-200">Configurá impresión, terminaciones y cantidad por ítem</p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={agregarItem}
+                    className="border-white/30 bg-white/10 text-white hover:bg-white/20"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Agregar Item
+                  </Button>
                 </div>
-              ))}
-            </div>
+              </div>
+
+              <div className="space-y-3 bg-gradient-to-b from-slate-50/80 to-white p-4">
+                {items.length === 0 ? (
+                  <div className="rounded-2xl border border-slate-200 bg-white px-4 py-8 text-center text-sm text-slate-500 shadow-sm">
+                    No hay ítems todavía. Usá <span className="font-semibold">Agregar Item</span> para comenzar.
+                  </div>
+                ) : (
+                  items.map((item, index) => {
+                    const impresionGroupKey = buildImpresionGroupKey(item.config);
+                    const hojasParaRangoGrupo = impresionGroupKey
+                      ? hojasPorGrupoImpresion.get(impresionGroupKey)
+                      : undefined;
+
+                    return (
+                      <div key={item.id} id={`item-${item.id}`}>
+                        <CentroCopiadoItemForm
+                          itemNumber={index + 1}
+                          nombreArchivo={item.nombreArchivo}
+                          descripcion={item.descripcion}
+                          onDescripcionChange={(desc) => {
+                            setItems(prev => prev.map(i => i.id === item.id ? { ...i, descripcion: desc } : i));
+                          }}
+                          value={item.config}
+                          onChange={(config) => actualizarItem(item.id, config)}
+                          onRemove={() => eliminarItem(item.id)}
+                          onPriceCalculated={priceCalculatedCallbacks[item.id]}
+                          onAhorroCantidadCalculated={ahorroCantidadCallbacks[item.id]}
+                          onImpresionPricingCalculated={impresionPricingCallbacks[item.id]}
+                          hojasParaRangoGrupo={hojasParaRangoGrupo}
+                          isCollapsed={item.isCollapsed}
+                          onToggleCollapse={() => toggleItemCollapse(item.id)}
+                        />
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </Card>
           </div>
 
           <div className={activeTab === 'pagos' ? 'block' : 'hidden'}>
@@ -842,7 +1008,9 @@ export function CrearOrdenCopiado() {
             items={items.map(item => ({
               id: item.id,
               precio: item.precio || 0,
-              config: item.config
+              config: item.config,
+              valorHojaImpresion: item.valorHojaImpresion ?? null,
+              rangoHojaImpresion: item.rangoHojaImpresion ?? null,
             }))}
             descuento={descuento}
             onDescuentoChange={setDescuento}
@@ -853,9 +1021,12 @@ export function CrearOrdenCopiado() {
             onCancelar={cancelar}
             containerRef={resumenContainerRef}
             requiereFactura={requiereFactura}
+            ahorroPorCantidad={totales.ahorroPorCantidad}
+            mostrarAhorroPorCantidad={hayAgrupacionImpresion}
+            saldoPendiente={totales.saldoPendiente}
             buttonText={primaryButtonText}
             buttonDraftText="Guardar borrador"
-            buttonSecondaryText="Crear y marcar como entregada"
+            buttonSecondaryText="Crear y entregar"
           />
         </div>
       </div >

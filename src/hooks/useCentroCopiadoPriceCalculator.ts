@@ -15,6 +15,7 @@ interface ConfiguracionImpresion {
   cara_impresa: CaraImpresaCopiado;
   cantidad_hojas: number;
   cantidad_copias: number;
+  cantidad_hojas_para_rango?: number;
 }
 
 interface ConfiguracionAnillado {
@@ -45,6 +46,8 @@ export interface ConfiguracionPloteoCAD {
 interface DesglosePrecios {
   precio_impresion_unitario: number;
   precio_impresion_total: number;
+  rango_impresion_desde: number | null;
+  rango_impresion_hasta: number | null;
   precio_anillado_unitario: number;
   precio_anillado_total: number;
   precio_plastificado_unitario: number;
@@ -235,7 +238,8 @@ export function useCentroCopiadoPriceCalculator() {
         setCalculating(true);
         setError(null);
 
-        const totalHojas = config.cantidad_hojas * config.cantidad_copias;
+        const totalHojasItem = config.cantidad_hojas * config.cantidad_copias;
+        const totalHojasParaRango = config.cantidad_hojas_para_rango ?? totalHojasItem;
 
         const rangos = await getRangosImpresion();
 
@@ -245,8 +249,8 @@ export function useCentroCopiadoPriceCalculator() {
 
         const rangoAplicable = rangos.find(
           (rango) =>
-            totalHojas >= rango.hojas_desde &&
-            (rango.hojas_hasta === null || totalHojas <= rango.hojas_hasta)
+            totalHojasParaRango >= rango.hojas_desde &&
+            (rango.hojas_hasta === null || totalHojasParaRango <= rango.hojas_hasta)
         );
 
         if (!rangoAplicable) {
@@ -260,11 +264,13 @@ export function useCentroCopiadoPriceCalculator() {
           config.cara_impresa,
           rangoAplicable.id
         );
-        const precioImpresionTotal = precioImpresionUnitario * totalHojas;
+        const precioImpresionTotal = precioImpresionUnitario * totalHojasItem;
 
         return {
           precio_impresion_unitario: precioImpresionUnitario,
           precio_impresion_total: precioImpresionTotal,
+          rango_impresion_desde: Number(rangoAplicable.hojas_desde),
+          rango_impresion_hasta: rangoAplicable.hojas_hasta === null ? null : Number(rangoAplicable.hojas_hasta),
           precio_anillado_unitario: 0,
           precio_anillado_total: 0,
           precio_plastificado_unitario: 0,
@@ -463,7 +469,12 @@ export function useCentroCopiadoPriceCalculator() {
         setCalculating(true);
         setError(null);
 
-        let preciosImpresion = { precio_impresion_total: 0, precio_impresion_unitario: 0 };
+        let preciosImpresion = {
+          precio_impresion_total: 0,
+          precio_impresion_unitario: 0,
+          rango_impresion_desde: null as number | null,
+          rango_impresion_hasta: null as number | null,
+        };
 
         // Mode: Impresion de Hojas
         if (configImpresion) {
@@ -514,6 +525,8 @@ export function useCentroCopiadoPriceCalculator() {
         return {
           precio_impresion_unitario: preciosImpresion.precio_impresion_unitario,
           precio_impresion_total: preciosImpresion.precio_impresion_total,
+          rango_impresion_desde: preciosImpresion.rango_impresion_desde ?? null,
+          rango_impresion_hasta: preciosImpresion.rango_impresion_hasta ?? null,
           precio_anillado_unitario: precioAnilladoUnitario,
           precio_anillado_total: precioAnilladoTotal,
           precio_plastificado_unitario: precioPlastificadoUnitario,

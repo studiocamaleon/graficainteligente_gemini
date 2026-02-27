@@ -1,6 +1,6 @@
 
-import { useState, useEffect } from 'react';
-import { Trash2, DollarSign, File, FileText, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Trash2, DollarSign, File, Files, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
 import { Card } from '../ui/card';
 import { Badge } from '../ui/Badge';
 import { Input } from '../ui/Input';
@@ -51,6 +51,9 @@ interface CentroCopiadoItemFormProps {
   onChange: (config: Partial<ItemCopiadoConfig>) => void;
   onRemove: () => void;
   onPriceCalculated?: (price: number) => void;
+  onAhorroCantidadCalculated?: (ahorro: number) => void;
+  onImpresionPricingCalculated?: (info: { valorHoja: number | null; rango: string | null }) => void;
+  hojasParaRangoGrupo?: number;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
 }
@@ -64,12 +67,18 @@ export function CentroCopiadoItemForm({
   onChange,
   onRemove,
   onPriceCalculated,
+  onAhorroCantidadCalculated,
+  onImpresionPricingCalculated,
+  hojasParaRangoGrupo,
   isCollapsed = false,
   onToggleCollapse,
 }: CentroCopiadoItemFormProps) {
+  const selectedModernClass =
+    'border-slate-800 bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-900 text-white shadow-[0_10px_24px_rgba(15,23,42,0.35)]';
 
   const [precioCalculado, setPrecioCalculado] = useState<number | null>(null);
   const [errorCalculo, setErrorCalculo] = useState<string | null>(null);
+  const activeCalculationRef = useRef(0);
 
   const { tamanios, loading: loadingTamanios } = useCentroCopiadoTamanios();
   const { papeles, loading: loadingPapeles } = useCentroCopiadoPapeles();
@@ -94,6 +103,12 @@ export function CentroCopiadoItemForm({
     );
 
   useEffect(() => {
+    const calculationId = activeCalculationRef.current + 1;
+    activeCalculationRef.current = calculationId;
+    let cancelled = false;
+
+    const isLatestCalculation = () => !cancelled && activeCalculationRef.current === calculationId;
+
     const calcularPrecio = async () => {
       const configDebounced = debouncedConfig;
       const isPloteoCADDebounced = configDebounced.modo_item === 'ploteo_cad';
@@ -114,15 +129,23 @@ export function CentroCopiadoItemForm({
         );
 
       if (!isConfigCompleteDebounced) {
+        if (!isLatestCalculation()) return;
         setPrecioCalculado(null);
         setErrorCalculo(null);
         if (onPriceCalculated) {
           onPriceCalculated(0);
         }
+        if (onAhorroCantidadCalculated) {
+          onAhorroCantidadCalculated(0);
+        }
+        if (onImpresionPricingCalculated) {
+          onImpresionPricingCalculated({ valorHoja: null, rango: null });
+        }
         return;
       }
 
       try {
+        if (!isLatestCalculation()) return;
         setErrorCalculo(null);
 
 
@@ -149,6 +172,7 @@ export function CentroCopiadoItemForm({
             cara_impresa: configDebounced.cara_impresa!,
             cantidad_hojas: hojasFisicas,
             cantidad_copias: configDebounced.cantidad_copias || 1,
+            cantidad_hojas_para_rango: hojasParaRangoGrupo,
           };
         
           configAnillado = configDebounced.anillado?.tipo
@@ -186,22 +210,68 @@ export function CentroCopiadoItemForm({
           configPloteoCAD
         );
 
+        let ahorroPorCantidad = 0;
+        if (!isPloteoCADDebounced && configImpresion) {
+          try {
+            // Referencia "sin descuento por volumen": forzar rango base (mínimo).
+            const desgloseBase = await calcularPrecioCompleto(
+              {
+                ...configImpresion,
+                cantidad_hojas_para_rango: 1,
+              },
+              configAnillado,
+              configPlastificado,
+              configGuillotinado,
+              undefined
+            );
+
+            ahorroPorCantidad = Math.max(0, desgloseBase.subtotal_item - desglose.subtotal_item);
+          } catch (baselineError) {
+            console.warn('No se pudo calcular ahorro base por cantidad:', baselineError);
+            ahorroPorCantidad = 0;
+          }
+        }
+
+        if (!isLatestCalculation()) return;
         setPrecioCalculado(desglose.subtotal_item);
         if (onPriceCalculated) {
           onPriceCalculated(desglose.subtotal_item);
         }
+        if (onAhorroCantidadCalculated) {
+          onAhorroCantidadCalculated(ahorroPorCantidad);
+        }
+        if (onImpresionPricingCalculated) {
+          const rango =
+            desglose.rango_impresion_desde !== null
+              ? `${desglose.rango_impresion_desde}-${desglose.rango_impresion_hasta ?? '∞'}`
+              : null;
+          onImpresionPricingCalculated({
+            valorHoja: !isPloteoCADDebounced ? desglose.precio_impresion_unitario || null : null,
+            rango,
+          });
+        }
       } catch (error) {
+        if (!isLatestCalculation()) return;
         console.error('Error al calcular precio:', error);
         setErrorCalculo(error instanceof Error ? error.message : 'Error al calcular precio');
         setPrecioCalculado(null);
         if (onPriceCalculated) {
           onPriceCalculated(0);
         }
+        if (onAhorroCantidadCalculated) {
+          onAhorroCantidadCalculated(0);
+        }
+        if (onImpresionPricingCalculated) {
+          onImpresionPricingCalculated({ valorHoja: null, rango: null });
+        }
       }
     };
 
-    calcularPrecio();
-  }, [debouncedConfig, calcularPrecioCompleto, hojasFisicasPorCopia, onPriceCalculated]);
+    void calcularPrecio();
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedConfig, calcularPrecioCompleto, hojasFisicasPorCopia, hojasParaRangoGrupo, onPriceCalculated, onAhorroCantidadCalculated, onImpresionPricingCalculated]);
 
   const handleFieldChange = (field: string, newValue: unknown) => {
     onChange({
@@ -381,7 +451,7 @@ export function CentroCopiadoItemForm({
                             type="button"
                             onClick={() => handleFieldChange('ploteo_cad_tipo_papel', papel)}
                             className={`p-3 rounded-lg border-2 text-sm font-medium transition-all ${value.ploteo_cad_tipo_papel === papel
-                              ? 'border-blue-500 bg-blue-50 text-blue-700 ring-1 ring-blue-500'
+                              ? selectedModernClass
                               : 'border-gray-200 hover:border-gray-300 bg-white text-gray-700'
                               }`}
                           >
@@ -404,7 +474,7 @@ export function CentroCopiadoItemForm({
                         type="button"
                         onClick={() => handleFieldChange('ploteo_cad_ancho_rollo', ancho)}
                         className={`p-4 rounded-lg border-2 flex flex-col items-center justify-center transition-all ${value.ploteo_cad_ancho_rollo === ancho
-                          ? 'border-blue-500 bg-blue-50 text-blue-700 ring-1 ring-blue-500'
+                          ? selectedModernClass
                           : 'border-gray-200 hover:border-gray-300 bg-white'
                           }`}
                       >
@@ -547,14 +617,28 @@ export function CentroCopiadoItemForm({
                   </label>
                   <div className="bg-gray-50/50 p-3 rounded-xl border border-gray-100 h-full">
                     <div className="grid grid-cols-1 gap-3 mb-3">
-                      <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">Tinta</label>
-                        <div className="grid grid-cols-2 gap-1.5 h-full">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div className="space-y-2">
+                          <label className="block text-xs font-medium text-gray-500 mb-1">Configuración de impresión</label>
+                          <button
+                            type="button"
+                            onClick={() => handleFieldChange('tipo_tinta', 'K')}
+                            className={`relative w-full p-3 rounded-lg border-2 transition-all flex flex-col items-center justify-center gap-2 h-20 ${value.tipo_tinta === 'K'
+                              ? selectedModernClass
+                              : 'border-gray-200 hover:border-gray-300 bg-white'
+                              }`}
+                          >
+                            <div className={`w-4 h-4 rounded-full mb-1 ${value.tipo_tinta === 'K' ? 'bg-white' : 'bg-gray-900'}`}></div>
+                            <span className="font-bold text-xs">Blanco y Negro</span>
+                            {value.tipo_tinta === 'K' && (
+                              <CheckCircle2 className="w-3 h-3 text-white absolute top-1 right-1" />
+                            )}
+                          </button>
                           <button
                             type="button"
                             onClick={() => handleFieldChange('tipo_tinta', 'CMYK')}
-                            className={`relative p-3 rounded-lg border-2 transition-all flex flex-col items-center justify-center gap-2 h-20 ${value.tipo_tinta === 'CMYK'
-                              ? 'border-blue-500 bg-blue-50 text-blue-700 ring-1 ring-blue-500'
+                            className={`relative w-full p-3 rounded-lg border-2 transition-all flex flex-col items-center justify-center gap-2 h-20 ${value.tipo_tinta === 'CMYK'
+                              ? selectedModernClass
                               : 'border-gray-200 hover:border-gray-300 bg-white'
                               }`}
                           >
@@ -564,57 +648,41 @@ export function CentroCopiadoItemForm({
                               <div className="w-3 h-3 rounded-full bg-yellow-400 ring-1 ring-white"></div>
                               <div className="w-3 h-3 rounded-full bg-black ring-1 ring-white"></div>
                             </div>
-                            <span className="font-bold text-xs">Color</span>
+                            <span className="font-bold text-xs">Full Color</span>
                             {value.tipo_tinta === 'CMYK' && (
-                              <CheckCircle2 className="w-3 h-3 text-blue-600 absolute top-1 right-1" />
-                            )}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleFieldChange('tipo_tinta', 'K')}
-                            className={`relative p-3 rounded-lg border-2 transition-all flex flex-col items-center justify-center gap-2 h-20 ${value.tipo_tinta === 'K'
-                              ? 'border-gray-700 bg-gray-50 text-gray-900 ring-1 ring-gray-700'
-                              : 'border-gray-200 hover:border-gray-300 bg-white'
-                              }`}
-                          >
-                            <div className="w-4 h-4 rounded-full bg-gray-900 mb-1"></div>
-                            <span className="font-bold text-xs">B/N</span>
-                            {value.tipo_tinta === 'K' && (
-                              <CheckCircle2 className="w-3 h-3 text-gray-600 absolute top-1 right-1" />
+                              <CheckCircle2 className="w-3 h-3 text-white absolute top-1 right-1" />
                             )}
                           </button>
                         </div>
-                      </div>
 
-                      <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">Caras</label>
-                        <div className="grid grid-cols-2 gap-1.5 h-full">
+                        <div className="space-y-2">
+                          <label className="block text-xs font-medium text-gray-500 mb-1">Caras</label>
                           <button
                             type="button"
                             onClick={() => handleFieldChange('cara_impresa', 'frente')}
-                            className={`relative p-3 rounded-lg border-2 transition-all flex flex-col items-center justify-center gap-2 h-20 ${value.cara_impresa === 'frente'
-                              ? 'border-blue-500 bg-blue-50 text-blue-700 ring-1 ring-blue-500'
+                            className={`relative w-full p-3 rounded-lg border-2 transition-all flex flex-col items-center justify-center gap-2 h-20 ${value.cara_impresa === 'frente'
+                              ? selectedModernClass
                               : 'border-gray-200 hover:border-gray-300 bg-white'
                               }`}
                           >
-                            <File className={`w-5 h-5 ${value.cara_impresa === 'frente' ? 'text-blue-600' : 'text-gray-400'}`} />
-                            <span className="font-bold text-xs">Simple</span>
+                            <File className={`w-5 h-5 ${value.cara_impresa === 'frente' ? 'text-white' : 'text-gray-400'}`} />
+                            <span className="font-bold text-xs">Simple Faz</span>
                             {value.cara_impresa === 'frente' && (
-                              <CheckCircle2 className="w-3 h-3 text-blue-600 absolute top-1 right-1" />
+                              <CheckCircle2 className="w-3 h-3 text-white absolute top-1 right-1" />
                             )}
                           </button>
                           <button
                             type="button"
                             onClick={() => handleFieldChange('cara_impresa', 'frente_y_dorso')}
-                            className={`relative p-3 rounded-lg border-2 transition-all flex flex-col items-center justify-center gap-2 h-20 ${value.cara_impresa === 'frente_y_dorso'
-                              ? 'border-blue-500 bg-blue-50 text-blue-700 ring-1 ring-blue-500'
+                            className={`relative w-full p-3 rounded-lg border-2 transition-all flex flex-col items-center justify-center gap-2 h-20 ${value.cara_impresa === 'frente_y_dorso'
+                              ? selectedModernClass
                               : 'border-gray-200 hover:border-gray-300 bg-white'
                               }`}
                           >
-                            <FileText className={`w-5 h-5 ${value.cara_impresa === 'frente_y_dorso' ? 'text-blue-600' : 'text-gray-400'}`} />
-                            <span className="font-bold text-xs">Doble</span>
+                            <Files className={`w-5 h-5 ${value.cara_impresa === 'frente_y_dorso' ? 'text-white' : 'text-gray-400'}`} />
+                            <span className="font-bold text-xs">Doble Faz</span>
                             {value.cara_impresa === 'frente_y_dorso' && (
-                              <CheckCircle2 className="w-3 h-3 text-blue-600 absolute top-1 right-1" />
+                              <CheckCircle2 className="w-3 h-3 text-white absolute top-1 right-1" />
                             )}
                           </button>
                         </div>

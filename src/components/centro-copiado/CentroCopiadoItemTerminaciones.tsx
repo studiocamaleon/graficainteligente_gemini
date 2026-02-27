@@ -34,6 +34,8 @@ export function CentroCopiadoItemTerminaciones({
   guillotinado,
   onChange,
 }: CentroCopiadoItemTerminacionesProps) {
+  const selectedModernClass =
+    'border-slate-800 bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-900 text-white shadow-[0_10px_24px_rgba(15,23,42,0.35)]';
   const [anilladoEnabled, setAnilladoEnabled] = useState(!!anillado);
   const [plastificadoEnabled, setPlastificadoEnabled] = useState(!!plastificado);
   const [guillotinadoEnabled, setGuillotinadoEnabled] = useState(!!guillotinado);
@@ -181,7 +183,7 @@ export function CentroCopiadoItemTerminaciones({
     setAnilladoEnabled(newState);
     if (newState) {
       onChange({
-        anillado: { tipo: 'ring_wire' },
+        anillado: { tipo: 'plastico' },
         plastificado,
         guillotinado,
       });
@@ -281,31 +283,26 @@ export function CentroCopiadoItemTerminaciones({
           className={`
             relative p-4 rounded-xl border transition-all text-left group overflow-hidden
             ${anilladoEnabled
-              ? 'border-blue-500 shadow-md ring-1 ring-blue-500' // Estado activo
+              ? selectedModernClass
               : 'border-gray-200 hover:border-gray-300 hover:shadow-sm bg-white' // Estado inactivo
             }
           `}
         >
-          {/* Fondo degradado sutil cuando activo */}
-          {anilladoEnabled && (
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-white opacity-100 z-0"></div>
-          )}
-
           <div className="relative z-10">
             <div className="flex items-start justify-between mb-2">
-              <div className={`p-2 rounded-lg transition-colors ${anilladoEnabled ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-400 group-hover:text-gray-600'}`}>
+              <div className={`p-2 rounded-lg transition-colors ${anilladoEnabled ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-400 group-hover:text-gray-600'}`}>
                 <Scissors className="w-5 h-5" />
               </div>
               {anilladoEnabled && (
-                <div className="h-2 w-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]"></div>
+                <div className="h-2 w-2 rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.7)]"></div>
               )}
             </div>
 
-            <h4 className={`font-semibold text-sm ${anilladoEnabled ? 'text-blue-900' : 'text-gray-700'}`}>
+            <h4 className={`font-semibold text-sm ${anilladoEnabled ? 'text-white' : 'text-gray-700'}`}>
               Anillado
             </h4>
 
-            <p className={`text-xs font-medium mt-1 ${anilladoEnabled ? 'text-blue-700' : 'text-green-600'}`}>
+            <p className={`text-xs font-medium mt-1 ${anilladoEnabled ? 'text-slate-200' : 'text-green-600'}`}>
               {anilladoEnabled && precioAnillado !== null
                 ? `+ $${precioAnillado.toFixed(2)}`
                 : previewPrecioAnillado !== null
@@ -323,30 +320,26 @@ export function CentroCopiadoItemTerminaciones({
           className={`
             relative p-4 rounded-xl border transition-all text-left group overflow-hidden
             ${guillotinadoEnabled
-              ? 'border-purple-500 shadow-md ring-1 ring-purple-500'
+              ? selectedModernClass
               : 'border-gray-200 hover:border-gray-300 hover:shadow-sm bg-white'
             }
           `}
         >
-          {guillotinadoEnabled && (
-            <div className="absolute inset-0 bg-gradient-to-br from-purple-50 to-white opacity-100 z-0"></div>
-          )}
-
           <div className="relative z-10">
             <div className="flex items-start justify-between mb-2">
-              <div className={`p-2 rounded-lg transition-colors ${guillotinadoEnabled ? 'bg-purple-100 text-purple-600' : 'bg-gray-100 text-gray-400 group-hover:text-gray-600'}`}>
+              <div className={`p-2 rounded-lg transition-colors ${guillotinadoEnabled ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-400 group-hover:text-gray-600'}`}>
                 <Scissors className="w-5 h-5" />
               </div>
               {guillotinadoEnabled && (
-                <div className="h-2 w-2 rounded-full bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.6)]"></div>
+                <div className="h-2 w-2 rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.7)]"></div>
               )}
             </div>
 
-            <h4 className={`font-semibold text-sm ${guillotinadoEnabled ? 'text-purple-900' : 'text-gray-700'}`}>
+            <h4 className={`font-semibold text-sm ${guillotinadoEnabled ? 'text-white' : 'text-gray-700'}`}>
               Guillotinado
             </h4>
 
-            <p className={`text-xs font-medium mt-1 ${guillotinadoEnabled ? 'text-purple-700' : 'text-green-600'}`}>
+            <p className={`text-xs font-medium mt-1 ${guillotinadoEnabled ? 'text-slate-200' : 'text-green-600'}`}>
               {guillotinadoEnabled && precioGuillotinado !== null
                 ? `+ $${precioGuillotinado.toFixed(2)}`
                 : previewPrecioGuillotinado !== null
@@ -364,30 +357,26 @@ export function CentroCopiadoItemTerminaciones({
           className={`
             relative p-4 rounded-xl border transition-all text-left group overflow-hidden
             ${plastificadoEnabled
-              ? 'border-orange-500 shadow-md ring-1 ring-orange-500'
+              ? selectedModernClass
               : 'border-gray-200 hover:border-gray-300 hover:shadow-sm bg-white'
             }
           `}
         >
-          {plastificadoEnabled && (
-            <div className="absolute inset-0 bg-gradient-to-br from-orange-50 to-white opacity-100 z-0"></div>
-          )}
-
           <div className="relative z-10">
             <div className="flex items-start justify-between mb-2">
-              <div className={`p-2 rounded-lg transition-colors ${plastificadoEnabled ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 text-gray-400 group-hover:text-gray-600'}`}>
+              <div className={`p-2 rounded-lg transition-colors ${plastificadoEnabled ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-400 group-hover:text-gray-600'}`}>
                 <Scissors className="w-5 h-5" />
               </div>
               {plastificadoEnabled && (
-                <div className="h-2 w-2 rounded-full bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.6)]"></div>
+                <div className="h-2 w-2 rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.7)]"></div>
               )}
             </div>
 
-            <h4 className={`font-semibold text-sm ${plastificadoEnabled ? 'text-orange-900' : 'text-gray-700'}`}>
+            <h4 className={`font-semibold text-sm ${plastificadoEnabled ? 'text-white' : 'text-gray-700'}`}>
               Plastificado
             </h4>
 
-            <p className={`text-xs font-medium mt-1 ${plastificadoEnabled ? 'text-orange-700' : 'text-green-600'}`}>
+            <p className={`text-xs font-medium mt-1 ${plastificadoEnabled ? 'text-slate-200' : 'text-green-600'}`}>
               {plastificadoEnabled && precioPlastificado !== null
                 ? `+ $${precioPlastificado.toFixed(2)}`
                 : previewPrecioPlastificado !== null
@@ -409,23 +398,23 @@ export function CentroCopiadoItemTerminaciones({
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
-                  onClick={() => handleAnilladoTipoChange('ring_wire')}
-                  className={`p-3 border-2 rounded-lg transition-all ${anillado?.tipo === 'ring_wire'
-                    ? 'border-blue-500 bg-white text-blue-700 shadow-sm'
-                    : 'border-gray-200 hover:border-gray-300 bg-white'
-                    }`}
-                >
-                  <span className="font-medium">Ring Wire</span>
-                </button>
-                <button
-                  type="button"
                   onClick={() => handleAnilladoTipoChange('plastico')}
                   className={`p-3 border-2 rounded-lg transition-all ${anillado?.tipo === 'plastico'
-                    ? 'border-blue-500 bg-white text-blue-700 shadow-sm'
+                    ? selectedModernClass
                     : 'border-gray-200 hover:border-gray-300 bg-white'
                     }`}
                 >
                   <span className="font-medium">Plástico</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAnilladoTipoChange('ring_wire')}
+                  className={`p-3 border-2 rounded-lg transition-all ${anillado?.tipo === 'ring_wire'
+                    ? selectedModernClass
+                    : 'border-gray-200 hover:border-gray-300 bg-white'
+                    }`}
+                >
+                  <span className="font-medium">Ring Wire</span>
                 </button>
               </div>
               <p className="text-xs text-blue-600/80">
@@ -459,7 +448,7 @@ export function CentroCopiadoItemTerminaciones({
                     type="button"
                     onClick={() => handlePlastificadoTipoChange('A4')}
                     className={`p-2 border-2 rounded-lg transition-all text-sm ${plastificado?.tipo === 'A4'
-                      ? 'border-blue-500 bg-white text-blue-700 shadow-sm'
+                      ? selectedModernClass
                       : 'border-gray-200 hover:border-gray-300 bg-white'
                       }`}
                   >
@@ -469,7 +458,7 @@ export function CentroCopiadoItemTerminaciones({
                     type="button"
                     onClick={() => handlePlastificadoTipoChange('SRA3')}
                     className={`p-2 border-2 rounded-lg transition-all text-sm ${plastificado?.tipo === 'SRA3'
-                      ? 'border-blue-500 bg-white text-blue-700 shadow-sm'
+                      ? selectedModernClass
                       : 'border-gray-200 hover:border-gray-300 bg-white'
                       }`}
                   >
@@ -479,7 +468,7 @@ export function CentroCopiadoItemTerminaciones({
                     type="button"
                     onClick={() => handlePlastificadoTipoChange('Carnet')}
                     className={`p-2 border-2 rounded-lg transition-all text-sm ${plastificado?.tipo === 'Carnet'
-                      ? 'border-blue-500 bg-white text-blue-700 shadow-sm'
+                      ? selectedModernClass
                       : 'border-gray-200 hover:border-gray-300 bg-white'
                       }`}
                   >
@@ -493,7 +482,7 @@ export function CentroCopiadoItemTerminaciones({
                   type="button"
                   onClick={() => handlePlastificadoModoChange(true)}
                   className={`p-3 border-2 rounded-lg transition-all ${plastificado?.todas_hojas
-                    ? 'border-blue-500 bg-white text-blue-700 shadow-sm'
+                    ? selectedModernClass
                     : 'border-gray-200 hover:border-gray-300 bg-white'
                     }`}
                 >
@@ -503,7 +492,7 @@ export function CentroCopiadoItemTerminaciones({
                   type="button"
                   onClick={() => handlePlastificadoModoChange(false)}
                   className={`p-3 border-2 rounded-lg transition-all ${!plastificado?.todas_hojas
-                    ? 'border-blue-500 bg-white text-blue-700 shadow-sm'
+                    ? selectedModernClass
                     : 'border-gray-200 hover:border-gray-300 bg-white'
                     }`}
                 >

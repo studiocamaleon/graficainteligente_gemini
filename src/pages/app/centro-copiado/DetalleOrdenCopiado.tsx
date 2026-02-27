@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Switch } from '../../../components/ui/Switch';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Calendar, User, FileText, DollarSign, AlertCircle, Download, ExternalLink, Edit } from 'lucide-react';
+import { ArrowLeft, Calendar, User, FileText, DollarSign, AlertCircle, Download, ExternalLink, Edit, Truck, Home } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/card';
 import { Badge } from '../../../components/ui/Badge';
@@ -24,6 +24,7 @@ import { ChannelBadge } from '../../../components/orders/ChannelBadge';
 import type { EstadoOrdenCopiado, TipoItemCopiado } from '../../../types/database';
 import { useAuth } from '../../../hooks/useAuth';
 import { canManagePaymentsRole, canRegisterPaymentsRole } from '../../../utils/roles';
+import { supabase } from '../../../lib/supabase';
 
 export function DetalleOrdenCopiado() {
   const { id } = useParams<{ id: string }>();
@@ -36,6 +37,7 @@ export function DetalleOrdenCopiado() {
   const [activeTab, setActiveTab] = useState('detalles');
   const [showPagoModal, setShowPagoModal] = useState(false);
   const [pagoEditando, setPagoEditando] = useState<any>(null);
+  const [valorHojaInfoByItem, setValorHojaInfoByItem] = useState<Record<string, { valor: number | null; rango: string | null }>>({});
 
   const { orden, loading, error, refetch, updateOrden } = useCentroCopiadoOrden(id);
   const { updateEstado } = useCentroCopiadoOrdenes({ enabled: false });
@@ -148,6 +150,126 @@ export function DetalleOrdenCopiado() {
     };
     return labels[item.tipo_item] || item.tipo_item;
   };
+
+  const buildImpresionGroupKey = (item: any): string | null => {
+    if (item.es_ploteo_cad) return null;
+    if (!item.tamanio_papel_id || !item.papel_id || !item.tipo_tinta || !item.cara_impresa) return null;
+    return `${item.tamanio_papel_id}|${item.papel_id}|${item.tipo_tinta}|${item.cara_impresa}`;
+  };
+
+  const totalHojasPorGrupo = useMemo(() => {
+    const totals = new Map<string, number>();
+    for (const item of orden?.items || []) {
+      const key = buildImpresionGroupKey(item);
+      if (!key) continue;
+      const hojas = Number(item.cantidad_hojas || 0);
+      const copias = Number(item.cantidad_unidades || 0);
+      if (hojas <= 0 || copias <= 0) continue;
+      totals.set(key, (totals.get(key) || 0) + hojas * copias);
+    }
+    return totals;
+  }, [orden?.items]);
+
+  useEffect(() => {
+    const calcularValoresHoja = async () => {
+      if (!profile?.company_id || !orden?.items?.length) {
+        setValorHojaInfoByItem({});
+        return;
+      }
+
+      const itemsImpresion = orden.items.filter((item: any) => {
+        return (
+          !item.es_ploteo_cad &&
+          item.tamanio_papel_id &&
+          item.papel_id &&
+          item.tipo_tinta &&
+          item.cara_impresa &&
+          Number(item.cantidad_hojas || 0) > 0 &&
+          Number(item.cantidad_unidades || 0) > 0
+        );
+      });
+
+      if (itemsImpresion.length === 0) {
+        setValorHojaInfoByItem({});
+        return;
+      }
+
+      try {
+        const { data: rangos, error: rangosError } = await supabase
+          .from('centro_copiado_rangos_precio_impresion')
+          .select('id, hojas_desde, hojas_hasta')
+          .eq('company_id', profile.company_id)
+          .eq('is_active', true)
+          .order('hojas_desde', { ascending: true });
+
+        if (rangosError) throw rangosError;
+
+        const rangosData = rangos || [];
+        const precioCache = new Map<string, number | null>();
+        const result: Record<string, { valor: number | null; rango: string | null }> = {};
+
+        for (const item of itemsImpresion) {
+          const groupKey = buildImpresionGroupKey(item);
+          if (!groupKey) {
+            result[item.id] = { valor: null, rango: null };
+            continue;
+          }
+
+          const totalGrupo = totalHojasPorGrupo.get(groupKey) || 0;
+          const rangoAplicable = rangosData.find(
+            (r: any) =>
+              totalGrupo >= Number(r.hojas_desde) &&
+              (r.hojas_hasta === null || totalGrupo <= Number(r.hojas_hasta))
+          );
+
+          if (!rangoAplicable) {
+            result[item.id] = { valor: null, rango: null };
+            continue;
+          }
+
+          const rangoLabel = `${rangoAplicable.hojas_desde}-${rangoAplicable.hojas_hasta ?? '∞'}`;
+          const precioKey = [
+            item.tamanio_papel_id,
+            item.papel_id,
+            item.tipo_tinta,
+            item.cara_impresa,
+            rangoAplicable.id,
+          ].join('|');
+
+          if (!precioCache.has(precioKey)) {
+            const { data: precioData, error: precioError } = await supabase
+              .from('centro_copiado_precios_impresion')
+              .select('precio')
+              .eq('company_id', profile.company_id)
+              .eq('tamanio_papel_id', item.tamanio_papel_id)
+              .eq('papel_id', item.papel_id)
+              .eq('tipo_tinta', item.tipo_tinta)
+              .eq('cara_impresa', item.cara_impresa)
+              .eq('rango_precio_id', rangoAplicable.id)
+              .maybeSingle();
+
+            if (precioError) {
+              precioCache.set(precioKey, null);
+            } else {
+              precioCache.set(precioKey, precioData ? Number(precioData.precio) : null);
+            }
+          }
+
+          result[item.id] = {
+            valor: precioCache.get(precioKey) ?? null,
+            rango: rangoLabel,
+          };
+        }
+
+        setValorHojaInfoByItem(result);
+      } catch (err) {
+        console.error('Error calculando valor unitario de hoja de impresión:', err);
+        setValorHojaInfoByItem({});
+      }
+    };
+
+    void calcularValoresHoja();
+  }, [profile?.company_id, orden?.items, totalHojasPorGrupo]);
 
 
 
@@ -387,6 +509,22 @@ export function DetalleOrdenCopiado() {
                 </div>
                 <ChannelBadge canal={orden.canal_venta || 'Mostrador'} showLabel={true} />
               </div>
+
+              <div className="mt-3 border-t border-slate-200 pt-3">
+                <div className="mb-2 flex items-center gap-2">
+                  {orden.requiere_despacho ? (
+                    <Truck className="h-4 w-4 text-amber-600" />
+                  ) : (
+                    <Home className="h-4 w-4 text-emerald-600" />
+                  )}
+                  <h3 className="text-sm font-medium text-slate-700">Entrega</h3>
+                </div>
+                {orden.requiere_despacho ? (
+                  <Badge variant="warning">Requiere despacho</Badge>
+                ) : (
+                  <Badge variant="success">Retira por local</Badge>
+                )}
+              </div>
             </div>
 
             <div className="rounded-lg border border-slate-200 bg-white p-4">
@@ -527,6 +665,12 @@ export function DetalleOrdenCopiado() {
                                 {item.tipo_tinta === 'CMYK' ? 'Color' : 'B/N'} -{' '}
                                 {item.cara_impresa === 'frente' ? 'Frente' : 'Frente y Dorso'}
                               </div>
+                              {valorHojaInfoByItem[item.id]?.valor !== null && valorHojaInfoByItem[item.id]?.valor !== undefined && (
+                                <div className="mt-1 text-xs text-blue-700">
+                                  Valor impresión/hoja: ${Number(valorHojaInfoByItem[item.id].valor).toFixed(2)}
+                                  {valorHojaInfoByItem[item.id]?.rango ? ` · Rango ${valorHojaInfoByItem[item.id].rango}` : ''}
+                                </div>
+                              )}
                               {item.descripcion && (
                                 <div className="mt-1 text-xs text-gray-500 italic border-t border-gray-100 pt-1">
                                   Nota: {item.descripcion}
@@ -565,6 +709,24 @@ export function DetalleOrdenCopiado() {
                           )}
                         </div>
                       ),
+                    },
+                    {
+                      key: 'valor_hoja',
+                      header: 'Valor hoja',
+                      render: (item) => {
+                        const valorInfo = valorHojaInfoByItem[item.id];
+                        if (!valorInfo || valorInfo.valor === null) {
+                          return <span className="text-sm text-gray-400">-</span>;
+                        }
+                        return (
+                          <div className="text-sm">
+                            <div className="font-medium text-gray-800">${valorInfo.valor.toFixed(2)}</div>
+                            {valorInfo.rango && (
+                              <div className="text-xs text-gray-500">Rango {valorInfo.rango}</div>
+                            )}
+                          </div>
+                        );
+                      },
                     },
                     {
                       key: 'subtotal',
