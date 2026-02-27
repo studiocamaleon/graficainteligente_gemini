@@ -1603,6 +1603,7 @@ export interface CentroCopiadoOrden {
   numero_orden: string | null;
   orden_trabajo_id: string | null;
   cliente_id: string | null;
+  requiere_despacho: boolean;
   estado: EstadoOrdenCopiado;
   fecha_solicitud: string;
   fecha_entrega_estimada: string | null;

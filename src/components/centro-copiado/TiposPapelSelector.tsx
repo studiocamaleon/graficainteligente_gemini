@@ -92,23 +92,23 @@ export function TiposPapelSelector({
                     relative p-2 rounded-lg border-2 transition-all duration-200 text-left
                     hover:shadow-md flex flex-col gap-1 h-full
                     ${isSelected
-                      ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500'
+                      ? 'border-slate-800 bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-900 text-white shadow-[0_10px_24px_rgba(15,23,42,0.35)]'
                       : 'border-gray-200 bg-white hover:border-gray-300'
                     }
                   `}
                 >
                   <div className="flex justify-between items-start w-full">
-                    <span className={`font-bold text-sm leading-tight ${isSelected ? 'text-blue-800' : 'text-gray-900'}`}>
+                    <span className={`font-bold text-sm leading-tight ${isSelected ? 'text-white' : 'text-gray-900'}`}>
                       {papel.variante_nombre}
                     </span>
                     {isSelected && (
-                      <CheckCircle2 className="w-4 h-4 text-blue-600 flex-shrink-0 ml-1" />
+                      <CheckCircle2 className="w-4 h-4 text-white flex-shrink-0 ml-1" />
                     )}
                   </div>
 
                   <div className="flex items-center gap-2 mt-auto">
                     {papel.espesor && (
-                      <span className={`text-xs font-bold ${isSelected ? 'text-blue-700' : 'text-gray-700'}`}>
+                      <span className={`text-xs font-bold ${isSelected ? 'text-slate-200' : 'text-gray-700'}`}>
                         {papel.espesor}{papel.unidad_espesor}
                       </span>
                     )}

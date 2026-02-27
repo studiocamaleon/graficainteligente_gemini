@@ -47,6 +47,7 @@ interface OrdenCopiadoWithRelations extends CentroCopiadoOrden {
 interface CreateOrdenCopiadoData {
   cliente_id?: string | null;
   origen?: 'WhatsApp' | 'Web' | 'Mostrador' | 'App Mobile' | null;
+  requiere_despacho?: boolean;
   orden_trabajo_id?: string;
   fecha_entrega_estimada?: string;
   observaciones?: string;
@@ -202,6 +203,7 @@ export function useCentroCopiadoOrdenes(params: UseCentroCopiadoOrdenesParams = 
           numero_orden: null,
           cliente_id: data.cliente_id || null,
           canal_venta: data.origen || null, // Map origin to expected DB column
+          requiere_despacho: Boolean(data.requiere_despacho),
           orden_trabajo_id: data.orden_trabajo_id || null,
           estado: estadoInicial,
           fecha_solicitud: new Date().toISOString(),
@@ -312,6 +314,7 @@ export function useCentroCopiadoOrdenes(params: UseCentroCopiadoOrdenesParams = 
           .update({
             cliente_id: data.cliente_id,
             canal_venta: data.origen,
+            requiere_despacho: Boolean(data.requiere_despacho),
             ...(data.estado ? { estado: data.estado } : {}),
             orden_trabajo_id: data.orden_trabajo_id || null,
             fecha_entrega_estimada: data.fecha_entrega_estimada || null,
@@ -395,23 +398,6 @@ export function useCentroCopiadoOrdenes(params: UseCentroCopiadoOrdenesParams = 
             descripcion: item.descripcion || null,
 
             // Imprimir / Standard Fields (Null if CAD)
-            tipo_item: esPloteoCad ? null : 'impresion', // Or handled by DB default? Usually 'impresion' by default but we added 'es_ploteo_cad'. 
-            // Actually existing table has tipo_item enum. Does it have 'ploteo_cad'? No. 
-            // Logic: if es_ploteo_cad is true, tipo_item might be null or we reuse 'impresion'?
-            // Looking at migration, we added `es_ploteo_cad` column. The `tipo_item` enum was likely not modified.
-            // Let's check `types/database.ts`. TipoItemCopiado = 'impresion' | 'anillado' | 'plastificado'.
-            // So if it is Ploteo CAD, we probably should set `tipo_item` to null or keep it as 'impresion' but ignore it?
-            // "Impresión de Planos" is technically printing.
-            // Let's set it to 'impresion' for now, or null if allowed.
-            // The constraint might require a value.
-            // In `CrearOrdenCopiado.tsx` I didn't set `tipo_item` explicitely for Ploteo CAD in my previous edit?
-            // Wait, I might have missed `tipo_item` in `CrearOrdenCopiado.tsx`?
-            // Let's check `CrearOrdenCopiado.tsx`.
-            // Line 448 in ORIGINAL code (before my edit) didn't set `tipo_item`.
-            // Oh, checking `useCentroCopiadoOrdenItems.ts` line 98: `tipo_item: 'impresion'`.
-            // So I should stick to 'impresion' or check if constraint allows null.
-            // Given I am not modifying the enum, keeping 'impresion' is safest, but `es_ploteo_cad` flag distinguishes it.
-
             tipo_item: 'impresion', // Defaulting to impresion as it is printing
             tamanio_papel_id: !esPloteoCad ? config.tamanio_papel_id : null,
             papel_id: !esPloteoCad ? config.papel_id : null,

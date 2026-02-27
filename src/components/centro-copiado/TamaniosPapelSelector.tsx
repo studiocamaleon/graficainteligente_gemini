@@ -55,30 +55,30 @@ export function TamaniosPapelSelector({
                 hover:shadow-sm flex flex-col items-center justify-center gap-2 h-full
                 min-h-[80px]
                 ${isSelected
-                  ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500'
+                  ? 'border-slate-800 bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-900 text-white shadow-[0_10px_24px_rgba(15,23,42,0.35)]'
                   : 'border-gray-200 bg-white hover:border-gray-300'
                 }
               `}
             >
               <div className="relative">
                 <FileText
-                  className={`w-6 h-8 ${isSelected ? 'text-blue-600' : 'text-gray-400'
+                  className={`w-6 h-8 ${isSelected ? 'text-white' : 'text-gray-400'
                     }`}
                 />
                 {isSelected && (
-                  <CheckCircle2 className="w-3 h-3 text-blue-600 absolute -top-1 -right-1 bg-white rounded-full" />
+                  <CheckCircle2 className="w-3 h-3 text-white absolute -top-1 -right-1" />
                 )}
               </div>
 
               <div className="flex flex-col items-center w-full min-w-0">
                 <span
-                  className={`font-bold text-xs truncate w-full ${isSelected ? 'text-blue-700' : 'text-gray-900'
+                  className={`font-bold text-xs truncate w-full ${isSelected ? 'text-white' : 'text-gray-900'
                     }`}
                 >
                   {tamanio.nombre}
                 </span>
                 <span
-                  className={`text-[9px] ${isSelected ? 'text-blue-600' : 'text-gray-500'
+                  className={`text-[9px] ${isSelected ? 'text-slate-200' : 'text-gray-500'
                     }`}
                 >
                   {tamanio.ancho_mm}×{tamanio.alto_mm}

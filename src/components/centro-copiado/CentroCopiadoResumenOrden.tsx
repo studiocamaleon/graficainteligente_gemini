@@ -1,15 +1,32 @@
 import { useState, useEffect, RefObject } from 'react';
-import { DollarSign, ShoppingCart, AlertCircle } from 'lucide-react';
+import {
+  DollarSign,
+  ShoppingCart,
+  AlertCircle,
+  Sparkles,
+  TrendingDown,
+  Save,
+  FileBox,
+  CheckCircle2,
+  X,
+} from 'lucide-react';
 import { Card } from '../ui/card';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
+import { Tooltip } from '../ui/Tooltip';
 import { useCentroCopiadoTamanios } from '../../hooks/useCentroCopiadoTamanios';
 import { useCentroCopiadoPapeles } from '../../hooks/useCentroCopiadoPapeles';
 import type { ItemCopiadoConfig } from './CentroCopiadoItemForm';
 
 interface CentroCopiadoResumenOrdenProps {
-  items: Array<{ id: string; config: Partial<ItemCopiadoConfig>; precio?: number }>;
+  items: Array<{
+    id: string;
+    config: Partial<ItemCopiadoConfig>;
+    precio?: number;
+    valorHojaImpresion?: number | null;
+    rangoHojaImpresion?: string | null;
+  }>;
   descuento: number;
   onDescuentoChange: (descuento: number) => void;
   onGuardar: () => void;
@@ -19,6 +36,9 @@ interface CentroCopiadoResumenOrdenProps {
   guardando: boolean;
   containerRef: RefObject<HTMLDivElement>;
   requiereFactura: boolean;
+  ahorroPorCantidad?: number;
+  mostrarAhorroPorCantidad?: boolean;
+  saldoPendiente?: number;
   buttonText?: string;
   buttonDraftText?: string;
   buttonSecondaryText?: string;
@@ -35,6 +55,9 @@ export function CentroCopiadoResumenOrden({
   guardando,
   containerRef,
   requiereFactura,
+  ahorroPorCantidad = 0,
+  mostrarAhorroPorCantidad = false,
+  saldoPendiente = 0,
   buttonText,
   buttonDraftText,
   buttonSecondaryText,
@@ -43,6 +66,7 @@ export function CentroCopiadoResumenOrden({
   const { papeles } = useCentroCopiadoPapeles();
   const [dimensions, setDimensions] = useState({ left: 0, width: 0 });
   const [isLargeScreen, setIsLargeScreen] = useState(false);
+  const [actionInFlight, setActionInFlight] = useState<null | 'save' | 'draft' | 'deliver' | 'cancel'>(null);
 
   useEffect(() => {
     const updateDimensions = () => {
@@ -108,72 +132,63 @@ export function CentroCopiadoResumenOrden({
 
   const puedeGuardar = itemsCompletos.length > 0 && !guardando;
   const puedeGuardarBorrador = !guardando;
+  const puedeCrearEntregada = puedeGuardar && saldoPendiente <= 0.01;
+  const isBusy = guardando || actionInFlight !== null;
 
-  const getItemDescripcion = (item: { config: Partial<ItemCopiadoConfig> }) => {
-    const config = item.config;
-    const partes: string[] = [];
+  const handleAction = async (
+    action: 'save' | 'draft' | 'deliver' | 'cancel',
+    fn: () => void
+  ) => {
+    if (isBusy) return;
+    setActionInFlight(action);
+    try {
+      await Promise.resolve(fn());
+    } finally {
+      setActionInFlight(null);
+    }
+  };
+
+  const getItemSections = (
+    config: Partial<ItemCopiadoConfig>,
+    itemMeta?: { valorHojaImpresion?: number | null; rangoHojaImpresion?: string | null }
+  ) => {
+    if (config.modo_item === 'ploteo_cad') {
+      return {
+        impresion: [
+          config.ploteo_cad_tipo_papel ? `Papel: ${config.ploteo_cad_tipo_papel}` : null,
+          config.ploteo_cad_ancho_rollo ? `Ancho: ${config.ploteo_cad_ancho_rollo}cm` : null,
+          config.ploteo_cad_metros_lineales ? `Metros: ${config.ploteo_cad_metros_lineales}` : null,
+          config.cantidad_copias ? `Copias: ${config.cantidad_copias}` : null,
+        ].filter(Boolean) as string[],
+        terminaciones: [] as string[],
+      };
+    }
 
     const tamanio = tamanios.find(t => t.id === config.tamanio_papel_id);
     const papel = papeles.find(p => p.id === config.papel_id);
+    const tinta = config.tipo_tinta === 'CMYK' ? 'Color (CMYK)' : config.tipo_tinta === 'K' ? 'B/N (K)' : null;
+    const caras = config.cara_impresa === 'frente'
+      ? 'Simple faz'
+      : config.cara_impresa === 'frente_y_dorso'
+        ? 'Doble faz'
+        : null;
 
-    if (tamanio) {
-      partes.push(tamanio.nombre);
-    }
+    const terminaciones: string[] = [];
+    if (config.anillado?.tipo) terminaciones.push(`Anillado ${config.anillado.tipo === 'ring_wire' ? 'Ring Wire' : 'Plástico'}`);
+    if (config.plastificado?.tipo) terminaciones.push(`Plastificado ${config.plastificado.tipo}`);
+    if (config.guillotinado) terminaciones.push('Guillotinado');
 
-    if (papel) {
-      partes.push(papel.variante_nombre);
-      if (papel.espesor && papel.unidad_espesor) {
-        partes.push(`${papel.espesor}${papel.unidad_espesor}`);
-      }
-    }
-
-    if (config.cantidad_hojas) {
-      partes.push(`${config.cantidad_hojas}h`);
-    }
-
-    if (config.tipo_tinta === 'CMYK') {
-      partes.push('Color');
-    } else if (config.tipo_tinta === 'K') {
-      partes.push('B/N');
-    }
-
-    if (config.cara_impresa === 'frente') {
-      partes.push('1C');
-    } else if (config.cara_impresa === 'frente_y_dorso') {
-      partes.push('2C');
-    }
-
-    if (config.cantidad_copias && config.cantidad_copias > 1) {
-      partes.push(`x${config.cantidad_copias}`);
-    }
-
-    if (config.anillado && config.anillado.tipo) {
-      partes.push(`Anil.`);
-    }
-
-    if (config.plastificado && config.plastificado.tipo) {
-      partes.push(`Plast.`);
-    }
-
-    if (config.guillotinado) {
-      partes.push(`Guill.`);
-    }
-
-    if (config.modo_item === 'ploteo_cad') {
-      const parts = [
-        'Ploteo CAD',
-        config.ploteo_cad_tipo_papel,
-        `Ancho ${config.ploteo_cad_ancho_rollo}cm`,
-        `${config.ploteo_cad_metros_lineales}ml`
-      ];
-
-      if (config.cantidad_copias && config.cantidad_copias > 1) {
-        parts.push(`x${config.cantidad_copias}`);
-      }
-      return parts.filter(Boolean).join(' • ');
-    }
-
-    return partes.join(' • ') || 'Sin configurar';
+    return {
+      impresion: [
+        tamanio ? `Tamaño: ${tamanio.nombre}` : null,
+        papel ? `Papel: ${papel.variante_nombre}${papel.espesor ? ` ${papel.espesor}${papel.unidad_espesor || ''}` : ''}` : null,
+        tinta ? `Tinta: ${tinta}` : null,
+        caras ? `Caras: ${caras}` : null,
+        config.cantidad_hojas ? `Hojas: ${config.cantidad_hojas}` : null,
+        config.cantidad_copias ? `Copias: ${config.cantidad_copias}` : null,
+      ].filter(Boolean) as string[],
+      terminaciones,
+    };
   };
 
   const fixedStyles = isLargeScreen
@@ -190,42 +205,111 @@ export function CentroCopiadoResumenOrden({
 
   return (
     <div style={fixedStyles}>
-      <Card className="h-fit shadow-lg">
-        <div className="p-4">
-          <div className="flex items-center gap-2 mb-4">
-            <ShoppingCart className="w-5 h-5 text-blue-600" />
-            <h3 className="text-base font-bold text-gray-900">Resumen de Orden</h3>
-            <Badge variant="default">{items.length}</Badge>
+      <Card className="h-fit overflow-hidden border-slate-200 shadow-[0_18px_48px_rgba(15,23,42,0.12)]">
+        <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-blue-900 p-4 text-white">
+          <div className="flex items-center gap-2">
+            <div className="rounded-lg border border-white/20 bg-white/10 p-1.5">
+              <ShoppingCart className="h-4 w-4 text-slate-100" />
+            </div>
+            <h3 className="text-base font-semibold tracking-tight">Resumen de Orden</h3>
+            <Badge variant="default" className="ml-auto border-transparent bg-white/15 text-white">
+              {items.length}
+            </Badge>
+          </div>
+          <p className="mt-2 text-xs text-slate-200">Vista rápida de ítems, ahorro por volumen y totales</p>
+        </div>
+
+        <div className="space-y-4 bg-gradient-to-b from-slate-50/80 to-white p-4">
+          <div className="grid grid-cols-2 gap-2">
+            <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Ítems completos</p>
+              <p className="mt-1 text-lg font-bold text-slate-900">{itemsCompletos.length}</p>
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Total ítems</p>
+              <p className="mt-1 text-lg font-bold text-slate-900">{items.length}</p>
+            </div>
           </div>
 
           {items.length === 0 ? (
-            <div className="text-center py-8">
+            <div className="rounded-2xl border border-slate-200 bg-white py-8 text-center shadow-sm">
               <AlertCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
               <p className="text-sm text-gray-500">No hay items agregados</p>
             </div>
           ) : (
             <>
-              <div className="space-y-2 mb-4 max-h-96 overflow-y-auto">
+              <div className="max-h-96 space-y-2 overflow-y-auto pr-1">
                 {items.map((item, index) => (
                   <div
                     key={item.id}
-                    className="p-2 bg-gray-50 rounded-lg border border-gray-200"
+                    className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm"
                   >
-                    <div className="flex items-start justify-between gap-2 mb-1">
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <Badge variant="primary" className="text-xs flex-shrink-0">
-                          #{index + 1}
-                        </Badge>
-                        <span className="text-xs text-gray-700 line-clamp-2 break-words">
-                          {getItemDescripcion(item)}
-                        </span>
+                    <div className="mb-2 flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="primary" className="shrink-0 text-xs">
+                            #{index + 1}
+                          </Badge>
+                          <span className="text-[11px] font-medium uppercase tracking-wide text-slate-500">
+                            {item.config.modo_item === 'ploteo_cad' ? 'Ploteo CAD' : 'Impresión hojas'}
+                          </span>
+                        </div>
                       </div>
                       {item.precio !== undefined && (
-                        <span className="text-xs font-semibold text-gray-900 whitespace-nowrap flex-shrink-0">
-                          ${item.precio.toFixed(2)}
-                        </span>
+                        <div className="shrink-0 flex items-center gap-1.5">
+                          <span className="inline-flex items-center whitespace-nowrap rounded-md border border-cyan-200 bg-cyan-50 px-2 py-0.5 text-[11px] font-semibold text-cyan-800">
+                            {item.valorHojaImpresion !== null && item.valorHojaImpresion !== undefined
+                              ? `$${Number(item.valorHojaImpresion).toFixed(2)}/hoja`
+                              : '-/hoja'}
+                          </span>
+                          <span className="inline-flex whitespace-nowrap rounded-lg bg-slate-900 px-2 py-1 text-xs font-semibold text-white">
+                            ${item.precio.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        </div>
                       )}
                     </div>
+
+                    <div className="space-y-2">
+                      {(() => {
+                        const sections = getItemSections(item.config, item);
+                        return (
+                          <>
+                            <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-2">
+                              <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500">Impresión</p>
+                              <div className="flex flex-wrap gap-1.5">
+                                {sections.impresion.length > 0 ? sections.impresion.map((detail) => (
+                                  <span
+                                    key={`${item.id}-imp-${detail}`}
+                                    className="inline-flex items-center rounded-md border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-medium text-slate-700"
+                                  >
+                                    {detail}
+                                  </span>
+                                )) : (
+                                  <span className="text-[11px] text-slate-500">Sin datos de impresión</span>
+                                )}
+                              </div>
+                            </div>
+
+                            {sections.terminaciones.length > 0 && (
+                              <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-2">
+                                <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500">Terminaciones</p>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {sections.terminaciones.map((detail) => (
+                                    <span
+                                      key={`${item.id}-ter-${detail}`}
+                                      className="inline-flex items-center rounded-md border border-blue-200 bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700"
+                                    >
+                                      {detail}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()}
+                    </div>
+
                     {!itemsCompletos.find((i) => i.id === item.id) && (
                       <div className="flex items-center gap-1 mt-2">
                         <AlertCircle className="w-3 h-3 text-amber-500" />
@@ -236,27 +320,28 @@ export function CentroCopiadoResumenOrden({
                 ))}
               </div>
 
-              <div className="border-t pt-3 space-y-2">
+              <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
                 <div className="flex items-center justify-between">
-                  {requiereFactura ? (
-                    <>
-                      <span className="text-sm text-gray-600">Subtotal Neto</span>
-                      <span className="text-sm font-semibold text-gray-900">
-                        ${subtotalNeto.toFixed(2)}
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="text-sm text-gray-600">Subtotal</span>
-                      <span className="text-sm font-semibold text-gray-900">
-                        ${subtotal.toFixed(2)}
-                      </span>
-                    </>
-                  )}
+                  <span className="text-sm text-slate-600">{requiereFactura ? 'Subtotal Neto' : 'Subtotal'}</span>
+                  <span className="text-sm font-semibold text-slate-900">
+                    ${(requiereFactura ? subtotalNeto : subtotal).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="block text-xs font-medium text-gray-700">
+                {(mostrarAhorroPorCantidad || ahorroPorCantidad > 0) && (
+                  <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <Sparkles className="h-3.5 w-3.5 text-emerald-700" />
+                        <span className="text-xs font-medium text-emerald-700">Ahorro por cantidad de páginas:</span>
+                      </div>
+                      <span className="text-sm font-bold text-emerald-700">${ahorroPorCantidad.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="mt-3 space-y-1">
+                  <label className="block text-xs font-medium text-slate-700">
                     Descuento (%)
                   </label>
                   <div className="flex items-center gap-2">
@@ -273,27 +358,30 @@ export function CentroCopiadoResumenOrden({
                   </div>
                   {montoDescuento > 0 && (
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-red-600">Monto descuento</span>
-                      <span className="font-medium text-red-600">-${montoDescuento.toFixed(2)}</span>
+                      <div className="flex items-center gap-1 text-red-600">
+                        <TrendingDown className="h-3.5 w-3.5" />
+                        <span>Monto descuento</span>
+                      </div>
+                      <span className="font-medium text-red-600">-${montoDescuento.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                     </div>
                   )}
                 </div>
 
                 {requiereFactura && iva > 0 && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">IVA (21%)</span>
-                    <span className="text-sm font-semibold text-gray-900">
-                      ${iva.toFixed(2)}
+                  <div className="mt-2 flex items-center justify-between">
+                    <span className="text-sm text-slate-600">IVA (21%)</span>
+                    <span className="text-sm font-semibold text-slate-900">
+                      ${iva.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   </div>
                 )}
 
-                <div className="border-t pt-2 flex items-center justify-between">
-                  <span className="text-sm font-bold text-gray-900">Total</span>
+                <div className="mt-3 flex items-center justify-between border-t border-slate-200 pt-3">
+                  <span className="text-sm font-bold text-slate-900">Total</span>
                   <div className="flex items-center gap-1">
-                    <DollarSign className="w-4 h-4 text-green-600" />
-                    <span className="text-xl font-bold text-green-600">
-                      ${total.toFixed(2)}
+                    <DollarSign className="h-4 w-4 text-emerald-600" />
+                    <span className="text-xl font-bold text-emerald-600">
+                      ${total.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   </div>
                 </div>
@@ -307,46 +395,77 @@ export function CentroCopiadoResumenOrden({
                 </div>
               )}
 
-              <div className="mt-4 space-y-2">
-                <Button
-                  variant="primary"
-                  onClick={() => onGuardar()}
-                  disabled={!puedeGuardar}
-                  isLoading={guardando}
-                  className="w-full"
-                >
-                  {guardando ? 'Guardando...' : (buttonText || 'Guardar Orden')}
-                </Button>
-                {onGuardarBorrador && (
-                  <Button
-                    variant="secondary"
-                    onClick={() => onGuardarBorrador()}
-                    disabled={!puedeGuardarBorrador}
-                    isLoading={guardando}
-                    className="w-full"
-                  >
-                    {guardando ? 'Guardando...' : (buttonDraftText || 'Guardar borrador')}
-                  </Button>
-                )}
-                {onGuardarEntregada && (
-                  <Button
-                    variant="success"
-                    onClick={() => onGuardarEntregada()}
-                    disabled={!puedeGuardar}
-                    isLoading={guardando}
-                    className="w-full"
-                  >
-                    {guardando ? 'Guardando...' : (buttonSecondaryText || 'Guardar y Entregar')}
-                  </Button>
-                )}
-                <Button
-                  variant="secondary"
-                  onClick={onCancelar}
-                  disabled={guardando}
-                  className="w-full"
-                >
-                  Cancelar
-                </Button>
+              <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50/80 p-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="w-full">
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => void handleAction('save', onGuardar)}
+                      disabled={!puedeGuardar || (isBusy && actionInFlight !== 'save')}
+                      isLoading={isBusy && actionInFlight === 'save'}
+                      className="w-full"
+                    >
+                      <Save className="h-4 w-4" />
+                      <span>{buttonText || 'Guardar'}</span>
+                    </Button>
+                  </div>
+
+                  {onGuardarBorrador && (
+                    <div className="w-full">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => void handleAction('draft', onGuardarBorrador)}
+                        disabled={!puedeGuardarBorrador || (isBusy && actionInFlight !== 'draft')}
+                        isLoading={isBusy && actionInFlight === 'draft'}
+                        className="w-full"
+                      >
+                        <FileBox className="h-4 w-4" />
+                        <span>Borrador</span>
+                      </Button>
+                    </div>
+                  )}
+
+                  {onGuardarEntregada && (
+                    <Tooltip
+                      content={
+                        puedeCrearEntregada
+                          ? (buttonSecondaryText || 'Crear y entregar')
+                          : 'Para crear y entregar, la orden debe estar paga al 100%'
+                      }
+                      position="top"
+                    >
+                      <div className="w-full">
+                        <Button
+                          variant="success"
+                          size="sm"
+                          onClick={() => void handleAction('deliver', onGuardarEntregada)}
+                          disabled={!puedeCrearEntregada || (isBusy && actionInFlight !== 'deliver')}
+                          isLoading={isBusy && actionInFlight === 'deliver'}
+                          className="w-full"
+                        >
+                          <CheckCircle2 className="h-4 w-4" />
+                          <span>Crear y entregar</span>
+                        </Button>
+                      </div>
+                    </Tooltip>
+                  )}
+
+                  <div className="w-full">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => void handleAction('cancel', onCancelar)}
+                      disabled={isBusy && actionInFlight !== 'cancel'}
+                      isLoading={isBusy && actionInFlight === 'cancel'}
+                      className="w-full"
+                    >
+                      <X className="h-4 w-4" />
+                      <span>Cancelar</span>
+                    </Button>
+                  </div>
+                </div>
               </div>
             </>
           )}
