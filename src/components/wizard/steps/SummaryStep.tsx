@@ -87,7 +87,11 @@ export function SummaryStep({ config }: SummaryStepProps) {
             <div className="flex justify-between">
               <span className="text-gray-600">Tipo de tinta:</span>
               <span className="font-medium text-gray-900">
-                {config.tipo_tinta === 'CMYK' ? 'Color (CMYK)' : 'Blanco y Negro (K)'}
+                {config.tipo_tinta === 'CMYK'
+                  ? 'Full Color (CMYK)'
+                  : config.tipo_tinta === 'COLOR'
+                    ? 'Color'
+                    : 'Blanco y Negro (K)'}
               </span>
             </div>
             <div className="flex justify-between">

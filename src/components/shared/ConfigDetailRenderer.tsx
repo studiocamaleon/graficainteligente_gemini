@@ -34,8 +34,12 @@ export function ConfigDetailRenderer({ config: rawConfig, tipoItem }: ConfigDeta
                 <div className="flex flex-wrap gap-1.5 mt-1">
                     {config.tamanio_nombre && <Badge variant="default" className="text-[10px] h-5">{config.tamanio_nombre}</Badge>}
                     {config.papel_detalle && <Badge variant="default" className="text-[10px] h-5">{config.papel_detalle}</Badge>}
-                    <Badge variant={config.tipo_tinta === 'CMYK' || config.tipo_tinta === 'color' ? 'purple' : 'default'} className="text-[10px] h-5">
-                        {config.tipo_tinta === 'CMYK' || config.tipo_tinta === 'color' ? 'Color' : 'B/N'}
+                    <Badge variant={config.tipo_tinta === 'CMYK' ? 'purple' : config.tipo_tinta === 'COLOR' || config.tipo_tinta === 'color' ? 'info' : 'default'} className="text-[10px] h-5">
+                        {config.tipo_tinta === 'CMYK'
+                            ? 'Full Color'
+                            : config.tipo_tinta === 'COLOR' || config.tipo_tinta === 'color'
+                                ? 'Color'
+                                : 'Blanco y Negro'}
                     </Badge>
                     <Badge variant="default" className="text-[10px] h-5">
                         {config.cara_impresa === 'frente_y_dorso' || config.cara_impresa === 'doble' || config.cara_impresa === '1/1' ? 'Doble Faz' : 'Simple Faz'}

@@ -13,7 +13,10 @@ export function generarDescripcionCopiado(config: any): string {
 
     // Ink & Sides
     if (config.tipo_tinta) {
-        parts.push(config.tipo_tinta === 'CMYK' ? 'Color' : 'B/N');
+        if (config.tipo_tinta === 'CMYK') parts.push('Full Color');
+        else if (config.tipo_tinta === 'COLOR') parts.push('Color');
+        else if (config.tipo_tinta === 'K') parts.push('Blanco y Negro');
+        else parts.push(config.tipo_tinta);
     }
     if (config.cara_impresa) {
         parts.push((config.cara_impresa === 'doble' || config.cara_impresa === '1/1') ? 'Doble Faz' : 'Simple Faz');

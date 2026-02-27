@@ -662,7 +662,11 @@ export function DetalleOrdenCopiado() {
                                 {item.papel?.espesor && ` ${item.papel.espesor}${item.papel.unidad_espesor}`}
                               </div>
                               <div className="text-gray-500">
-                                {item.tipo_tinta === 'CMYK' ? 'Color' : 'B/N'} -{' '}
+                                {item.tipo_tinta === 'CMYK'
+                                  ? 'Full Color'
+                                  : item.tipo_tinta === 'COLOR'
+                                    ? 'Color'
+                                    : 'Blanco y Negro'} -{' '}
                                 {item.cara_impresa === 'frente' ? 'Frente' : 'Frente y Dorso'}
                               </div>
                               {valorHojaInfoByItem[item.id]?.valor !== null && valorHojaInfoByItem[item.id]?.valor !== undefined && (

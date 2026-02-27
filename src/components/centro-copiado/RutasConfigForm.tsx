@@ -19,7 +19,8 @@ const CONFIG_KEYS = [
 // Define known values for each configuration key
 const CONFIG_VALUES: Record<string, { value: string; label: string }[]> = {
     tipo_tinta: [
-        { value: 'CMYK', label: 'Color (CMYK)' },
+        { value: 'CMYK', label: 'Full Color (CMYK)' },
+        { value: 'COLOR', label: 'Color' },
         { value: 'K', label: 'Blanco y Negro (K)' },
     ],
     anillado: [

@@ -154,8 +154,12 @@ export function ItemConfigRenderer({ config, tipoItem, rutasGeneradas }: ItemCon
                 <div className="flex flex-wrap gap-2 text-xs">
                     {config.tamanio_nombre && <Badge variant="default">{config.tamanio_nombre}</Badge>}
                     {config.papel_detalle && <Badge variant="default">{config.papel_detalle}</Badge>}
-                    <Badge variant={config.tipo_tinta === 'CMYK' || config.tipo_tinta === 'color' ? 'purple' : 'default'}>
-                        {config.tipo_tinta === 'CMYK' || config.tipo_tinta === 'color' ? 'Color' : 'B/N'}
+                    <Badge variant={config.tipo_tinta === 'CMYK' ? 'purple' : config.tipo_tinta === 'COLOR' || config.tipo_tinta === 'color' ? 'info' : 'default'}>
+                        {config.tipo_tinta === 'CMYK'
+                            ? 'Full Color'
+                            : config.tipo_tinta === 'COLOR' || config.tipo_tinta === 'color'
+                                ? 'Color'
+                                : 'Blanco y Negro'}
                     </Badge>
                     <Badge variant="default">
                         {config.cara_impresa === 'frente_y_dorso' || config.cara_impresa === 'doble' || config.cara_impresa === '1/1' ? 'Doble Faz' : 'Simple Faz'}
@@ -306,4 +310,3 @@ export function ItemConfigRenderer({ config, tipoItem, rutasGeneradas }: ItemCon
         </div>
     );
 }
-

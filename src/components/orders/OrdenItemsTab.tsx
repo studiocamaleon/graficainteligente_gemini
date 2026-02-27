@@ -712,7 +712,11 @@ export function OrdenItemsTab({
                                 <span>
                                   {copies} copias •{' '}
                                   {sheets} hojas •{' '}
-                                  {inkType === 'CMYK' ? 'Color' : 'B/N'}
+                                  {inkType === 'CMYK'
+                                    ? 'Full Color'
+                                    : inkType === 'COLOR'
+                                      ? 'Color'
+                                      : 'Blanco y Negro'}
                                   {item.descripcion && ` • ${item.descripcion}`}
                                 </span>
                                 <span className="ml-auto font-medium text-green-600">
