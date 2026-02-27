@@ -29,7 +29,7 @@ export function CentroCopiadoMatrizPrecios({
   const isInitialized = useRef(false);
 
   const getCombinacionKey = (combinacion: CombinacionTamanioPapel) => {
-    return `${combinacion.tamanio_id}-${combinacion.papel_id}`;
+    return `${combinacion.tamanio_id}|${combinacion.papel_id}`;
   };
 
   const getRangoCaraKey = (rangoId: string, cara: 'frente' | 'frente_y_dorso') => {

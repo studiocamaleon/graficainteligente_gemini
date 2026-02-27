@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { Palette, FileText } from 'lucide-react';
+import { CircleDot, Palette, FileText } from 'lucide-react';
 import { Card } from '../ui/card';
 import { Badge } from '../ui/Badge';
 import { CentroCopiadoMatrizPrecios } from './CentroCopiadoMatrizPrecios';
@@ -14,6 +14,7 @@ interface Props {
   rangos: CentroCopiadoRangoPrecioImpresion[];
   onPreciosChange: (precios: PrecioImpresionInput[]) => void;
   loadPreciosExistentes: () => Promise<Map<string, any[]>>;
+  overridePrecios?: PrecioImpresionInput[] | null;
 }
 
 interface PrecioCargado {
@@ -27,6 +28,7 @@ export function CentroCopiadoTintaSection({
   rangos,
   onPreciosChange,
   loadPreciosExistentes,
+  overridePrecios = null,
 }: Props) {
   const [preciosCargados, setPreciosCargados] = useState<Map<string, PrecioCargado[]>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
@@ -52,6 +54,19 @@ export function CentroCopiadoTintaSection({
   }, []);
 
   const preciosActuales = useMemo(() => {
+    if (overridePrecios) {
+      const overrideMap = new Map<string, Map<string, number>>();
+      overridePrecios.forEach((precio) => {
+        const combKey = `${precio.tamanio_papel_id}|${precio.papel_id}`;
+        const rangoCaraKey = `${precio.rango_precio_id}-${precio.cara_impresa}`;
+        if (!overrideMap.has(combKey)) {
+          overrideMap.set(combKey, new Map<string, number>());
+        }
+        overrideMap.get(combKey)!.set(rangoCaraKey, precio.precio);
+      });
+      return overrideMap;
+    }
+
     const map = new Map<string, Map<string, number>>();
 
     preciosCargados.forEach((precios, combKey) => {
@@ -64,18 +79,24 @@ export function CentroCopiadoTintaSection({
     });
 
     return map;
-  }, [preciosCargados]);
+  }, [preciosCargados, overridePrecios]);
 
   const getTintaIcon = () => {
-    return tintaData.tipo_tinta === 'CMYK' ? Palette : FileText;
+    if (tintaData.tipo_tinta === 'CMYK') return Palette;
+    if (tintaData.tipo_tinta === 'COLOR') return CircleDot;
+    return FileText;
   };
 
   const getTintaLabel = () => {
-    return tintaData.tipo_tinta === 'CMYK' ? 'Impresión CMYK' : 'Blanco y Negro';
+    if (tintaData.tipo_tinta === 'CMYK') return 'Impresión Full Color';
+    if (tintaData.tipo_tinta === 'COLOR') return 'Impresión Color';
+    return 'Blanco y Negro';
   };
 
   const getTintaBadgeColor = (): 'primary' | 'default' | 'success' | 'warning' | 'danger' | 'info' => {
-    return tintaData.tipo_tinta === 'CMYK' ? 'primary' : 'default';
+    if (tintaData.tipo_tinta === 'CMYK') return 'primary';
+    if (tintaData.tipo_tinta === 'COLOR') return 'info';
+    return 'default';
   };
 
   const totalCombinaciones = tintaData.combinaciones.length;

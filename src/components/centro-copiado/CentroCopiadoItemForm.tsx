@@ -332,8 +332,9 @@ export function CentroCopiadoItemForm({
     if (tamanio) partes.push(tamanio.nombre);
     if (papel) partes.push(papel.variante_nombre);
     if (value.cantidad_hojas) partes.push(`${value.cantidad_hojas} hojas`);
-    if (value.tipo_tinta === 'CMYK') partes.push('Color');
-    else if (value.tipo_tinta === 'K') partes.push('B/N');
+    if (value.tipo_tinta === 'CMYK') partes.push('Full Color');
+    else if (value.tipo_tinta === 'COLOR') partes.push('Color');
+    else if (value.tipo_tinta === 'K') partes.push('Blanco y Negro');
     if (value.cara_impresa === 'frente') partes.push('Frente');
     else if (value.cara_impresa === 'frente_y_dorso') partes.push('F/D');
     if (value.cantidad_copias && value.cantidad_copias > 1) partes.push(`x${value.cantidad_copias}`);
@@ -628,9 +629,26 @@ export function CentroCopiadoItemForm({
                               : 'border-gray-200 hover:border-gray-300 bg-white'
                               }`}
                           >
-                            <div className={`w-4 h-4 rounded-full mb-1 ${value.tipo_tinta === 'K' ? 'bg-white' : 'bg-gray-900'}`}></div>
+                            <div className={`w-4 h-4 rounded-full mb-1 ${value.tipo_tinta === 'K' ? 'bg-white' : 'bg-gray-800'}`}></div>
                             <span className="font-bold text-xs">Blanco y Negro</span>
                             {value.tipo_tinta === 'K' && (
+                              <CheckCircle2 className="w-3 h-3 text-white absolute top-1 right-1" />
+                            )}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleFieldChange('tipo_tinta', 'COLOR')}
+                            className={`relative w-full p-3 rounded-lg border-2 transition-all flex flex-col items-center justify-center gap-2 h-20 ${value.tipo_tinta === 'COLOR'
+                              ? selectedModernClass
+                              : 'border-gray-200 hover:border-gray-300 bg-white'
+                              }`}
+                          >
+                            <div className="flex -space-x-1 scale-110 mb-1">
+                              <div className="w-3 h-3 rounded-full bg-cyan-300 ring-1 ring-white"></div>
+                              <div className="w-3 h-3 rounded-full bg-fuchsia-300 ring-1 ring-white"></div>
+                            </div>
+                            <span className="font-bold text-xs">Color</span>
+                            {value.tipo_tinta === 'COLOR' && (
                               <CheckCircle2 className="w-3 h-3 text-white absolute top-1 right-1" />
                             )}
                           </button>
@@ -642,11 +660,11 @@ export function CentroCopiadoItemForm({
                               : 'border-gray-200 hover:border-gray-300 bg-white'
                               }`}
                           >
-                            <div className="flex -space-x-1 scale-125 mb-1">
-                              <div className="w-3 h-3 rounded-full bg-cyan-500 ring-1 ring-white"></div>
-                              <div className="w-3 h-3 rounded-full bg-fuchsia-500 ring-1 ring-white"></div>
-                              <div className="w-3 h-3 rounded-full bg-yellow-400 ring-1 ring-white"></div>
-                              <div className="w-3 h-3 rounded-full bg-black ring-1 ring-white"></div>
+                            <div className="flex -space-x-1 scale-110 mb-1">
+                              <div className="w-3 h-3 rounded-full bg-cyan-400 ring-1 ring-white"></div>
+                              <div className="w-3 h-3 rounded-full bg-fuchsia-400 ring-1 ring-white"></div>
+                              <div className="w-3 h-3 rounded-full bg-yellow-300 ring-1 ring-white"></div>
+                              <div className="w-3 h-3 rounded-full bg-slate-500 ring-1 ring-white"></div>
                             </div>
                             <span className="font-bold text-xs">Full Color</span>
                             {value.tipo_tinta === 'CMYK' && (

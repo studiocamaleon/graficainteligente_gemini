@@ -7,7 +7,6 @@ import type {
     CentroCopiadoRangoPrecioImpresion,
     TipoTintaCopiado
 } from '../types/database';
-import type { CombinacionTamanioPapel } from '../hooks/useCentroCopiadoPreciosImpresion';
 import { formatCurrency } from '../utils/pdfHelpers';
 
 interface PrecioCargado {
@@ -34,7 +33,7 @@ const getPrecio = (
     rangoId: string,
     cara: 'frente' | 'frente_y_dorso'
 ) => {
-    const key = `${tamanioId}-${papelId}`;
+    const key = `${tamanioId}|${papelId}`;
     const preciosList = preciosMap.get(key);
     if (!preciosList) return '-';
 
@@ -58,6 +57,7 @@ export function useCentroCopiadoExport() {
 
             // Fetch Data
             const preciosCMYK = await loadPreciosExistentes('CMYK');
+            const preciosColor = await loadPreciosExistentes('COLOR');
             const preciosBN = await loadPreciosExistentes('K');
 
             const doc = new jsPDF('p', 'mm', 'a4');
@@ -91,11 +91,21 @@ export function useCentroCopiadoExport() {
 
                 if (tipoTinta === 'CMYK') {
                     doc.setTextColor(0, 150, 150); // Cyanish
+                } else if (tipoTinta === 'COLOR') {
+                    doc.setTextColor(56, 116, 203);
                 } else {
                     doc.setTextColor(50, 50, 50); // Gray
                 }
 
-                doc.text(tipoTinta === 'CMYK' ? 'Impresión Color (CMYK)' : 'Impresión Blanco y Negro', 14, finalY);
+                doc.text(
+                    tipoTinta === 'CMYK'
+                        ? 'Impresión Full Color (CMYK)'
+                        : tipoTinta === 'COLOR'
+                            ? 'Impresión Color'
+                            : 'Impresión Blanco y Negro',
+                    14,
+                    finalY
+                );
                 finalY += 10;
 
                 // Iterate Tamanios
@@ -181,6 +191,7 @@ export function useCentroCopiadoExport() {
             };
 
             renderSection('CMYK', preciosCMYK, false);
+            renderSection('COLOR', preciosColor, true);
             renderSection('K', preciosBN, true);
 
             doc.save(`Lista_Precios_Centro_Copiado_${new Date().toISOString().split('T')[0]}.pdf`);

@@ -42,6 +42,8 @@ interface PrecioCargado {
   precio: number;
 }
 
+const buildCombinacionKey = (tamanioId: string, papelId: string) => `${tamanioId}|${papelId}`;
+
 export function useCentroCopiadoPreciosImpresion() {
   const { company } = useAuth();
   const [tamanios, setTamanios] = useState<CentroCopiadoTamanioPapel[]>([]);
@@ -116,12 +118,17 @@ export function useCentroCopiadoPreciosImpresion() {
         combinaciones: [...combinaciones],
       };
 
+      const tintasColor: TintaData = {
+        tipo_tinta: 'COLOR',
+        combinaciones: [...combinaciones],
+      };
+
       const tintasK: TintaData = {
         tipo_tinta: 'K',
         combinaciones: [...combinaciones],
       };
 
-      setTintasData([tintasCMYK, tintasK]);
+      setTintasData([tintasCMYK, tintasColor, tintasK]);
 
     } catch (err) {
       console.error('Error fetching configuración:', err);
@@ -150,7 +157,7 @@ export function useCentroCopiadoPreciosImpresion() {
       const preciosMap = new Map<string, PrecioCargado[]>();
 
       (data || []).forEach(precio => {
-        const key = `${precio.tamanio_papel_id}-${precio.papel_id}`;
+        const key = buildCombinacionKey(precio.tamanio_papel_id, precio.papel_id);
         if (!preciosMap.has(key)) {
           preciosMap.set(key, []);
         }

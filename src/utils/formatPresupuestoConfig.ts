@@ -415,7 +415,10 @@ function formatCentroCopiado(config: ConfiguracionBase): string {
   if (config.tinta) {
     partes.push(config.tinta);
   } else if (config.tipo_tinta) {
-    partes.push(config.tipo_tinta === 'CMYK' ? 'Color' : 'B/N');
+    if (config.tipo_tinta === 'CMYK') partes.push('Full Color');
+    else if (config.tipo_tinta === 'COLOR') partes.push('Color');
+    else if (config.tipo_tinta === 'K') partes.push('Blanco y Negro');
+    else partes.push(config.tipo_tinta);
   }
 
   // Caras

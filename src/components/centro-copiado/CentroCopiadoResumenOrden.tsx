@@ -166,7 +166,13 @@ export function CentroCopiadoResumenOrden({
 
     const tamanio = tamanios.find(t => t.id === config.tamanio_papel_id);
     const papel = papeles.find(p => p.id === config.papel_id);
-    const tinta = config.tipo_tinta === 'CMYK' ? 'Color (CMYK)' : config.tipo_tinta === 'K' ? 'B/N (K)' : null;
+    const tinta = config.tipo_tinta === 'CMYK'
+      ? 'Full Color (CMYK)'
+      : config.tipo_tinta === 'COLOR'
+        ? 'Color'
+        : config.tipo_tinta === 'K'
+          ? 'Blanco y Negro (K)'
+          : null;
     const caras = config.cara_impresa === 'frente'
       ? 'Simple faz'
       : config.cara_impresa === 'frente_y_dorso'

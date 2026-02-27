@@ -45,8 +45,12 @@ const renderConfiguracion = (config: any, tipoItem?: string) => {
         <div className="flex flex-wrap gap-1.5 mt-1">
           {config.tamanio_nombre && <Badge variant="outline" className="text-[10px] h-5">{config.tamanio_nombre}</Badge>}
           {config.papel_detalle && <Badge variant="outline" className="text-[10px] h-5">{config.papel_detalle}</Badge>}
-          <Badge variant={config.tipo_tinta === 'CMYK' || config.tipo_tinta === 'color' ? 'purple' : 'gray'} className="text-[10px] h-5">
-            {config.tipo_tinta === 'CMYK' || config.tipo_tinta === 'color' ? 'Color' : 'B/N'}
+          <Badge variant={config.tipo_tinta === 'CMYK' ? 'purple' : config.tipo_tinta === 'COLOR' || config.tipo_tinta === 'color' ? 'info' : 'default'} className="text-[10px] h-5">
+            {config.tipo_tinta === 'CMYK'
+              ? 'Full Color'
+              : config.tipo_tinta === 'COLOR' || config.tipo_tinta === 'color'
+                ? 'Color'
+                : 'Blanco y Negro'}
           </Badge>
           <Badge variant="outline" className="text-[10px] h-5">
             {config.cara_impresa === 'frente_y_dorso' || config.cara_impresa === 'doble' || config.cara_impresa === '1/1' ? 'Doble Faz' : 'Simple Faz'}
@@ -279,7 +283,11 @@ export function PresupuestoItemsSection({
       // We will rely on description if provided, otherwise generic.
       // But we can extract some info.
 
-      const tipoTinta = item.config.tipo_tinta === 'CMYK' ? 'Color' : 'B/N';
+      const tipoTinta = item.config.tipo_tinta === 'CMYK'
+        ? 'Full Color'
+        : item.config.tipo_tinta === 'COLOR'
+          ? 'Color'
+          : 'Blanco y Negro';
       const nombreItem = `Copias ${tipoTinta} - ${tamanioName}`;
 
       const papelNombre = item.config.papel_detalle || item.config.papel_id;

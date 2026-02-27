@@ -1498,7 +1498,7 @@ export interface PresupuestoItemRuta {
 // CENTRO DE COPIADO - Types
 // ============================================================================
 
-export type TipoTintaCopiado = 'CMYK' | 'K';
+export type TipoTintaCopiado = 'CMYK' | 'COLOR' | 'K';
 export type CaraImpresaCopiado = 'frente' | 'frente_y_dorso';
 export type TipoAnillado = 'ring_wire' | 'plastico';
 export type TipoPlastificado = 'A4' | 'SRA3' | 'Carnet';
