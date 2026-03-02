@@ -44,6 +44,35 @@ interface OrdenCopiadoWithRelations extends CentroCopiadoOrden {
   items_count?: number;
 }
 
+interface SearchCentroCopiadoOrdenRpcRow {
+  id: string;
+  company_id: string;
+  numero_orden: string | null;
+  orden_trabajo_id: string | null;
+  cliente_id: string | null;
+  requiere_despacho: boolean;
+  estado: EstadoOrdenCopiado;
+  fecha_solicitud: string;
+  fecha_entrega_estimada: string | null;
+  fecha_entrega_real: string | null;
+  total: number;
+  observaciones: string | null;
+  requiere_factura: boolean;
+  numero_factura: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  canal_venta: CentroCopiadoOrden['canal_venta'];
+  subtotal: number;
+  total_descuentos: number;
+  cliente_nombre: string | null;
+  cliente_documento: string | null;
+  created_by_full_name: string | null;
+  created_by_avatar_url: string | null;
+  items_count: number;
+  full_count: number;
+}
+
 interface CreateOrdenCopiadoData {
   cliente_id?: string | null;
   origen?: 'WhatsApp' | 'Web' | 'Mostrador' | 'App Mobile' | null;
@@ -56,6 +85,12 @@ interface CreateOrdenCopiadoData {
   subtotal: number;
   total_descuentos: number;
   estado?: EstadoOrdenCopiado;
+}
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function isUuid(value?: string | null): value is string {
+  return !!value && UUID_REGEX.test(value);
 }
 
 export function useCentroCopiadoOrdenes(params: UseCentroCopiadoOrdenesParams = {}) {
@@ -83,6 +118,72 @@ export function useCentroCopiadoOrdenes(params: UseCentroCopiadoOrdenesParams = 
     try {
       setLoading(true);
       setError(null);
+
+      const from = (page - 1) * itemsPerPage;
+      const to = from + itemsPerPage - 1;
+      const trimmedSearchTerm = searchTerm.trim();
+
+      if (trimmedSearchTerm) {
+        const { data, error: searchError } = await supabase.rpc(
+          'fn_search_centro_copiado_ordenes',
+          {
+            p_company_id: profile.company_id,
+            p_search_term: trimmedSearchTerm,
+            p_estado: estado,
+            p_estados: estados.length > 0 ? estados : null,
+            p_cliente_id: clienteId,
+            p_fecha_desde: fechaDesde,
+            p_fecha_hasta: fechaHasta,
+            p_limit: itemsPerPage,
+            p_offset: from,
+          }
+        );
+
+        if (searchError) throw searchError;
+
+        const searchRows = (data || []) as SearchCentroCopiadoOrdenRpcRow[];
+        const mappedRows = searchRows.map((item) => ({
+          id: item.id,
+          company_id: item.company_id,
+          numero_orden: item.numero_orden,
+          orden_trabajo_id: item.orden_trabajo_id,
+          cliente_id: item.cliente_id,
+          requiere_despacho: item.requiere_despacho,
+          estado: item.estado,
+          fecha_solicitud: item.fecha_solicitud,
+          fecha_entrega_estimada: item.fecha_entrega_estimada,
+          fecha_entrega_real: item.fecha_entrega_real,
+          total: item.total,
+          observaciones: item.observaciones,
+          requiere_factura: item.requiere_factura,
+          numero_factura: item.numero_factura,
+          created_by: item.created_by,
+          created_at: item.created_at,
+          updated_at: item.updated_at,
+          canal_venta: item.canal_venta,
+          subtotal: item.subtotal,
+          total_descuentos: item.total_descuentos,
+          cliente: item.cliente_id
+            ? {
+                id: item.cliente_id,
+                nombre_fantasia: item.cliente_nombre || 'Sin cliente',
+                numero_documento: item.cliente_documento || '',
+              }
+            : undefined,
+          created_by_profile: item.created_by
+            ? {
+                id: item.created_by,
+                full_name: item.created_by_full_name || '',
+                avatar_url: item.created_by_avatar_url,
+              }
+            : undefined,
+          items_count: item.items_count || 0,
+        })) as OrdenCopiadoWithRelations[];
+
+        setOrdenes(mappedRows);
+        setTotalCount(searchRows.length > 0 ? Number(searchRows[0].full_count || 0) : 0);
+        return;
+      }
 
       let query = supabase
         .from('centro_copiado_ordenes')
@@ -115,28 +216,6 @@ export function useCentroCopiadoOrdenes(params: UseCentroCopiadoOrdenesParams = 
       if (fechaHasta) {
         query = query.lte('fecha_solicitud', fechaHasta);
       }
-
-      if (searchTerm) {
-        // First find clients matching the search term
-        const { data: matchingClients } = await supabase
-          .from('clients')
-          .select('id')
-          .ilike('nombre_fantasia', `%${searchTerm}%`)
-          .limit(20);
-
-        const clientIds = matchingClients?.map((c) => c.id) || [];
-
-        let orCondition = `numero_orden.ilike.%${searchTerm}%,observaciones.ilike.%${searchTerm}%`;
-
-        if (clientIds.length > 0) {
-          orCondition += `,cliente_id.in.(${clientIds.join(',')})`;
-        }
-
-        query = query.or(orCondition);
-      }
-
-      const from = (page - 1) * itemsPerPage;
-      const to = from + itemsPerPage - 1;
 
       query = query.order('fecha_solicitud', { ascending: true }).range(from, to);
 
@@ -345,7 +424,7 @@ export function useCentroCopiadoOrdenes(params: UseCentroCopiadoOrdenesParams = 
 
         const currentIds = currentItems?.map((i) => i.id) || [];
         const incomingIds = items
-          .filter((i) => !i.id.startsWith('temp_')) // Solo IDs reales (UUIDs)
+          .filter((i) => isUuid(i.id))
           .map((i) => i.id);
 
         // Identificar items a eliminar
@@ -415,7 +494,7 @@ export function useCentroCopiadoOrdenes(params: UseCentroCopiadoOrdenesParams = 
             ploteo_cad_metros_lineales: esPloteoCad ? config.ploteo_cad_metros_lineales : null,
           };
 
-          if (item.id.startsWith('temp_')) {
+          if (!isUuid(item.id)) {
             // INSERTAR NUEVO ITEM
             const { data: newItem, error: insertError } = await supabase
               .from('centro_copiado_ordenes_items')
