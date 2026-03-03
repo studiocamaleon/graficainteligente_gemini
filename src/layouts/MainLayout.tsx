@@ -15,6 +15,7 @@ import { ReglasInternasMandatoryModal } from '../components/documentation/Reglas
 import { ChatFloatingButton } from '../components/chat/ChatFloatingButton';
 import { ChatPanel } from '../components/chat/ChatPanel';
 import { ChatPanelStateProvider } from '../hooks/useChatPanelState';
+import { useChatNotifications } from '../hooks/useChatNotifications';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -50,6 +51,7 @@ function MainLayoutContent({ children }: MainLayoutProps) {
   const canCreateOT = hasPermission('orders-crear', 'create');
   const canCreateOC = hasPermission('centro-copiado-ordenes-crear', 'create');
   const canUseChat = canAccessModule('chat');
+  useChatNotifications(canUseChat);
   const isOrderDetailRoute = /^\/app\/orders\/[a-f0-9-]+$/i.test(location.pathname);
   const isCopyOrderDetailRoute = /^\/app\/centro-copiado\/ordenes\/[a-f0-9-]+$/i.test(location.pathname);
   const isCreateOrderRoute = location.pathname === '/app/orders/crear-ot';
