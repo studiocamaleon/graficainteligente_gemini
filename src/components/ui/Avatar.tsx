@@ -3,6 +3,8 @@ interface AvatarProps {
   alt?: string;
   name?: string;
   size?: 'sm' | 'md' | 'lg' | 'xl';
+  showPresence?: boolean;
+  isOnline?: boolean;
 }
 
 const sizeStyles = {
@@ -21,24 +23,35 @@ function getInitials(name: string): string {
     .slice(0, 2);
 }
 
-export function Avatar({ src, alt, name, size = 'md' }: AvatarProps) {
+export function Avatar({ src, alt, name, size = 'md', showPresence = false, isOnline = false }: AvatarProps) {
   const initials = name ? getInitials(name) : '?';
 
-  if (src) {
-    return (
-      <img
-        src={src}
-        alt={alt || name || 'Avatar'}
-        className={`${sizeStyles[size]} rounded-full object-cover border-2 border-gray-200`}
-      />
-    );
-  }
-
-  return (
+  const avatarContent = src ? (
+    <img
+      src={src}
+      alt={alt || name || 'Avatar'}
+      className={`${sizeStyles[size]} rounded-full object-cover border-2 border-gray-200`}
+    />
+  ) : (
     <div
       className={`${sizeStyles[size]} rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 text-white font-semibold flex items-center justify-center border-2 border-gray-200`}
     >
       {initials}
+    </div>
+  );
+
+  return (
+    <div className="relative inline-flex">
+      {avatarContent}
+      {showPresence && (
+        <span
+          className={`absolute bottom-0 right-0 block h-3.5 w-3.5 rounded-full border-2 border-white ${
+            isOnline ? 'bg-emerald-500' : 'bg-slate-300'
+          }`}
+          aria-label={isOnline ? 'En línea' : 'Desconectado'}
+          title={isOnline ? 'En línea' : 'Desconectado'}
+        />
+      )}
     </div>
   );
 }

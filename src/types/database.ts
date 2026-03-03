@@ -5,6 +5,13 @@ export type CompanyStatus = 'active' | 'suspended' | 'cancelled';
 export type SubscriptionStatus = 'active' | 'cancelled' | 'expired';
 import type { Egreso } from './tesoreria';
 import type { Presupuesto, PresupuestoItem, CondicionComercial, PresupuestoHistorial } from './presupuestos';
+import type {
+  ChatConversation,
+  ChatConversationParticipant,
+  ChatMessage,
+  ChatMessageRead,
+  ChatMessageReference,
+} from './chat';
 
 
 export type DocumentType = 'DNI' | 'CUIT' | 'CUIL';
@@ -1781,6 +1788,31 @@ export interface Database {
         Row: Profile;
         Insert: Omit<Profile, 'created_at' | 'updated_at'>;
         Update: Partial<Omit<Profile, 'id' | 'created_at'>>;
+      };
+      chat_conversations: {
+        Row: ChatConversation;
+        Insert: Omit<ChatConversation, 'id' | 'created_at' | 'updated_at' | 'last_message_at' | 'last_message_id'>;
+        Update: Partial<Omit<ChatConversation, 'id' | 'created_at'>>;
+      };
+      chat_conversation_participants: {
+        Row: ChatConversationParticipant;
+        Insert: Omit<ChatConversationParticipant, 'id' | 'joined_at' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<ChatConversationParticipant, 'id' | 'created_at'>>;
+      };
+      chat_messages: {
+        Row: ChatMessage;
+        Insert: Omit<ChatMessage, 'id' | 'created_at' | 'updated_at' | 'edited_at'>;
+        Update: Partial<Omit<ChatMessage, 'id' | 'created_at'>>;
+      };
+      chat_message_reads: {
+        Row: ChatMessageRead;
+        Insert: Omit<ChatMessageRead, 'id' | 'created_at'>;
+        Update: Partial<Omit<ChatMessageRead, 'id' | 'created_at'>>;
+      };
+      chat_message_references: {
+        Row: ChatMessageReference;
+        Insert: Omit<ChatMessageReference, 'id' | 'created_at'>;
+        Update: Partial<Omit<ChatMessageReference, 'id' | 'created_at'>>;
       };
       subscription_plans: {
         Row: SubscriptionPlan;

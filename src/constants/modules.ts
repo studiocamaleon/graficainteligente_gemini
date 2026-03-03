@@ -389,6 +389,14 @@ export const MODULES: Module[] = [
     color: 'text-pink-600',
   },
   {
+    id: 'chat',
+    name: 'Chat Interno',
+    description: 'Mensajería interna entre usuarios del mismo tenant',
+    icon: MessageSquare,
+    path: '/app/chat',
+    color: 'text-sky-600',
+  },
+  {
     id: 'integrations',
     name: 'Integraciones',
     description: 'Conecta con otras plataformas',

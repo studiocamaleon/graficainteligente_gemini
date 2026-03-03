@@ -60,6 +60,7 @@ import { ClienteRegistro } from './pages/public/ClienteRegistro';
 import { AgendarVisita } from './pages/public/AgendarVisita';
 import { PendingDeliveriesPage } from './pages/app/delivery/PendingDeliveriesPage';
 import Documentation from './pages/app/Documentation';
+import { Chat } from './pages/app/Chat';
 
 function AppRoutes() {
   const { user, loading, isAuthenticating } = useAuth();
@@ -424,6 +425,14 @@ function AppRoutes() {
                   element={
                     <ProtectedModuleRoute moduleId="team">
                       <Team />
+                    </ProtectedModuleRoute>
+                  }
+                />
+                <Route
+                  path="chat"
+                  element={
+                    <ProtectedModuleRoute moduleId="chat">
+                      <Chat />
                     </ProtectedModuleRoute>
                   }
                 />

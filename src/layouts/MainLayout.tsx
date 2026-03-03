@@ -12,6 +12,9 @@ import { useNotificaciones } from '../hooks/useNotificaciones';
 import { NotificationsPanel } from '../components/notifications/NotificationsPanel';
 import { MODULES } from '../constants/modules'; // Used for title resolution
 import { ReglasInternasMandatoryModal } from '../components/documentation/ReglasInternasMandatoryModal';
+import { ChatFloatingButton } from '../components/chat/ChatFloatingButton';
+import { ChatPanel } from '../components/chat/ChatPanel';
+import { ChatPanelStateProvider } from '../hooks/useChatPanelState';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -46,6 +49,7 @@ function MainLayoutContent({ children }: MainLayoutProps) {
   const pageTitle = description;
   const canCreateOT = hasPermission('orders-crear', 'create');
   const canCreateOC = hasPermission('centro-copiado-ordenes-crear', 'create');
+  const canUseChat = canAccessModule('chat');
   const isOrderDetailRoute = /^\/app\/orders\/[a-f0-9-]+$/i.test(location.pathname);
   const isCopyOrderDetailRoute = /^\/app\/centro-copiado\/ordenes\/[a-f0-9-]+$/i.test(location.pathname);
   const isCreateOrderRoute = location.pathname === '/app/orders/crear-ot';
@@ -240,6 +244,15 @@ function MainLayoutContent({ children }: MainLayoutProps) {
           )}
         </div>
       )}
+
+      {canUseChat && (
+        <>
+          <div className="fixed bottom-6 right-6 z-40">
+            <ChatFloatingButton />
+          </div>
+          <ChatPanel />
+        </>
+      )}
     </div>
   );
 }
@@ -247,7 +260,9 @@ function MainLayoutContent({ children }: MainLayoutProps) {
 export function MainLayout({ children }: MainLayoutProps) {
   return (
     <PageHeaderProvider>
-      <MainLayoutContent>{children}</MainLayoutContent>
+      <ChatPanelStateProvider>
+        <MainLayoutContent>{children}</MainLayoutContent>
+      </ChatPanelStateProvider>
     </PageHeaderProvider>
   );
 }

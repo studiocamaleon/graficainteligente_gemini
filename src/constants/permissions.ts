@@ -103,6 +103,7 @@ AVAILABLE_PERMISSIONS.forEach((permission) => {
   }
 
   const managerAllowedModules = [
+    'chat',
     'documentation',
     'clients',
     'providers',
@@ -151,6 +152,7 @@ AVAILABLE_PERMISSIONS.forEach((permission) => {
 
   // Operador de Diseño: Acceso a clientes, órdenes, centro copiado, y visualización de productos
   const operadorDisenoFullAccessModules = [
+    'chat',
     'clients',
     'orders',
     'orders-crear',
@@ -219,9 +221,10 @@ AVAILABLE_PERMISSIONS.forEach((permission) => {
   }
 
   // Operador de Taller: Acceso a producción (full) y órdenes (solo lectura)
-  const operadorTallerFullAccessModules = ['production'];
+  const operadorTallerFullAccessModules = ['production', 'chat'];
   const operadorTallerViewOnlyModules = [
     'dashboard',
+    'chat',
     'documentation',
     'orders',
     'orders-lista'
@@ -251,8 +254,8 @@ AVAILABLE_PERMISSIONS.forEach((permission) => {
   }
 
   PREDEFINED_ROLES.viewer.permissions[permission.moduleId] = {
-    view: permission.moduleId === 'documentation' || !['team', 'settings', 'finance'].includes(permission.moduleId),
-    create: false,
+    view: permission.moduleId === 'chat' || permission.moduleId === 'documentation' || !['team', 'settings', 'finance'].includes(permission.moduleId),
+    create: permission.moduleId === 'chat',
     edit: false,
     delete: false,
   };
