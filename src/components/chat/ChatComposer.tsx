@@ -1,5 +1,5 @@
 import { AtSign, SendHorizontal, X } from 'lucide-react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Button } from '../ui/Button';
 import { Textarea } from '../ui/Textarea';
 import type { ChatMessageReferenceInput } from '../../types/chat';
@@ -21,21 +21,29 @@ export function ChatComposer({
   const [error, setError] = useState<string | null>(null);
   const [references, setReferences] = useState<ChatMessageReferenceInput[]>([]);
   const [isReferencePickerOpen, setIsReferencePickerOpen] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const submit = async () => {
-    const nextBody = draft.trim();
-    if (!nextBody || submitting || disabled) return;
+    const nextBody = draft;
+    const nextTrimmedBody = nextBody.trim();
+    const nextReferences = [...references];
+    if (!nextTrimmedBody || submitting || disabled) return;
 
     try {
       setSubmitting(true);
       setError(null);
-      await onSend(nextBody, references);
       setDraft('');
       setReferences([]);
+      await onSend(nextTrimmedBody, nextReferences);
     } catch (err) {
+      setDraft(nextBody);
+      setReferences(nextReferences);
       setError(err instanceof Error ? err.message : 'No se pudo enviar el mensaje');
     } finally {
       setSubmitting(false);
+      requestAnimationFrame(() => {
+        textareaRef.current?.focus();
+      });
     }
   };
 
@@ -80,6 +88,7 @@ export function ChatComposer({
         </Button>
 
         <Textarea
+          ref={textareaRef}
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           placeholder={placeholder}
@@ -125,7 +134,12 @@ export function ChatComposer({
 
       <ChatReferencePicker
         isOpen={isReferencePickerOpen}
-        onClose={() => setIsReferencePickerOpen(false)}
+        onClose={() => {
+          setIsReferencePickerOpen(false);
+          requestAnimationFrame(() => {
+            textareaRef.current?.focus();
+          });
+        }}
         onSelect={(reference) => {
           setReferences((current) => {
             const alreadySelected = current.some(
@@ -134,6 +148,10 @@ export function ChatComposer({
 
             if (alreadySelected) return current;
             return [...current, reference];
+          });
+
+          requestAnimationFrame(() => {
+            textareaRef.current?.focus();
           });
         }}
       />

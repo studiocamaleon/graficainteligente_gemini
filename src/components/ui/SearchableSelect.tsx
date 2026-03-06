@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown, Search, X, Plus } from 'lucide-react';
+import { normalizeString } from '../../utils/stringUtils';
 
 interface SearchableSelectOption {
   value: string;
@@ -58,8 +59,8 @@ export function SearchableSelect({
   const filteredOptions = onSearch
     ? options
     : options.filter((option) =>
-      option.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      option.subtitle?.toLowerCase().includes(searchTerm.toLowerCase())
+      normalizeString(option.label).includes(normalizeString(searchTerm)) ||
+      normalizeString(option.subtitle || '').includes(normalizeString(searchTerm))
     );
 
   const updatePosition = () => {

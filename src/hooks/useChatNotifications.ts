@@ -12,6 +12,12 @@ interface SenderProfile {
   email: string | null;
 }
 
+interface ConversationSnapshot {
+  conversation_id: string;
+  type: 'general' | 'direct';
+  title: string;
+}
+
 export function useChatNotifications(enabled = true) {
   const { profile, company } = useAuth();
   const { conversations } = useChatConversations();
@@ -63,6 +69,33 @@ export function useChatNotifications(enabled = true) {
       return data as SenderProfile | null;
     };
 
+    const fetchConversationSnapshot = async (conversationId: string) => {
+      const existing = conversations.find((item) => item.conversation_id === conversationId);
+      if (existing) {
+        return {
+          conversation_id: existing.conversation_id,
+          type: existing.type,
+          title: existing.title,
+        } satisfies ConversationSnapshot;
+      }
+
+      const { data, error } = await supabase
+        .from('chat_conversations')
+        .select('id, type, title')
+        .eq('id', conversationId)
+        .maybeSingle();
+
+      if (error || !data) {
+        return null;
+      }
+
+      return {
+        conversation_id: data.id,
+        type: (data.type as 'general' | 'direct') || 'direct',
+        title: data.title || 'Conversación',
+      } satisfies ConversationSnapshot;
+    };
+
     const channel = supabase
       .channel(`chat-notifications-${profile.company_id}-${profile.id}`)
       .on(
@@ -85,7 +118,7 @@ export function useChatNotifications(enabled = true) {
           if (notifiedMessageIdsRef.current.has(message.id)) return;
           notifiedMessageIdsRef.current.add(message.id);
 
-          const conversation = conversations.find((item) => item.conversation_id === message.conversation_id);
+          const conversation = await fetchConversationSnapshot(message.conversation_id);
           if (!conversation) return;
           if (isConversationVisible(message.conversation_id)) return;
 

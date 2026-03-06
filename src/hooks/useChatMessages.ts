@@ -16,6 +16,59 @@ export function useChatMessages({ conversationId }: UseChatMessagesOptions) {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
+  const conversationIdRef = useRef<string | null>(conversationId);
+
+  useEffect(() => {
+    conversationIdRef.current = conversationId;
+  }, [conversationId]);
+
+  const fetchMessageById = useCallback(
+    async (messageId: string) => {
+      const activeConversationId = conversationIdRef.current;
+      if (!activeConversationId) return null;
+
+      const { data: messageData, error: messageError } = await supabase
+        .from('chat_messages')
+        .select(
+          `
+            id,
+            conversation_id,
+            company_id,
+            sender_profile_id,
+            body,
+            message_type,
+            created_at,
+            updated_at,
+            edited_at,
+            sender:profiles!chat_messages_sender_profile_id_fkey(id, full_name, email, avatar_url)
+          `
+        )
+        .eq('id', messageId)
+        .eq('conversation_id', activeConversationId)
+        .maybeSingle();
+
+      if (messageError || !messageData) return null;
+
+      const { data: readsData } = await supabase
+        .from('chat_message_reads')
+        .select('id, message_id, conversation_id, company_id, reader_profile_id, read_at, created_at')
+        .eq('message_id', messageId);
+
+      const { data: referencesData } = await supabase
+        .from('chat_message_references')
+        .select(
+          'id, message_id, conversation_id, company_id, reference_type, entity_id, entity_label, entity_status, client_name, created_at'
+        )
+        .eq('message_id', messageId);
+
+      return normalizeChatMessage({
+        ...(messageData as any),
+        reads: (readsData as any[]) || [],
+        references: (referencesData as any[]) || [],
+      });
+    },
+    []
+  );
 
   const fetchMessages = useCallback(async () => {
     if (!conversationId) {
@@ -279,15 +332,115 @@ export function useChatMessages({ conversationId }: UseChatMessagesOptions) {
         .channel(`chat-messages-${conversationId}`)
         .on(
           'postgres_changes',
-          { event: '*', schema: 'public', table: 'chat_messages', filter: `conversation_id=eq.${conversationId}` },
-          () => {
-            void fetchMessages();
+          { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `conversation_id=eq.${conversationId}` },
+          async (payload) => {
+            const insertedMessageId = (payload.new as { id: string }).id;
+            const incomingMessage = await fetchMessageById(insertedMessageId);
+            if (!incomingMessage) return;
+
+            setMessages((current) => dedupeMessages([...current, incomingMessage]));
+          }
+        )
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'chat_messages', filter: `conversation_id=eq.${conversationId}` },
+          async (payload) => {
+            const updatedMessageId = (payload.new as { id: string }).id;
+            const updatedMessage = await fetchMessageById(updatedMessageId);
+            if (!updatedMessage) return;
+
+            setMessages((current) =>
+              dedupeMessages(current.map((message) => (message.id === updatedMessage.id ? updatedMessage : message)))
+            );
+          }
+        )
+        .on(
+          'postgres_changes',
+          { event: 'DELETE', schema: 'public', table: 'chat_messages', filter: `conversation_id=eq.${conversationId}` },
+          (payload) => {
+            const deletedMessageId = (payload.old as { id: string }).id;
+            setMessages((current) => current.filter((message) => message.id !== deletedMessageId));
+          }
+        )
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'chat_message_reads', filter: `conversation_id=eq.${conversationId}` },
+          (payload) => {
+            const read = payload.new as {
+              id: string;
+              message_id: string;
+              conversation_id: string;
+              company_id: string;
+              reader_profile_id: string;
+              read_at: string;
+              created_at: string;
+            };
+
+            setMessages((current) =>
+              current.map((message) => {
+                if (message.id !== read.message_id) return message;
+                if (message.reads.some((existingRead) => existingRead.id === read.id)) return message;
+
+                return {
+                  ...message,
+                  reads: [...message.reads, read],
+                };
+              })
+            );
+          }
+        )
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'chat_message_references', filter: `conversation_id=eq.${conversationId}` },
+          (payload) => {
+            const reference = payload.new as {
+              id: string;
+              message_id: string;
+              conversation_id: string;
+              company_id: string;
+              reference_type: 'orden_trabajo' | 'orden_copiado';
+              entity_id: string;
+              entity_label: string;
+              entity_status: string | null;
+              client_name: string | null;
+              created_at: string;
+            };
+
+            setMessages((current) =>
+              current.map((message) => {
+                if (message.id !== reference.message_id) return message;
+                if (message.references.some((existingReference) => existingReference.id === reference.id)) return message;
+
+                return {
+                  ...message,
+                  references: [...message.references, reference],
+                };
+              })
+            );
           }
         )
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'chat_message_reads', filter: `conversation_id=eq.${conversationId}` },
           () => {
+            if (!isMounted) return;
+            if (document.visibilityState === 'visible') return;
+            void fetchMessages();
+          }
+        )
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'chat_message_references', filter: `conversation_id=eq.${conversationId}` },
+          () => {
+            if (!isMounted) return;
+            void fetchMessages();
+          }
+        )
+        .on(
+          'postgres_changes',
+          { event: 'DELETE', schema: 'public', table: 'chat_message_references', filter: `conversation_id=eq.${conversationId}` },
+          () => {
+            if (!isMounted) return;
             void fetchMessages();
           }
         )
@@ -305,7 +458,7 @@ export function useChatMessages({ conversationId }: UseChatMessagesOptions) {
         channelRef.current = null;
       }
     };
-  }, [conversationId, fetchMessages, profile?.company_id]);
+  }, [conversationId, fetchMessageById, fetchMessages, profile?.company_id]);
 
   return {
     messages,
