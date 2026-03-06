@@ -61,6 +61,7 @@ import { AgendarVisita } from './pages/public/AgendarVisita';
 import { PendingDeliveriesPage } from './pages/app/delivery/PendingDeliveriesPage';
 import Documentation from './pages/app/Documentation';
 import { Chat } from './pages/app/Chat';
+import { Herramientas } from './pages/app/Herramientas';
 
 function AppRoutes() {
   const { user, loading, isAuthenticating } = useAuth();
@@ -433,6 +434,14 @@ function AppRoutes() {
                   element={
                     <ProtectedModuleRoute moduleId="chat">
                       <Chat />
+                    </ProtectedModuleRoute>
+                  }
+                />
+                <Route
+                  path="herramientas"
+                  element={
+                    <ProtectedModuleRoute moduleId="herramientas">
+                      <Herramientas />
                     </ProtectedModuleRoute>
                   }
                 />

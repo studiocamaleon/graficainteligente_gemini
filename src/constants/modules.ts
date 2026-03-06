@@ -397,6 +397,14 @@ export const MODULES: Module[] = [
     color: 'text-sky-600',
   },
   {
+    id: 'herramientas',
+    name: 'Herramientas',
+    description: 'Utilidades internas del equipo',
+    icon: Wrench,
+    path: '/app/herramientas',
+    color: 'text-emerald-600',
+  },
+  {
     id: 'integrations',
     name: 'Integraciones',
     description: 'Conecta con otras plataformas',
