@@ -19,7 +19,7 @@ import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../hooks/useAuth';
 import { sendWatiMessage } from '../../../lib/wati';
 import { buildTrackingUrl } from '../../../lib/trackingUrl';
-import { canRegisterPaymentsRole } from '../../../utils/roles';
+import { canRegisterPaymentsRole, isWorkshopOperatorRole } from '../../../utils/roles';
 
 interface PendingDeliveriesPageProps {
     embedded?: boolean;
@@ -61,6 +61,7 @@ function PendingDeliveriesContent({ embedded = false }: PendingDeliveriesPagePro
     const navigate = useNavigate();
     const { profile, company } = useAuth();
     const canRegisterPayments = canRegisterPaymentsRole(profile?.role);
+    const isWorkshopOperator = isWorkshopOperatorRole(profile?.role);
 
     const { deliveries, loading, error, refresh, deliverOrder, addPayment } = usePendingDeliveries();
     const [searchTerm, setSearchTerm] = useState(() =>
@@ -99,7 +100,7 @@ function PendingDeliveriesContent({ embedded = false }: PendingDeliveriesPagePro
 
     const filteredDeliveries = useMemo(() => {
         return deliveries.filter((d) => {
-            const matchesDebt = paymentFilter === 'deben' ? d.saldo_pendiente > 0.01 : true;
+            const matchesDebt = isWorkshopOperator || paymentFilter !== 'deben' ? true : d.saldo_pendiente > 0.01;
             if (!matchesDebt) return false;
             if (!searchTerm) return true;
 
@@ -110,7 +111,7 @@ function PendingDeliveriesContent({ embedded = false }: PendingDeliveriesPagePro
                 (d.cliente?.numero_documento || '').includes(lowerTerm)
             );
         });
-    }, [deliveries, paymentFilter, searchTerm]);
+    }, [deliveries, isWorkshopOperator, paymentFilter, searchTerm]);
 
     const sortedDeliveries = useMemo(() => {
         if (balanceSort === 'none') return filteredDeliveries;
@@ -440,7 +441,9 @@ function PendingDeliveriesContent({ embedded = false }: PendingDeliveriesPagePro
                     </Button>
                     <div className="text-sm text-gray-500">
                         <Clock className="w-4 h-4 inline mr-1" />
-                        {balanceSort === 'none'
+                        {isWorkshopOperator
+                            ? 'Ordenado por antigüedad (Más antiguos primero)'
+                            : balanceSort === 'none'
                             ? 'Ordenado por antigüedad (Más antiguos primero)'
                             : balanceSort === 'asc'
                                 ? 'Ordenado por saldo pendiente (Menor a mayor)'
@@ -463,14 +466,16 @@ function PendingDeliveriesContent({ embedded = false }: PendingDeliveriesPagePro
                             />
                         </div>
                         <div className="flex items-center gap-2 w-full md:w-auto">
-                            <select
-                                value={paymentFilter}
-                                onChange={(e) => setPaymentFilter(e.target.value as 'all' | 'deben')}
-                                className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            >
-                                <option value="all">Todas</option>
-                                <option value="deben">Solo deben</option>
-                            </select>
+                            {!isWorkshopOperator && (
+                                <select
+                                    value={paymentFilter}
+                                    onChange={(e) => setPaymentFilter(e.target.value as 'all' | 'deben')}
+                                    className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                >
+                                    <option value="all">Todas</option>
+                                    <option value="deben">Solo deben</option>
+                                </select>
+                            )}
                             <Badge variant="primary">{filteredDeliveries.length} Pendientes</Badge>
                         </div>
                     </div>
@@ -487,7 +492,7 @@ function PendingDeliveriesContent({ embedded = false }: PendingDeliveriesPagePro
                         </div>
                     )}
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-3 mb-6">
+                    <div className={`grid grid-cols-1 sm:grid-cols-2 ${isWorkshopOperator ? 'xl:grid-cols-3' : 'xl:grid-cols-6'} gap-3 mb-6`}>
                         <Card className="p-4">
                             <div className="flex items-center justify-between">
                                 <div className="text-sm text-gray-600">Órdenes</div>
@@ -497,38 +502,42 @@ function PendingDeliveriesContent({ embedded = false }: PendingDeliveriesPagePro
                             <div className="mt-1 text-xs text-gray-500">Pendientes (según filtro)</div>
                         </Card>
 
-                        <Card className="p-4">
-                            <div className="flex items-center justify-between">
-                                <div className="text-sm text-gray-600">Deuda total</div>
-                                <DollarSign className="w-4 h-4 text-gray-500" />
-                            </div>
-                            <div className="mt-2 text-base sm:text-lg lg:text-xl font-semibold leading-tight text-gray-900 whitespace-nowrap tabular-nums">
-                                ${headerMetrics.sumSaldo.toLocaleString('es-AR')}
-                            </div>
-                            <div className="mt-1 text-xs text-gray-500">Saldo pendiente acumulado</div>
-                        </Card>
+                        {!isWorkshopOperator && (
+                            <>
+                                <Card className="p-4">
+                                    <div className="flex items-center justify-between">
+                                        <div className="text-sm text-gray-600">Deuda total</div>
+                                        <DollarSign className="w-4 h-4 text-gray-500" />
+                                    </div>
+                                    <div className="mt-2 text-base sm:text-lg lg:text-xl font-semibold leading-tight text-gray-900 whitespace-nowrap tabular-nums">
+                                        ${headerMetrics.sumSaldo.toLocaleString('es-AR')}
+                                    </div>
+                                    <div className="mt-1 text-xs text-gray-500">Saldo pendiente acumulado</div>
+                                </Card>
 
-                        <Card className="p-4">
-                            <div className="flex items-center justify-between">
-                                <div className="text-sm text-gray-600">A cobrar</div>
-                                <DollarSign className="w-4 h-4 text-orange-600" />
-                            </div>
-                            <div className="mt-2 text-base sm:text-lg lg:text-xl font-semibold leading-tight text-gray-900 whitespace-nowrap tabular-nums">
-                                ${headerMetrics.sumCobrar.toLocaleString('es-AR')}
-                            </div>
-                            <div className="mt-1 text-xs text-gray-500">Sin cuenta corriente</div>
-                        </Card>
+                                <Card className="p-4">
+                                    <div className="flex items-center justify-between">
+                                        <div className="text-sm text-gray-600">A cobrar</div>
+                                        <DollarSign className="w-4 h-4 text-orange-600" />
+                                    </div>
+                                    <div className="mt-2 text-base sm:text-lg lg:text-xl font-semibold leading-tight text-gray-900 whitespace-nowrap tabular-nums">
+                                        ${headerMetrics.sumCobrar.toLocaleString('es-AR')}
+                                    </div>
+                                    <div className="mt-1 text-xs text-gray-500">Sin cuenta corriente</div>
+                                </Card>
 
-                        <Card className="p-4">
-                            <div className="flex items-center justify-between">
-                                <div className="text-sm text-gray-600">A c/c</div>
-                                <DollarSign className="w-4 h-4 text-emerald-600" />
-                            </div>
-                            <div className="mt-2 text-base sm:text-lg lg:text-xl font-semibold leading-tight text-gray-900 whitespace-nowrap tabular-nums">
-                                ${headerMetrics.sumCuentaCorriente.toLocaleString('es-AR')}
-                            </div>
-                            <div className="mt-1 text-xs text-gray-500">Con cuenta corriente</div>
-                        </Card>
+                                <Card className="p-4">
+                                    <div className="flex items-center justify-between">
+                                        <div className="text-sm text-gray-600">A c/c</div>
+                                        <DollarSign className="w-4 h-4 text-emerald-600" />
+                                    </div>
+                                    <div className="mt-2 text-base sm:text-lg lg:text-xl font-semibold leading-tight text-gray-900 whitespace-nowrap tabular-nums">
+                                        ${headerMetrics.sumCuentaCorriente.toLocaleString('es-AR')}
+                                    </div>
+                                    <div className="mt-1 text-xs text-gray-500">Con cuenta corriente</div>
+                                </Card>
+                            </>
+                        )}
 
                         <Card className="p-4">
                             <div className="flex items-center justify-between">
@@ -596,7 +605,7 @@ function PendingDeliveriesContent({ embedded = false }: PendingDeliveriesPagePro
                                 },
                                 {
                                     key: 'total',
-                                    header: (
+                                    header: isWorkshopOperator ? 'Estado de pago' : (
                                         <button
                                             type="button"
                                             onClick={() => setBalanceSort((prev) => (prev === 'none' ? 'asc' : prev === 'asc' ? 'desc' : 'none'))}
@@ -615,16 +624,24 @@ function PendingDeliveriesContent({ embedded = false }: PendingDeliveriesPagePro
                                     ),
                                     render: (item) => (
                                         <div>
-                                            {item.saldo_pendiente > 0 ? (
-                                                <div className="font-semibold text-amber-700">
-                                                    ${item.saldo_pendiente.toLocaleString('es-AR')}
-                                                </div>
+                                            {isWorkshopOperator ? (
+                                                item.saldo_pendiente > 0
+                                                    ? <div className="font-semibold text-amber-700">Pendiente de pago</div>
+                                                    : <div className="font-semibold text-emerald-700">Pagado</div>
                                             ) : (
-                                                <div className="font-semibold text-emerald-700">Pagado</div>
+                                                <>
+                                                    {item.saldo_pendiente > 0 ? (
+                                                        <div className="font-semibold text-amber-700">
+                                                            ${item.saldo_pendiente.toLocaleString('es-AR')}
+                                                        </div>
+                                                    ) : (
+                                                        <div className="font-semibold text-emerald-700">Pagado</div>
+                                                    )}
+                                                    <div className="text-xs text-gray-500">
+                                                        Total orden: ${item.total.toLocaleString('es-AR')}
+                                                    </div>
+                                                </>
                                             )}
-                                            <div className="text-xs text-gray-500">
-                                                Total orden: ${item.total.toLocaleString('es-AR')}
-                                            </div>
                                         </div>
                                     ),
                                 },
@@ -642,15 +659,20 @@ function PendingDeliveriesContent({ embedded = false }: PendingDeliveriesPagePro
                                             </Button>
                                             <Button
                                                 size="sm"
-                                                variant={item.saldo_pendiente > 0 ? "warning" : (item.requiere_despacho ? "primary" : "success")}
+                                                variant={item.saldo_pendiente > 0 ? (canRegisterPayments ? "warning" : "secondary") : (item.requiere_despacho ? "primary" : "success")}
                                                 className={item.requiere_despacho && item.saldo_pendiente <= 0 ? "bg-orange-600 hover:bg-orange-700 border-transparent text-white focus:ring-orange-500" : ""}
+                                                disabled={item.saldo_pendiente > 0 && !canRegisterPayments}
                                                 onClick={() => handleDeliverClick(item)}
                                             >
                                                 {item.saldo_pendiente > 0 ? (
-                                                    <>
-                                                        <DollarSign className="w-4 h-4 mr-1" />
-                                                        Cobrar
-                                                    </>
+                                                    canRegisterPayments ? (
+                                                        <>
+                                                            <DollarSign className="w-4 h-4 mr-1" />
+                                                            Cobrar
+                                                        </>
+                                                    ) : (
+                                                        'Pago pendiente'
+                                                    )
                                                 ) : (
                                                     item.requiere_despacho ? (
                                                         <>
@@ -761,16 +783,20 @@ function PendingDeliveriesContent({ embedded = false }: PendingDeliveriesPagePro
                                 <div className="text-xs text-gray-500">Cliente</div>
                                 <div className="font-semibold text-gray-900">{detailData.clienteNombre}</div>
                             </Card>
-                            <Card className="p-3">
-                                <div className="text-xs text-gray-500">Total</div>
-                                <div className="font-semibold text-gray-900">{formatMoney(detailData.total)}</div>
-                            </Card>
-                            <Card className="p-3">
-                                <div className="text-xs text-gray-500">Saldo pendiente</div>
-                                <div className={`font-semibold ${detailData.saldoPendiente > 0.01 ? 'text-amber-700' : 'text-emerald-700'}`}>
-                                    {formatMoney(detailData.saldoPendiente)}
-                                </div>
-                            </Card>
+                            {!isWorkshopOperator && (
+                                <>
+                                    <Card className="p-3">
+                                        <div className="text-xs text-gray-500">Total</div>
+                                        <div className="font-semibold text-gray-900">{formatMoney(detailData.total)}</div>
+                                    </Card>
+                                    <Card className="p-3">
+                                        <div className="text-xs text-gray-500">Saldo pendiente</div>
+                                        <div className={`font-semibold ${detailData.saldoPendiente > 0.01 ? 'text-amber-700' : 'text-emerald-700'}`}>
+                                            {formatMoney(detailData.saldoPendiente)}
+                                        </div>
+                                    </Card>
+                                </>
+                            )}
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
@@ -800,8 +826,8 @@ function PendingDeliveriesContent({ embedded = false }: PendingDeliveriesPagePro
                                                 <th className="px-3 py-2 text-left font-semibold">Producto / Item</th>
                                                 <th className="px-3 py-2 text-left font-semibold">Categoría</th>
                                                 <th className="px-3 py-2 text-right font-semibold">Cantidad</th>
-                                                <th className="px-3 py-2 text-right font-semibold">P. Unitario</th>
-                                                <th className="px-3 py-2 text-right font-semibold">Subtotal</th>
+                                                {!isWorkshopOperator && <th className="px-3 py-2 text-right font-semibold">P. Unitario</th>}
+                                                {!isWorkshopOperator && <th className="px-3 py-2 text-right font-semibold">Subtotal</th>}
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -810,8 +836,8 @@ function PendingDeliveriesContent({ embedded = false }: PendingDeliveriesPagePro
                                                     <td className="px-3 py-2 text-gray-900">{item.nombre}</td>
                                                     <td className="px-3 py-2 text-gray-600">{item.categoria}</td>
                                                     <td className="px-3 py-2 text-right text-gray-900">{item.cantidad.toLocaleString('es-AR')}</td>
-                                                    <td className="px-3 py-2 text-right text-gray-900">{formatMoney(item.precioUnitario)}</td>
-                                                    <td className="px-3 py-2 text-right font-medium text-gray-900">{formatMoney(item.precioTotal)}</td>
+                                                    {!isWorkshopOperator && <td className="px-3 py-2 text-right text-gray-900">{formatMoney(item.precioUnitario)}</td>}
+                                                    {!isWorkshopOperator && <td className="px-3 py-2 text-right font-medium text-gray-900">{formatMoney(item.precioTotal)}</td>}
                                                 </tr>
                                             ))}
                                         </tbody>
