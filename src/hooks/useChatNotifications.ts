@@ -89,10 +89,12 @@ export function useChatNotifications(enabled = true) {
         return null;
       }
 
+      const conversationRow = data as { id: string; type: string; title: string | null };
+
       return {
-        conversation_id: data.id,
-        type: (data.type as 'general' | 'direct') || 'direct',
-        title: data.title || 'Conversación',
+        conversation_id: conversationRow.id,
+        type: (conversationRow.type as 'general' | 'direct') || 'direct',
+        title: conversationRow.title || 'Conversación',
       } satisfies ConversationSnapshot;
     };
 

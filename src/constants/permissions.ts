@@ -104,6 +104,7 @@ AVAILABLE_PERMISSIONS.forEach((permission) => {
 
   const managerAllowedModules = [
     'chat',
+    'herramientas',
     'documentation',
     'clients',
     'providers',
@@ -173,6 +174,7 @@ AVAILABLE_PERMISSIONS.forEach((permission) => {
 
   const operadorDisenoViewOnlyModules = [
     'dashboard',
+    'herramientas',
     'documentation',
     'productos',
     'productos-impresion-laser',
@@ -225,6 +227,7 @@ AVAILABLE_PERMISSIONS.forEach((permission) => {
   const operadorTallerViewOnlyModules = [
     'dashboard',
     'chat',
+    'herramientas',
     'documentation',
     'orders',
     'orders-lista'
