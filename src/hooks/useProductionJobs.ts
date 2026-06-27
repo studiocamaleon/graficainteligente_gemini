@@ -39,6 +39,34 @@ interface JobsByEstado {
   finalizado: JobItem[];
 }
 
+const getErrorMessage = (err: unknown) => {
+  if (err instanceof Error) return err.message;
+  if (err && typeof err === 'object' && 'message' in err) {
+    const message = (err as { message?: unknown }).message;
+    if (typeof message === 'string' && message.trim()) return message;
+  }
+  return 'Error desconocido';
+};
+
+const getSupabaseErrorDebug = (err: unknown) => {
+  if (!err || typeof err !== 'object') return err;
+  const error = err as {
+    message?: unknown;
+    code?: unknown;
+    details?: unknown;
+    hint?: unknown;
+    status?: unknown;
+  };
+
+  return {
+    message: error.message,
+    code: error.code,
+    details: error.details,
+    hint: error.hint,
+    status: error.status,
+  };
+};
+
 const encontrarPasoRelevante = (itemRutas: any[], estacionesByPasoId: Record<string, string>) => {
   if (itemRutas.length === 0) return null;
 
@@ -102,6 +130,12 @@ export function useProductionJobs() {
       setLoading(true);
       setError(null);
 
+      const debugContext = {
+        companyId: profile.company_id,
+        timestamp: new Date().toISOString(),
+      };
+      console.info('[ProductionJobs] Iniciando carga de jobs', debugContext);
+
       const { data: itemsData, error: itemsError } = await supabase
         .from('ordenes_trabajo_items')
         .select(`
@@ -132,9 +166,21 @@ export function useProductionJobs() {
         .neq('orden.estado', 'borrador')
         .neq('orden.estado', 'entregada');
 
-      if (itemsError) throw itemsError;
+      if (itemsError) {
+        console.error('[ProductionJobs] Error en query ordenes_trabajo_items', {
+          ...debugContext,
+          error: getSupabaseErrorDebug(itemsError),
+        });
+        throw itemsError;
+      }
+
+      console.info('[ProductionJobs] Items obtenidos', {
+        ...debugContext,
+        itemsCount: itemsData?.length ?? 0,
+      });
 
       if (!itemsData || itemsData.length === 0) {
+        console.info('[ProductionJobs] Sin items activos para producción', debugContext);
         setJobs([]);
         setJobsByEstado({ pendiente: [], en_proceso: [], finalizado: [] });
         setLoading(false);
@@ -146,6 +192,21 @@ export function useProductionJobs() {
         !item.configuracion?.es_servicio_cobro
       );
 
+      console.info('[ProductionJobs] Items filtrados para producción', {
+        ...debugContext,
+        totalItems: itemsData.length,
+        productionItems: productionItems.length,
+        serviceChargeItems: itemsData.length - productionItems.length,
+      });
+
+      if (productionItems.length === 0) {
+        console.warn('[ProductionJobs] No quedaron items productivos después del filtro', debugContext);
+        setJobs([]);
+        setJobsByEstado({ pendiente: [], en_proceso: [], finalizado: [] });
+        setLoading(false);
+        return;
+      }
+
       const sortedItemsData = productionItems.sort((a: any, b: any) => {
         const fechaA = new Date(a.orden.fecha_creacion).getTime();
         const fechaB = new Date(b.orden.fecha_creacion).getTime();
@@ -154,12 +215,29 @@ export function useProductionJobs() {
 
       const itemIds = (sortedItemsData as any[]).map((item) => item.id);
 
+      console.info('[ProductionJobs] Consultando rutas de producción', {
+        ...debugContext,
+        itemIdsCount: itemIds.length,
+      });
+
       const { data: rutasData, error: rutasError } = await supabase
         .from('ordenes_trabajo_items_rutas')
         .select('orden_item_id, paso_id, estado_paso, paso_nombre, tipo_etapa, orden')
         .in('orden_item_id', itemIds);
 
-      if (rutasError) throw rutasError;
+      if (rutasError) {
+        console.error('[ProductionJobs] Error en query ordenes_trabajo_items_rutas', {
+          ...debugContext,
+          itemIdsCount: itemIds.length,
+          error: getSupabaseErrorDebug(rutasError),
+        });
+        throw rutasError;
+      }
+
+      console.info('[ProductionJobs] Rutas obtenidas', {
+        ...debugContext,
+        rutasCount: rutasData?.length ?? 0,
+      });
 
       const pasoIds = Array.from(
         new Set(
@@ -171,12 +249,29 @@ export function useProductionJobs() {
 
       let estacionesByPasoId: Record<string, string> = {};
       if (pasoIds.length > 0) {
+        console.info('[ProductionJobs] Consultando estaciones por pasos', {
+          ...debugContext,
+          pasoIdsCount: pasoIds.length,
+        });
+
         const { data: pasosData, error: pasosError } = await supabase
           .from('pasos')
           .select('id, estaciones_trabajo(nombre)')
           .in('id', pasoIds);
 
-        if (pasosError) throw pasosError;
+        if (pasosError) {
+          console.error('[ProductionJobs] Error en query pasos -> estaciones_trabajo', {
+            ...debugContext,
+            pasoIdsCount: pasoIds.length,
+            error: getSupabaseErrorDebug(pasosError),
+          });
+          throw pasosError;
+        }
+
+        console.info('[ProductionJobs] Pasos obtenidos para estaciones', {
+          ...debugContext,
+          pasosCount: pasosData?.length ?? 0,
+        });
 
         estacionesByPasoId = ((pasosData as any[]) || []).reduce((acc, paso) => {
           const nombre = paso?.estaciones_trabajo?.nombre;
@@ -250,9 +345,19 @@ export function useProductionJobs() {
 
       setJobs(jobsWithProgress);
       setJobsByEstado(grouped);
+      console.info('[ProductionJobs] Jobs cargados correctamente', {
+        ...debugContext,
+        totalJobs: jobsWithProgress.length,
+        pendiente: grouped.pendiente.length,
+        enProceso: grouped.en_proceso.length,
+        finalizado: grouped.finalizado.length,
+      });
     } catch (err) {
-      console.error('Error fetching production jobs:', err);
-      setError(err instanceof Error ? err.message : 'Error desconocido');
+      console.error('[ProductionJobs] Error fetching production jobs', {
+        error: getSupabaseErrorDebug(err),
+        rawError: err,
+      });
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
