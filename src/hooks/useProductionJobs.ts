@@ -67,6 +67,14 @@ const getSupabaseErrorDebug = (err: unknown) => {
   };
 };
 
+const chunkArray = <T,>(items: T[], chunkSize: number) => {
+  const chunks: T[][] = [];
+  for (let index = 0; index < items.length; index += chunkSize) {
+    chunks.push(items.slice(index, index + chunkSize));
+  }
+  return chunks;
+};
+
 const encontrarPasoRelevante = (itemRutas: any[], estacionesByPasoId: Record<string, string>) => {
   if (itemRutas.length === 0) return null;
 
@@ -220,22 +228,33 @@ export function useProductionJobs() {
         itemIdsCount: itemIds.length,
       });
 
-      const { data: rutasData, error: rutasError } = await supabase
-        .from('ordenes_trabajo_items_rutas')
-        .select('orden_item_id, paso_id, estado_paso, paso_nombre, tipo_etapa, orden')
-        .in('orden_item_id', itemIds);
+      const rutasChunks = chunkArray(itemIds, 100);
+      const rutasData: any[] = [];
 
-      if (rutasError) {
-        console.error('[ProductionJobs] Error en query ordenes_trabajo_items_rutas', {
-          ...debugContext,
-          itemIdsCount: itemIds.length,
-          error: getSupabaseErrorDebug(rutasError),
-        });
-        throw rutasError;
+      for (const [index, itemIdsChunk] of rutasChunks.entries()) {
+        const { data: rutasChunkData, error: rutasError } = await supabase
+          .from('ordenes_trabajo_items_rutas')
+          .select('orden_item_id, paso_id, estado_paso, paso_nombre, tipo_etapa, orden')
+          .in('orden_item_id', itemIdsChunk);
+
+        if (rutasError) {
+          console.error('[ProductionJobs] Error en query ordenes_trabajo_items_rutas', {
+            ...debugContext,
+            batchIndex: index + 1,
+            totalBatches: rutasChunks.length,
+            batchItemIdsCount: itemIdsChunk.length,
+            itemIdsCount: itemIds.length,
+            error: getSupabaseErrorDebug(rutasError),
+          });
+          throw rutasError;
+        }
+
+        rutasData.push(...((rutasChunkData as any[]) || []));
       }
 
       console.info('[ProductionJobs] Rutas obtenidas', {
         ...debugContext,
+        batches: rutasChunks.length,
         rutasCount: rutasData?.length ?? 0,
       });
 
@@ -254,22 +273,33 @@ export function useProductionJobs() {
           pasoIdsCount: pasoIds.length,
         });
 
-        const { data: pasosData, error: pasosError } = await supabase
-          .from('pasos')
-          .select('id, estaciones_trabajo(nombre)')
-          .in('id', pasoIds);
+        const pasosChunks = chunkArray(pasoIds, 100);
+        const pasosData: any[] = [];
 
-        if (pasosError) {
-          console.error('[ProductionJobs] Error en query pasos -> estaciones_trabajo', {
-            ...debugContext,
-            pasoIdsCount: pasoIds.length,
-            error: getSupabaseErrorDebug(pasosError),
-          });
-          throw pasosError;
+        for (const [index, pasoIdsChunk] of pasosChunks.entries()) {
+          const { data: pasosChunkData, error: pasosError } = await supabase
+            .from('pasos')
+            .select('id, estaciones_trabajo(nombre)')
+            .in('id', pasoIdsChunk);
+
+          if (pasosError) {
+            console.error('[ProductionJobs] Error en query pasos -> estaciones_trabajo', {
+              ...debugContext,
+              batchIndex: index + 1,
+              totalBatches: pasosChunks.length,
+              batchPasoIdsCount: pasoIdsChunk.length,
+              pasoIdsCount: pasoIds.length,
+              error: getSupabaseErrorDebug(pasosError),
+            });
+            throw pasosError;
+          }
+
+          pasosData.push(...((pasosChunkData as any[]) || []));
         }
 
         console.info('[ProductionJobs] Pasos obtenidos para estaciones', {
           ...debugContext,
+          batches: pasosChunks.length,
           pasosCount: pasosData?.length ?? 0,
         });
 
