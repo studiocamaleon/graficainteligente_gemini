@@ -48,6 +48,12 @@ interface RutaConOrden {
   pausa_activa?: any;
 }
 
+interface MesaTrabajoRow {
+  ruta_id: string;
+  assigned_user_id?: string | null;
+  assigned_by?: string | null;
+}
+
 export interface StationWithJobs {
   estacion_id: string;
   estacion_nombre: string;
@@ -63,6 +69,17 @@ export interface StationWithJobs {
 interface UseProductionStationsParams {
   estacionId?: string | null;
 }
+
+const QUERY_PAGE_SIZE = 1000;
+const IN_FILTER_BATCH_SIZE = 100;
+
+const chunkArray = <T,>(items: T[], chunkSize: number) => {
+  const chunks: T[][] = [];
+  for (let index = 0; index < items.length; index += chunkSize) {
+    chunks.push(items.slice(index, index + chunkSize));
+  }
+  return chunks;
+};
 
 export function useProductionStations(params: UseProductionStationsParams = {}) {
   const { profile } = useAuth();
@@ -81,59 +98,90 @@ export function useProductionStations(params: UseProductionStationsParams = {}) 
       setLoading(true);
       setError(null);
 
-      let rutasQuery = supabase
-        .from('ordenes_trabajo_items_rutas')
-        .select(`
-          id,
-          paso_id,
-          paso_nombre,
-          estado_paso,
-          orden,
-          tipo_etapa,
-          orden_item_id,
-          fecha_inicio,
-          global_task_id,
-          orden_item:ordenes_trabajo_items!inner(
+      const debugContext = {
+        companyId: profile.company_id,
+        timestamp: new Date().toISOString(),
+      };
+
+      console.info('[ProductionStations] Iniciando carga de estaciones', debugContext);
+
+      const rutasData: any[] = [];
+      let from = 0;
+
+      while (true) {
+        const to = from + QUERY_PAGE_SIZE - 1;
+        const { data: rutasPage, error: rutasError } = await supabase
+          .from('ordenes_trabajo_items_rutas')
+          .select(`
             id,
-            producto_nombre,
-            configuracion,
-            cantidad,
-            orden:ordenes_trabajo!inner(
+            paso_id,
+            paso_nombre,
+            estado_paso,
+            orden,
+            tipo_etapa,
+            orden_item_id,
+            fecha_inicio,
+            global_task_id,
+            orden_item:ordenes_trabajo_items!inner(
               id,
-              numero_orden,
-              fecha_creacion,
-              fecha_estimada_entrega,
-              requiere_despacho,
-              estado,
-              cliente:clients!inner(
+              producto_nombre,
+              configuracion,
+              cantidad,
+              orden:ordenes_trabajo!inner(
                 id,
-                nombre_fantasia
+                numero_orden,
+                fecha_creacion,
+                fecha_estimada_entrega,
+                requiere_despacho,
+                estado,
+                cliente:clients!inner(
+                  id,
+                  nombre_fantasia
+                )
+              )
+            ),
+            paso:pasos(
+              id,
+              estacion_id,
+              estacion:estaciones_trabajo!inner(
+                id,
+                nombre,
+                descripcion,
+                is_active
               )
             )
-          ),
-          paso:pasos(
-            id,
-            estacion_id,
-            estacion:estaciones_trabajo!inner(
-              id,
-              nombre,
-              descripcion,
-              is_active
-            )
-          )
-        `)
-        .eq('company_id', profile.company_id)
-        .neq('orden_item.orden.estado', 'cancelada')
-        .neq('orden_item.orden.estado', 'borrador')
-        .neq('orden_item.orden.estado', 'entregada')
-        .eq('paso.estacion.is_active', true);
+          `)
+          .eq('company_id', profile.company_id)
+          .neq('orden_item.orden.estado', 'cancelada')
+          .neq('orden_item.orden.estado', 'borrador')
+          .neq('orden_item.orden.estado', 'entregada')
+          .eq('paso.estacion.is_active', true)
+          .range(from, to);
 
-      // Eliminamos el filtro por estacionId aquí para que isPasoListo tenga el contexto completo de la ruta
-      // El componente StationsView se encarga de mostrar la estación seleccionada del arreglo completo.
+        if (rutasError) {
+          console.error('[ProductionStations] Error en query ordenes_trabajo_items_rutas', {
+            ...debugContext,
+            from,
+            to,
+            error: rutasError,
+          });
+          throw rutasError;
+        }
 
-      const { data: rutasData, error: rutasError } = await rutasQuery;
+        rutasData.push(...((rutasPage as any[]) || []));
 
-      if (rutasError) throw rutasError;
+        if (!rutasPage || rutasPage.length < QUERY_PAGE_SIZE) {
+          break;
+        }
+
+        from += QUERY_PAGE_SIZE;
+      }
+
+      console.info('[ProductionStations] Rutas obtenidas', {
+        ...debugContext,
+        rutasCount: rutasData.length,
+        pages: Math.ceil(rutasData.length / QUERY_PAGE_SIZE),
+      });
 
       if (!rutasData || rutasData.length === 0) {
         setStations([]);
@@ -150,18 +198,35 @@ export function useProductionStations(params: UseProductionStationsParams = {}) 
       let mesaTrabajoSet = new Set<string>();
 
       if (rutasIds.length > 0) {
-        const { data: pausasData } = await supabase
-          .from('ordenes_items_rutas_pausas')
-          .select(`
-            ruta_id,
-            categoria_motivo,
-            fecha_inicio_pausa,
-            fecha_fin_pausa,
-            motivo:pasos_motivos_pausa(
-              nombre
-            )
-          `)
-          .in('ruta_id', rutasIds);
+        const pausasData: any[] = [];
+        const rutasIdsChunks = chunkArray(rutasIds, IN_FILTER_BATCH_SIZE);
+
+        for (const [index, rutasIdsChunk] of rutasIdsChunks.entries()) {
+          const { data: pausasChunkData, error: pausasError } = await supabase
+            .from('ordenes_items_rutas_pausas')
+            .select(`
+              ruta_id,
+              categoria_motivo,
+              fecha_inicio_pausa,
+              fecha_fin_pausa,
+              motivo:pasos_motivos_pausa(
+                nombre
+              )
+            `)
+            .in('ruta_id', rutasIdsChunk);
+
+          if (pausasError) {
+            console.warn('[ProductionStations] No se pudieron leer pausas de rutas', {
+              ...debugContext,
+              batchIndex: index + 1,
+              totalBatches: rutasIdsChunks.length,
+              error: pausasError,
+            });
+            continue;
+          }
+
+          pausasData.push(...((pausasChunkData as any[]) || []));
+        }
 
         if (pausasData) {
           pausasData.forEach((pausa: any) => {
@@ -185,39 +250,96 @@ export function useProductionStations(params: UseProductionStationsParams = {}) 
           });
         }
 
-        const { data: mesaData } = await supabase
-          .from('ordenes_items_mesa_trabajo')
-          .select('ruta_id, assigned_user_id')
-          .eq('company_id', profile.company_id)
-          .in('ruta_id', rutasIds);
+        let mesaData: MesaTrabajoRow[] = [];
+        const mesaRows: MesaTrabajoRow[] = [];
+        const mesaRutasIdsChunks = chunkArray(rutasIds, IN_FILTER_BATCH_SIZE);
 
-        const ownerIds = (mesaData || [])
-          .map((row: any) => row.assigned_user_id)
+        for (const [index, rutasIdsChunk] of mesaRutasIdsChunks.entries()) {
+          const mesaAssignedUserQuery = await supabase
+            .from('ordenes_items_mesa_trabajo')
+            .select('ruta_id, assigned_user_id')
+            .eq('company_id', profile.company_id)
+            .in('ruta_id', rutasIdsChunk);
+
+          if (mesaAssignedUserQuery.error) {
+            console.warn('[ProductionStations] No se pudo leer assigned_user_id en mesa de trabajo. Se intenta fallback legacy assigned_by.', {
+              ...debugContext,
+              batchIndex: index + 1,
+              totalBatches: mesaRutasIdsChunks.length,
+              error: mesaAssignedUserQuery.error,
+            });
+
+            const mesaLegacyQuery = await supabase
+              .from('ordenes_items_mesa_trabajo')
+              .select('ruta_id, assigned_by')
+              .eq('company_id', profile.company_id)
+              .in('ruta_id', rutasIdsChunk);
+
+            if (mesaLegacyQuery.error) {
+              console.error('[ProductionStations] No se pudo leer mesa de trabajo', {
+                ...debugContext,
+                batchIndex: index + 1,
+                totalBatches: mesaRutasIdsChunks.length,
+                error: mesaLegacyQuery.error,
+              });
+            } else {
+              mesaRows.push(
+                ...((mesaLegacyQuery.data || []).map((row: any) => ({
+                  ruta_id: row.ruta_id,
+                  assigned_user_id: row.assigned_by || null,
+                  assigned_by: row.assigned_by || null,
+                })))
+              );
+            }
+          } else {
+            mesaRows.push(...(((mesaAssignedUserQuery.data || []) as MesaTrabajoRow[])));
+          }
+        }
+
+        mesaData = mesaRows;
+
+        const ownerIds = mesaData
+          .map((row) => row.assigned_user_id)
           .filter((value: any) => !!value);
         const uniqueOwnerIds = Array.from(new Set(ownerIds));
 
         const ownerNameMap = new Map<string, string>();
         if (uniqueOwnerIds.length > 0) {
-          const { data: ownersData } = await supabase
-            .from('profiles')
-            .select('id, full_name')
-            .in('id', uniqueOwnerIds);
+          const ownersData: any[] = [];
+          const ownerIdsChunks = chunkArray(uniqueOwnerIds, IN_FILTER_BATCH_SIZE);
+
+          for (const [index, ownerIdsChunk] of ownerIdsChunks.entries()) {
+            const { data: ownersChunkData, error: ownersError } = await supabase
+              .from('profiles')
+              .select('id, full_name')
+              .in('id', ownerIdsChunk);
+
+            if (ownersError) {
+              console.warn('[ProductionStations] No se pudieron leer nombres de responsables de mesa', {
+                ...debugContext,
+                batchIndex: index + 1,
+                totalBatches: ownerIdsChunks.length,
+                error: ownersError,
+              });
+              continue;
+            }
+
+            ownersData.push(...((ownersChunkData as any[]) || []));
+          }
 
           (ownersData || []).forEach((owner: any) => {
             ownerNameMap.set(owner.id, owner.full_name || 'Usuario desconocido');
           });
         }
 
-        if (mesaData) {
-          mesaTrabajoSet = new Set(
-            mesaData
-              .filter((row: any) => !!row.assigned_user_id)
-              .map((row: any) => row.ruta_id)
-          );
-        }
+        mesaTrabajoSet = new Set(
+          mesaData
+            .filter((row) => !!row.assigned_user_id)
+            .map((row) => row.ruta_id)
+        );
 
         const mesaOwnerMap = new Map<string, { ownerId: string | null; ownerName: string | null }>();
-        (mesaData || []).forEach((row: any) => {
+        mesaData.forEach((row) => {
           const ownerId = row.assigned_user_id || null;
           mesaOwnerMap.set(row.ruta_id, {
             ownerId,
@@ -365,6 +487,12 @@ export function useProductionStations(params: UseProductionStationsParams = {}) 
       );
 
       stationsWithJobs.sort((a, b) => a.estacion_nombre.localeCompare(b.estacion_nombre));
+
+      console.info('[ProductionStations] Estaciones cargadas correctamente', {
+        ...debugContext,
+        stationsCount: stationsWithJobs.length,
+        totalActivePasos: stationsWithJobs.reduce((sum, station) => sum + station.total_pasos_activos, 0),
+      });
 
       setStations(stationsWithJobs);
     } catch (err) {
