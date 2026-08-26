@@ -39,6 +39,9 @@ interface JobsByEstado {
   finalizado: JobItem[];
 }
 
+const QUERY_PAGE_SIZE = 1000;
+const IN_FILTER_BATCH_SIZE = 100;
+
 const getErrorMessage = (err: unknown) => {
   if (err instanceof Error) return err.message;
   if (err && typeof err === 'object' && 'message' in err) {
@@ -144,50 +147,68 @@ export function useProductionJobs() {
       };
       console.info('[ProductionJobs] Iniciando carga de jobs', debugContext);
 
-      const { data: itemsData, error: itemsError } = await supabase
-        .from('ordenes_trabajo_items')
-        .select(`
-          id,
-          orden_id,
-          producto_nombre,
-          producto_categoria,
-          cantidad,
-          estado,
-          created_at,
-          updated_at,
-          orden:ordenes_trabajo!inner(
-            id,
-            numero_orden,
-            fecha_creacion,
-            fecha_estimada_entrega,
-            estado,
-            cliente:clients!inner(
-              id,
-              nombre_fantasia,
-              razon_social
-            )
-          ),
-          configuracion
-        `)
-        .eq('orden.company_id', profile.company_id)
-        .neq('orden.estado', 'cancelada')
-        .neq('orden.estado', 'borrador')
-        .neq('orden.estado', 'entregada');
+      const itemsData: any[] = [];
+      let from = 0;
 
-      if (itemsError) {
-        console.error('[ProductionJobs] Error en query ordenes_trabajo_items', {
-          ...debugContext,
-          error: getSupabaseErrorDebug(itemsError),
-        });
-        throw itemsError;
+      while (true) {
+        const to = from + QUERY_PAGE_SIZE - 1;
+        const { data: itemsPage, error: itemsError } = await supabase
+          .from('ordenes_trabajo_items')
+          .select(`
+            id,
+            orden_id,
+            producto_nombre,
+            producto_categoria,
+            cantidad,
+            estado,
+            created_at,
+            updated_at,
+            orden:ordenes_trabajo!inner(
+              id,
+              numero_orden,
+              fecha_creacion,
+              fecha_estimada_entrega,
+              estado,
+              cliente:clients!inner(
+                id,
+                nombre_fantasia,
+                razon_social
+              )
+            ),
+            configuracion
+          `)
+          .eq('orden.company_id', profile.company_id)
+          .neq('orden.estado', 'cancelada')
+          .neq('orden.estado', 'borrador')
+          .neq('orden.estado', 'entregada')
+          .range(from, to);
+
+        if (itemsError) {
+          console.error('[ProductionJobs] Error en query ordenes_trabajo_items', {
+            ...debugContext,
+            from,
+            to,
+            error: getSupabaseErrorDebug(itemsError),
+          });
+          throw itemsError;
+        }
+
+        itemsData.push(...((itemsPage as any[]) || []));
+
+        if (!itemsPage || itemsPage.length < QUERY_PAGE_SIZE) {
+          break;
+        }
+
+        from += QUERY_PAGE_SIZE;
       }
 
       console.info('[ProductionJobs] Items obtenidos', {
         ...debugContext,
-        itemsCount: itemsData?.length ?? 0,
+        itemsCount: itemsData.length,
+        pages: Math.ceil(itemsData.length / QUERY_PAGE_SIZE),
       });
 
-      if (!itemsData || itemsData.length === 0) {
+      if (itemsData.length === 0) {
         console.info('[ProductionJobs] Sin items activos para producción', debugContext);
         setJobs([]);
         setJobsByEstado({ pendiente: [], en_proceso: [], finalizado: [] });
@@ -228,7 +249,7 @@ export function useProductionJobs() {
         itemIdsCount: itemIds.length,
       });
 
-      const rutasChunks = chunkArray(itemIds, 100);
+      const rutasChunks = chunkArray(itemIds, IN_FILTER_BATCH_SIZE);
       const rutasData: any[] = [];
 
       for (const [index, itemIdsChunk] of rutasChunks.entries()) {
@@ -273,7 +294,7 @@ export function useProductionJobs() {
           pasoIdsCount: pasoIds.length,
         });
 
-        const pasosChunks = chunkArray(pasoIds, 100);
+        const pasosChunks = chunkArray(pasoIds, IN_FILTER_BATCH_SIZE);
         const pasosData: any[] = [];
 
         for (const [index, pasoIdsChunk] of pasosChunks.entries()) {
